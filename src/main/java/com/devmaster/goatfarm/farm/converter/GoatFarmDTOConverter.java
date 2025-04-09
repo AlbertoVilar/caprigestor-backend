@@ -4,7 +4,6 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import org.springframework.stereotype.Component;
 
 @Component

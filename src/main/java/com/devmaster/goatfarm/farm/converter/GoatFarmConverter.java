@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import org.springframework.stereotype.Component;
 
 @Component
-public class GoatFarmEntityConverter {
+public class GoatFarmConverter {
 
     public static GoatFarm toEntity(GoatFarmRequestVO requestVO) {
 

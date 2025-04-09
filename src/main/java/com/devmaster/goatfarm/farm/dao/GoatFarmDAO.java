@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.farm.dao;
 
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.farm.converter.GoatFarmEntityConverter;
+import com.devmaster.goatfarm.farm.converter.GoatFarmConverter;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,10 +23,10 @@ public class GoatFarmDAO {
 
         if (requestVO != null) {
 
-            GoatFarm goatFarm = GoatFarmEntityConverter.toEntity(requestVO);
+            GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO);
             goatFarm = goatFarmRepository.save(goatFarm);
 
-            return GoatFarmEntityConverter.toVO(goatFarm);
+            return GoatFarmConverter.toVO(goatFarm);
 
         } else {
             return null;
@@ -38,9 +37,9 @@ public class GoatFarmDAO {
         GoatFarm goatFarmUpdated = goatFarmRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Elemento não encontrado " + id));
 
-        GoatFarmEntityConverter.entityUpdate(goatFarmUpdated, requestVO);
+        GoatFarmConverter.entityUpdate(goatFarmUpdated, requestVO);
 
-        return GoatFarmEntityConverter.toVO(goatFarmRepository.save(goatFarmUpdated));
+        return GoatFarmConverter.toVO(goatFarmRepository.save(goatFarmUpdated));
     }
 
 
@@ -49,7 +48,7 @@ public class GoatFarmDAO {
               GoatFarm goatFarm = goatFarmRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Elemento não encontrado " + id));
-       return GoatFarmEntityConverter.toVO(goatFarm);
+       return GoatFarmConverter.toVO(goatFarm);
     }
 
     public List<GoatFarmResponseVO> findAllGoatFarm() {
@@ -57,7 +56,7 @@ public class GoatFarmDAO {
         List<GoatFarm> resultGoatFarms = goatFarmRepository.findAll();
 
         return resultGoatFarms.stream()
-                .map(GoatFarmEntityConverter::toVO).collect(Collectors.toList());
+                .map(GoatFarmConverter::toVO).collect(Collectors.toList());
     }
 
     public String deleteGoatFarm(Long id) {

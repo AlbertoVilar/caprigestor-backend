@@ -16,13 +16,18 @@ public class GoatFarm {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "nome", nullable = true)
     private String name;
+    @Column(name = "TOD", nullable = true)
     private String tod;
 
     @CreatedDate
+    @Column(name = "criado", nullable = true)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "atualizado", nullable = true)
     private LocalDateTime updatedAt;
 
     public GoatFarm(Long id, String name, String tod) {
