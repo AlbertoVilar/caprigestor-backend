@@ -1,7 +1,6 @@
 package com.devmaster.goatfarm.farm.model.entity;
 
 import jakarta.persistence.*;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -17,18 +16,21 @@ public class GoatFarm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nome", nullable = true)
+    @Column(name = "nome", nullable = false)
     private String name;
-    @Column(name = "TOD", nullable = true)
+    @Column(name = "TOD", nullable = false)
     private String tod;
 
     @CreatedDate
-    @Column(name = "criado", nullable = true)
+    @Column(name = "criado", nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(name = "atualizado", nullable = true)
+    @Column(name = "atualizado", nullable = false)
     private LocalDateTime updatedAt;
+
+    public GoatFarm() {
+    }
 
     public GoatFarm(Long id, String name, String tod) {
 

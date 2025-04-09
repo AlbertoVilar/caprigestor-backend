@@ -10,12 +10,15 @@ public class Owner {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "nome", nullable = true)
+    @Column(name = "nome", nullable = false)
     private String name;
     @Column(nullable = false, unique = true)
     private String cpf;
-    @Column(name = "email", nullable = true,  unique = true)
+    @Column(name = "email", nullable =false,  unique = true)
     private String email;
+
+    public Owner() {
+    }
 
     public Owner(Long id, String name, String cpf, String email) {
         this.id = id;

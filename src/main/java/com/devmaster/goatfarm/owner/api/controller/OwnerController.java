@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.owner.api.controller;
 
-
 import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
 import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
 import com.devmaster.goatfarm.owner.facade.OwnerFacade;
@@ -14,36 +13,31 @@ import java.util.List;
 public class OwnerController {
 
     @Autowired
-    OwnerFacade ownerFacade;
+    private OwnerFacade ownerFacade;
 
     @PostMapping
     public OwnerResponseVO createOwner(@RequestBody OwnerRequestVO requestVO) {
-
         return ownerFacade.createOwner(requestVO);
     }
 
     @PutMapping("/{id}")
-    public OwnerResponseVO updateGoatOwner(@PathVariable Long id,
-                                           @RequestBody OwnerRequestVO requestVO) {
-
-        return ownerFacade.updateGoatOwner(id,requestVO);
+    public OwnerResponseVO updateOwner(@PathVariable Long id,
+                                       @RequestBody OwnerRequestVO requestVO) {
+        return ownerFacade.updateGoatOwner(id, requestVO);
     }
 
     @GetMapping("/{id}")
-    public OwnerResponseVO findOwnerById(Long id) {
-
+    public OwnerResponseVO getOwnerById(@PathVariable Long id) {
         return ownerFacade.findOwnerById(id);
     }
 
     @GetMapping
-    public List<OwnerResponseVO> findAllOwners() {
-
+    public List<OwnerResponseVO> getAllOwners() {
         return ownerFacade.findAllOwners();
     }
 
-    @DeleteMapping
-    public String deleteOwner(Long id) {
-
+    @DeleteMapping("/{id}")
+    public String deleteOwner(@PathVariable Long id) {
         return ownerFacade.deleteOwner(id);
     }
 }
