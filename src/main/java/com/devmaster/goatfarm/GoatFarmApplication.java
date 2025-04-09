@@ -1,18 +1,16 @@
-package com.devmaster.GoatFarm;
+package com.devmaster.goatfarm;
 
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
-public class GoatFarmApplication implements CommandLineRunner {
+@EnableJpaAuditing
+public class GoatFarmApplication  {
 
 	public static void main(String[] args) {
 		SpringApplication.run(GoatFarmApplication.class, args);
 	}
 
-	@Override
-	public void run(String... args) throws Exception {
-		System.out.println("Hello World!");
-	}
+
 }
