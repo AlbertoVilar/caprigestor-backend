@@ -18,75 +18,76 @@ import java.time.LocalDate;
 @Table(name = "cabras")
 public class Goat {
 
-    @Id
-    @Column(name = "numero_registro", unique = true, nullable = false, length = 20)
-    private String numeroRegistro;
+        @Id
+        @Column(name = "registration_number", unique = true, nullable = false, length = 20)
+        private String registrationNumber;
 
-    @Column(name = "nome", nullable = false, length = 100)
-    private String nome;
+        @Column(name = "name", nullable = false, length = 100)
+        private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "genero", nullable = false, length = 10)
-    private Gender genero;
+        @Enumerated(EnumType.STRING)
+        @Column(name = "gender", nullable = false, length = 10)
+        private Gender gender;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "raca", length = 50)
-    private GoatBreed breed;
+        @Enumerated(EnumType.STRING)
+        @Column(name = "breed", length = 50)
+        private GoatBreed breed;
 
-    @Column(name = "cor", length = 30)
-    private String cor;
+        @Column(name = "color", length = 30)
+        private String color;
 
-    @Column(name = "data_nascimento", nullable = false)
-    private LocalDate dataNascimento;
+        @Column(name = "birth_date", nullable = false)
+        private LocalDate birthDate;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 15)
-    private GoatStatus status;
+        @Enumerated(EnumType.STRING)
+        @Column(name = "status", nullable = false, length = 15)
+        private GoatStatus status;
 
-    @Column(name = "TOD", length = 15)
-    private String tod;
+        @Column(name = "tod", length = 15)
+        private String tod;
 
-    @Column(name = "TOE", length = 15)
-    private String toe;
+        @Column(name = "toe", length = 15)
+        private String toe;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "categoria", length = 10)
-    private Category categoria;
+        @Enumerated(EnumType.STRING)
+        @Column(name = "category", length = 10)
+        private Category category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pai_id", referencedColumnName = "numero_registro")
-    private Goat pai;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "father_id", referencedColumnName = "registration_number")
+        private Goat father;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mae_id", referencedColumnName = "numero_registro")
-    private Goat mae;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "mother_id", referencedColumnName = "registration_number")
+        private Goat mother;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "capril_id")
-    private GoatFarm capril;
+        @ManyToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "farm_id")
+        private GoatFarm farm;
 
-    public Goat() {
-    }
+        public Goat() {
+        }
 
-    public Goat(String numeroRegistro, String nome,
-                Gender genero, GoatBreed breed,
-                String cor, LocalDate dataNascimento,
-                GoatStatus status, String tod, String toe,
-                Category categoria, Goat pai, Goat mae, GoatFarm capril) {
+        public Goat(String registrationNumber, String name,
+                    Gender gender, GoatBreed breed,
+                    String color, LocalDate birthDate,
+                    GoatStatus status, String tod, String toe,
+                    Category category, Goat father, Goat mother, GoatFarm farm) {
 
-        this.numeroRegistro = numeroRegistro;
-        this.nome = nome;
-        this.genero = genero;
-        this.breed = breed;
-        this.cor = cor;
-        this.dataNascimento = dataNascimento;
-        this.status = status;
-        this.tod = tod;
-        this.toe = toe;
-        this.categoria = categoria;
-        this.pai = pai;
-        this.mae = mae;
-        this.capril = capril;
+            this.registrationNumber = registrationNumber;
+            this.name = name;
+            this.gender = gender;
+            this.breed = breed;
+            this.color = color;
+            this.birthDate = birthDate;
+            this.status = status;
+            this.tod = tod;
+            this.toe = toe;
+            this.category = category;
+            this.father = father;
+            this.mother = mother;
+            this.farm = farm;
+
     }
 
 }
