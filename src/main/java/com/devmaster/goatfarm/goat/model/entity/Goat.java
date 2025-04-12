@@ -19,24 +19,24 @@ import java.time.LocalDate;
 public class Goat {
 
         @Id
-        @Column(name = "registration_number", unique = true, nullable = false, length = 20)
+        @Column(name = "num_registro", unique = true, nullable = false, length = 20)
         private String registrationNumber;
 
-        @Column(name = "name", nullable = false, length = 100)
+        @Column(name = "nome", nullable = false, length = 100)
         private String name;
 
         @Enumerated(EnumType.STRING)
-        @Column(name = "gender", nullable = false, length = 10)
+        @Column(name = "sexo", nullable = false, length = 10)
         private Gender gender;
 
         @Enumerated(EnumType.STRING)
-        @Column(name = "breed", length = 50)
+        @Column(name = "raça", length = 50)
         private GoatBreed breed;
 
-        @Column(name = "color", length = 30)
+        @Column(name = "cor", length = 30)
         private String color;
 
-        @Column(name = "birth_date", nullable = false)
+        @Column(name = "nascimento", nullable = false)
         private LocalDate birthDate;
 
         @Enumerated(EnumType.STRING)
@@ -50,19 +50,19 @@ public class Goat {
         private String toe;
 
         @Enumerated(EnumType.STRING)
-        @Column(name = "category", length = 10)
+        @Column(name = "categoria", length = 10)
         private Category category;
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "father_id", referencedColumnName = "registration_number")
+        @JoinColumn(name = "pai_id", referencedColumnName = "num_registro")
         private Goat father;
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "mother_id", referencedColumnName = "registration_number")
+        @JoinColumn(name = "mae_id", referencedColumnName = "num_registro")
         private Goat mother;
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "farm_id")
+        @JoinColumn(name = "capril_id")
         private GoatFarm farm;
 
         public Goat() {
@@ -88,6 +88,14 @@ public class Goat {
             this.mother = mother;
             this.farm = farm;
 
+    }
+
+    @Override
+    public String toString() {
+        return "Goat{" +
+                "registrationNumber='" + registrationNumber + '\'' +
+                ", name='" + name + '\'' +
+                '}';
     }
 
 }

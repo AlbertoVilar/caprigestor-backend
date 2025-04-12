@@ -34,13 +34,32 @@ public class GoatResponseVO {
     private String farmName;
 
     public GoatResponseVO(String registrationNumber,
-                           String name, Gender gender,
-                           GoatBreed breed, String color,
-                           LocalDate birthDate, GoatStatus status,
-                           String tod, String toe, Category category,
-                           String fatherName, String fatherRegistrationNumber,
-                           String motherName, String motherRegistrationNumber,
-                           Long farmId, String farmName) {
+                          String name, Gender gender,
+                          GoatBreed breed, String color,
+                          LocalDate birthDate, GoatStatus status,
+                          String tod, String toe, Category category,
+                          String fatherName, String fatherRegistrationNumber,
+                          String motherName, String motherRegistrationNumber,
+                          Long farmId, String farmName) {
+
+        this.registrationNumber = registrationNumber;
+        this.name = name;
+        this.gender = gender;
+        this.breed = breed;
+        this.color = color;
+        this.birthDate = birthDate;
+        this.status = status;
+        this.tod = tod;
+        this.toe = toe;
+        this.category = category;
+
+        this.fatherName = fatherName;
+        this.fatherRegistrationNumber = fatherRegistrationNumber;
+        this.motherName = motherName;
+        this.motherRegistrationNumber = motherRegistrationNumber;
+        this.farmId = farmId;
+        this.farmName = farmName;
     }
+
 
 }

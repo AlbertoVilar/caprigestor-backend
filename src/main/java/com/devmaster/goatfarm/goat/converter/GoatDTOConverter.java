@@ -30,6 +30,28 @@ public class GoatDTOConverter {
         );
     }
 
+    public static GoatRequestDTO toRequestDTO(GoatRequestVO goatRequesVO) {
+       
+        return new GoatRequestDTO(
+                goatRequesVO.getRegistrationNumber(),
+                goatRequesVO.getName(),
+                goatRequesVO.getGender(),
+                goatRequesVO.getBreed(),
+                goatRequesVO.getColor(),
+                goatRequesVO.getBirthDate(),
+                goatRequesVO.getStatus(),
+                goatRequesVO.getTod(),
+                goatRequesVO.getToe(),
+                goatRequesVO.getCategory(),
+                goatRequesVO.getFatherName(),
+                goatRequesVO.getFatherRegistrationNumber(),
+                goatRequesVO.getMotherName(),
+                goatRequesVO.getMotherRegistrationNumber(),
+                goatRequesVO.getFarmId(),
+                goatRequesVO.getFarmName()
+        );
+    }
+
     public static GoatResponseDTO toResponseDTO(GoatResponseVO vo) {
         return new GoatResponseDTO(
                 vo.getRegistrationNumber(),

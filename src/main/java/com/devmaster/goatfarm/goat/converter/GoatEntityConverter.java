@@ -4,11 +4,13 @@ import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Component;
 
 @Component
 public class GoatEntityConverter {
 
+    @Transactional
     public static Goat toEntity(GoatRequestVO requestVO,
                                 Goat father, Goat mother,
                                 GoatFarm goatFarm) {
@@ -32,6 +34,7 @@ public class GoatEntityConverter {
         );
     }
 
+    @Transactional
     public static void updateGoatEntity(Goat goatToUpdate,
                                         GoatRequestVO requestVO,
                                         Goat father,
@@ -54,6 +57,7 @@ public class GoatEntityConverter {
 
 
 
+    @Transactional
     public static GoatResponseVO toResponseVO(Goat goat) {
         return new GoatResponseVO(
                 goat.getRegistrationNumber(),

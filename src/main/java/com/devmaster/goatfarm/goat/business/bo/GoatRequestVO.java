@@ -33,6 +33,9 @@ public class GoatRequestVO {
     private Long farmId;
     private String farmName;
 
+    public GoatRequestVO() {
+    }
+
     public GoatRequestVO(String registrationNumber,
                          String name, Gender gender,
                          GoatBreed breed, String color,
@@ -41,6 +44,23 @@ public class GoatRequestVO {
                          String fatherName, String fatherRegistrationNumber,
                          String motherName, String motherRegistrationNumber,
                          Long farmId, String farmName) {
+        this.registrationNumber = registrationNumber;
+        this.name = name;
+        this.gender = gender;
+        this.breed = breed;
+        this.color = color;
+        this.birthDate = birthDate;
+        this.status = status;
+        this.tod = tod;
+        this.toe = toe;
+        this.category = category;
+        this.fatherName = fatherName;
+        this.fatherRegistrationNumber = fatherRegistrationNumber;
+        this.motherName = motherName;
+        this.motherRegistrationNumber = motherRegistrationNumber;
+        this.farmId = farmId;
+        this.farmName = farmName;
     }
+
 
 }
