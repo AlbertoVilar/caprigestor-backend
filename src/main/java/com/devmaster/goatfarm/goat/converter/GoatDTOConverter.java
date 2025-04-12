@@ -21,12 +21,12 @@ public class GoatDTOConverter {
                 dto.getTod(),
                 dto.getToe(),
                 dto.getCategory(),
-                dto.getFatherName(),
+
                 dto.getFatherRegistrationNumber(),
-                dto.getMotherName(),
                 dto.getMotherRegistrationNumber(),
-                dto.getFarmId(),
-                dto.getFarmName()
+
+                dto.getFarmId()
+
         );
     }
 
@@ -43,12 +43,12 @@ public class GoatDTOConverter {
                 goatRequesVO.getTod(),
                 goatRequesVO.getToe(),
                 goatRequesVO.getCategory(),
-                goatRequesVO.getFatherName(),
+
                 goatRequesVO.getFatherRegistrationNumber(),
-                goatRequesVO.getMotherName(),
                 goatRequesVO.getMotherRegistrationNumber(),
-                goatRequesVO.getFarmId(),
-                goatRequesVO.getFarmName()
+
+                goatRequesVO.getFarmId()
+
         );
     }
 

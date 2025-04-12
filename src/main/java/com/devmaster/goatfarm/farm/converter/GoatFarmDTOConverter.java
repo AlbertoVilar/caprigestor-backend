@@ -27,7 +27,6 @@ public class GoatFarmDTOConverter {
     public static GoatFarmRequestDTO fromGoatRequestDTO(GoatRequestDTO goatRequestDTO) {
         return new GoatFarmRequestDTO(
                 goatRequestDTO.getFarmId(),
-                goatRequestDTO.getFarmName(),
                 goatRequestDTO.getTod()
         );
     }

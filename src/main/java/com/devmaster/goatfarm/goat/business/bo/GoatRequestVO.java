@@ -24,14 +24,12 @@ public class GoatRequestVO {
     private String toe;
     private Category category;
 
-    private String fatherName;
     private String fatherRegistrationNumber;
 
-    private String motherName;
     private String motherRegistrationNumber;
 
     private Long farmId;
-    private String farmName;
+
 
     public GoatRequestVO() {
     }
@@ -39,11 +37,14 @@ public class GoatRequestVO {
     public GoatRequestVO(String registrationNumber,
                          String name, Gender gender,
                          GoatBreed breed, String color,
-                         LocalDate birthDate, GoatStatus status,
-                         String tod, String toe, Category category,
-                         String fatherName, String fatherRegistrationNumber,
-                         String motherName, String motherRegistrationNumber,
-                         Long farmId, String farmName) {
+                         LocalDate birthDate,
+                         GoatStatus status,
+                         String tod,
+                         String toe,
+                         Category category,
+                         String fatherRegistrationNumber,
+                         String motherRegistrationNumber, Long farmId) {
+
         this.registrationNumber = registrationNumber;
         this.name = name;
         this.gender = gender;
@@ -54,12 +55,9 @@ public class GoatRequestVO {
         this.tod = tod;
         this.toe = toe;
         this.category = category;
-        this.fatherName = fatherName;
         this.fatherRegistrationNumber = fatherRegistrationNumber;
-        this.motherName = motherName;
         this.motherRegistrationNumber = motherRegistrationNumber;
         this.farmId = farmId;
-        this.farmName = farmName;
     }
 
 

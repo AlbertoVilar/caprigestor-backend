@@ -6,10 +6,19 @@ public class GoatFarmRequestDTO {
     private String name;
     private String tod;
 
+
+    public GoatFarmRequestDTO() {
+    }
+
     public GoatFarmRequestDTO(Long id, String name, String tod) {
 
         this.id = id;
         this.name = name;
+        this.tod = tod;
+    }
+
+    public GoatFarmRequestDTO(Long farmId, String tod) {
+        this.id = farmId;
         this.tod = tod;
     }
 

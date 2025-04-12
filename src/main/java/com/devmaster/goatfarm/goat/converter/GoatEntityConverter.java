@@ -30,6 +30,7 @@ public class GoatEntityConverter {
 
                 father,
                 mother,
+
                 goatFarm
         );
     }

@@ -6,9 +6,18 @@ public class GoatFarmRequestVO {
     private String name;
     private String tod;
 
+
+    public GoatFarmRequestVO() {
+    }
+
     public GoatFarmRequestVO(Long id, String name, String tod) {
         this.id = id;
         this.name = name;
+        this.tod = tod;
+    }
+
+    public GoatFarmRequestVO(Long id, String tod) {
+        this.id = id;
         this.tod = tod;
     }
 
