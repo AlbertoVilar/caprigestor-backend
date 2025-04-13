@@ -6,7 +6,9 @@ import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.owner.model.entity.Owner;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +16,7 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
+@AllArgsConstructor
 @Entity
 @Table(name = "cabras")
 public class Goat {
@@ -61,6 +64,10 @@ public class Goat {
         @JoinColumn(name = "mae_id", referencedColumnName = "num_registro")
         private Goat mother;
 
+        @ManyToOne
+        @JoinColumn(name = "owner_id")
+        private Owner owner;
+
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "capril_id")
         private GoatFarm farm;
@@ -68,27 +75,7 @@ public class Goat {
         public Goat() {
         }
 
-        public Goat(String registrationNumber, String name,
-                    Gender gender, GoatBreed breed,
-                    String color, LocalDate birthDate,
-                    GoatStatus status, String tod, String toe,
-                    Category category, Goat father, Goat mother, GoatFarm farm) {
 
-            this.registrationNumber = registrationNumber;
-            this.name = name;
-            this.gender = gender;
-            this.breed = breed;
-            this.color = color;
-            this.birthDate = birthDate;
-            this.status = status;
-            this.tod = tod;
-            this.toe = toe;
-            this.category = category;
-            this.father = father;
-            this.mother = mother;
-            this.farm = farm;
-
-    }
 
     @Override
     public String toString() {

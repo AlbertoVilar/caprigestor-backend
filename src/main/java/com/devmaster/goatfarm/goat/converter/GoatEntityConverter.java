@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.owner.model.entity.Owner;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Component;
 
@@ -13,10 +14,11 @@ public class GoatEntityConverter {
     @Transactional
     public static Goat toEntity(GoatRequestVO requestVO,
                                 Goat father, Goat mother,
-                                GoatFarm goatFarm) {
+                                Owner owner,  // Incluindo o owner como parâmetro
+                                GoatFarm goatFarm  // Garantir que goatFarm seja passado corretamente
+                               ) {
 
         return new Goat(
-
                 requestVO.getRegistrationNumber(),
                 requestVO.getName(),
                 requestVO.getGender(),
@@ -27,13 +29,14 @@ public class GoatEntityConverter {
                 requestVO.getTod(),
                 requestVO.getToe(),
                 requestVO.getCategory(),
-
                 father,
                 mother,
-
+                owner, // Atribuindo o owner à cabra
                 goatFarm
+
         );
     }
+
 
     @Transactional
     public static void updateGoatEntity(Goat goatToUpdate,
@@ -56,8 +59,6 @@ public class GoatEntityConverter {
         goatToUpdate.setFarm(goatFarm);
     }
 
-
-
     @Transactional
     public static GoatResponseVO toResponseVO(Goat goat) {
         return new GoatResponseVO(
@@ -78,10 +79,12 @@ public class GoatEntityConverter {
                 goat.getMother() != null ? goat.getMother().getName() : null,
                 goat.getMother() != null ? goat.getMother().getRegistrationNumber() : null,
 
+                goat.getOwner() != null ? goat.getOwner().getName() : null, // Incluindo o nome do proprietário
+
                 goat.getFarm() != null ? goat.getFarm().getId() : null,
                 goat.getFarm() != null ? goat.getFarm().getName() : null
+
         );
     }
-
 
 }

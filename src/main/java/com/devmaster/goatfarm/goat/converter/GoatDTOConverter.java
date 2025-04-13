@@ -1,9 +1,7 @@
 package com.devmaster.goatfarm.goat.converter;
 
-
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
-
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 
@@ -21,34 +19,29 @@ public class GoatDTOConverter {
                 dto.getTod(),
                 dto.getToe(),
                 dto.getCategory(),
-
                 dto.getFatherRegistrationNumber(),
                 dto.getMotherRegistrationNumber(),
-
-                dto.getFarmId()
-
+                dto.getFarmId(),
+                dto.getOwnerId() // <-- adicionado aqui
         );
     }
 
-    public static GoatRequestDTO toRequestDTO(GoatRequestVO goatRequesVO) {
-       
+    public static GoatRequestDTO toRequestDTO(GoatRequestVO vo) {
         return new GoatRequestDTO(
-                goatRequesVO.getRegistrationNumber(),
-                goatRequesVO.getName(),
-                goatRequesVO.getGender(),
-                goatRequesVO.getBreed(),
-                goatRequesVO.getColor(),
-                goatRequesVO.getBirthDate(),
-                goatRequesVO.getStatus(),
-                goatRequesVO.getTod(),
-                goatRequesVO.getToe(),
-                goatRequesVO.getCategory(),
-
-                goatRequesVO.getFatherRegistrationNumber(),
-                goatRequesVO.getMotherRegistrationNumber(),
-
-                goatRequesVO.getFarmId()
-
+                vo.getRegistrationNumber(),
+                vo.getName(),
+                vo.getGender(),
+                vo.getBreed(),
+                vo.getColor(),
+                vo.getBirthDate(),
+                vo.getStatus(),
+                vo.getTod(),
+                vo.getToe(),
+                vo.getCategory(),
+                vo.getFatherRegistrationNumber(),
+                vo.getMotherRegistrationNumber(),
+                vo.getFarmId(),
+                vo.getOwnerId() // <-- adicionado aqui
         );
     }
 
@@ -68,6 +61,7 @@ public class GoatDTOConverter {
                 vo.getFatherRegistrationNumber(),
                 vo.getMotherName(),
                 vo.getMotherRegistrationNumber(),
+                vo.getOwnerName(),
                 vo.getFarmId(),
                 vo.getFarmName()
         );

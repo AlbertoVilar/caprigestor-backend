@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +13,8 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
+@AllArgsConstructor
+@Builder
 public class GoatRequestVO {
 
     private String registrationNumber;
@@ -25,39 +29,12 @@ public class GoatRequestVO {
     private Category category;
 
     private String fatherRegistrationNumber;
-
     private String motherRegistrationNumber;
 
     private Long farmId;
-
+    private Long ownerId;
 
     public GoatRequestVO() {
-    }
-
-    public GoatRequestVO(String registrationNumber,
-                         String name, Gender gender,
-                         GoatBreed breed, String color,
-                         LocalDate birthDate,
-                         GoatStatus status,
-                         String tod,
-                         String toe,
-                         Category category,
-                         String fatherRegistrationNumber,
-                         String motherRegistrationNumber, Long farmId) {
-
-        this.registrationNumber = registrationNumber;
-        this.name = name;
-        this.gender = gender;
-        this.breed = breed;
-        this.color = color;
-        this.birthDate = birthDate;
-        this.status = status;
-        this.tod = tod;
-        this.toe = toe;
-        this.category = category;
-        this.fatherRegistrationNumber = fatherRegistrationNumber;
-        this.motherRegistrationNumber = motherRegistrationNumber;
-        this.farmId = farmId;
     }
 
 

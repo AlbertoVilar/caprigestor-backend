@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +13,8 @@ import java.time.LocalDate;
 
 @Getter
 @Setter
+@AllArgsConstructor
+@Builder
 public class GoatResponseDTO {
 
     private String registrationNumber;
@@ -30,35 +34,9 @@ public class GoatResponseDTO {
     private String motherName;
     private String motherRegistrationNumber;
 
+    private String ownerName;  // <-- Novo campo para o nome do proprietário
+
     private Long farmId;
     private String farmName;
 
-    public GoatResponseDTO(String registrationNumber,
-                           String name, Gender gender,
-                           GoatBreed breed, String color,
-                           LocalDate birthDate, GoatStatus status,
-                           String tod, String toe, Category category,
-                           String fatherName, String fatherRegistrationNumber,
-                           String motherName, String motherRegistrationNumber,
-                           Long farmId, String farmName) {
-
-        this.registrationNumber = registrationNumber;
-        this.name = name;
-        this.gender = gender;
-        this.breed = breed;
-        this.color = color;
-        this.birthDate = birthDate;
-        this.status = status;
-        this.tod = tod;
-        this.toe = toe;
-        this.category = category;
-
-        this.fatherName = fatherName;
-        this.fatherRegistrationNumber = fatherRegistrationNumber;
-        this.motherName = motherName;
-        this.motherRegistrationNumber = motherRegistrationNumber;
-
-        this.farmId = farmId;
-        this.farmName = farmName;
-    }
-}
+   }

@@ -23,7 +23,6 @@ public class OwnerEntityConverter {
 
     public static void entityUpdate(Owner owner, OwnerRequestVO requestVO) {
 
-        owner.setId(requestVO.getId());
         owner.setName(requestVO.getName());
         owner.setCpf(requestVO.getCpf());
         owner.setEmail(requestVO.getEmail());

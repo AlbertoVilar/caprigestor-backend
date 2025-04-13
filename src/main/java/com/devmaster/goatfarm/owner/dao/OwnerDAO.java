@@ -23,16 +23,13 @@ public class OwnerDAO {
 
     public OwnerResponseVO createOwner(OwnerRequestVO requestVO) {
 
-        if (requestVO != null) {
-
-            Owner owner = OwnerEntityConverter.toEntity(requestVO);
-            owner = ownerRepository.save(owner);
-
-            return OwnerEntityConverter.toVO(owner);
-
-        } else {
-            return null;
+        if (requestVO == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Owner request cannot be null");
         }
+
+        Owner owner = OwnerEntityConverter.toEntity(requestVO);
+        owner = ownerRepository.save(owner);
+        return OwnerEntityConverter.toVO(owner);
 
     }
     public OwnerResponseVO updateGoatOwner(Long id, OwnerRequestVO requestVO) {

@@ -12,6 +12,7 @@ public class OwnerDTOConverter {
     public static OwnerResponseDTO toDTO(OwnerResponseVO responseVO) {
 
         return new OwnerResponseDTO(
+
                 responseVO.getId(),
                 responseVO.getName(),
                 responseVO.getCpf(),
@@ -23,7 +24,7 @@ public class OwnerDTOConverter {
 
         return new OwnerRequestVO(
 
-                requestDTO.getId(),
+
                 requestDTO.getName(),
                 requestDTO.getCpf(),
                 requestDTO.getEmail()
