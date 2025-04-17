@@ -63,7 +63,7 @@ public class GenealogyEntityConverter {
                 vo.getMaternalGreatGrandfather2Name(),
                 vo.getMaternalGreatGrandfather2Registration(),
                 vo.getMaternalGreatGrandmother2Name(),
-                vo.getMaternalGreatGrandmother2Registration() 
+                vo.getMaternalGreatGrandmother2Registration()
         );
     }
 
@@ -124,4 +124,6 @@ public class GenealogyEntityConverter {
 
                 .build();
     }
+
+
 }
