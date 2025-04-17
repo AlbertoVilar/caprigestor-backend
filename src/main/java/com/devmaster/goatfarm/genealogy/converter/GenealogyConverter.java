@@ -8,12 +8,44 @@ import org.springframework.stereotype.Service;
 @Service
 public class GenealogyConverter {
 
-    // Método auxiliar para preencher os avós e bisavós
+    @Transactional
+    public GenealogyResponseVO buildGenealogyFromGoat(Goat goat) {
+        GenealogyResponseVO genealogy = new GenealogyResponseVO();
+
+        genealogy.setGoatName(goat.getName());
+        genealogy.setGoatRegistration(goat.getRegistrationNumber());
+        genealogy.setBreeder(goat.getFarm() != null ? goat.getFarm().getName() : null);
+        genealogy.setOwner(goat.getOwner() != null ? goat.getOwner().getName() : null);
+        genealogy.setBreed(goat.getBreed() != null ? goat.getBreed().name() : null);
+        genealogy.setColor(goat.getColor());
+        genealogy.setStatus(goat.getStatus() != null ? goat.getStatus().name() : null);
+        genealogy.setGender(goat.getGender() != null ? goat.getGender().name() : null);
+        genealogy.setCategory(goat.getCategory() != null ? goat.getCategory().name() : null);
+        genealogy.setTod(goat.getTod());
+        genealogy.setToe(goat.getToe());
+        genealogy.setBirthDate(goat.getBirthDate() != null ? goat.getBirthDate().toString() : null);
+
+        if (goat.getFather() != null) {
+            genealogy.setFatherName(goat.getFather().getName());
+            genealogy.setFatherRegistration(goat.getFather().getRegistrationNumber());
+        }
+
+        if (goat.getMother() != null) {
+            genealogy.setMotherName(goat.getMother().getName());
+            genealogy.setMotherRegistration(goat.getMother().getRegistrationNumber());
+        }
+
+        fillGrandparentsAndGreatGrandparents(goat, genealogy, "father");
+        fillGrandparentsAndGreatGrandparents(goat, genealogy, "mother");
+
+        return genealogy;
+    }
+
     private void fillGrandparentsAndGreatGrandparents(Goat goat, GenealogyResponseVO genealogy, String side) {
         Goat parent = side.equals("father") ? goat.getFather() : goat.getMother();
 
         if (parent != null) {
-            // Avós
+            // Avô
             Goat grandfather = parent.getFather();
             if (grandfather != null) {
                 if (side.equals("father")) {
@@ -23,10 +55,10 @@ public class GenealogyConverter {
                     genealogy.setMaternalGrandfatherName(grandfather.getName());
                     genealogy.setMaternalGrandfatherRegistration(grandfather.getRegistrationNumber());
                 }
-
                 fillGreatGrandparents(grandfather, genealogy, side, 1);
             }
 
+            // Avó
             Goat grandmother = parent.getMother();
             if (grandmother != null) {
                 if (side.equals("father")) {
@@ -36,13 +68,11 @@ public class GenealogyConverter {
                     genealogy.setMaternalGrandmotherName(grandmother.getName());
                     genealogy.setMaternalGrandmotherRegistration(grandmother.getRegistrationNumber());
                 }
-
                 fillGreatGrandparents(grandmother, genealogy, side, 2);
             }
         }
     }
 
-    // Método auxiliar para preencher os bisavós
     private void fillGreatGrandparents(Goat grandparent, GenealogyResponseVO genealogy, String side, int index) {
         Goat greatGrandfather = grandparent.getFather();
         if (greatGrandfather != null) {
@@ -85,30 +115,5 @@ public class GenealogyConverter {
                 }
             }
         }
-    }
-
-    // Método para construir o pedigree completo
-    @Transactional
-    public GenealogyResponseVO buildGenealogyFromGoat(Goat goat) {
-        GenealogyResponseVO genealogy = new GenealogyResponseVO();
-
-        genealogy.setGoatName(goat.getName());
-        genealogy.setGoatRegistration(goat.getRegistrationNumber());
-        genealogy.setBreeder(goat.getFarm() != null ? goat.getFarm().getName() : null);
-        genealogy.setOwner(goat.getOwner() != null ? goat.getOwner().getName() : null);
-        genealogy.setBreed(goat.getBreed() != null ? goat.getBreed().name() : null);
-        genealogy.setColor(goat.getColor());
-        genealogy.setStatus(goat.getStatus() != null ? goat.getStatus().name() : null);
-        genealogy.setGender(goat.getGender() != null ? goat.getGender().name() : null);
-        genealogy.setCategory(goat.getCategory() != null ? goat.getCategory().name() : null);
-        genealogy.setTod(goat.getTod());
-        genealogy.setToe(goat.getToe());
-        genealogy.setBirthDate(goat.getBirthDate() != null ? goat.getBirthDate().toString() : null);
-
-
-        fillGrandparentsAndGreatGrandparents(goat, genealogy, "father");
-        fillGrandparentsAndGreatGrandparents(goat, genealogy, "mother");
-
-        return genealogy;
     }
 }

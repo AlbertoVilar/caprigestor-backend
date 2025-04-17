@@ -23,5 +23,6 @@ INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, cap
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('2114517012', 'NAIDE DO CRS', 'FEMALE', 'Alpina', 'Indefinida', '2017-01-01', 'ATIVO', 1, 1, '1650113018', '2114513061');
 
 -- Inserir dados na tabela 'cabras' (FILHOS)
-INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('1643218012', 'XEQUE V DO CAPRIL VILAR', 'MALE', 'Alpina', 'CHAMOISÉE', '2018-06-27', 'ATIVO', 1, 1, '1635717065', '2114517012');
+INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id, tod, toe, categoria) VALUES ('1643218012', 'XEQUE V DO CAPRIL VILAR', 'MALE', 'Alpina', 'CHAMOISÉE', '2018-06-27', 'ATIVO', 1, 1, '1635717065', '2114517012', '16432', '18012', 'PO');
+
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('1643218013', 'IRMÃO DO XEQUE', 'FEMALE', 'Alpina', 'CHAMOISÉE', '2020-01-01', 'ATIVO', 1, 1, '1635717065', '2114517012');
