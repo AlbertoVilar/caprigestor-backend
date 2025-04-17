@@ -33,7 +33,7 @@ public class Goat {
         private Gender gender;
 
         @Enumerated(EnumType.STRING)
-        @Column(name = "raça", length = 50)
+        @Column(name = "raca", length = 50)
         private GoatBreed breed;
 
         @Column(name = "cor", length = 30)

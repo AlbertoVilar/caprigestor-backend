@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.goat.enums;
 
 public enum GoatStatus {
-    ACTIVE,
+    ATIVO,
     INACTIVE,
     DECEASED,
     SOLD

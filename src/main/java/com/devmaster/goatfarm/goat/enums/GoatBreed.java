@@ -6,7 +6,7 @@ public enum GoatBreed {
     BOER,
     MESTIÇA,
     MURCIANA_GRANADINA,
-    PARD_ALPINA,
+    ALPINA,
     SAANEN,
     TOGGENBURG
 }
