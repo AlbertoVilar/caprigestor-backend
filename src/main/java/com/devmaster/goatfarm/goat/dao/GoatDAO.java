@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.goat.dao;
 
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
@@ -8,8 +8,6 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.converter.GoatEntityConverter;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
-import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
 import com.devmaster.goatfarm.owner.model.entity.Owner;
 import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -96,8 +94,8 @@ public class GoatDAO {
     @Transactional
     public GoatResponseVO findGoatById(String registrationNumber) {
         Goat goat = goatRepository.findByRegistrationNumber(registrationNumber)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Goat not found with registration number: " + registrationNumber));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Animal com registro " + registrationNumber + " não encontrada."));
 
         return GoatEntityConverter.toResponseVO(goat);
     }

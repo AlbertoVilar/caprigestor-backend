@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.goat.converter.GoatDTOConverter;
 import com.devmaster.goatfarm.goat.facade.GoatFacade;
 import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;  // Corrigido para OwnerResponseVO
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -49,8 +50,9 @@ public class GoatController {
     }
 
     @GetMapping("/{registrationNumber}")
-    public GoatResponseDTO findByRegistrationNumber(@PathVariable String registrationNumber) {
-        return GoatDTOConverter.toResponseDTO(goatFacade.findGoatByRegistrationNumber(registrationNumber));
+    public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(@PathVariable String registrationNumber) {
+        return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
+                goatFacade.findGoatByRegistrationNumber(registrationNumber)));
     }
 
     // DELETE

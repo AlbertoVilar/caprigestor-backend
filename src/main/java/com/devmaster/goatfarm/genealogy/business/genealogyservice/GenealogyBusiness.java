@@ -11,8 +11,8 @@ public class GenealogyBusiness {
     @Autowired
     private GenealogyDAO genealogyDAO;
 
-    public GenealogyResponseVO buildGenealogy(String goatRegistrationNumber) {
+    public GenealogyResponseVO findGenealogy(String goatRegistrationNumber) {
 
-        return genealogyDAO.buildGenealogy(goatRegistrationNumber);
+        return genealogyDAO.findGenealogy(goatRegistrationNumber);
     }
 }

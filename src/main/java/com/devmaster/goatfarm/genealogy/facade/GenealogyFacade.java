@@ -11,9 +11,9 @@ public class GenealogyFacade {
     @Autowired
     private GenealogyBusiness genealogyBusiness;
 
-    public GenealogyResponseVO buildGenealogy(String goatRegistrationNumber) {
+    public GenealogyResponseVO findGenealogy(String goatRegistrationNumber) {
 
-        return genealogyBusiness.buildGenealogy(goatRegistrationNumber);
+        return genealogyBusiness.findGenealogy(goatRegistrationNumber);
     }
 }
 
