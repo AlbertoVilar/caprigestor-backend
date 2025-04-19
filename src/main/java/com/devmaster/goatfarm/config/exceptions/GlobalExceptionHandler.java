@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.exceptions;
 
 import com.devmaster.goatfarm.config.exceptions.custom.CustomError;
+import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,5 +23,17 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(err);
+    }
+
+    //Cuda dos erros de integridade
+    @ExceptionHandler(DatabaseException.class)
+    public ResponseEntity<CustomError> handleDatabase(DatabaseException ex, WebRequest request) {
+        CustomError err = new CustomError(
+                Instant.now(),
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
     }
 }

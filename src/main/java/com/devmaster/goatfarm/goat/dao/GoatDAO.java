@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.goat.dao;
 
+import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
@@ -11,9 +12,11 @@ import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
 import com.devmaster.goatfarm.owner.model.entity.Owner;
 import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -109,12 +112,19 @@ public class GoatDAO {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.SUPPORTS)
     public void deleteGoat(String registrationNumber) {
         if (!goatRepository.existsById(registrationNumber)) {
-            throw new EntityNotFoundException("Goat with registration number " + registrationNumber + " not found.");
+            throw new ResourceNotFoundException("Númro de Registro " + registrationNumber + " não encontrado.");
+        }
+        try {
+            goatRepository.deleteById(registrationNumber);
+
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException("Não pode deletar animal com número de registro "
+                    + registrationNumber + " porque ele é referenciado por outro animal.");
         }
 
-        goatRepository.deleteById(registrationNumber);
+
     }
 }

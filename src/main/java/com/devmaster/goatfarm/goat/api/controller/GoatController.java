@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.goat.converter.GoatDTOConverter;
 import com.devmaster.goatfarm.goat.facade.GoatFacade;
 import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;  // Corrigido para OwnerResponseVO
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class GoatController {
 
     // CREATE
     @PostMapping
-    public GoatResponseDTO createGoat(@RequestBody GoatRequestDTO goatRequestDTO) {
+    public GoatResponseDTO createGoat(@Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
         Long farmId = goatRequestDTO.getFarmId(); // Extrai o ID da fazenda do DTO
         Long ownerId = goatRequestDTO.getOwnerId(); // Extrai o ID do proprietário do DTO
