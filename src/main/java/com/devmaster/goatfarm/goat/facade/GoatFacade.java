@@ -35,8 +35,8 @@ public class GoatFacade {
     }
 
     // UPDATE
-    public GoatResponseVO updateGoat(GoatRequestVO goatRequestVO) {
-        return goatBusiness.updateGoat(goatRequestVO);
+    public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO goatRequestVO) {
+        return goatBusiness.updateGoat(numRegistration, goatRequestVO);
     }
 
     // DELETE

@@ -60,35 +60,36 @@ public class GoatDAO {
     }
 
     @Transactional
-    public GoatResponseVO updateGoat(GoatRequestVO requestVO) {
-        // Usando findById para obter a entidade
-        Goat goatToUpdate = goatRepository.findById(requestVO.getRegistrationNumber())
-                .orElseThrow(() -> new EntityNotFoundException("Goat not found"));
+    public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {
+        // Troquei para getReferenceById para obter a entidade
+        try {
+            Goat goatToUpdate = goatRepository.getReferenceById(numRegistration);
+            Goat father = null;
+            Goat mother = null;
+            GoatFarm farm = null;
 
-        Goat father = null;
-        Goat mother = null;
-        GoatFarm farm = null;
+            if (requestVO.getFatherRegistrationNumber() != null) {
+                father = goatRepository.findById(requestVO.getFatherRegistrationNumber())
+                        .orElse(null);
+            }
+            if (requestVO.getMotherRegistrationNumber() != null) {
+                mother = goatRepository.findById(requestVO.getMotherRegistrationNumber())
+                        .orElse(null);
+            }
+            if (requestVO.getFarmId() != null) {
+                farm = goatFarmRepository.findById(requestVO.getFarmId())
+                        .orElse(null);
+            }
+            // Atualizando a cabra
+            GoatEntityConverter.updateGoatEntity(goatToUpdate, requestVO, father, mother, farm);
+            goatRepository.save(goatToUpdate);
 
-        if (requestVO.getFatherRegistrationNumber() != null) {
-            father = goatRepository.findById(requestVO.getFatherRegistrationNumber())
-                    .orElse(null);
+            return GoatEntityConverter.toResponseVO(goatToUpdate);
+
+        } catch (EntityNotFoundException e) {
+            throw new ResourceNotFoundException("Id " + numRegistration + " não encontrado");
         }
 
-        if (requestVO.getMotherRegistrationNumber() != null) {
-            mother = goatRepository.findById(requestVO.getMotherRegistrationNumber())
-                    .orElse(null);
-        }
-
-        if (requestVO.getFarmId() != null) {
-            farm = goatFarmRepository.findById(requestVO.getFarmId())
-                    .orElse(null);
-        }
-
-        // Atualizando a cabra
-        GoatEntityConverter.updateGoatEntity(goatToUpdate, requestVO, father, mother, farm);
-        goatRepository.save(goatToUpdate);
-
-        return GoatEntityConverter.toResponseVO(goatToUpdate);
     }
 
     @Transactional

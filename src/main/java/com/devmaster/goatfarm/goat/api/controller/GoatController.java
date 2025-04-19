@@ -35,10 +35,11 @@ public class GoatController {
 
 
     // UPDATE
-    @PutMapping
-    public GoatResponseDTO updateGoat(@RequestBody GoatRequestDTO goatRequestDTO) {
+    @PutMapping(value = "/{registrationNumber}")
+    public GoatResponseDTO updateGoat(@PathVariable String registrationNumber,
+                                      @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
-        return GoatDTOConverter.toResponseDTO(goatFacade.updateGoat(requestVO));
+        return GoatDTOConverter.toResponseDTO(goatFacade.updateGoat(registrationNumber, requestVO));
     }
 
     // READ

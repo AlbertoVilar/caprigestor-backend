@@ -33,8 +33,8 @@ public class GoatBusiness {
     }
 
     // UPDATE
-    public GoatResponseVO updateGoat(GoatRequestVO requestVO) {
-        return goatDAO.updateGoat(requestVO);
+    public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {
+        return goatDAO.updateGoat(numRegistration, requestVO);
     }
 
 
