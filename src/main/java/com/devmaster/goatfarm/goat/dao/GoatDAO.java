@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.dao;
 
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
+import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
@@ -36,6 +37,10 @@ public class GoatDAO {
     @Transactional
     public GoatResponseVO createGoat(GoatRequestVO requestVO, Long ownerId, Long farmId) {
 
+      if(goatRepository.existsById(requestVO.getRegistrationNumber())) {
+          throw new DuplicateEntityException("Este registro " + requestVO.getRegistrationNumber() +
+                                            " já está cadastrado.");
+      }
         // Verificação de existência de pai e mãe
         Goat father = null;
         if (requestVO.getFatherRegistrationNumber() != null) {
@@ -49,11 +54,13 @@ public class GoatDAO {
 
         // Verificando se o proprietário existe
         Owner owner = ownerRepository.findById(ownerId)
-                .orElseThrow(() -> new EntityNotFoundException("Owner not found with id: " + ownerId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Elemento com registro " + ownerId + " não encontrado."));
 
         // Verificando se a fazenda existe
         GoatFarm farm = goatFarmRepository.findById(farmId)
-                .orElseThrow(() -> new EntityNotFoundException("Goat farm not found with id: " + farmId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Capril com registro " + farmId + " não encontrada."));
 
         // Convertendo e salvando a cabra
         Goat goat = GoatEntityConverter.toEntity(requestVO, father, mother, owner, farm);

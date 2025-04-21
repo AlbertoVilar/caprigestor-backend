@@ -1,9 +1,6 @@
 package com.devmaster.goatfarm.config.exceptions;
 
-import com.devmaster.goatfarm.config.exceptions.custom.CustomError;
-import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.config.exceptions.custom.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -39,6 +36,18 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
     }
+
+    @ExceptionHandler(DuplicateEntityException.class)
+    public ResponseEntity<CustomError> DuplicateEntity(DuplicateEntityException ex, WebRequest request) {
+        CustomError err = new CustomError(
+                Instant.now(),
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                request.getDescription(false).replace("uri = ", "")
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
+    }
+
     // Handles Bean Validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<CustomError> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
