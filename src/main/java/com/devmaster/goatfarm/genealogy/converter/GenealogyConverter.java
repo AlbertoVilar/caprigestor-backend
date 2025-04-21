@@ -297,7 +297,7 @@ public class GenealogyConverter {
         }
     }
 
-    private void mapGreatGrandparentsToEntity(Goat grandparent, Genealogy genealogyEntity, String side, int index, Map<String, BiConsumer<Genealogy, Goat>> mappers) {
+    private static void mapGreatGrandparentsToEntity(Goat grandparent, Genealogy genealogyEntity, String side, int index, Map<String, BiConsumer<Genealogy, Goat>> mappers) {
         Goat greatGrandfather = grandparent.getFather();
         Goat greatGrandmother = grandparent.getMother();
 

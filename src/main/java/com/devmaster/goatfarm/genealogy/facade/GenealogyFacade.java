@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class GenealogyFacade {
@@ -14,6 +15,11 @@ public class GenealogyFacade {
     public GenealogyResponseVO findGenealogy(String goatRegistrationNumber) {
 
         return genealogyBusiness.findGenealogy(goatRegistrationNumber);
+    }
+
+    @Transactional
+    public GenealogyResponseVO createGenealogy(String goatRegistrationNumber) {
+        return genealogyBusiness.createGenealogy(goatRegistrationNumber);
     }
 }
 

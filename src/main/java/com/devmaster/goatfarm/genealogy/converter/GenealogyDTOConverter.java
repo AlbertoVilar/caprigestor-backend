@@ -3,8 +3,10 @@ package com.devmaster.goatfarm.genealogy.converter;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+@Component
 public class GenealogyDTOConverter {
 
     @Transactional(readOnly = true)
