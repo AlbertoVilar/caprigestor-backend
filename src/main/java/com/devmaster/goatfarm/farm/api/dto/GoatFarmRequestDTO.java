@@ -1,9 +1,17 @@
 package com.devmaster.goatfarm.farm.api.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 public class GoatFarmRequestDTO {
 
     private Long id;
+
+    @NotBlank(message = "O nome da fazenda não pode estar em branco.")
     private String name;
+
+    @NotBlank(message = "A TOD não pode estar em branco.")
+    @Size(min = 5, max = 5, message = "A TOD deve ter {max} caracteres.")
     private String tod;
 
 

@@ -26,29 +26,29 @@ public class GoatController {
 
     // CREATE
     @PostMapping
-    public GoatResponseDTO createGoat(@Valid @RequestBody GoatRequestDTO goatRequestDTO) {
+    public ResponseEntity<GoatResponseDTO> createGoat(@Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
-        Long farmId = goatRequestDTO.getFarmId(); // Extrai o ID da fazenda do DTO
-        Long ownerId = goatRequestDTO.getOwnerId(); // Extrai o ID do proprietário do DTO
+        Long farmId = goatRequestDTO.getFarmId(); // Extracts the farm ID from the DTO
+        Long ownerId = goatRequestDTO.getOwnerId(); // Extracts the owner ID from the DTO
 
-        return GoatDTOConverter.toResponseDTO(goatFacade.createGoat(requestVO, ownerId, farmId));
+        return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(goatFacade.createGoat(requestVO, ownerId, farmId)));
     }
 
 
     // UPDATE
     @PutMapping(value = "/{registrationNumber}")
-    public GoatResponseDTO updateGoat(@PathVariable String registrationNumber,
-                                      @RequestBody GoatRequestDTO goatRequestDTO) {
+    public ResponseEntity<GoatResponseDTO> updateGoat(@PathVariable String registrationNumber,
+                                                      @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
-        return GoatDTOConverter.toResponseDTO(goatFacade.updateGoat(registrationNumber, requestVO));
+        return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(goatFacade.updateGoat(registrationNumber, requestVO)));
     }
 
     // READ
     @GetMapping
-    public List<GoatResponseDTO> findAllGoats() {
-        return goatFacade.findAllGoats().stream()
+    public ResponseEntity<List<GoatResponseDTO>> findAllGoats() {
+        return ResponseEntity.ok(goatFacade.findAllGoats().stream()
                 .map(GoatDTOConverter::toResponseDTO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     @GetMapping("/{registrationNumber}")
@@ -59,19 +59,9 @@ public class GoatController {
 
     // DELETE
     @DeleteMapping("/{registrationNumber}")
-    public void deleteGoat(@PathVariable String registrationNumber) {
+    public ResponseEntity<Void> deleteGoat(@PathVariable String registrationNumber) {
         goatFacade.deleteGoatByRegistrationNumber(registrationNumber);
+        return ResponseEntity.noContent().build();
     }
 
-    // Método utilitário privado para extrair o VO da fazenda a partir do GoatRequestDTO
-    private GoatFarmRequestVO extractFarmRequestVO(GoatRequestDTO goatRequestDTO) {
-        GoatFarmRequestDTO farmRequestDTO = GoatFarmDTOConverter.fromGoatRequestDTO(goatRequestDTO);
-        return GoatFarmDTOConverter.toVO(farmRequestDTO);
-    }
-
-    private OwnerResponseVO extractOwnerResponseVO(GoatRequestDTO goatRequestDTO) {
-        return OwnerResponseVO.builder()
-                .id(goatRequestDTO.getOwnerId())
-                .build();
-    }
 }

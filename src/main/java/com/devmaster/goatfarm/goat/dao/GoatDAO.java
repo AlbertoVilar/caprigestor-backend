@@ -37,11 +37,12 @@ public class GoatDAO {
     @Transactional
     public GoatResponseVO createGoat(GoatRequestVO requestVO, Long ownerId, Long farmId) {
 
-      if(goatRepository.existsById(requestVO.getRegistrationNumber())) {
-          throw new DuplicateEntityException("Este registro " + requestVO.getRegistrationNumber() +
-                                            " já está cadastrado.");
-      }
-        // Verificação de existência de pai e mãe
+        // Verify if this Id already exists
+        if(goatRepository.existsById(requestVO.getRegistrationNumber())) {
+            throw new DuplicateEntityException("Este registro "
+                    + requestVO.getRegistrationNumber() + " já existe");
+        }
+        // Verification of father and mother existence
         Goat father = null;
         if (requestVO.getFatherRegistrationNumber() != null) {
             father = goatRepository.findById(requestVO.getFatherRegistrationNumber()).orElse(null);
@@ -52,17 +53,17 @@ public class GoatDAO {
             mother = goatRepository.findById(requestVO.getMotherRegistrationNumber()).orElse(null);
         }
 
-        // Verificando se o proprietário existe
+        // Verifying if the owner exists
         Owner owner = ownerRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Elemento com registro " + ownerId + " não encontrado."));
+                        "Elemento " + ownerId + " não encontrado."));
 
-        // Verificando se a fazenda existe
+        // Verifying if the farm exists
         GoatFarm farm = goatFarmRepository.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Capril com registro " + farmId + " não encontrada."));
+                        "Capril " + farmId + " não encontrado."));
 
-        // Convertendo e salvando a cabra
+        // Converting and saving the goat
         Goat goat = GoatEntityConverter.toEntity(requestVO, father, mother, owner, farm);
         goat = goatRepository.save(goat);
 
@@ -71,7 +72,7 @@ public class GoatDAO {
 
     @Transactional
     public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {
-        // Troquei para getReferenceById para obter a entidade
+        // Changed to getReferenceById to obtain the entity
         try {
             Goat goatToUpdate = goatRepository.getReferenceById(numRegistration);
             Goat father = null;
@@ -90,14 +91,14 @@ public class GoatDAO {
                 farm = goatFarmRepository.findById(requestVO.getFarmId())
                         .orElse(null);
             }
-            // Atualizando a cabra
+            // Updating the goat
             GoatEntityConverter.updateGoatEntity(goatToUpdate, requestVO, father, mother, farm);
             goatRepository.save(goatToUpdate);
 
             return GoatEntityConverter.toResponseVO(goatToUpdate);
 
         } catch (EntityNotFoundException e) {
-            throw new ResourceNotFoundException("Id " + numRegistration + " não encontrado");
+            throw new ResourceNotFoundException("Id " + numRegistration + " not found");
         }
 
     }
@@ -106,7 +107,7 @@ public class GoatDAO {
     public GoatResponseVO findGoatById(String registrationNumber) {
         Goat goat = goatRepository.findByRegistrationNumber(registrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Animal com registro " + registrationNumber + " não encontrada."));
+                        "Animal " + registrationNumber + " não encontrado."));
 
         return GoatEntityConverter.toResponseVO(goat);
     }
@@ -122,14 +123,14 @@ public class GoatDAO {
     @Transactional(propagation = Propagation.SUPPORTS)
     public void deleteGoat(String registrationNumber) {
         if (!goatRepository.existsById(registrationNumber)) {
-            throw new ResourceNotFoundException("Númro de Registro " + registrationNumber + " não encontrado.");
+            throw new ResourceNotFoundException("Registro " + registrationNumber + " não encontrado.");
         }
         try {
             goatRepository.deleteById(registrationNumber);
 
         } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Não pode deletar animal com número de registro "
-                    + registrationNumber + " porque ele é referenciado por outro animal.");
+            throw new DatabaseException("Animal com registro " + registrationNumber
+                    + " não pode ser deletado, pois está referenciado por outro animal.");
         }
 
 

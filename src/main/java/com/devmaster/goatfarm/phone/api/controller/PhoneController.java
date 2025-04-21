@@ -6,7 +6,10 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,35 +23,40 @@ public class PhoneController {
     private PhoneBusiness phoneBusiness;
 
     @PostMapping
-    public PhoneResponseDTO createPhone(@RequestBody PhoneRequestDTO requestDTO) {
+    public ResponseEntity<PhoneResponseDTO> createPhone(@Valid @RequestBody PhoneRequestDTO requestDTO) {
         PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
         PhoneResponseVO responseVO = phoneBusiness.createPhone(requestVO);
-        return PhoneDTOConverter.toDTO(responseVO);
+        return new ResponseEntity<>(PhoneDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    public PhoneResponseDTO getPhoneById(@PathVariable Long id) {
+    public ResponseEntity<PhoneResponseDTO> getPhoneById(@PathVariable Long id) {
         PhoneResponseVO responseVO = phoneBusiness.findPhoneById(id);
-        return PhoneDTOConverter.toDTO(responseVO);
+        if (responseVO != null) {
+            return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @GetMapping
-    public List<PhoneResponseDTO> getAllPhones() {
+    public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
         List<PhoneResponseVO> responseVOs = phoneBusiness.findAllPhones();
-        return responseVOs.stream()
+        return ResponseEntity.ok(responseVOs.stream()
                 .map(PhoneDTOConverter::toDTO)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     @PutMapping("/{id}")
-    public PhoneResponseDTO updatePhone(@PathVariable Long id, @RequestBody PhoneRequestDTO requestDTO) {
+    public ResponseEntity<PhoneResponseDTO> updatePhone(@PathVariable Long id, @Valid @RequestBody PhoneRequestDTO requestDTO) {
         PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
         PhoneResponseVO responseVO = phoneBusiness.updatePhone(id, requestVO);
-        return PhoneDTOConverter.toDTO(responseVO);
+        return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
     }
 
     @DeleteMapping("/{id}")
-    public String deletePhone(@PathVariable Long id) {
-        return phoneBusiness.deletePhone(id);
+    public ResponseEntity<Void> deletePhone(@PathVariable Long id) {
+        phoneBusiness.deletePhone(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,15 +1,18 @@
 package com.devmaster.goatfarm.owner.api.controller;
 
+import com.devmaster.goatfarm.owner.api.dto.OwnerRequestDTO;
+import com.devmaster.goatfarm.owner.api.dto.OwnerResponseDTO;
 import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
-import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
+import com.devmaster.goatfarm.owner.converter.OwnerDTOConverter;
 import com.devmaster.goatfarm.owner.facade.OwnerFacade;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/owners")
@@ -19,35 +22,47 @@ public class OwnerController {
     private OwnerFacade ownerFacade;
 
     @PostMapping
-    public OwnerResponseVO createOwner(@RequestBody OwnerRequestVO requestVO) {
-        if (requestVO == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados do proprietário não podem ser nulos.");
+    public ResponseEntity<OwnerResponseDTO> createOwner(@Valid @RequestBody OwnerRequestDTO requestDTO) {
+        if (requestDTO == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-        return ownerFacade.createOwner(requestVO);
+        OwnerRequestVO requestVO = OwnerDTOConverter.toVO(requestDTO);
+        OwnerResponseDTO responseDTO = OwnerDTOConverter.toDTO(ownerFacade.createOwner(requestVO));
+        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public OwnerResponseVO updateOwner(@PathVariable Long id,
-                                       @RequestBody OwnerRequestVO requestVO) {
-        if (requestVO == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados para atualização não podem ser nulos.");
+    public ResponseEntity<OwnerResponseDTO> updateOwner(@PathVariable Long id,
+                                                        @Valid @RequestBody OwnerRequestDTO requestDTO) {
+        if (requestDTO == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-        return ownerFacade.updateGoatOwner(id, requestVO);
+        OwnerRequestVO requestVO = OwnerDTOConverter.toVO(requestDTO);
+        OwnerResponseDTO responseDTO = OwnerDTOConverter.toDTO(ownerFacade.updateGoatOwner(id, requestVO));
+        return ResponseEntity.ok(responseDTO);
     }
 
     @GetMapping("/{id}")
-    public OwnerResponseVO getOwnerById(@PathVariable Long id) {
-        return ownerFacade.findOwnerById(id);
+    public ResponseEntity<OwnerResponseDTO> getOwnerById(@PathVariable Long id) {
+        OwnerResponseDTO responseDTO = OwnerDTOConverter.toDTO(ownerFacade.findOwnerById(id));
+        if (responseDTO != null) {
+            return ResponseEntity.ok(responseDTO);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @GetMapping
-    public List<OwnerResponseVO> getAllOwners() {
-        return ownerFacade.findAllOwners();
+    public ResponseEntity<List<OwnerResponseDTO>> getAllOwners() {
+        List<OwnerResponseDTO> responseDTOList = ownerFacade.findAllOwners().stream()
+                .map(OwnerDTOConverter::toDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responseDTOList);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteOwner(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteOwner(@PathVariable Long id) {
         ownerFacade.deleteOwner(id);
-        return ResponseEntity.ok("Proprietário com ID " + id + " foi deletado com sucesso.");
+        return ResponseEntity.noContent().build();
     }
 }

@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
 import com.devmaster.goatfarm.address.facade.AddressFacade;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,14 +21,15 @@ public class AddressController {
     private AddressFacade addressFacade;
 
     @PostMapping
-    public AddressResponseDTO createAddress(@RequestBody AddressRequestDTO requestDTO) {
+    public AddressResponseDTO createAddress(@Valid @RequestBody AddressRequestDTO requestDTO) {
         AddressRequestVO requestVO = AddressDTOConverter.toVO(requestDTO);
         AddressResponseVO responseVO = addressFacade.createAddress(requestVO);
         return AddressDTOConverter.toDTO(responseVO);
     }
 
     @PutMapping("/{id}")
-    public AddressResponseDTO updateAddress(@PathVariable Long id, @RequestBody AddressRequestDTO requestDTO) {
+    public AddressResponseDTO updateAddress(@PathVariable Long id,
+                                            @Valid @RequestBody AddressRequestDTO requestDTO) {
         AddressRequestVO requestVO = AddressDTOConverter.toVO(requestDTO);
         AddressResponseVO responseVO = addressFacade.updateAddress(id, requestVO);
         return AddressDTOConverter.toDTO(responseVO);

@@ -1,17 +1,39 @@
 package com.devmaster.goatfarm.address.api.dto;
 
-public class AddressRequestDTO {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
+public class AddressRequestDTO {
 
     private Long id;
 
+    @NotBlank(message = "A rua não pode estar em branco.")
+    @Size(max = 255, message = "A rua não pode ter mais de 255 caracteres.")
     private String street;
+
+    @NotBlank(message = "O bairro não pode estar em branco.")
+    @Size(max = 100, message = "O bairro não pode ter mais de 100 caracteres.")
     private String neighborhood;
+
+    @NotBlank(message = "A cidade não pode estar em branco.")
+    @Size(max = 100, message = "A cidade não pode ter mais de 100 caracteres.")
     private String city;
+
+    @NotBlank(message = "O estado não pode estar em branco.")
+    @Size(max = 50, message = "O estado não pode ter mais de 50 caracteres.")
     private String state;
+
+    @NotBlank(message = "O código postal não pode estar em branco.")
+    @Pattern(regexp = "^\\d{5}-?\\d{3}$", message = "O código postal deve estar no formato XXXXX-XXX ou XXXXX.")
     private String postalCode;
+
+    @NotBlank(message = "O país não pode estar em branco.")
+    @Size(max = 100, message = "O país não pode ter mais de 100 caracteres.")
     private String country;
 
+    public AddressRequestDTO() {
+    }
 
     public AddressRequestDTO(Long id,
                              String street,

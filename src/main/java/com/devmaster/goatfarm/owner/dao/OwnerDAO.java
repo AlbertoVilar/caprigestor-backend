@@ -1,16 +1,17 @@
 package com.devmaster.goatfarm.owner.dao;
 
-
-
+import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
+import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
 import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
 import com.devmaster.goatfarm.owner.converter.OwnerEntityConverter;
 import com.devmaster.goatfarm.owner.model.entity.Owner;
 import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,49 +22,75 @@ public class OwnerDAO {
     @Autowired
     private OwnerRepository ownerRepository;
 
+    @Transactional
     public OwnerResponseVO createOwner(OwnerRequestVO requestVO) {
-
         if (requestVO == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Owner request cannot be null");
+            throw new IllegalArgumentException("Os dados do proprietário para criação não podem ser nulos.");
+        }
+
+        if (ownerRepository.existsByCpf(requestVO.getCpf())) {
+            throw new DuplicateEntityException("Já existe um proprietário com o CPF '" + requestVO.getCpf() + "'.");
+        }
+
+        if (ownerRepository.existsByEmail(requestVO.getEmail())) {
+            throw new DuplicateEntityException("Já existe um proprietário com o email '" + requestVO.getEmail() + "'.");
         }
 
         Owner owner = OwnerEntityConverter.toEntity(requestVO);
-        owner = ownerRepository.save(owner);
-        return OwnerEntityConverter.toVO(owner);
-
+        try {
+            owner = ownerRepository.save(owner);
+            return OwnerEntityConverter.toVO(owner);
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException("Erro ao salvar o proprietário: " + e.getMessage());
+        }
     }
+
+    @Transactional
     public OwnerResponseVO updateGoatOwner(Long id, OwnerRequestVO requestVO) {
-       Owner owner = ownerRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Elemento não encontrado " + id));
+        Owner ownerToUpdate = ownerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proprietário com ID " + id + " não encontrado."));
 
-        OwnerEntityConverter.entityUpdate(owner, requestVO);
+        if (!ownerToUpdate.getCpf().equals(requestVO.getCpf()) && ownerRepository.existsByCpf(requestVO.getCpf())) {
+            throw new DuplicateEntityException("Já existe outro proprietário com o CPF '" + requestVO.getCpf() + "'.");
+        }
 
-        return OwnerEntityConverter.toVO(ownerRepository.save(owner));
+        if (!ownerToUpdate.getEmail().equals(requestVO.getEmail()) && ownerRepository.existsByEmail(requestVO.getEmail())) {
+            throw new DuplicateEntityException("Já existe outro proprietário com o email '" + requestVO.getEmail() + "'.");
+        }
+
+        OwnerEntityConverter.entityUpdate(ownerToUpdate, requestVO);
+        try {
+            return OwnerEntityConverter.toVO(ownerRepository.save(ownerToUpdate));
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException("Erro ao atualizar o proprietário com ID " + id + ": " + e.getMessage());
+        }
     }
 
-
+    @Transactional
     public OwnerResponseVO findOwnerById(Long id) {
-
-             Owner owner = ownerRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Elemento não encontrado " + id));
-       return OwnerEntityConverter.toVO(owner);
+        Owner owner = ownerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proprietário com ID " + id + " não encontrado."));
+        return OwnerEntityConverter.toVO(owner);
     }
 
+    @Transactional
     public List<OwnerResponseVO> findAllOwners() {
-
         List<Owner> resultOwners = ownerRepository.findAll();
-
         return resultOwners.stream()
-                .map(OwnerEntityConverter::toVO).collect(Collectors.toList());
+                .map(OwnerEntityConverter::toVO)
+                .collect(Collectors.toList());
     }
 
+    @Transactional
     public String deleteOwner(Long id) {
         if (!ownerRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Elemento não encontrado " + id);
+            throw new ResourceNotFoundException("Proprietário com ID " + id + " não encontrado.");
         }
-        ownerRepository.deleteById(id);
-        return "Goat Farm com ID " + id + " foi deletada com sucesso.";
+        try {
+            ownerRepository.deleteById(id);
+            return "Proprietário com ID " + id + " foi deletado com sucesso.";
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException("Não é possível deletar o proprietário com ID " + id + " porque ele possui relacionamentos com outras entidades.");
+        }
     }
-
 }

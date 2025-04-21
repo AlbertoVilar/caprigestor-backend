@@ -6,4 +6,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
+
+    boolean existsByName(String name);
+
+    boolean existsByTod(String tod);
 }
