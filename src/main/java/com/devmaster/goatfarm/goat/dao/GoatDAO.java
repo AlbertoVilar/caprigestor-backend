@@ -15,6 +15,8 @@ import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -113,11 +115,19 @@ public class GoatDAO {
     }
 
     @Transactional
-    public List<GoatResponseVO> findAllGoats() {
-        List<Goat> goatResult = goatRepository.findAll();
+    public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
+        Page<Goat> goatResult = goatRepository.searchGoatByName(name, pageable);
 
-        return goatResult.stream().map(GoatEntityConverter::toResponseVO)
-                .collect(Collectors.toList());
+        return goatResult.map(GoatEntityConverter::toResponseVO);
+
+    }
+
+    @Transactional
+    public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
+        Page<Goat> goatResult = goatRepository.findAll(pageable);
+
+        return goatResult.map(GoatEntityConverter::toResponseVO);
+
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)
@@ -132,7 +142,6 @@ public class GoatDAO {
             throw new DatabaseException("Animal com registro " + registrationNumber
                     + " não pode ser deletado, pois está referenciado por outro animal.");
         }
-
 
     }
 }

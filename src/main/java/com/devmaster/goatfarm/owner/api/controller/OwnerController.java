@@ -3,10 +3,14 @@ package com.devmaster.goatfarm.owner.api.controller;
 import com.devmaster.goatfarm.owner.api.dto.OwnerRequestDTO;
 import com.devmaster.goatfarm.owner.api.dto.OwnerResponseDTO;
 import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
+import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
 import com.devmaster.goatfarm.owner.converter.OwnerDTOConverter;
 import com.devmaster.goatfarm.owner.facade.OwnerFacade;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -53,12 +57,23 @@ public class OwnerController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OwnerResponseDTO>> getAllOwners() {
-        List<OwnerResponseDTO> responseDTOList = ownerFacade.findAllOwners().stream()
-                .map(OwnerDTOConverter::toDTO)
-                .collect(Collectors.toList());
+    public ResponseEntity<Page<OwnerResponseDTO>> searchOwnersByName(
+            @RequestParam(value = "name", defaultValue = "") String name,
+            @PageableDefault(size = 12, page = 0) Pageable pageable) {
+
+        String trimmedName = name.trim(); // Remove espaços em branco iniciais e finais
+        Page<OwnerResponseVO> responsePage = ownerFacade.searchOwnerByName(trimmedName, pageable);
+        return ResponseEntity.ok(responsePage.map(OwnerDTOConverter::toDTO));
+    }
+
+   // @GetMapping
+    public ResponseEntity<Page<OwnerResponseDTO>> getAllOwners(@PageableDefault(size = 12, page = 0) Pageable pageable) {
+        Page<OwnerResponseDTO> responseDTOList = ownerFacade.findAllOwners(pageable)
+                .map(OwnerDTOConverter::toDTO);
+
         return ResponseEntity.ok(responseDTOList);
     }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOwner(@PathVariable Long id) {

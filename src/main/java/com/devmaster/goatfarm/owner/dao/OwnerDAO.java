@@ -10,8 +10,11 @@ import com.devmaster.goatfarm.owner.model.entity.Owner;
 import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -73,12 +76,18 @@ public class OwnerDAO {
         return OwnerEntityConverter.toVO(owner);
     }
 
+    @Transactional(readOnly = true)
+    public Page<OwnerResponseVO> searchOwnerByName(String name, Pageable pageable) {
+        System.out.println("Buscando proprietários com nome: '" + name + "'"); // Adicione esta linha
+        Page<Owner> resultOwners = ownerRepository.searchOwnerByName(name, pageable);
+        return resultOwners.map(OwnerEntityConverter::toVO);
+    }
+
     @Transactional
-    public List<OwnerResponseVO> findAllOwners() {
-        List<Owner> resultOwners = ownerRepository.findAll();
-        return resultOwners.stream()
-                .map(OwnerEntityConverter::toVO)
-                .collect(Collectors.toList());
+    public Page<OwnerResponseVO> findAllOwners(Pageable pageable) {
+        Page<Owner> resultOwners = ownerRepository.findAll(pageable);
+        return resultOwners.map(OwnerEntityConverter::toVO);
+
     }
 
     @Transactional

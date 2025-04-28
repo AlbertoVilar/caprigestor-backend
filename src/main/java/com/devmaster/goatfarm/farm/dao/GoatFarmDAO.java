@@ -10,11 +10,10 @@ import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class GoatFarmDAO {
@@ -86,18 +85,26 @@ public class GoatFarmDAO {
         // Busca a fazenda pelo seu ID
         GoatFarm goatFarm = goatFarmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada."));
-        // Converte a entidade encontrada para o VO de resposta
+
         return GoatFarmConverter.toVO(goatFarm);
     }
 
     @Transactional
-    public List<GoatFarmResponseVO> findAllGoatFarm() {
-        // Recupera todas as fazendas
-        List<GoatFarm> resultGoatFarms = goatFarmRepository.findAll();
+    public Page<GoatFarmResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
+
+        Page<GoatFarm> resultGoatFarms = goatFarmRepository.searchGoatFarmByName(name, pageable);
+
+        return resultGoatFarms.map(GoatFarmConverter::toVO);
+
+    }
+
+    @Transactional
+    public Page<GoatFarmResponseVO> findAllGoatFarm(Pageable pageable) {
+
+        Page<GoatFarm> resultGoatFarms = goatFarmRepository.findAll(pageable);
         // Converte a lista de entidades para uma lista de VOs de resposta
-        return resultGoatFarms.stream()
-                .map(GoatFarmConverter::toVO)
-                .collect(Collectors.toList());
+        return resultGoatFarms.map(GoatFarmConverter::toVO);
+
     }
 
     @Transactional

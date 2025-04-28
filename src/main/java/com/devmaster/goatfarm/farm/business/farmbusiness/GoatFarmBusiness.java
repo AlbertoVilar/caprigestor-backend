@@ -4,9 +4,9 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class GoatFarmBusiness {
@@ -29,9 +29,14 @@ public class GoatFarmBusiness {
            return goatFarmDAO.findGoatFarmById(id);
     }
 
-    public List<GoatFarmResponseVO> FindALLGoatFarm() {
+    public Page<GoatFarmResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
 
-        return goatFarmDAO.findAllGoatFarm();
+        return goatFarmDAO.searchGoatFarmByName(name, pageable);
+    }
+
+    public Page<GoatFarmResponseVO> findAllGoatFarm(Pageable pageable) {
+
+        return goatFarmDAO.findAllGoatFarm(pageable);
     }
 
     public String deleteGoatFarm(Long id) {

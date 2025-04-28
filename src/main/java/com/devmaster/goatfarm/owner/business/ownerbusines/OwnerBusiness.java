@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
 import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
 import com.devmaster.goatfarm.owner.dao.OwnerDAO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,9 +32,14 @@ public class OwnerBusiness {
         return ownerDAO.findOwnerById(id);
     }
 
-    public List<OwnerResponseVO> findAllOwners() {
+    public Page<OwnerResponseVO> findAllOwners(Pageable pageable) {
 
-        return ownerDAO.findAllOwners();
+        return ownerDAO.findAllOwners(pageable);
+    }
+
+    public Page<OwnerResponseVO> searchOwnerByName(String name, Pageable pageable) {
+
+        return ownerDAO.searchOwnerByName(name, pageable);
     }
 
     public String deleteOwner(Long id) {

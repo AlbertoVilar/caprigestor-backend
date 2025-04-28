@@ -6,6 +6,9 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converter.GoatFarmDTOConverter;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,12 +42,24 @@ public class GoatFarmController {
         return ResponseEntity.ok(GoatFarmDTOConverter.toDTO(responseVO));
     }
 
+    @GetMapping(value = "/name")
+    public ResponseEntity<Page<GoatFarmResponseDTO>> searchGoatFarmByName(
+            @RequestParam(value = "name", defaultValue = "") String name,
+            @PageableDefault(size = 12, page = 0) Pageable pageable ) {
+
+        return ResponseEntity.ok(farmFacade.searchGoatFarmByName(name, pageable)
+
+                .map(GoatFarmDTOConverter::toDTO));
+
+    }
+
     @GetMapping
-    public ResponseEntity<List<GoatFarmResponseDTO>> findAllGoatFarms() {
-        return ResponseEntity.ok(farmFacade.findALLGoatFarm()
-                .stream()
-                .map(GoatFarmDTOConverter::toDTO)
-                .collect(Collectors.toList()));
+    public ResponseEntity<Page<GoatFarmResponseDTO>> findAllGoatFarm(@PageableDefault(size = 12, page = 0)
+                                                                         Pageable pageable) {
+        return ResponseEntity.ok(farmFacade.findAllGoatFarm(pageable)
+
+                .map(GoatFarmDTOConverter::toDTO));
+
     }
 
     @DeleteMapping("/{id}")

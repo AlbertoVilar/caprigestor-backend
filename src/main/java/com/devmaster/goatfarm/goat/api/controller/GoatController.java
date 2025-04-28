@@ -11,6 +11,9 @@ import com.devmaster.goatfarm.goat.facade.GoatFacade;
 import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;  // Corrigido para OwnerResponseVO
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,13 +46,26 @@ public class GoatController {
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(goatFacade.updateGoat(registrationNumber, requestVO)));
     }
 
+    @GetMapping(value = "/name")
+    public ResponseEntity<Page<GoatResponseDTO>> searchGoatByName(@RequestParam(value = "name",
+                                                                  defaultValue = "") String name,
+                                                                  @PageableDefault(size = 12, page = 0)
+                                                                  Pageable pageable) {
+
+        return ResponseEntity.ok(goatFacade.searchGoatByName(name, pageable)
+                .map(GoatDTOConverter::toResponseDTO));
+    }
+
     // READ
     @GetMapping
-    public ResponseEntity<List<GoatResponseDTO>> findAllGoats() {
-        return ResponseEntity.ok(goatFacade.findAllGoats().stream()
-                .map(GoatDTOConverter::toResponseDTO)
-                .collect(Collectors.toList()));
+    public ResponseEntity<Page<GoatResponseDTO>> findAllGoats(@PageableDefault(size = 12, page = 0)
+                                                            Pageable pageable) {
+
+        return ResponseEntity.ok(goatFacade.findAllGoats(pageable)
+                .map(GoatDTOConverter::toResponseDTO));
+
     }
+
 
     @GetMapping("/{registrationNumber}")
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(@PathVariable String registrationNumber) {
