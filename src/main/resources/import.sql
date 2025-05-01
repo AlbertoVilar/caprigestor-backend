@@ -1,3 +1,13 @@
+INSERT INTO users (name, email, password) VALUES ('Alex', 'alex@gmail.com', '$2a$10$u.FcQ3Krw8cGViiZgbvw6.pq24fS/d/352B0R76vOmXCfPEeAJ9xq');
+INSERT INTO users (name, email, password) VALUES ('Maria', 'maria@gmail.com', '$2a$10$u.FcQ3Krw8cGViiZgbvw6.pq24fS/d/352B0R76vOmXCfPEeAJ9xq');
+
+INSERT INTO role (authority) VALUES ('ROLE_OPERATOR');
+INSERT INTO role (authority) VALUES ('ROLE_ADMIN');
+
+INSERT INTO tb_user_role (user_id, role_id) VALUES (1, 1);
+INSERT INTO tb_user_role (user_id, role_id) VALUES (2, 1);
+INSERT INTO tb_user_role (user_id, role_id) VALUES (2, 2);
+
 -- Inserir dados na tabela 'capril'
 INSERT INTO capril (nome, TOD, criado, atualizado) VALUES ('Capril Vilar', '16432', NOW(), NOW());
 

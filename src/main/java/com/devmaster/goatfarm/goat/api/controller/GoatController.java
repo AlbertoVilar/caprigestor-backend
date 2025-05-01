@@ -15,6 +15,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +30,20 @@ public class GoatController {
     @Autowired
     private GoatFacade goatFacade;
 
+    @GetMapping("/debug")
+    public ResponseEntity<String> debugAuthorities() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null) {
+            return ResponseEntity.status(403).body("Nenhuma autenticação ativa.");
+        }
+
+        return ResponseEntity.ok("Authorities reconhecidas: " + authentication.getAuthorities());
+    }
+
+
     // CREATE
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<GoatResponseDTO> createGoat(@Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
@@ -66,7 +82,7 @@ public class GoatController {
 
     }
 
-
+    @PreAuthorize("hasAnyRole('ROLE_OPERATOR')")
     @GetMapping("/{registrationNumber}")
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(@PathVariable String registrationNumber) {
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
