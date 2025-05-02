@@ -55,6 +55,7 @@ public class GoatController {
 
 
     // UPDATE
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping(value = "/{registrationNumber}")
     public ResponseEntity<GoatResponseDTO> updateGoat(@PathVariable String registrationNumber,
                                                       @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
@@ -82,7 +83,6 @@ public class GoatController {
 
     }
 
-    @PreAuthorize("hasAnyRole('ROLE_OPERATOR')")
     @GetMapping("/{registrationNumber}")
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(@PathVariable String registrationNumber) {
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
@@ -90,6 +90,7 @@ public class GoatController {
     }
 
     // DELETE
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{registrationNumber}")
     public ResponseEntity<Void> deleteGoat(@PathVariable String registrationNumber) {
         goatFacade.deleteGoatByRegistrationNumber(registrationNumber);

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class PhoneController {
     @Autowired
     private PhoneBusiness phoneBusiness;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<PhoneResponseDTO> createPhone(@Valid @RequestBody PhoneRequestDTO requestDTO) {
         PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
@@ -29,6 +31,7 @@ public class PhoneController {
         return new ResponseEntity<>(PhoneDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<PhoneResponseDTO> getPhoneById(@PathVariable Long id) {
         PhoneResponseVO responseVO = phoneBusiness.findPhoneById(id);
@@ -39,6 +42,7 @@ public class PhoneController {
         }
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
         List<PhoneResponseVO> responseVOs = phoneBusiness.findAllPhones();
@@ -47,6 +51,7 @@ public class PhoneController {
                 .collect(Collectors.toList()));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<PhoneResponseDTO> updatePhone(@PathVariable Long id, @Valid @RequestBody PhoneRequestDTO requestDTO) {
         PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
@@ -54,6 +59,7 @@ public class PhoneController {
         return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePhone(@PathVariable Long id) {
         phoneBusiness.deletePhone(id);

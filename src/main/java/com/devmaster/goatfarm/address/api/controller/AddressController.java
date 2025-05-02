@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
 import com.devmaster.goatfarm.address.facade.AddressFacade;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class AddressController {
     @Autowired
     private AddressFacade addressFacade;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public AddressResponseDTO createAddress(@Valid @RequestBody AddressRequestDTO requestDTO) {
         AddressRequestVO requestVO = AddressDTOConverter.toVO(requestDTO);
@@ -27,6 +29,7 @@ public class AddressController {
         return AddressDTOConverter.toDTO(responseVO);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public AddressResponseDTO updateAddress(@PathVariable Long id,
                                             @Valid @RequestBody AddressRequestDTO requestDTO) {
@@ -35,12 +38,14 @@ public class AddressController {
         return AddressDTOConverter.toDTO(responseVO);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public AddressResponseDTO findAddressById(@PathVariable Long id) {
         AddressResponseVO responseVO = addressFacade.findAddressById(id);
         return AddressDTOConverter.toDTO(responseVO);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public List<AddressResponseDTO> findAllAddresses() {
         return addressFacade.findAllAddresses().stream()
@@ -48,6 +53,7 @@ public class AddressController {
                 .collect(Collectors.toList());
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public String deleteAddress(@PathVariable Long id) {
         return addressFacade.deleteAddress(id);

@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class OwnerController {
     @Autowired
     private OwnerFacade ownerFacade;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<OwnerResponseDTO> createOwner(@Valid @RequestBody OwnerRequestDTO requestDTO) {
         if (requestDTO == null) {
@@ -35,6 +37,7 @@ public class OwnerController {
         return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<OwnerResponseDTO> updateOwner(@PathVariable Long id,
                                                         @Valid @RequestBody OwnerRequestDTO requestDTO) {
@@ -46,6 +49,7 @@ public class OwnerController {
         return ResponseEntity.ok(responseDTO);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<OwnerResponseDTO> getOwnerById(@PathVariable Long id) {
         OwnerResponseDTO responseDTO = OwnerDTOConverter.toDTO(ownerFacade.findOwnerById(id));
@@ -56,6 +60,7 @@ public class OwnerController {
         }
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<Page<OwnerResponseDTO>> searchOwnersByName(
             @RequestParam(value = "name", defaultValue = "") String name,
@@ -66,7 +71,8 @@ public class OwnerController {
         return ResponseEntity.ok(responsePage.map(OwnerDTOConverter::toDTO));
     }
 
-   // @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@GetMapping
     public ResponseEntity<Page<OwnerResponseDTO>> getAllOwners(@PageableDefault(size = 12, page = 0) Pageable pageable) {
         Page<OwnerResponseDTO> responseDTOList = ownerFacade.findAllOwners(pageable)
                 .map(OwnerDTOConverter::toDTO);
@@ -75,6 +81,7 @@ public class OwnerController {
     }
 
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOwner(@PathVariable Long id) {
         ownerFacade.deleteOwner(id);

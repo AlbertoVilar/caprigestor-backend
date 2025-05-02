@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,12 +24,14 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(@RequestBody GoatFarmRequestDTO requestDTO) {
         GoatFarmResponseVO responseVO = farmFacade.createGoatFarm(GoatFarmDTOConverter.toVO(requestDTO));
         return new ResponseEntity<>(GoatFarmDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<GoatFarmResponseDTO> updateGoatFarm(@PathVariable Long id,
                                                               @RequestBody GoatFarmRequestDTO requestDTO) {
@@ -62,6 +65,7 @@ public class GoatFarmController {
 
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGoatFarm(@PathVariable Long id) {
         farmFacade.deleteGoatFarm(id);
