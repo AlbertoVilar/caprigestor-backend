@@ -43,7 +43,7 @@ public class GoatController {
 
 
     // CREATE
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<GoatResponseDTO> createGoat(@Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);

@@ -9,7 +9,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,6 +23,8 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.Arrays;
 
 @Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
 public class ResourceServerConfig {
 
 
@@ -51,16 +55,14 @@ public class ResourceServerConfig {
 	}
 
 
-
 	@Bean
 	public JwtAuthenticationConverter jwtAuthenticationConverter() {
 		JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-		grantedAuthoritiesConverter.setAuthoritiesClaimName("authorities"); // Certifique-se de que esse nome está no JWT
-		grantedAuthoritiesConverter.setAuthorityPrefix(""); // REMOVE o prefixo automático
+		grantedAuthoritiesConverter.setAuthoritiesClaimName("authorities");
+		grantedAuthoritiesConverter.setAuthorityPrefix("");
 
 		JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
 		jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-
 		return jwtAuthenticationConverter;
 	}
 

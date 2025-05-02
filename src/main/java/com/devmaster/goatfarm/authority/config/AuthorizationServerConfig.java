@@ -48,6 +48,7 @@ import java.util.UUID;
 
 @Configuration
 public class AuthorizationServerConfig {
+
 	@Value("${security.client-id}")
 	private String clientId;
 
