@@ -1,23 +1,29 @@
 package com.devmaster.goatfarm.authority.dao;
 
 import com.devmaster.goatfarm.authority.api.projection.UserDetailsProjection;
+import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
+import com.devmaster.goatfarm.authority.conveter.UserEntityConverter;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserDAO implements UserDetailsService {
 
 
     private final UserRepository repository;
 
-    public UserService(UserRepository repository) {
+    public UserDAO(UserRepository repository) {
         this.repository = repository;
     }
 
@@ -37,5 +43,31 @@ public class UserService implements UserDetailsService {
             user.addRole(new Role(userP.getRoleId(), userP.getAuthority()));
         }
         return user;
+    }
+
+    protected User authenticated() {
+
+        String username = null;
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Jwt jwtPrincipal = (Jwt) authentication.getPrincipal();
+            username = jwtPrincipal.getClaim("username");
+
+            User user = repository.findByEmail(username).get();
+
+            return user;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Email não encontrado");
+        }
+
+    }
+
+
+    @Transactional(readOnly = true)
+    public UserResponseVO getMe() {
+        User user = authenticated();
+
+        return UserEntityConverter.toVO(user);
     }
 }

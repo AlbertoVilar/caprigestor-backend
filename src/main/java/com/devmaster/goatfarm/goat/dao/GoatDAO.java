@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.goat.dao;
 
+import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -144,4 +146,5 @@ public class GoatDAO {
         }
 
     }
+
 }
