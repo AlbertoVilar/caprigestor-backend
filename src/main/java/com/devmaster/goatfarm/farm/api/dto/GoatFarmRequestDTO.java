@@ -1,56 +1,26 @@
 package com.devmaster.goatfarm.farm.api.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
+//@JsonIgnoreProperties(ignoreUnknown = true)
 public class GoatFarmRequestDTO {
-
     private Long id;
-
-    @NotBlank(message = "O nome da fazenda não pode estar em branco.")
     private String name;
-
-    @NotBlank(message = "A TOD não pode estar em branco.")
-    @Size(min = 5, max = 5, message = "A TOD deve ter {max} caracteres.")
     private String tod;
-
-
+    private Long addressId;
+    private Long ownerId; // Adicione este campo
     public GoatFarmRequestDTO() {
     }
 
-    public GoatFarmRequestDTO(Long id, String name, String tod) {
-
+    public GoatFarmRequestDTO(Long id, String name, String tod, Long addressId, Long ownerId) {
         this.id = id;
         this.name = name;
         this.tod = tod;
-    }
-
-    public GoatFarmRequestDTO(Long farmId, String tod) {
-        this.id = farmId;
-        this.tod = tod;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getTod() {
-        return tod;
-    }
-
-    public void setTod(String tod) {
-        this.tod = tod;
+        this.addressId = addressId;
+        this.ownerId = ownerId;
     }
 }

@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.phone.business.business;
 
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.dao.PhoneDAO;
@@ -14,8 +15,8 @@ public class PhoneBusiness {
     @Autowired
     private PhoneDAO phoneDAO;
 
-    public PhoneResponseVO createPhone(PhoneRequestVO requestVO) {
-        return phoneDAO.createPhone(requestVO);
+    public PhoneResponseVO createPhone(PhoneRequestVO requestVO, Long goatFarmId) {
+        return phoneDAO.createPhone(requestVO, goatFarmId);
     }
 
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {

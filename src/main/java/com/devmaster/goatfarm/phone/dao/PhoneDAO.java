@@ -2,6 +2,9 @@ package com.devmaster.goatfarm.phone.dao;
 
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
+import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.converter.PhoneEntityConverter;
@@ -21,19 +24,33 @@ public class PhoneDAO {
     @Autowired
     private PhoneRepository phoneRepository;
 
+    @Autowired
+    private GoatFarmRepository farmRepository;
+
     @Transactional
-    public PhoneResponseVO createPhone(PhoneRequestVO requestVO) {
+    public PhoneResponseVO createPhone(PhoneRequestVO requestVO, Long goatFarmId) {
         if (requestVO == null) {
             throw new IllegalArgumentException("Os dados do telefone para criação não podem ser nulos.");
         }
-        Phone phone = PhoneEntityConverter.toEntity(requestVO);
-        try {
-            phone = phoneRepository.save(phone);
-            return PhoneEntityConverter.toVO(phone);
-        } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Erro ao salvar o telefone: " + e.getMessage());
+
+        if (goatFarmId == null) {
+            throw new IllegalArgumentException("Os dados do capril não podem ser nulos.");
         }
+
+        // goatFarmId vindo do parâmetro
+        GoatFarm capril = farmRepository.findById(goatFarmId)
+                .orElseThrow(() -> new RuntimeException("Capril não encontrado"));
+
+        // Converter PhoneRequestVO para Phone, agora incluindo o GoatFarm
+        Phone phone = PhoneEntityConverter.toEntity(requestVO, capril);
+
+        // Salvar o telefone com o GoatFarm associado
+        phone = phoneRepository.save(phone);
+
+        // Retornar a resposta após salvar
+        return PhoneEntityConverter.toVO(phone);
     }
+
 
     @Transactional
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {

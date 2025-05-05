@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class GoatEntityConverter {
 
-    @Transactional
+
     public static Goat toEntity(GoatRequestVO requestVO,
                                 Goat father, Goat mother,
                                 Owner owner,  // Incluindo o owner como parâmetro

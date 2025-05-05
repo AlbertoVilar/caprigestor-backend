@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.address.converter.AddressEntityConverter;
 import com.devmaster.goatfarm.address.model.entity.Address;
-import com.devmaster.goatfarm.address.model.repository.AdressRepository;
+import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class AddressDAO {
 
     @Autowired
-    private AdressRepository adressRepository;
+    private AddressRepository adressRepository;
 
     @Transactional
     public AddressResponseVO createAddress(AddressRequestVO requestVO) {

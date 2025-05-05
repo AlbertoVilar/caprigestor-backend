@@ -1,11 +1,19 @@
 package com.devmaster.goatfarm.farm.model.entity;
 
+import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.owner.model.entity.Owner;
+import com.devmaster.goatfarm.phone.model.entity.Phone;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "capril")
@@ -18,8 +26,24 @@ public class GoatFarm {
 
     @Column(name = "nome", nullable = false)
     private String name;
+
     @Column(name = "TOD", nullable = false)
     private String tod;
+
+    @OneToOne
+    @JoinColumn(name = "owner_id", referencedColumnName = "id", nullable = false)
+    private Owner owner;
+
+    @OneToOne
+    @JoinColumn(name = "address_id", referencedColumnName = "id", nullable = false)
+    private Address address;
+
+    @OneToMany(mappedBy = "goatFarm", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Phone> phones = new HashSet<>();
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "capril_id")
+    private List<Goat> goats = new ArrayList<>();
 
     @CreatedDate
     @Column(name = "criado", nullable = false)
@@ -32,12 +56,12 @@ public class GoatFarm {
     public GoatFarm() {
     }
 
-    public GoatFarm(Long id, String name, String tod) {
-
+    public GoatFarm(Long id, String name, String tod, Owner owner, Address address) {
         this.id = id;
         this.name = name;
         this.tod = tod;
-
+        this.owner = owner;
+        this.address = address;
     }
 
     public Long getId() {
@@ -64,6 +88,23 @@ public class GoatFarm {
         this.tod = tod;
     }
 
+    public Owner getOwner() {
+        return owner;
+    }
+
+    public void setOwner(Owner owner) {
+        this.owner = owner;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
+
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -80,3 +121,4 @@ public class GoatFarm {
         this.updatedAt = updatedAt;
     }
 }
+

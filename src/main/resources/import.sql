@@ -8,11 +8,17 @@ INSERT INTO tb_user_role (user_id, role_id) VALUES (1, 1);
 INSERT INTO tb_user_role (user_id, role_id) VALUES (2, 1);
 INSERT INTO tb_user_role (user_id, role_id) VALUES (2, 2);
 
--- Inserir dados na tabela 'capril'
-INSERT INTO capril (nome, TOD, criado, atualizado) VALUES ('Capril Vilar', '16432', NOW(), NOW());
-
--- Inserir dados na tabela 'owner'
+-- Inserir registro na tabela owners
 INSERT INTO owners (nome, cpf, email) VALUES ('Alberto Vilar', '05202259450', 'albertovilar1@gmail.com');
+
+-- Inserir eendereço vinculado
+INSERT INTO endereco (rua, bairro, cidade, estado, codigo_postal, pais) VALUES ('Sítio São Felix', 'Zona Rural', 'Santo Andre', 'Paraíba', '58670-000', 'Brasil');
+
+-- Inserir a GoatFarm (fazenda de cabras) com owner_id e address_id como 1
+INSERT INTO capril (nome, TOD, owner_id, address_id, criado, atualizado) VALUES ('Capril Vilar', '16432', 1, 1, NOW(), NOW());
+
+-- Inserir telefone vinculado
+INSERT INTO telefone (ddd, numero, goat_farm_id) VALUES ('21', '989882934', 1);
 
 -- Inserir dados na tabela 'cabras' (BISAVÔS MATERNOS)
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('1403110395', 'NATAL DO JACOMÉ', 'MALE', 'Alpina', 'Indefinida', '2010-01-01', 'ATIVO', 1, 1, NULL, NULL);

@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.phone.facade;
 
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
@@ -14,8 +15,8 @@ public class PhoneFacade {
     @Autowired
     private PhoneBusiness phoneBusiness;
 
-    public PhoneResponseVO createPhone(PhoneRequestVO requestVO) {
-        return phoneBusiness.createPhone(requestVO);
+    public PhoneResponseVO createPhone(PhoneRequestVO requestVO, Long goatFarmId) {
+        return phoneBusiness.createPhone(requestVO, goatFarmId);
     }
 
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {

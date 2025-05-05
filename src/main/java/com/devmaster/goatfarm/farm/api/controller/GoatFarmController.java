@@ -24,7 +24,7 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+   // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(@RequestBody GoatFarmRequestDTO requestDTO) {
         GoatFarmResponseVO responseVO = farmFacade.createGoatFarm(GoatFarmDTOConverter.toVO(requestDTO));

@@ -4,7 +4,7 @@ package com.devmaster.goatfarm.address.model.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "address")
+@Table(name = "endereco")
 public class Address {
 
     @Id

@@ -19,7 +19,8 @@ public class PhoneDTOConverter {
         return new PhoneRequestVO(
                 null,
                 requestDTO.getDdd(),
-                requestDTO.getNumber()
+                requestDTO.getNumber(),
+                requestDTO.getGoatFarmId()
         );
     }
 }

@@ -18,13 +18,16 @@ public class PhoneRequestDTO {
     @Pattern(regexp = "^\\d{8,9}$", message = "O número de telefone deve conter apenas números.")
     private String number;
 
+    private Long goatFarmId; // Somente o ID do GoatFarm
+
     public PhoneRequestDTO() {
     }
 
-    public PhoneRequestDTO(Long id, String ddd, String number) {
+    public PhoneRequestDTO(Long id, String ddd, String number, Long goatFarmId) {
         this.id = id;
         this.ddd = ddd;
         this.number = number;
+        this.goatFarmId = goatFarmId;
     }
 
     public Long getId() {
@@ -39,6 +42,10 @@ public class PhoneRequestDTO {
         return number;
     }
 
+    public Long getGoatFarmId() {
+        return goatFarmId;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -49,5 +56,9 @@ public class PhoneRequestDTO {
 
     public void setNumber(String number) {
         this.number = number;
+    }
+
+    public void setGoatFarmId(Long goatFarmId) {
+        this.goatFarmId = goatFarmId;
     }
 }

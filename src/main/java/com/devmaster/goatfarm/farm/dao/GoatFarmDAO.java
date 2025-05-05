@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.farm.dao;
 
+import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -8,6 +10,8 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converter.GoatFarmConverter;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
+import com.devmaster.goatfarm.owner.model.entity.Owner;
+import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -20,6 +24,13 @@ public class GoatFarmDAO {
 
     @Autowired
     private GoatFarmRepository goatFarmRepository;
+
+    @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private OwnerRepository ownerRepository; // Injeta OwnerDAO
+
 
     @Transactional
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
@@ -38,8 +49,15 @@ public class GoatFarmDAO {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + requestVO.getTod() + "'.");
         }
 
-        // Converte o VO da requisição para a entidade
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO);
+        // Busca Owner e Address por ID
+        Owner owner = ownerRepository.findById(requestVO.getOwnerId()) // Usa getOwnerId()
+                .orElseThrow(() -> new ResourceNotFoundException("Dono não encontrado com o ID: " + requestVO.getOwnerId()));
+        Address address = addressRepository.findById(requestVO.getAddressId()) // Usa getAddressId()
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço não encontrado com o ID: " + requestVO.getAddressId()));
+
+        // Converte o VO da requisição para a entidade, passando Owner e Address
+        GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO, owner, address);
+
         try {
             // Salva a nova fazenda
             goatFarm = goatFarmRepository.save(goatFarm);
@@ -50,6 +68,7 @@ public class GoatFarmDAO {
             throw new DatabaseException("Ocorreu um erro ao salvar a fazenda: " + e.getMessage());
         }
     }
+
 
     @Transactional
     public GoatFarmResponseVO updateGoatFarm(Long id, GoatFarmRequestVO requestVO) {

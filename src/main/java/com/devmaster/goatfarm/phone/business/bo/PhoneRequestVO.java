@@ -1,19 +1,21 @@
 package com.devmaster.goatfarm.phone.business.bo;
 
-
 public class PhoneRequestVO {
 
     private Long id;
     private String ddd;
     private String number;
 
+    private Long goatFarmId; // Alteração: Usando o ID do GoatFarm em vez de todo o objeto
+
     public PhoneRequestVO() {
     }
 
-    public PhoneRequestVO(Long id, String ddd, String number) {
+    public PhoneRequestVO(Long id, String ddd, String number, Long goatFarmId) {
         this.id = id;
         this.ddd = ddd;
         this.number = number;
+        this.goatFarmId = goatFarmId;
     }
 
     public Long getId() {
@@ -28,6 +30,10 @@ public class PhoneRequestVO {
         return number;
     }
 
+    public Long getGoatFarmId() {
+        return goatFarmId;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -38,5 +44,9 @@ public class PhoneRequestVO {
 
     public void setNumber(String number) {
         this.number = number;
+    }
+
+    public void setGoatFarmId(Long goatFarmId) {
+        this.goatFarmId = goatFarmId;
     }
 }
