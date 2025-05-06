@@ -38,7 +38,6 @@ public class GoatBusiness {
         return goatDAO.searchGoatByName(name, pageable);
     }
 
-
     // UPDATE
     public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {
         return goatDAO.updateGoat(numRegistration, requestVO);

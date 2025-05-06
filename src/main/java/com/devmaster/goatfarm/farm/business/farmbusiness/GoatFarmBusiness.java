@@ -3,10 +3,13 @@ package com.devmaster.goatfarm.farm.business.farmbusiness;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class GoatFarmBusiness {
@@ -42,4 +45,11 @@ public class GoatFarmBusiness {
     public String deleteGoatFarm(Long id) {
       return goatFarmDAO.deleteGoatFarm(id);
     }
+
+    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
+                                                                       String registrationNumber,
+                                                                       Pageable pageable) {
+        return goatFarmDAO.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
+    }
+
 }

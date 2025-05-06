@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.farm.facade;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,5 +44,11 @@ public class GoatFarmFacade {
 
     public String deleteGoatFarm(Long id) {
         return farmBusiness.deleteGoatFarm(id);
+    }
+
+    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
+                                                                       String registrationNumber,
+                                                                       Pageable pageable) {
+        return farmBusiness.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
     }
 }

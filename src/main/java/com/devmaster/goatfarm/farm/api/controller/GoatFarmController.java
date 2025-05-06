@@ -5,6 +5,9 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converter.GoatFarmDTOConverter;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
+import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.converter.GoatDTOConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -70,5 +73,25 @@ public class GoatFarmController {
     public ResponseEntity<Void> deleteGoatFarm(@PathVariable Long id) {
         farmFacade.deleteGoatFarm(id);
         return ResponseEntity.noContent().build();
+    }
+
+
+    // Método para buscar as cabras de uma fazenda
+    @GetMapping("/{farmId}/goats")
+    public ResponseEntity<Page<GoatResponseDTO>> findGoatsByFarmId(
+            @PathVariable Long farmId,
+            @RequestParam(value = "registrationNumber", required = false) String registrationNumber, Pageable pageable) {
+
+        // Buscar as cabras usando o facade, que retorna GoatResponseVO
+        Page<GoatResponseVO> goatsVO = farmFacade.findGoatsByFarmIdAndRegistrationNumber(farmId,
+                registrationNumber,
+                pageable);
+
+        // Converter os GoatResponseVO para GoatResponseDTO
+        Page<GoatResponseDTO> goatsDTO = goatsVO
+                .map(GoatDTOConverter::toResponseDTO); // Aqui você pode fazer a conversão diretamente
+
+
+        return ResponseEntity.ok(goatsDTO); // Retorna os DTOs
     }
 }
