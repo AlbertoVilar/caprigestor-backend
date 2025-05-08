@@ -30,8 +30,8 @@ public class GenealogyController {
             GenealogyResponseDTO responseDTO = genealogyDTOConverter.toResponseDTO(responseVO);
             return ResponseEntity.ok(responseDTO);
         } else {
-            return ResponseEntity.notFound().build();
-        }
+          return ResponseEntity.notFound().build();
+       }
     }
 
     @PostMapping("/{registrationNumber}")

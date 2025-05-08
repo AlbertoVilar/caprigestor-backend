@@ -3,8 +3,7 @@ package com.devmaster.goatfarm.genealogy.dao;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.genealogy.converter.GenealogyConverter; // Remova esta importação
-import com.devmaster.goatfarm.genealogy.converter.GenealogyEntityConverter; // Importe o novo converter
+import com.devmaster.goatfarm.genealogy.converter.GenealogyEntityConverter;
 import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
 import com.devmaster.goatfarm.genealogy.model.repository.GenealogyRepository;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
@@ -26,60 +25,61 @@ public class GenealogyDAO {
     private GoatRepository goatRepository;
 
     @Autowired
-    private GenealogyConverter buildGenealogyMapper; // Mantemos este para a montagem inicial
+    private com.devmaster.goatfarm.genealogy.converter.GenealogyConverter buildGenealogyMapper; // Utilizado apenas para construção inicial da genealogia
 
     @Transactional
     private GenealogyResponseVO buildGenealogy(String goatRegistrationNumber) {
         try {
-            Goat goat = goatRepository.findByRegistrationNumber(goatRegistrationNumber)
-                    .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado com o número de registro: " + goatRegistrationNumber));
+            final Goat goat = goatRepository.findByRegistrationNumber(goatRegistrationNumber)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Animal não encontrado com o número de registro: " + goatRegistrationNumber));
             return buildGenealogyMapper.buildGenealogyFromGoat(goat);
         } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            throw new DatabaseException("Erro inesperado ao construir a genealogia para o animal " + goatRegistrationNumber + ": " + e.getMessage());
+            throw new DatabaseException("Erro ao construir a genealogia do animal " + goatRegistrationNumber + ": " + e.getMessage());
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public GenealogyResponseVO findGenealogy(String goatRegistrationNumber) {
         try {
-            Goat goat = goatRepository.findByRegistrationNumber(goatRegistrationNumber)
-                    .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado com o número de registro: " + goatRegistrationNumber));
+            final Optional<Genealogy> genealogyOptional = genealogyRepository.findByGoatRegistration(goatRegistrationNumber);
 
-            Optional<Genealogy> genealogyOptional = genealogyRepository.findByGoatRegistration(goatRegistrationNumber);
-
-            return genealogyOptional.map(GenealogyEntityConverter::toResponseVO).orElse(null);
+            return genealogyOptional.map(GenealogyEntityConverter::toResponseVO)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Genealogia não encontrada com o número de registro: " + goatRegistrationNumber));
 
         } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            throw new DatabaseException("Erro inesperado ao buscar a genealogia do animal " + goatRegistrationNumber + ": " + e.getMessage());
+            throw new DatabaseException("Erro ao buscar a genealogia do animal " + goatRegistrationNumber + ": " + e.getMessage());
         }
     }
 
     @Transactional
     public GenealogyResponseVO createGenealogy(String goatRegistrationNumber) {
         try {
-            Goat goat = goatRepository.findByRegistrationNumber(goatRegistrationNumber)
-                    .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado com o número de registro: " + goatRegistrationNumber));
+            final Goat goat = goatRepository.findByRegistrationNumber(goatRegistrationNumber)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Animal não encontrado com o número de registro: " + goatRegistrationNumber));
 
             if (genealogyRepository.existsByGoatRegistration(goatRegistrationNumber)) {
-                throw new DatabaseException("A genealogia para o animal " + goatRegistrationNumber + " já existe.");
+                throw new DatabaseException("A genealogia do animal " + goatRegistrationNumber + " já existe.");
             }
 
-            GenealogyResponseVO genealogyVO = buildGenealogy(goatRegistrationNumber);
-            Genealogy genealogyEntity = GenealogyEntityConverter.toEntity(genealogyVO); // Usando o novo converter
+            final GenealogyResponseVO genealogyVO = buildGenealogy(goatRegistrationNumber);
+            final Genealogy genealogyEntity = GenealogyEntityConverter.toEntity(genealogyVO);
 
             genealogyRepository.save(genealogyEntity);
             return genealogyVO;
 
         } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Erro ao salvar a genealogia do animal " + goatRegistrationNumber + ": " + e.getMessage());
+            throw new DatabaseException("Violação de integridade ao salvar a genealogia do animal " + goatRegistrationNumber + ": " + e.getMessage());
         } catch (ResourceNotFoundException e) {
-            throw e; // Re-lança a exceção customizada, pois ela já está no formato desejado
+            throw e;
         } catch (Exception e) {
-            throw new DatabaseException("Erro inesperado ao criar a genealogia do animal " + goatRegistrationNumber);
+            throw new DatabaseException("Erro ao criar a genealogia do animal " + goatRegistrationNumber + ": " + e.getMessage());
         }
     }
 }
