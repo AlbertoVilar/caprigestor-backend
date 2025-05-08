@@ -50,3 +50,6 @@ INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, cap
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id, tod, toe, categoria) VALUES ('1643218012', 'XEQUE V DO CAPRIL VILAR', 'MALE', 'Alpina', 'CHAMOISÉE', '2018-06-27', 'ATIVO', 1, 1, '1635717065', '2114517012', '16432', '18012', 'PO');
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('1643218013', 'IRMÃO DO XEQUE', 'MALE', 'Alpina', 'CHAMOISÉE', '2020-01-01', 'ATIVO', 1, 1, '1635717065', '2114517012');
+
+-- Inserir um Evento para teste
+INSERT INTO eventos (animal_id, tipo_evento, data, descricao, local, veterinario, resultado) VALUES ('2114517012', 'PARTO', '2025-05-08','Nascimento de dois cabritos machos sem complicações.', 'Capril Vilar', 'Dr. João Silva', 'Ambos os cabritos nasceram saudáveis.');
