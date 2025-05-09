@@ -51,5 +51,6 @@ INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, cap
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('1643218013', 'IRMÃO DO XEQUE', 'MALE', 'Alpina', 'CHAMOISÉE', '2020-01-01', 'ATIVO', 1, 1, '1635717065', '2114517012');
 
--- Inserir um Evento para teste
-INSERT INTO eventos (animal_id, tipo_evento, data, descricao, local, veterinario, resultado) VALUES ('2114517012', 'PARTO', '2025-05-08','Nascimento de dois cabritos machos sem complicações.', 'Capril Vilar', 'Dr. João Silva', 'Ambos os cabritos nasceram saudáveis.');
+INSERT INTO eventos (goat_id, tipo_evento, data, descricao, local, veterinario, resultado) VALUES ('2114517012', 'PARTO', '2025-05-08', 'Nascimento de dois cabritos machos sem complicações.', 'Capril Vilar', 'Dr. João Silva', 'Ambos os cabritos nasceram saudáveis.');
+
+INSERT INTO eventos (goat_id, tipo_evento, data, descricao, local, veterinario, resultado) VALUES ('2114517012', 'SAUDE', '2025-05-05', 'Apresentou sintomas de mastite clínica', 'Capril Vilar', 'Dr. Carlos Mendes', 'Iniciado tratamento com antibiótico específico. Isolamento recomendado por 5 dias.');

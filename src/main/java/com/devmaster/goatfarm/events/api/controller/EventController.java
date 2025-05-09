@@ -1,23 +1,32 @@
 package com.devmaster.goatfarm.events.api.controller;
 
+import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
+import com.devmaster.goatfarm.events.converter.EventDTOConverter;
 import com.devmaster.goatfarm.events.dao.EventDao;
+import com.devmaster.goatfarm.events.facade.EventFacade;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/events")
 public class EventController {
+
     @Autowired
-    private EventDao eventDao;
+    private EventFacade eventFacade;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<EventResponseVO> findEventById(@PathVariable Long id) {
+    @GetMapping(value = "/{goatNumRegistration}")
+    public ResponseEntity<List<EventResponseDTO>> findEventsByGoat(@PathVariable String goatNumRegistration) {
 
-        return ResponseEntity.ok(eventDao.findEventById(id));
+        List<EventResponseVO> responseVOs = eventFacade.findEventByGoat(goatNumRegistration);
+
+        return ResponseEntity.ok( responseVOs.stream().map(EventDTOConverter::responseDTO).toList());
     }
+
+
 }
+
