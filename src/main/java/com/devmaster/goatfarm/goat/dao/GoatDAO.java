@@ -46,6 +46,7 @@ public class GoatDAO {
             throw new DuplicateEntityException("Este registro "
                     + requestVO.getRegistrationNumber() + " já existe");
         }
+
         // Verification of father and mother existence
         Goat father = null;
         if (requestVO.getFatherRegistrationNumber() != null) {
@@ -95,6 +96,7 @@ public class GoatDAO {
                 farm = goatFarmRepository.findById(requestVO.getFarmId())
                         .orElse(null);
             }
+
             // Updating the goat
             GoatEntityConverter.updateGoatEntity(goatToUpdate, requestVO, father, mother, farm);
             goatRepository.save(goatToUpdate);
@@ -104,7 +106,6 @@ public class GoatDAO {
         } catch (EntityNotFoundException e) {
             throw new ResourceNotFoundException("Id " + numRegistration + " not found");
         }
-
     }
 
     @Transactional
@@ -121,7 +122,6 @@ public class GoatDAO {
         Page<Goat> goatResult = goatRepository.searchGoatByName(name, pageable);
 
         return goatResult.map(GoatEntityConverter::toResponseVO);
-
     }
 
     @Transactional
@@ -129,7 +129,6 @@ public class GoatDAO {
         Page<Goat> goatResult = goatRepository.findAll(pageable);
 
         return goatResult.map(GoatEntityConverter::toResponseVO);
-
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)
@@ -144,7 +143,5 @@ public class GoatDAO {
             throw new DatabaseException("Animal com registro " + registrationNumber
                     + " não pode ser deletado, pois está referenciado por outro animal.");
         }
-
     }
-
 }

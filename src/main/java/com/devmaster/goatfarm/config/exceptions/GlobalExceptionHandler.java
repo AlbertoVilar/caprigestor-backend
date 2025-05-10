@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CustomError> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
         ValidationError error = new ValidationError(
                 Instant.now(),
-                HttpStatus.CONFLICT.value(),
+                HttpStatus.BAD_REQUEST.value(),
                 "Validation failed for one or more fields.",
                 request.getDescription(false).replace("uri=", "")
         );
