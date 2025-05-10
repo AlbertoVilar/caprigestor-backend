@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.events.business.eventbusiness;
 
+import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.enuns.EventType;
@@ -25,5 +26,9 @@ public class EventBusiness {
                                                              LocalDate endDate) {
 
         return eventDao.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
+    }
+
+    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
+        return eventDao.createEvent(requestVO,goatRegistrationNumber);
     }
 }

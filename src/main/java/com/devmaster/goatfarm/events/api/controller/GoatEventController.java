@@ -1,11 +1,14 @@
 package com.devmaster.goatfarm.events.api.controller;
 
+import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
+import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.converter.EventDTOConverter;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.facade.EventFacade;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,18 +21,6 @@ public class GoatEventController {
 
     @Autowired
     private EventFacade eventFacade;
-
-   // @GetMapping
-    public ResponseEntity<List<EventResponseDTO>> getGoatEvents(
-            @PathVariable String registrationNumber) {
-
-        // Usando o mesmo método existente do facade
-        List<EventResponseVO> responseVOs = eventFacade.findEventByGoat(registrationNumber);
-
-        return ResponseEntity.ok(responseVOs.stream()
-                .map(EventDTOConverter::responseDTO)
-                .toList());
-    }
 
     @GetMapping
     public ResponseEntity<List<EventResponseDTO>> getGoatEvents(
@@ -46,5 +37,20 @@ public class GoatEventController {
                 .map(EventDTOConverter::responseDTO)
                 .toList());
     }
+
+    @PostMapping
+    public ResponseEntity<EventResponseDTO> createEvent(
+            @RequestBody EventRequestDTO requestDTO,
+            @PathVariable("registrationNumber") String registrationNumber
+    ) {
+        EventRequestVO requestVO = EventDTOConverter.toRequestVO(requestDTO);
+        EventResponseVO responseVO = eventFacade.createEvent(requestVO, registrationNumber);
+        EventResponseDTO responseDTO = EventDTOConverter.responseDTO(responseVO);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED) // Semântica correta para POST
+                .body(responseDTO);
+    }
+
 
 }

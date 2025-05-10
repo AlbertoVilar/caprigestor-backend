@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.events.facade;
 
+import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.business.eventbusiness.EventBusiness;
 import com.devmaster.goatfarm.events.enuns.EventType;
@@ -25,6 +26,10 @@ public class EventFacade {
                                                              LocalDate endDate) {
 
         return eventBusiness.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
+    }
+
+    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
+        return eventBusiness.createEvent(requestVO,goatRegistrationNumber);
     }
 }
 
