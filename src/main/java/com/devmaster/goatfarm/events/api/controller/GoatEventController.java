@@ -52,5 +52,26 @@ public class GoatEventController {
                 .body(responseDTO);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<EventResponseDTO> updateGoatEvent(
+            @PathVariable("registrationNumber") String registrationNumber,
+            @PathVariable Long id,
+            @RequestBody EventRequestDTO requestDTO) {
 
+        EventRequestVO requestVO = EventDTOConverter.toRequestVO(requestDTO);
+        EventResponseVO responseVO = eventFacade.updateEvent(id, requestVO, registrationNumber);
+        EventResponseDTO responseDTO = EventDTOConverter.responseDTO(responseVO);
+
+        return ResponseEntity.ok(responseDTO);
+    }
+
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEventById(@PathVariable Long id) {
+
+        eventFacade.deleteEventById(id);
+        return ResponseEntity.status(HttpStatus.GONE).build();
+    }
 }
+
+

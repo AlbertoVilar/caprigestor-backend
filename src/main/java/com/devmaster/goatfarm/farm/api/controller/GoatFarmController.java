@@ -89,9 +89,8 @@ public class GoatFarmController {
 
         // Converter os GoatResponseVO para GoatResponseDTO
         Page<GoatResponseDTO> goatsDTO = goatsVO
-                .map(GoatDTOConverter::toResponseDTO); // Aqui você pode fazer a conversão diretamente
+                .map(GoatDTOConverter::toResponseDTO);
 
-
-        return ResponseEntity.ok(goatsDTO); // Retorna os DTOs
+        return ResponseEntity.ok(goatsDTO);
     }
 }

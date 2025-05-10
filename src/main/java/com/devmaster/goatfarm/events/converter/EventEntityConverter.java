@@ -22,6 +22,16 @@ public class EventEntityConverter {
         );
     }
 
+    public static void toUpdateEvent(Event event, EventRequestVO requestVO) {
+        //Não acrescentei Goat por entender que não faz sentido atulaiza-lo por aqui
+        event.setEventType(requestVO.eventType());
+        event.setDate(requestVO.date());
+        event.setDescription(requestVO.description());
+        event.setLocation(requestVO.location());
+        event.setVeterinarian(requestVO.veterinarian());
+        event.setOutcome(requestVO.outcome());
+    }
+
     public static EventResponseVO toResponseVO(Event event) {
         return new EventResponseVO(
                 event.getId(),

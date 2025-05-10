@@ -16,6 +16,14 @@ public class EventBusiness {
     @Autowired
     private EventDao eventDao;
 
+    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
+        return eventDao.createEvent(requestVO,goatRegistrationNumber);
+    }
+
+    public EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
+        return eventDao.updateGoatEvent(id, requestVO,goatRegistrationNumber);
+    }
+
     public List<EventResponseVO> findEventByGoat(String goatNumRegistration) {
         return eventDao.findEventByGoat(goatNumRegistration);
     }
@@ -28,7 +36,7 @@ public class EventBusiness {
         return eventDao.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
     }
 
-    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        return eventDao.createEvent(requestVO,goatRegistrationNumber);
+    public void deleteEventById(Long id) {
+        eventDao.deleteEventById(id);
     }
 }

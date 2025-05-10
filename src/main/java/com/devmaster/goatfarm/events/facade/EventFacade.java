@@ -16,6 +16,14 @@ public class EventFacade {
     @Autowired
     private EventBusiness eventBusiness;
 
+    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
+        return eventBusiness.createEvent(requestVO,goatRegistrationNumber);
+    }
+
+    public EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
+        return eventBusiness.updateEvent(id, requestVO,goatRegistrationNumber);
+    }
+
     public List<EventResponseVO> findEventByGoat(String goatNumRegistration) {
         return eventBusiness.findEventByGoat(goatNumRegistration);
     }
@@ -28,8 +36,9 @@ public class EventFacade {
         return eventBusiness.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
     }
 
-    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        return eventBusiness.createEvent(requestVO,goatRegistrationNumber);
+    public void deleteEventById(Long id) {
+        eventBusiness.deleteEventById(id);
     }
 }
+
 
