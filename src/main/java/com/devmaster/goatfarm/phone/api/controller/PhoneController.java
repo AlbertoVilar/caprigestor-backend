@@ -1,13 +1,14 @@
 package com.devmaster.goatfarm.phone.api.controller;
 
-import com.devmaster.goatfarm.goat.converter.GoatDTOConverter;
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
 import com.devmaster.goatfarm.phone.facade.PhoneFacade;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,28 +26,28 @@ public class PhoneController {
     @Autowired
     private PhoneFacade phoneFacade;
 
+    @Operation(summary = "Cadastra um novo telefone")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
-    public ResponseEntity<PhoneResponseDTO> createPhone(@Valid @RequestBody PhoneRequestDTO requestDTO) {
-        // Converter o DTO para VO
+    public ResponseEntity<PhoneResponseDTO> createPhone(
+            @RequestBody(description = "Dados do telefone a ser cadastrado")
+            @org.springframework.web.bind.annotation.RequestBody @Valid PhoneRequestDTO requestDTO) {
+
         PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
+        Long goatFarmId = requestDTO.getGoatFarmId();
 
-        // Obter o ID do GoatFarm do DTO
-        Long goatFarmId = requestDTO.getGoatFarmId(); // Supondo que o DTO tenha o goatFarmId
-
-        // Criar o telefone usando a fachada, passando o requestVO e o ID do GoatFarm
         PhoneResponseVO responseVO = phoneFacade.createPhone(requestVO, goatFarmId);
-
-        // Converter a resposta de VO para DTO
         PhoneResponseDTO responseDTO = PhoneDTOConverter.toDTO(responseVO);
 
-        // Retornar a resposta com o status HTTP 200 (OK)
-        return ResponseEntity.ok(responseDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
+    @Operation(summary = "Busca um telefone pelo ID")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<PhoneResponseDTO> getPhoneById(@PathVariable Long id) {
+    public ResponseEntity<PhoneResponseDTO> getPhoneById(
+            @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long id) {
+
         PhoneResponseVO responseVO = phoneFacade.findPhoneById(id);
         if (responseVO != null) {
             return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
@@ -55,6 +56,7 @@ public class PhoneController {
         }
     }
 
+    @Operation(summary = "Lista todos os telefones cadastrados")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
@@ -64,17 +66,25 @@ public class PhoneController {
                 .collect(Collectors.toList()));
     }
 
+    @Operation(summary = "Atualiza um telefone existente")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<PhoneResponseDTO> updatePhone(@PathVariable Long id, @Valid @RequestBody PhoneRequestDTO requestDTO) {
+    public ResponseEntity<PhoneResponseDTO> updatePhone(
+            @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long id,
+            @RequestBody(description = "Novos dados do telefone")
+            @org.springframework.web.bind.annotation.RequestBody @Valid PhoneRequestDTO requestDTO) {
+
         PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
         PhoneResponseVO responseVO = phoneFacade.updatePhone(id, requestVO);
         return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
     }
 
+    @Operation(summary = "Remove um telefone existente")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePhone(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePhone(
+            @Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long id) {
+
         phoneFacade.deletePhone(id);
         return ResponseEntity.noContent().build();
     }
