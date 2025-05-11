@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,12 +30,13 @@ public class EventBusiness {
         return eventDao.findEventByGoat(goatNumRegistration);
     }
 
-    public List<EventResponseVO> findEventsByGoatWithFilters(String registrationNumber,
+    public Page<EventResponseVO> findEventsByGoatWithFilters(String registrationNumber,
                                                              EventType eventType,
                                                              LocalDate startDate,
-                                                             LocalDate endDate) {
+                                                             LocalDate endDate,
+                                                             Pageable pageable) {
 
-        return eventDao.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
+        return eventDao.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
     }
 
     public void deleteEventById(Long id) {

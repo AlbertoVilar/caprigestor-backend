@@ -2,6 +2,8 @@ package com.devmaster.goatfarm.events.model.repository;
 
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,11 +27,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
       AND (:startDate IS NULL OR e.date >= :startDate)
       AND (:endDate IS NULL OR e.date <= :endDate)
 """)
-        List<Event> findEventsByGoatWithFilters(
+        Page<Event> findEventsByGoatWithFilters(
                 @Param("registrationNumber") String registrationNumber,
                 @Param("eventType") EventType eventType,
                 @Param("startDate") LocalDate startDate,
-                @Param("endDate") LocalDate endDate
+                @Param("endDate") LocalDate endDate,
+                Pageable pageable
         );
 
 

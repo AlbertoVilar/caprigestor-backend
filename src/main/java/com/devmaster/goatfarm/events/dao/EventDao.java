@@ -10,6 +10,8 @@ import com.devmaster.goatfarm.events.model.repository.EventRepository;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,17 +65,18 @@ public class EventDao {
         return events.stream().map(EventEntityConverter::toResponseVO).toList();
     }
 
-    // FIND GOAT EVENT WITH FILTERS
+    // FIND GOAT EVENT WITH FILTERS + PAGINATION
     @Transactional(readOnly = true)
-    public List<EventResponseVO> findEventsByGoatWithFilters(String registrationNumber,
+    public Page<EventResponseVO> findEventsByGoatWithFilters(String registrationNumber,
                                                              EventType eventType,
                                                              LocalDate startDate,
-                                                             LocalDate endDate) {
-        List<Event> events = eventRepository.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
-        if (events.isEmpty()) {
+                                                             LocalDate endDate,
+                                                             Pageable pageable) {
+        Page<Event> page = eventRepository.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
+        if (page.isEmpty()) {
             throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com os filtros fornecidos.");
         }
-        return events.stream().map(EventEntityConverter::toResponseVO).toList();
+        return page.map(EventEntityConverter::toResponseVO);
     }
 
     // DELETE

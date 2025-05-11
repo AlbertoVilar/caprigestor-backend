@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,28 +34,28 @@ public class GoatEventController {
             summary = "Busca eventos da cabra por registro e filtros opcionais",
             description = "Permite buscar eventos de uma cabra específica com filtros por tipo de evento e intervalo de datas."
     )
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
-    public ResponseEntity<List<EventResponseDTO>> getGoatEvents(
+    public ResponseEntity<Page<EventResponseDTO>> getGoatEvents(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable String registrationNumber,
 
-            @Parameter(description = "Tipo do evento (ex: SAUDE, PARTO, VACINACAO)", example = "SAUDE")
+            @Parameter(description = "Tipo do evento", example = "SAUDE")
             @RequestParam(required = false) EventType eventType,
 
-            @Parameter(description = "Data inicial para filtro (formato: yyyy-MM-dd)", example = "2025-01-01")
+            @Parameter(description = "Data inicial", example = "2025-01-01")
             @RequestParam(required = false) LocalDate startDate,
 
-            @Parameter(description = "Data final para filtro (formato: yyyy-MM-dd)", example = "2025-12-31")
-            @RequestParam(required = false) LocalDate endDate
-    ) {
-        List<EventResponseVO> responseVOs =
-                eventFacade.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate);
+            @Parameter(description = "Data final", example = "2025-12-31")
+            @RequestParam(required = false) LocalDate endDate,
 
-        return ResponseEntity.ok(responseVOs.stream()
-                .map(EventDTOConverter::responseDTO)
-                .toList());
+            @Parameter(hidden = true) Pageable pageable // oculto no Swagger para evitar poluição
+    ) {
+        Page<EventResponseVO> voPage = eventFacade.findEventsByGoatWithFilters(
+                registrationNumber, eventType, startDate, endDate, pageable);
+
+        return ResponseEntity.ok(voPage.map(EventDTOConverter::responseDTO));
     }
+
 
     @Operation(
             summary = "Adiciona um novo evento para uma cabra",
