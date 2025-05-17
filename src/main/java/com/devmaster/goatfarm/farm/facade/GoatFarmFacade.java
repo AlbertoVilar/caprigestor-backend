@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.farm.facade;
 
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
@@ -37,7 +38,7 @@ public class GoatFarmFacade {
         return farmBusiness.searchGoatFarmByName(name, pageable);
     }
 
-    public Page<GoatFarmResponseVO> findAllGoatFarm(Pageable pageable) {
+    public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
 
         return farmBusiness.findAllGoatFarm(pageable);
     }

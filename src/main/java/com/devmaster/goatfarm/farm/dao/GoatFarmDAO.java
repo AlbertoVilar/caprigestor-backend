@@ -5,9 +5,10 @@ import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.farm.converter.GoatFarmConverter;
+import com.devmaster.goatfarm.farm.converters.GoatFarmConverter;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
@@ -22,9 +23,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class GoatFarmDAO {
@@ -110,10 +108,11 @@ public class GoatFarmDAO {
     }
 
     @Transactional(readOnly = true)
-    public Page<GoatFarmResponseVO> findAllGoatFarm(Pageable pageable) {
-        Page<GoatFarm> resultGoatFarms = goatFarmRepository.findAll(pageable);
-        return resultGoatFarms.map(GoatFarmConverter::toVO);
+    public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
+        Page<GoatFarm> projections = goatFarmRepository.searchAllFullFarms(pageable);
+        return projections.map(GoatFarmConverter::toFullVO);
     }
+
 
     @Transactional
     public String deleteGoatFarm(Long id) {
@@ -140,7 +139,5 @@ public class GoatFarmDAO {
         return goats
                 .map(GoatEntityConverter::toResponseVO);
     }
-
-
 
 }

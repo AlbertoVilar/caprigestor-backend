@@ -1,11 +1,17 @@
-package com.devmaster.goatfarm.farm.converter;
+package com.devmaster.goatfarm.farm.converters;
 
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
+import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class GoatFarmDTOConverter {
@@ -23,10 +29,10 @@ public class GoatFarmDTOConverter {
     public static GoatFarmRequestDTO fromGoatRequestDTO(GoatRequestDTO goatRequestDTO) {
         return new GoatFarmRequestDTO(
                 goatRequestDTO.getFarmId(),
-                null, //name n tem no goatRequestDTO
+                null,
                 goatRequestDTO.getTod(),
-                null, //addressId n tem
-                null //ownerId n tem
+                null,
+                null
         );
     }
 
@@ -35,8 +41,8 @@ public class GoatFarmDTOConverter {
                 resRequesVO.getId(),
                 resRequesVO.getName(),
                 resRequesVO.getTod(),
-                resRequesVO.getAddressId(), // Adiciona addressId
-                resRequesVO.getOwnerId()    // Adiciona ownerId
+                resRequesVO.getAddressId(),
+                resRequesVO.getOwnerId()
         );
     }
 
@@ -45,8 +51,35 @@ public class GoatFarmDTOConverter {
                 requestDTO.getId(),
                 requestDTO.getName(),
                 requestDTO.getTod(),
-                requestDTO.getAddressId(), // Adiciona addressId
-                requestDTO.getOwnerId()    // Adiciona ownerId
+                requestDTO.getAddressId(),
+                requestDTO.getOwnerId()
         );
     }
+
+    public static GoatFarmFullResponseDTO toFullDTO(GoatFarmFullResponseVO vo) {
+        List<PhoneResponseDTO> phones = vo.getPhones().stream()
+                .map(p -> new PhoneResponseDTO(p.getId(), p.getDdd(), p.getNumber()))
+                .collect(Collectors.toList());
+
+        return new GoatFarmFullResponseDTO(
+                vo.getId(),
+                vo.getName(),
+                vo.getTod(),
+                vo.getCreatedAt(),
+                vo.getUpdatedAt(),
+
+                vo.getOwnerId(),
+                vo.getOwnerName(),
+
+                vo.getAddressId(),
+                vo.getStreet(),
+                vo.getDistrict(),
+                vo.getCity(),
+                vo.getState(),
+                vo.getPostalCode(),
+
+                phones
+        );
+    }
+
 }

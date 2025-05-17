@@ -2,7 +2,9 @@ package com.devmaster.goatfarm.phone.model.entity;
 
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode
 @Entity
 @Table(name = "telefone")
 public class Phone {
@@ -65,4 +67,6 @@ public class Phone {
     public void setGoatFarm(GoatFarm goatFarm) {
         this.goatFarm = goatFarm;
     }
+
+
 }

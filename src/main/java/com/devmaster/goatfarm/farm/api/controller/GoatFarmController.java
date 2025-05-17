@@ -1,9 +1,10 @@
 package com.devmaster.goatfarm.farm.api.controller;
 
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.farm.converter.GoatFarmDTOConverter;
+import com.devmaster.goatfarm.farm.converters.GoatFarmDTOConverter;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
@@ -27,6 +28,7 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
+    //@CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo capril")
     @PostMapping
     public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(
@@ -72,11 +74,11 @@ public class GoatFarmController {
 
     @Operation(summary = "Lista todos os capris com paginação")
     @GetMapping
-    public ResponseEntity<Page<GoatFarmResponseDTO>> findAllGoatFarm(
+    public ResponseEntity<Page<GoatFarmFullResponseDTO>> findAllGoatFarm(
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
 
         return ResponseEntity.ok(farmFacade.findAllGoatFarm(pageable)
-                .map(GoatFarmDTOConverter::toDTO));
+                .map(GoatFarmDTOConverter::toFullDTO));
     }
 
     @Operation(summary = "Remove um capril pelo ID")

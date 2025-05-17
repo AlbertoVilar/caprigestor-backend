@@ -104,6 +104,13 @@ public class GoatFarm {
         this.address = address;
     }
 
+    public Set<Phone> getPhones() {
+        return phones;
+    }
+
+    public void addPhones(Phone phone) {
+        this.phones.add(phone);
+    }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
