@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
 
@@ -16,15 +18,18 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
 
     boolean existsByTod(String tod);
 
-    Page<GoatFarm> findAll(Pageable pageable);
-
-    @Query("SELECT g FROM GoatFarm g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
-    Page<GoatFarm> searchGoatFarmByName(@Param("name") String name, Pageable pageable);
-
-
+    // Buscar todas as fazendas com relacionamentos completos
     @EntityGraph(attributePaths = {"owner", "address", "phones"})
     @Query("SELECT g FROM GoatFarm g")
     Page<GoatFarm> searchAllFullFarms(Pageable pageable);
 
+    // Buscar por nome com relacionamentos completos
+    @EntityGraph(attributePaths = {"owner", "address", "phones"})
+    @Query("SELECT g FROM GoatFarm g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Page<GoatFarm> searchGoatFarmByName(@Param("name") String name, Pageable pageable);
 
+    // Buscar por ID com relacionamentos completos
+    @EntityGraph(attributePaths = {"owner", "address", "phones"})
+    @Query("SELECT g FROM GoatFarm g WHERE g.id = :id")
+    Optional<GoatFarm> findById(@Param("id") Long id);
 }

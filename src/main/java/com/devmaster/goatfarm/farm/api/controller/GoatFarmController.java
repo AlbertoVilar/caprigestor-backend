@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.farm.api.controller;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converters.GoatFarmDTOConverter;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
@@ -53,24 +54,25 @@ public class GoatFarmController {
 
     @Operation(summary = "Busca um capril pelo ID")
     @GetMapping("/{id}")
-    public ResponseEntity<GoatFarmResponseDTO> findGoatFarmById(
+    public ResponseEntity<GoatFarmFullResponseDTO> findGoatFarmById(
             @Parameter(description = "ID do capril", example = "1") @PathVariable Long id) {
 
-        GoatFarmResponseVO responseVO = farmFacade.findGoatFarmById(id);
-        return ResponseEntity.ok(GoatFarmDTOConverter.toDTO(responseVO));
+        GoatFarmFullResponseVO responseVO = farmFacade.findGoatFarmById(id);
+        return ResponseEntity.ok(GoatFarmDTOConverter.toFullDTO(responseVO));
     }
 
     @Operation(summary = "Busca paginada de capris pelo nome")
     @GetMapping("/name")
-    public ResponseEntity<Page<GoatFarmResponseDTO>> searchGoatFarmByName(
+    public ResponseEntity<Page<GoatFarmFullResponseDTO>> searchGoatFarmByName(
             @Parameter(description = "Nome ou parte do nome do capril", example = "Capril Vilar")
             @RequestParam(value = "name", defaultValue = "") String name,
 
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
 
         return ResponseEntity.ok(farmFacade.searchGoatFarmByName(name, pageable)
-                .map(GoatFarmDTOConverter::toDTO));
+                .map(GoatFarmDTOConverter::toFullDTO));
     }
+
 
     @Operation(summary = "Lista todos os capris com paginação")
     @GetMapping

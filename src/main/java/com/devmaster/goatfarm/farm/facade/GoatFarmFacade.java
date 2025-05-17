@@ -28,12 +28,12 @@ public class GoatFarmFacade {
         return farmBusiness.updateGoatFarm(id, requestVO);
     }
 
-    public GoatFarmResponseVO findGoatFarmById(Long id) {
+    public GoatFarmFullResponseVO findGoatFarmById(Long id) {
 
         return farmBusiness.findGoatFarmById(id);
     }
 
-    public Page<GoatFarmResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
+    public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
 
         return farmBusiness.searchGoatFarmByName(name, pageable);
     }

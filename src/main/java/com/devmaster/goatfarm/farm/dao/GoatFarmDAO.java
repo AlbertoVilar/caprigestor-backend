@@ -94,17 +94,17 @@ public class GoatFarmDAO {
     }
 
     @Transactional(readOnly = true)
-    public GoatFarmResponseVO findGoatFarmById(Long id) {
-        GoatFarm goatFarm = goatFarmRepository.findById(id)
+    public GoatFarmFullResponseVO findGoatFarmById(Long id) {
+        GoatFarm goatFarm = goatFarmRepository.findById(id) // usa EntityGraph agora
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada."));
 
-        return GoatFarmConverter.toVO(goatFarm);
+        return GoatFarmConverter.toFullVO(goatFarm);
     }
 
     @Transactional(readOnly = true)
-    public Page<GoatFarmResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
+    public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
         Page<GoatFarm> resultGoatFarms = goatFarmRepository.searchGoatFarmByName(name, pageable);
-        return resultGoatFarms.map(GoatFarmConverter::toVO);
+        return resultGoatFarms.map(GoatFarmConverter::toFullVO);
     }
 
     @Transactional(readOnly = true)
