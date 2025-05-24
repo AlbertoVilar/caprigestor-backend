@@ -27,7 +27,7 @@ public class OwnerController {
     private OwnerFacade ownerFacade;
 
     @Operation(summary = "Cadastra um novo proprietário")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<OwnerResponseDTO> createOwner(
             @RequestBody(description = "Dados do novo proprietário")
@@ -39,7 +39,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Atualiza um proprietário existente")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<OwnerResponseDTO> updateOwner(
             @Parameter(description = "ID do proprietário a ser atualizado", example = "1") @PathVariable Long id,
@@ -52,7 +52,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Busca um proprietário pelo ID")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<OwnerResponseDTO> getOwnerById(
             @Parameter(description = "ID do proprietário", example = "1") @PathVariable Long id) {
@@ -62,7 +62,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Busca paginada de proprietários pelo nome")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<Page<OwnerResponseDTO>> searchOwnersByName(
             @Parameter(description = "Nome ou parte do nome do proprietário", example = "João")
@@ -86,7 +86,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Remove um proprietário por ID")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOwner(
             @Parameter(description = "ID do proprietário a ser removido", example = "1")

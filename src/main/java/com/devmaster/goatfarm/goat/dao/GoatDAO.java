@@ -124,6 +124,23 @@ public class GoatDAO {
         return goatResult.map(GoatEntityConverter::toResponseVO);
     }
 
+    @Transactional(readOnly = true)
+    public Page<GoatResponseVO> findByFarmIdAndOptionalRegistrationNumber(
+            Long farmId, String registrationNumber, Pageable pageable) {
+
+        Page<Goat> goats = goatRepository.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
+
+        if (goats.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Nenhuma cabra encontrada para a fazenda com ID " + farmId +
+                            " e registro " + registrationNumber + "."
+            );
+        }
+
+        return goats.map(GoatEntityConverter::toResponseVO);
+    }
+
+
     @Transactional
     public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
         Page<Goat> goatResult = goatRepository.findAll(pageable);

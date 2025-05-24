@@ -47,10 +47,4 @@ public class GoatFarmBusiness {
       return goatFarmDAO.deleteGoatFarm(id);
     }
 
-    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
-                                                                       String registrationNumber,
-                                                                       Pageable pageable) {
-        return goatFarmDAO.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
-    }
-
 }

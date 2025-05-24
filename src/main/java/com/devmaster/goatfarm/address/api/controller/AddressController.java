@@ -25,7 +25,7 @@ public class AddressController {
     private AddressFacade addressFacade;
 
     @Operation(summary = "Cria um novo endereço")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public AddressResponseDTO createAddress(
             @RequestBody(description = "Dados do novo endereço")

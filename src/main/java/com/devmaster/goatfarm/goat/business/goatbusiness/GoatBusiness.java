@@ -38,11 +38,17 @@ public class GoatBusiness {
         return goatDAO.searchGoatByName(name, pageable);
     }
 
+    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
+                                                                       String registrationNumber,
+                                                                       Pageable pageable) {
+        return goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
+    }
+
+
     // UPDATE
     public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {
         return goatDAO.updateGoat(numRegistration, requestVO);
     }
-
 
     // DELETE
     public void deleteGoat(String registrationNumber) {

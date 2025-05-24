@@ -47,9 +47,4 @@ public class GoatFarmFacade {
         return farmBusiness.deleteGoatFarm(id);
     }
 
-    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
-                                                                       String registrationNumber,
-                                                                       Pageable pageable) {
-        return farmBusiness.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
-    }
 }

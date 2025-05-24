@@ -36,9 +36,6 @@ public class GoatFarmDAO {
     @Autowired
     private OwnerRepository ownerRepository;
 
-    @Autowired
-    private GoatRepository goatRepository; // INJEÇÃO DO REPOSITÓRIO DE GOAT
-
     @Transactional
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
         if (requestVO == null) {
@@ -126,18 +123,6 @@ public class GoatFarmDAO {
             throw new DatabaseException("Não é possível deletar a fazenda com ID " + id +
                     " porque ela possui relacionamentos com outras entidades.");
         }
-    }
-
-    @Transactional(readOnly = true)
-    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
-                                                                       String registrationNumber,
-                                                                       Pageable pageable) {
-        Page<Goat> goats = goatRepository.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
-        if (goats.isEmpty()) {
-            throw new ResourceNotFoundException("Nenhuma cabra encontrada para a fazenda com ID " + farmId + " e registro " + registrationNumber + ".");
-        }
-        return goats
-                .map(GoatEntityConverter::toResponseVO);
     }
 
 }

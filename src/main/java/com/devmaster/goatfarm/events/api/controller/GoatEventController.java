@@ -62,7 +62,7 @@ public class GoatEventController {
             description = "Cria e associa um evento como: COBERTURA, PARTO, MORTE, SAUDE, VACINACAO, TRANSFERENCIA, " +
                     "MUDANCA_PROPRIETARIO, PESAGEM ou OUTRO a uma cabra identificada pelo número de registro."
     )
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<EventResponseDTO> createEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")

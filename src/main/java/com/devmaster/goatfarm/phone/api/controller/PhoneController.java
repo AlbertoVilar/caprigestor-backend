@@ -27,7 +27,7 @@ public class PhoneController {
     private PhoneFacade phoneFacade;
 
     @Operation(summary = "Cadastra um novo telefone")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<PhoneResponseDTO> createPhone(
             @RequestBody(description = "Dados do telefone a ser cadastrado")

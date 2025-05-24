@@ -93,18 +93,5 @@ public class GoatFarmController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Busca todas as cabras de um capril por ID")
-    @GetMapping("/{farmId}/goats")
-    public ResponseEntity<Page<GoatResponseDTO>> findGoatsByFarmId(
-            @Parameter(description = "ID do capril", example = "1") @PathVariable Long farmId,
 
-            @Parameter(description = "Filtro opcional por número de registro da cabra", example = "2114517012")
-            @RequestParam(value = "registrationNumber", required = false) String registrationNumber,
-
-            Pageable pageable) {
-
-        Page<GoatResponseVO> goatsVO = farmFacade.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
-        Page<GoatResponseDTO> goatsDTO = goatsVO.map(GoatDTOConverter::toResponseDTO);
-        return ResponseEntity.ok(goatsDTO);
-    }
 }

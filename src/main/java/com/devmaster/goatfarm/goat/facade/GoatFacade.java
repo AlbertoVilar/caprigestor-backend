@@ -41,6 +41,12 @@ public class GoatFacade {
         return goatBusiness.searchGoatByName(name, pageable);
     }
 
+    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
+                                                                       String registrationNumber,
+                                                                       Pageable pageable) {
+        return goatBusiness.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
+    }
+
     // UPDATE
     public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO goatRequestVO) {
         return goatBusiness.updateGoat(numRegistration, goatRequestVO);

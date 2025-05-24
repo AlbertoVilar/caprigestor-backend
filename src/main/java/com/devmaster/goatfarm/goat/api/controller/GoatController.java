@@ -20,7 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/goats")
+@RequestMapping("/goatfarms")
 public class GoatController {
 
     @Autowired
@@ -30,79 +30,82 @@ public class GoatController {
     @GetMapping("/debug")
     public ResponseEntity<String> debugAuthorities() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
         if (authentication == null) {
             return ResponseEntity.status(403).body("Nenhuma autenticação ativa.");
         }
-
         return ResponseEntity.ok("Authorities reconhecidas: " + authentication.getAuthorities());
     }
 
     @Operation(summary = "Cadastra uma nova cabra no sistema")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @PostMapping
+    @PostMapping("/goats") // POST /goatfarms/goats
     public ResponseEntity<GoatResponseDTO> createGoat(
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
-
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
         Long farmId = goatRequestDTO.getFarmId();
         Long ownerId = goatRequestDTO.getOwnerId();
-
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
                 goatFacade.createGoat(requestVO, ownerId, farmId)));
     }
 
     @Operation(summary = "Atualiza os dados de uma cabra existente")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @PutMapping("/{registrationNumber}")
+    @PutMapping("/goats/{registrationNumber}") // PUT /goatfarms/goats/{registrationNumber}
     public ResponseEntity<GoatResponseDTO> updateGoat(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable String registrationNumber,
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
-
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
                 goatFacade.updateGoat(registrationNumber, requestVO)));
     }
 
     @Operation(summary = "Busca paginada por cabras usando parte do nome")
-    @GetMapping("/name")
+    @GetMapping("/goats/name") // GET /goatfarms/goats/name
     public ResponseEntity<Page<GoatResponseDTO>> searchGoatByName(
             @Parameter(description = "Nome ou parte do nome da cabra", example = "NAIDE")
             @RequestParam(defaultValue = "") String name,
             @Parameter(hidden = true)
             @PageableDefault(size = 12) Pageable pageable) {
-
         return ResponseEntity.ok(goatFacade.searchGoatByName(name, pageable)
                 .map(GoatDTOConverter::toResponseDTO));
     }
 
     @Operation(summary = "Lista todas as cabras cadastradas com paginação")
-    @GetMapping
+    @GetMapping("/goats") // GET /goatfarms/goats
     public ResponseEntity<Page<GoatResponseDTO>> findAllGoats(
             @PageableDefault(size = 12) Pageable pageable) {
-
         return ResponseEntity.ok(goatFacade.findAllGoats(pageable)
                 .map(GoatDTOConverter::toResponseDTO));
     }
 
     @Operation(summary = "Busca uma cabra pelo número de registro")
-    @GetMapping("/{registrationNumber}")
+    @GetMapping("/goats/registration/{registrationNumber}") // GET /goatfarms/goats/registration/{registrationNumber}
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable String registrationNumber) {
-
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
                 goatFacade.findGoatByRegistrationNumber(registrationNumber)));
     }
 
+    @Operation(summary = "Busca todas as cabras de um capril por ID")
+    @GetMapping("/{farmId}/goats") // GET /goatfarms/{farmId}/goats
+    public ResponseEntity<Page<GoatResponseDTO>> findGoatsByFarmId(
+            @Parameter(description = "ID do capril", example = "1") @PathVariable Long farmId,
+            @Parameter(description = "Filtro opcional por número de registro da cabra", example = "2114517012")
+            @RequestParam(value = "registrationNumber", required = false) String registrationNumber,
+            Pageable pageable) {
+        Page<GoatResponseVO> goatsVO = goatFacade.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
+        Page<GoatResponseDTO> goatsDTO = goatsVO.map(GoatDTOConverter::toResponseDTO);
+        return ResponseEntity.ok(goatsDTO);
+    }
+
     @Operation(summary = "Remove uma cabra do sistema")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    @DeleteMapping("/{registrationNumber}")
+    @DeleteMapping("/goats/{registrationNumber}") // DELETE /goatfarms/goats/{registrationNumber}
     public ResponseEntity<Void> deleteGoat(
             @Parameter(description = "Número de registro da cabra a ser removida", example = "2114517012")
             @PathVariable String registrationNumber) {
-
         goatFacade.deleteGoatByRegistrationNumber(registrationNumber);
         return ResponseEntity.noContent().build();
     }
