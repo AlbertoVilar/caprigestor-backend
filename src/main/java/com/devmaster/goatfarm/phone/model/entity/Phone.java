@@ -6,7 +6,12 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode
 @Entity
-@Table(name = "telefone")
+@Table(
+        name = "telefone",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"ddd", "numero"}) // Garante unicidade
+        }
+)
 public class Phone {
 
     @Id
@@ -23,11 +28,9 @@ public class Phone {
     @JoinColumn(name = "goat_farm_id", referencedColumnName = "id")
     private GoatFarm goatFarm;
 
-
     public Phone() {
     }
 
-    // Construtor com capril
     public Phone(Long id, String ddd, String number, GoatFarm goatFarm) {
         this.id = id;
         this.ddd = ddd;
@@ -35,7 +38,6 @@ public class Phone {
         this.goatFarm = goatFarm;
     }
 
-    // Getters e setters
     public Long getId() {
         return id;
     }
@@ -67,6 +69,4 @@ public class Phone {
     public void setGoatFarm(GoatFarm goatFarm) {
         this.goatFarm = goatFarm;
     }
-
-
 }

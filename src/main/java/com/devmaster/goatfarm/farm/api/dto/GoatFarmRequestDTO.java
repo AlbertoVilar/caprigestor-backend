@@ -1,26 +1,40 @@
 package com.devmaster.goatfarm.farm.api.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
-//@JsonIgnoreProperties(ignoreUnknown = true)
 public class GoatFarmRequestDTO {
     private Long id;
-    private String name;
-    private String tod;
-    private Long addressId;
-    private Long ownerId; // Adicione este campo
-    public GoatFarmRequestDTO() {
-    }
 
-    public GoatFarmRequestDTO(Long id, String name, String tod, Long addressId, Long ownerId) {
+    @NotNull(message = "O nome da fazenda é obrigatório.")
+    private String name;
+
+    private String tod;
+
+    @NotNull(message = "O endereço da fazenda é obrigatório.")
+    private Long addressId;
+
+    @NotNull(message = "O proprietário da fazenda é obrigatório.")
+    private Long ownerId;
+
+    @NotNull(message = "É obrigatório informar ao menos um telefone.")
+    @Size(min = 1, message = "A fazenda deve conter ao menos um telefone.")
+    private List<Long> phoneIds;
+
+    public GoatFarmRequestDTO() {}
+
+    public GoatFarmRequestDTO(Long id, String name, String tod, Long addressId, Long ownerId, List<Long> phoneIds) {
         this.id = id;
         this.name = name;
         this.tod = tod;
         this.addressId = addressId;
         this.ownerId = ownerId;
+        this.phoneIds = phoneIds;
     }
 }

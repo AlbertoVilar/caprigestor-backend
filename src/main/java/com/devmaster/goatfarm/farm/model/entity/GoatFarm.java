@@ -11,9 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Entity
 @Table(name = "capril")
@@ -39,7 +37,7 @@ public class GoatFarm {
     private Address address;
 
     @OneToMany(mappedBy = "goatFarm", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Phone> phones = new HashSet<>();
+    private List<Phone> phones = new ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "capril_id")
@@ -63,6 +61,8 @@ public class GoatFarm {
         this.owner = owner;
         this.address = address;
     }
+
+    // Getters e Setters
 
     public Long getId() {
         return id;
@@ -104,12 +104,23 @@ public class GoatFarm {
         this.address = address;
     }
 
-    public Set<Phone> getPhones() {
+    public List<Phone> getPhones() {
         return phones;
     }
 
-    public void addPhones(Phone phone) {
-        this.phones.add(phone);
+    public void setPhones(List<Phone> phones) {
+        this.phones = phones;
+        if (phones != null) {
+            phones.forEach(phone -> phone.setGoatFarm(this));
+        }
+    }
+
+    public List<Goat> getGoats() {
+        return goats;
+    }
+
+    public void setGoats(List<Goat> goats) {
+        this.goats = goats;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -128,4 +139,3 @@ public class GoatFarm {
         this.updatedAt = updatedAt;
     }
 }
-

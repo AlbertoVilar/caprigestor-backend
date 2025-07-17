@@ -17,10 +17,10 @@ public class PhoneDTOConverter {
 
     public static PhoneRequestVO toVO(PhoneRequestDTO requestDTO) {
         return new PhoneRequestVO(
-                null,
+                requestDTO.getId(),
                 requestDTO.getDdd(),
                 requestDTO.getNumber(),
-                requestDTO.getGoatFarmId()
+                requestDTO.getGoatFarmId() // ✅ Incluído o goatFarmId
         );
     }
 }

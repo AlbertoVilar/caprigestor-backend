@@ -25,7 +25,7 @@ public class OwnerController {
 
     @Autowired
     private OwnerFacade ownerFacade;
-
+    @CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo proprietário")
     //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping

@@ -2,7 +2,6 @@ package com.devmaster.goatfarm.phone.dao;
 
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,30 +33,36 @@ public class PhoneDAO {
             throw new IllegalArgumentException("Os dados do telefone para criação não podem ser nulos.");
         }
 
-        if (goatFarmId == null) {
-            throw new IllegalArgumentException("Os dados do capril não podem ser nulos.");
+        // Verifica duplicidade de telefone (DDD + Número)
+        boolean exists = phoneRepository.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
+        if (exists) {
+            throw new DatabaseException("Já existe um telefone com este DDD e número cadastrado.");
         }
 
-        // goatFarmId vindo do parâmetro
-        GoatFarm capril = farmRepository.findById(goatFarmId)
-                .orElseThrow(() -> new RuntimeException("Capril não encontrado"));
+        // Se for informado um goatFarmId, tenta buscar a fazenda
+        GoatFarm capril = null;
+        if (goatFarmId != null) {
+            capril = farmRepository.findById(goatFarmId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Capril com ID " + goatFarmId + " não encontrado."));
+        }
 
-        // Converter PhoneRequestVO para Phone, agora incluindo o GoatFarm
+        // Converte VO para entidade com ou sem fazenda associada
         Phone phone = PhoneEntityConverter.toEntity(requestVO, capril);
 
-        // Salvar o telefone com o GoatFarm associado
+        // Salva e retorna
         phone = phoneRepository.save(phone);
-
-        // Retornar a resposta após salvar
         return PhoneEntityConverter.toVO(phone);
     }
+
 
 
     @Transactional
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {
         Phone phoneToUpdate = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
+
         PhoneEntityConverter.toUpdateEntity(phoneToUpdate, requestVO);
+
         try {
             return PhoneEntityConverter.toVO(phoneRepository.save(phoneToUpdate));
         } catch (DataIntegrityViolationException e) {
@@ -64,14 +70,14 @@ public class PhoneDAO {
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public PhoneResponseVO findPhoneById(Long id) {
         Phone phone = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
         return PhoneEntityConverter.toVO(phone);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<PhoneResponseVO> findAllPhones() {
         List<Phone> phones = phoneRepository.findAll();
         return phones.stream()
@@ -84,11 +90,12 @@ public class PhoneDAO {
         if (!phoneRepository.existsById(id)) {
             throw new ResourceNotFoundException("Telefone com ID " + id + " não encontrado.");
         }
+
         try {
             phoneRepository.deleteById(id);
             return "Telefone com ID " + id + " foi deletado com sucesso.";
         } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Não é possível deletar o telefone com ID " + id + " porque ele possui relacionamentos com outras entidades.");
+            throw new DatabaseException("Não é possível deletar o telefone com ID " + id + " pois ele está vinculado a outra entidade.");
         }
     }
 }

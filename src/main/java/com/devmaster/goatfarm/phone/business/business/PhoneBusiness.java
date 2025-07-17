@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.phone.business.business;
 
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.dao.PhoneDAO;
@@ -35,4 +34,3 @@ public class PhoneBusiness {
         return phoneDAO.deletePhone(id);
     }
 }
-

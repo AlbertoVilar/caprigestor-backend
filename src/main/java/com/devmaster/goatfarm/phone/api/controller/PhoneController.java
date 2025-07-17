@@ -43,7 +43,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Busca um telefone pelo ID")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<PhoneResponseDTO> getPhoneById(
             @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long id) {
@@ -57,7 +57,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Lista todos os telefones cadastrados")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
         List<PhoneResponseVO> responseVOs = phoneFacade.findAllPhones();
@@ -67,7 +67,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Atualiza um telefone existente")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<PhoneResponseDTO> updatePhone(
             @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long id,

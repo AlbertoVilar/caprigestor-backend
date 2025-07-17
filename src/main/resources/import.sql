@@ -27,6 +27,7 @@ INSERT INTO capril (nome, TOD, owner_id, address_id, criado, atualizado) VALUES 
 INSERT INTO telefone (ddd, numero, goat_farm_id) VALUES ('21', '98988-2934', 1);
 
 INSERT INTO telefone (ddd, numero, goat_farm_id) VALUES ('83', '99876-1234', 2);
+INSERT INTO telefone (ddd, numero, goat_farm_id) VALUES ('11', '99876-2548', 3);
 
 -- Inserir dados na tabela 'cabras' (BISAVÔS MATERNOS)
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, nascimento, status, capril_id, owner_id, pai_id, mae_id) VALUES ('1403110395', 'NATAL DO JACOMÉ', 'MALE', 'Alpina', 'Indefinida', '2010-01-01', 'ATIVO', 1, 1, NULL, NULL);

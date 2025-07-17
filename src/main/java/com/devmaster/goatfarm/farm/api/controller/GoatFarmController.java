@@ -29,7 +29,7 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
-    //@CrossOrigin(origins = "http://localhost:5500")
+    @CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo capril")
     @PostMapping
     public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(

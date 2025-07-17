@@ -11,18 +11,18 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converters.GoatFarmConverter;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
-import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.converter.GoatEntityConverter;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
 import com.devmaster.goatfarm.owner.model.entity.Owner;
 import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
+import com.devmaster.goatfarm.phone.model.entity.Phone;
+import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class GoatFarmDAO {
@@ -36,10 +36,17 @@ public class GoatFarmDAO {
     @Autowired
     private OwnerRepository ownerRepository;
 
+    @Autowired
+    private PhoneRepository phoneRepository;
+
     @Transactional
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
         if (requestVO == null) {
             throw new IllegalArgumentException("Os dados da fazenda para criação não podem ser nulos.");
+        }
+
+        if (requestVO.getPhoneIds() == null || requestVO.getPhoneIds().isEmpty()) {
+            throw new IllegalArgumentException("É obrigatório informar ao menos um telefone para a fazenda.");
         }
 
         if (goatFarmRepository.existsByName(requestVO.getName())) {
@@ -52,10 +59,25 @@ public class GoatFarmDAO {
 
         Owner owner = ownerRepository.findById(requestVO.getOwnerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Dono não encontrado com o ID: " + requestVO.getOwnerId()));
+
         Address address = addressRepository.findById(requestVO.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Endereço não encontrado com o ID: " + requestVO.getAddressId()));
 
+        List<Phone> phones = phoneRepository.findAllById(requestVO.getPhoneIds());
+        if (phones.size() != requestVO.getPhoneIds().size()) {
+            throw new ResourceNotFoundException("Um ou mais telefones informados não foram encontrados.");
+        }
+
+        // ✅ Validação de exclusividade: impede reuso de telefone já atrelado a outra fazenda
+        for (Phone phone : phones) {
+            if (phone.getGoatFarm() != null) {
+                throw new DatabaseException("Telefone DDD (" + phone.getDdd() + ") número " + phone.getNumber()
+                        + " já está associado à fazenda: " + phone.getGoatFarm().getName());
+            }
+        }
+
         GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO, owner, address);
+        goatFarm.setPhones(phones); // associação segura após verificação
 
         try {
             goatFarm = goatFarmRepository.save(goatFarm);
@@ -92,9 +114,8 @@ public class GoatFarmDAO {
 
     @Transactional(readOnly = true)
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        GoatFarm goatFarm = goatFarmRepository.findById(id) // usa EntityGraph agora
+        GoatFarm goatFarm = goatFarmRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada."));
-
         return GoatFarmConverter.toFullVO(goatFarm);
     }
 
@@ -110,7 +131,6 @@ public class GoatFarmDAO {
         return projections.map(GoatFarmConverter::toFullVO);
     }
 
-
     @Transactional
     public String deleteGoatFarm(Long id) {
         if (!goatFarmRepository.existsById(id)) {
@@ -124,5 +144,4 @@ public class GoatFarmDAO {
                     " porque ela possui relacionamentos com outras entidades.");
         }
     }
-
 }

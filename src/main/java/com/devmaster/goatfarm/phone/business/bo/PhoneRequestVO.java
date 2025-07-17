@@ -5,8 +5,7 @@ public class PhoneRequestVO {
     private Long id;
     private String ddd;
     private String number;
-
-    private Long goatFarmId; // Alteração: Usando o ID do GoatFarm em vez de todo o objeto
+    private Long goatFarmId; // ✅ ID do Capril associado
 
     public PhoneRequestVO() {
     }

@@ -32,17 +32,19 @@ public class GoatFarmDTOConverter {
                 null,
                 goatRequestDTO.getTod(),
                 null,
-                null
+                null,
+                null // ✅ Adicionado campo phoneIds como null
         );
     }
 
-    public static GoatFarmRequestDTO toRequestDTO(GoatFarmRequestVO resRequesVO) {
+    public static GoatFarmRequestDTO toRequestDTO(GoatFarmRequestVO resRequestVO) {
         return new GoatFarmRequestDTO(
-                resRequesVO.getId(),
-                resRequesVO.getName(),
-                resRequesVO.getTod(),
-                resRequesVO.getAddressId(),
-                resRequesVO.getOwnerId()
+                resRequestVO.getId(),
+                resRequestVO.getName(),
+                resRequestVO.getTod(),
+                resRequestVO.getAddressId(),
+                resRequestVO.getOwnerId(),
+                resRequestVO.getPhoneIds() // ✅ Adicionado
         );
     }
 
@@ -52,7 +54,8 @@ public class GoatFarmDTOConverter {
                 requestDTO.getName(),
                 requestDTO.getTod(),
                 requestDTO.getAddressId(),
-                requestDTO.getOwnerId()
+                requestDTO.getOwnerId(),
+                requestDTO.getPhoneIds() // ✅ Adicionado
         );
     }
 
@@ -81,5 +84,4 @@ public class GoatFarmDTOConverter {
                 phones
         );
     }
-
 }

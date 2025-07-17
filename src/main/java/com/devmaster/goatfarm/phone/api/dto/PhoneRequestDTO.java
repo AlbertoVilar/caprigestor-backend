@@ -18,7 +18,7 @@ public class PhoneRequestDTO {
     @Pattern(regexp = "^\\d{8,9}$", message = "O número de telefone deve conter apenas números.")
     private String number;
 
-    private Long goatFarmId; // Somente o ID do GoatFarm
+    private Long goatFarmId; // ✅ Adicione este campo
 
     public PhoneRequestDTO() {
     }
