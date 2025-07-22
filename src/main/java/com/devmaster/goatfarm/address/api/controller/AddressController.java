@@ -37,7 +37,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Atualiza um endereço existente")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public AddressResponseDTO updateAddress(
             @Parameter(description = "ID do endereço a ser atualizado", example = "1") @PathVariable Long id,
@@ -50,7 +50,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Busca um endereço pelo ID")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/{id}")
     public AddressResponseDTO findAddressById(
             @Parameter(description = "ID do endereço a ser buscado", example = "1") @PathVariable Long id) {

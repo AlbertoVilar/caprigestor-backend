@@ -73,6 +73,8 @@ public class GoatFarmDTOConverter {
 
                 vo.getOwnerId(),
                 vo.getOwnerName(),
+                vo.getOwnerEmail(), // ✅ novo
+                vo.getOwnerCpf(),   // ✅ novo
 
                 vo.getAddressId(),
                 vo.getStreet(),
@@ -84,4 +86,5 @@ public class GoatFarmDTOConverter {
                 phones
         );
     }
+
 }

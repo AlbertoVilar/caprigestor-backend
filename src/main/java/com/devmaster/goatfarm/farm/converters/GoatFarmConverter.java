@@ -56,19 +56,22 @@ public class GoatFarmConverter {
         vo.setCreatedAt(entity.getCreatedAt());
         vo.setUpdatedAt(entity.getUpdatedAt());
 
+        // Proprietário
         vo.setOwnerId(entity.getOwner().getId());
         vo.setOwnerName(entity.getOwner().getName());
+        vo.setOwnerEmail(entity.getOwner().getEmail()); // ✅ Adicionado
+        vo.setOwnerCpf(entity.getOwner().getCpf());     // ✅ Adicionado
 
+        // Endereço
         vo.setAddressId(entity.getAddress().getId());
         vo.setStreet(entity.getAddress().getStreet());
         vo.setDistrict(entity.getAddress().getNeighborhood()); // Se for 'district' no VO
         vo.setCity(entity.getAddress().getCity());
         vo.setState(entity.getAddress().getState());
         vo.setPostalCode(entity.getAddress().getPostalCode());
+
         vo.setPhones(phones);
 
         return vo;
     }
-
-
 }

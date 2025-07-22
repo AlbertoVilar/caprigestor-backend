@@ -82,7 +82,7 @@ public class GoatEventController {
             summary = "Atualiza um evento relacionado a uma cabra",
             description = "Permite atualizar ou corrigir os dados de um evento, sem alterar informações do animal vinculado."
     )
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<EventResponseDTO> updateGoatEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")

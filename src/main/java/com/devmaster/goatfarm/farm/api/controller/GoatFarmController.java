@@ -1,8 +1,10 @@
 package com.devmaster.goatfarm.farm.api.controller;
 
+import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converters.GoatFarmDTOConverter;
@@ -10,6 +12,8 @@ import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.converter.GoatDTOConverter;
+import com.devmaster.goatfarm.owner.converter.OwnerDTOConverter;
+import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -41,16 +45,24 @@ public class GoatFarmController {
     }
 
     @Operation(summary = "Atualiza os dados de um capril existente")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+//@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<GoatFarmResponseDTO> updateGoatFarm(
+    public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(
             @Parameter(description = "ID do capril a ser atualizado", example = "1") @PathVariable Long id,
             @RequestBody(description = "Novos dados para o capril")
-            @org.springframework.web.bind.annotation.RequestBody GoatFarmRequestDTO requestDTO) {
+            @org.springframework.web.bind.annotation.RequestBody GoatFarmUpdateRequestDTO requestDTO) {
 
-        GoatFarmResponseVO responseVO = farmFacade.updateGoatFarm(id, GoatFarmDTOConverter.toVO(requestDTO));
-        return ResponseEntity.ok(GoatFarmDTOConverter.toDTO(responseVO));
+        GoatFarmFullResponseVO responseVO = farmFacade.updateGoatFarm(
+                id,
+                GoatFarmDTOConverter.toVO(requestDTO.getFarm()),
+                OwnerDTOConverter.toVO(requestDTO.getOwner()),
+                AddressDTOConverter.toVO(requestDTO.getAddress()),
+                requestDTO.getPhones().stream().map(PhoneDTOConverter::toVO).toList()
+        );
+
+        return ResponseEntity.ok(GoatFarmDTOConverter.toFullDTO(responseVO));
     }
+
 
     @Operation(summary = "Busca um capril pelo ID")
     @GetMapping("/{id}")

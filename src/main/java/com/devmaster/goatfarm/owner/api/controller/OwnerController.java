@@ -75,7 +75,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Lista todos os proprietários cadastrados (desativado)")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     // @GetMapping
     public ResponseEntity<Page<OwnerResponseDTO>> getAllOwners(
             @PageableDefault(size = 12, page = 0) Pageable pageable) {

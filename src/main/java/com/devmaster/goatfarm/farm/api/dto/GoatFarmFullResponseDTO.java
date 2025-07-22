@@ -14,6 +14,8 @@ public record GoatFarmFullResponseDTO(
 
         Long ownerId,
         String ownerName,
+        String ownerEmail,     // ✅ novo
+        String ownerCpf,       // ✅ novo
 
         Long addressId,
         String street,

@@ -1,17 +1,12 @@
 package com.devmaster.goatfarm.goat.business.goatbusiness;
 
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.dao.GoatDAO;
-import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
-import com.devmaster.goatfarm.owner.business.bo.OwnerResponseVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class GoatBusiness {
@@ -34,16 +29,22 @@ public class GoatBusiness {
         return goatDAO.findAllGoats(pageable);
     }
 
+    // 🔍 Busca por nome (sem considerar fazenda)
     public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
         return goatDAO.searchGoatByName(name, pageable);
     }
 
+    // ✅ NOVO: Busca por nome dentro de uma fazenda (ajuste para bater com o Controller)
+    public Page<GoatResponseVO> findGoatsByNameAndFarmId(Long farmId, String name, Pageable pageable) {
+        return goatDAO.searchGoatByNameAndFarmId(farmId, name, pageable);
+    }
+
+    // 🔍 Busca por ID da fazenda e número de registro (opcional)
     public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
                                                                        String registrationNumber,
                                                                        Pageable pageable) {
         return goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
     }
-
 
     // UPDATE
     public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {

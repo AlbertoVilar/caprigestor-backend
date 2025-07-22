@@ -37,7 +37,7 @@ public class GoatController {
     }
 
     @Operation(summary = "Cadastra uma nova cabra no sistema")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/goats") // POST /goatfarms/goats
     public ResponseEntity<GoatResponseDTO> createGoat(
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
@@ -49,7 +49,7 @@ public class GoatController {
     }
 
     @Operation(summary = "Atualiza os dados de uma cabra existente")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/goats/{registrationNumber}") // PUT /goatfarms/goats/{registrationNumber}
     public ResponseEntity<GoatResponseDTO> updateGoat(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
@@ -60,7 +60,7 @@ public class GoatController {
                 goatFacade.updateGoat(registrationNumber, requestVO)));
     }
 
-    @Operation(summary = "Busca paginada por cabras usando parte do nome")
+    @Operation(summary = "Busca paginada por cabras usando parte do nome (sem especificar fazenda)")
     @GetMapping("/goats/name") // GET /goatfarms/goats/name
     public ResponseEntity<Page<GoatResponseDTO>> searchGoatByName(
             @Parameter(description = "Nome ou parte do nome da cabra", example = "NAIDE")
@@ -71,12 +71,34 @@ public class GoatController {
                 .map(GoatDTOConverter::toResponseDTO));
     }
 
-    @Operation(summary = "Lista todas as cabras cadastradas com paginação")
-    @GetMapping("/goats") // GET /goatfarms/goats
-    public ResponseEntity<Page<GoatResponseDTO>> findAllGoats(
-            @PageableDefault(size = 12) Pageable pageable) {
-        return ResponseEntity.ok(goatFacade.findAllGoats(pageable)
-                .map(GoatDTOConverter::toResponseDTO));
+    @Operation(summary = "Busca todas as cabras de um capril por ID, com filtro por nome ou número de registro (um ou outro)")
+    @GetMapping("/{farmId}/goats")
+    public ResponseEntity<Page<GoatResponseDTO>> findGoatsByFarmId(
+            @Parameter(description = "ID do capril", example = "1")
+            @PathVariable Long farmId,
+            @Parameter(description = "Número de registro da cabra", example = "2114517012")
+            @RequestParam(value = "registrationNumber", required = false) String registrationNumber,
+            @Parameter(description = "Nome ou parte do nome da cabra", example = "NAIDE")
+            @RequestParam(value = "name", required = false) String name,
+            Pageable pageable) {
+
+        Page<GoatResponseVO> goatsVO;
+
+        // Prioriza a busca por nome, se informado
+        if (name != null && !name.isBlank()) {
+            goatsVO = goatFacade.findGoatsByNameAndFarmId(farmId, name, pageable);
+        }
+        // Senão, busca por número de registro (se informado)
+        else if (registrationNumber != null && !registrationNumber.isBlank()) {
+            goatsVO = goatFacade.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
+        }
+        // Se nenhum parâmetro for informado, retorna todos da fazenda
+        else {
+            goatsVO = goatFacade.findGoatsByFarmIdAndRegistrationNumber(farmId, null, pageable);
+        }
+
+        Page<GoatResponseDTO> goatsDTO = goatsVO.map(GoatDTOConverter::toResponseDTO);
+        return ResponseEntity.ok(goatsDTO);
     }
 
     @Operation(summary = "Busca uma cabra pelo número de registro")
@@ -86,18 +108,6 @@ public class GoatController {
             @PathVariable String registrationNumber) {
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
                 goatFacade.findGoatByRegistrationNumber(registrationNumber)));
-    }
-
-    @Operation(summary = "Busca todas as cabras de um capril por ID")
-    @GetMapping("/{farmId}/goats") // GET /goatfarms/{farmId}/goats
-    public ResponseEntity<Page<GoatResponseDTO>> findGoatsByFarmId(
-            @Parameter(description = "ID do capril", example = "1") @PathVariable Long farmId,
-            @Parameter(description = "Filtro opcional por número de registro da cabra", example = "2114517012")
-            @RequestParam(value = "registrationNumber", required = false) String registrationNumber,
-            Pageable pageable) {
-        Page<GoatResponseVO> goatsVO = goatFacade.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
-        Page<GoatResponseDTO> goatsDTO = goatsVO.map(GoatDTOConverter::toResponseDTO);
-        return ResponseEntity.ok(goatsDTO);
     }
 
     @Operation(summary = "Remove uma cabra do sistema")
