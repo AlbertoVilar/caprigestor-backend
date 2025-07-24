@@ -9,7 +9,7 @@
 		<relativePath/>
 	</parent>
 	<groupId>com.devmaster</groupId>
-	<artifactId>GoatFarm</artifactId>
+	<artifactId>CapriGestor</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>GoatFarm</name>
 	<description>Demo project for Spring Boot</description>

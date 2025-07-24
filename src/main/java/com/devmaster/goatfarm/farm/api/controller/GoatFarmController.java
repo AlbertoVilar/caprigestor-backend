@@ -96,7 +96,7 @@ public class GoatFarmController {
     }
 
     @Operation(summary = "Remove um capril pelo ID")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGoatFarm(
             @Parameter(description = "ID do capril a ser removido", example = "1") @PathVariable Long id) {

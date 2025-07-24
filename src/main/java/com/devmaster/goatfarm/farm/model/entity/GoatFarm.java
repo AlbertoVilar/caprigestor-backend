@@ -28,17 +28,21 @@ public class GoatFarm {
     @Column(name = "TOD", nullable = false)
     private String tod;
 
-    @OneToOne
+    // ✅ Cascade + orphanRemoval para excluir Owner junto com a fazenda
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "owner_id", referencedColumnName = "id", nullable = false)
     private Owner owner;
 
-    @OneToOne
+    // ✅ Cascade + orphanRemoval para excluir Address junto com a fazenda
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "address_id", referencedColumnName = "id", nullable = false)
     private Address address;
 
+    // ✅ Lista de telefones da fazenda com cascade e remoção automática
     @OneToMany(mappedBy = "goatFarm", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Phone> phones = new ArrayList<>();
 
+    // ✅ Lista de cabras pertencentes ao capril
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "capril_id")
     private List<Goat> goats = new ArrayList<>();
@@ -51,8 +55,7 @@ public class GoatFarm {
     @Column(name = "atualizado", nullable = false)
     private LocalDateTime updatedAt;
 
-    public GoatFarm() {
-    }
+    public GoatFarm() {}
 
     public GoatFarm(Long id, String name, String tod, Owner owner, Address address) {
         this.id = id;

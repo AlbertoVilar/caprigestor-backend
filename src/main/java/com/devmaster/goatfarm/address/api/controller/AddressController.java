@@ -60,7 +60,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Lista todos os endereços cadastrados")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping
     public List<AddressResponseDTO> findAllAddresses() {
         return addressFacade.findAllAddresses().stream()

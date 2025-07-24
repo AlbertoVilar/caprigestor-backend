@@ -80,7 +80,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Remove um telefone existente")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePhone(
             @Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long id) {

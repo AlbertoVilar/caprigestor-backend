@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: caprigestor-postgres
+    environment:
+      POSTGRES_DB: caprigestor_test
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - caprigestor-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: caprigestor-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+    networks:
+      - caprigestor-network
+
+volumes:
+  pgdata:
+
+networks:
+  caprigestor-network:
+    driver: bridge
