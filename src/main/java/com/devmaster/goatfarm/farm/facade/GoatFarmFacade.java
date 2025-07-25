@@ -21,6 +21,14 @@ public class GoatFarmFacade {
     @Autowired
     private GoatFarmBusiness farmBusiness;
 
+    // ✅ Criação completa (com owner, endereço e telefones)
+    public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmVO,
+                                                     OwnerRequestVO ownerVO,
+                                                     AddressRequestVO addressVO,
+                                                     List<PhoneRequestVO> phoneVOs) {
+        return farmBusiness.createFullGoatFarm(farmVO, ownerVO, addressVO, phoneVOs);
+    }
+
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
 
         return farmBusiness.createGoatFarm(requestVO);

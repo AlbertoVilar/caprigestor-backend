@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,4 +75,29 @@ public class AddressDAO {
             throw new DatabaseException("Não é possível deletar o endereço com ID " + id + " porque ele possui relacionamentos com outras entidades.");
         }
     }
+
+    @Transactional
+    public Address findOrCreateAddress(AddressRequestVO requestVO) {
+        if (requestVO == null) {
+            throw new IllegalArgumentException("Os dados do endereço são obrigatórios.");
+        }
+
+        // Verifica se já existe um endereço igual
+        Optional<Address> existing = adressRepository.searchExactAddress(
+                        requestVO.getStreet(),
+                        requestVO.getNeighborhood(),
+                        requestVO.getCity(),
+                        requestVO.getState(),
+                        requestVO.getPostalCode()
+                );
+
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        // Se não existir, cria um novo endereço usando o conversor
+        Address newAddress = AddressEntityConverter.toEntity(requestVO);
+        return adressRepository.save(newAddress);
+    }
+
 }

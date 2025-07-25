@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.farm.model.repository;
 
+import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,4 +33,5 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
     @EntityGraph(attributePaths = {"owner", "address", "phones"})
     @Query("SELECT g FROM GoatFarm g WHERE g.id = :id")
     Optional<GoatFarm> findById(@Param("id") Long id);
+
 }

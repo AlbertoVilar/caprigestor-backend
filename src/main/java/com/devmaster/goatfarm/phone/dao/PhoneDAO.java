@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +25,24 @@ public class PhoneDAO {
 
     @Autowired
     private GoatFarmRepository farmRepository;
+
+    // ✅ Cria ou reutiliza uma lista de telefones
+    public List<Phone> findOrCreatePhones(List<PhoneRequestVO> phoneVOList) {
+        return phoneVOList.stream()
+                .map(this::findOrCreatePhone)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ Cria ou reutiliza um único telefone
+    public Phone findOrCreatePhone(PhoneRequestVO phoneVO) {
+        return phoneRepository.findByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())
+                .orElseGet(() -> {
+                    Phone phone = new Phone();
+                    phone.setDdd(phoneVO.getDdd());
+                    phone.setNumber(phoneVO.getNumber());
+                    return phoneRepository.save(phone);
+                });
+    }
 
     @Transactional
     public PhoneResponseVO createPhone(PhoneRequestVO requestVO, Long goatFarmId) {
@@ -53,8 +70,6 @@ public class PhoneDAO {
         phone = phoneRepository.save(phone);
         return PhoneEntityConverter.toVO(phone);
     }
-
-
 
     @Transactional
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {

@@ -28,7 +28,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class GoatFarmDAO {
@@ -54,6 +57,79 @@ public class GoatFarmDAO {
     @Autowired
     private PhoneDAO phoneDAO;
 
+    @Transactional
+    public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmRequestVO,
+                                                     OwnerRequestVO ownerRequestVO,
+                                                     AddressRequestVO addressRequestVO,
+                                                     List<PhoneRequestVO> phoneRequestVOs) {
+        if (farmRequestVO == null) {
+            throw new IllegalArgumentException("Os dados da fazenda para criação não podem ser nulos.");
+        }
+
+        if (ownerRequestVO == null) {
+            throw new IllegalArgumentException("Dados do proprietário são obrigatórios.");
+        }
+
+        if (addressRequestVO == null) {
+            throw new IllegalArgumentException("Dados do endereço são obrigatórios.");
+        }
+
+        if (phoneRequestVOs == null || phoneRequestVOs.isEmpty()) {
+            throw new IllegalArgumentException("É obrigatório informar ao menos um telefone para a fazenda.");
+        }
+
+        // Verificações duplicadas
+        if (goatFarmRepository.existsByName(farmRequestVO.getName())) {
+            throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmRequestVO.getName() + "'.");
+        }
+
+        if (farmRequestVO.getTod() != null && goatFarmRepository.existsByTod(farmRequestVO.getTod())) {
+            throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmRequestVO.getTod() + "'.");
+        }
+
+        // 1. Proprietário
+        Owner owner = ownerDAO.findOrCreateOwner(ownerRequestVO);
+
+        // 2. Endereço
+        Address address = addressDAO.findOrCreateAddress(addressRequestVO);
+
+        // 3. Telefones
+        List<Phone> associatedPhones = new ArrayList<>();
+        Set<String> processedNumbers = new HashSet<>();
+
+        for (PhoneRequestVO phoneVO : phoneRequestVOs) {
+            if (!processedNumbers.add(phoneVO.getNumber())) {
+                throw new DuplicateEntityException("Número de telefone duplicado: " + phoneVO.getNumber());
+            }
+
+            Phone phone = phoneDAO.findOrCreatePhone(phoneVO);
+
+            if (phone.getGoatFarm() != null) {
+                throw new DatabaseException("Telefone DDD (" + phone.getDdd() + ") número " + phone.getNumber()
+                        + " já está associado à fazenda: " + phone.getGoatFarm().getName());
+            }
+
+            associatedPhones.add(phone);
+        }
+
+        // 4. Criar a fazenda
+        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, owner, address);
+        goatFarm.setPhones(associatedPhones);
+
+        try {
+            goatFarm = goatFarmRepository.save(goatFarm);
+
+            // Atualiza referência de fazenda nos telefones
+            for (Phone phone : associatedPhones) {
+                phone.setGoatFarm(goatFarm);
+                phoneRepository.save(phone);
+            }
+
+            return GoatFarmConverter.toFullVO(goatFarm);
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException("Erro ao salvar a fazenda: " + e.getMessage());
+        }
+    }
     @Transactional
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
         if (requestVO == null) {
@@ -100,6 +176,7 @@ public class GoatFarmDAO {
             throw new DatabaseException("Ocorreu um erro ao salvar a fazenda: " + e.getMessage());
         }
     }
+
 
     @Transactional
     public GoatFarmFullResponseVO updateGoatFarm(Long id,

@@ -26,6 +26,19 @@ public class OwnerDAO {
     private OwnerRepository ownerRepository;
 
     @Transactional
+    public Owner findOrCreateOwner(OwnerRequestVO requestVO) {
+        return ownerRepository.findByCpf(requestVO.getCpf())
+                .orElseGet(() -> {
+                    try {
+                        Owner newOwner = OwnerEntityConverter.toEntity(requestVO);
+                        return ownerRepository.save(newOwner);
+                    } catch (Exception e) {
+                        throw new DatabaseException("Erro ao criar novo proprietário: " + e.getMessage());
+                    }
+                });
+    }
+
+    @Transactional
     public OwnerResponseVO createOwner(OwnerRequestVO requestVO) {
         if (requestVO == null) {
             throw new IllegalArgumentException("Os dados do proprietário para criação não podem ser nulos.");
@@ -102,4 +115,5 @@ public class OwnerDAO {
             throw new DatabaseException("Não é possível deletar o proprietário com ID " + id + " porque ele possui relacionamentos com outras entidades.");
         }
     }
+
 }

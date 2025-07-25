@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OwnerRepository extends JpaRepository<Owner, Long> {
@@ -22,4 +23,5 @@ public interface OwnerRepository extends JpaRepository<Owner, Long> {
     @Query("SELECT o FROM Owner o WHERE LOWER(o.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Owner> searchOwnerByName(@Param("name") String name, Pageable pageable);
 
+    Optional<Owner> findByCpf(String cpf);
 }

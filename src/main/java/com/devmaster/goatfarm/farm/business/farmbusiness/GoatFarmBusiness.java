@@ -20,6 +20,14 @@ public class GoatFarmBusiness {
     @Autowired
     private GoatFarmDAO goatFarmDAO;
 
+    // ✅ Criação completa (fazenda + owner + endereço + telefones)
+    public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmVO,
+                                                     OwnerRequestVO ownerVO,
+                                                     AddressRequestVO addressVO,
+                                                     List<PhoneRequestVO> phoneVOs) {
+        return goatFarmDAO.createFullGoatFarm(farmVO, ownerVO, addressVO, phoneVOs);
+    }
+
     // Criação
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
         return goatFarmDAO.createGoatFarm(requestVO);

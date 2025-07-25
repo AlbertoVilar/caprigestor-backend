@@ -33,6 +33,23 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
+    @Operation(summary = "Cadastra um novo capril completo com proprietário, endereço e telefones")
+    @PostMapping("/full")
+    public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(
+            @RequestBody(description = "Dados completos para criação da fazenda")
+            @org.springframework.web.bind.annotation.RequestBody com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO requestDTO) {
+
+        GoatFarmFullResponseVO responseVO = farmFacade.createFullGoatFarm(
+                GoatFarmDTOConverter.toVO(requestDTO.getFarm()),
+                OwnerDTOConverter.toVO(requestDTO.getOwner()),
+                AddressDTOConverter.toVO(requestDTO.getAddress()),
+                requestDTO.getPhones().stream().map(PhoneDTOConverter::toVO).toList()
+        );
+
+        return new ResponseEntity<>(GoatFarmDTOConverter.toFullDTO(responseVO), HttpStatus.CREATED);
+    }
+
+
     @CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo capril")
     @PostMapping
