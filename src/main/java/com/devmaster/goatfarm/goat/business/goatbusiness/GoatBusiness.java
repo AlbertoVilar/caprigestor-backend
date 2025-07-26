@@ -11,47 +11,76 @@ import org.springframework.stereotype.Service;
 @Service
 public class GoatBusiness {
 
-    @Autowired
-    private GoatDAO goatDAO;
+    private final GoatDAO goatDAO;
 
-    // CREATE
+    @Autowired
+    public GoatBusiness(GoatDAO goatDAO) {
+        this.goatDAO = goatDAO;
+    }
+
+    /**
+     * Cria uma nova cabra.
+     * Delega a operação para a camada DAO.
+     */
     public GoatResponseVO createGoat(GoatRequestVO requestVO, Long ownerId, Long farmId) {
         return goatDAO.createGoat(requestVO, ownerId, farmId);
     }
 
-    // READ (BY ID)
+    /**
+     * Busca uma cabra pelo número de registro.
+     * Delega a operação para a camada DAO.
+     */
     public GoatResponseVO findGoatByRegistrationNumber(String registrationNumber) {
         return goatDAO.findGoatById(registrationNumber);
     }
 
-    // READ (ALL)
+    /**
+     * Lista todas as cabras paginadas.
+     * Delega a operação para a camada DAO.
+     */
     public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
         return goatDAO.findAllGoats(pageable);
     }
 
-    // 🔍 Busca por nome (sem considerar fazenda)
+    /**
+     * Busca paginada de cabras por nome (sem considerar fazenda).
+     * Delega a operação para a camada DAO.
+     */
     public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
         return goatDAO.searchGoatByName(name, pageable);
     }
 
-    // ✅ NOVO: Busca por nome dentro de uma fazenda (ajuste para bater com o Controller)
+    /**
+     * Busca paginada de cabras por nome dentro de uma fazenda específica.
+     * Delega a operação para a camada DAO.
+     */
     public Page<GoatResponseVO> findGoatsByNameAndFarmId(Long farmId, String name, Pageable pageable) {
         return goatDAO.searchGoatByNameAndFarmId(farmId, name, pageable);
     }
 
-    // 🔍 Busca por ID da fazenda e número de registro (opcional)
+    /**
+     * Busca paginada de cabras por ID da fazenda e número de registro (opcional).
+     * Delega a operação para a camada DAO.
+     */
     public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
                                                                        String registrationNumber,
                                                                        Pageable pageable) {
+        // Este método agora chama o DAO, que por sua vez chama o Repository com a Native Query corrigida.
         return goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
     }
 
-    // UPDATE
+    /**
+     * Atualiza os dados de uma cabra existente.
+     * Delega a operação para a camada DAO.
+     */
     public GoatResponseVO updateGoat(String numRegistration, GoatRequestVO requestVO) {
         return goatDAO.updateGoat(numRegistration, requestVO);
     }
 
-    // DELETE
+    /**
+     * Remove uma cabra do sistema.
+     * Delega a operação para a camada DAO.
+     */
     public void deleteGoat(String registrationNumber) {
         goatDAO.deleteGoat(registrationNumber);
     }
