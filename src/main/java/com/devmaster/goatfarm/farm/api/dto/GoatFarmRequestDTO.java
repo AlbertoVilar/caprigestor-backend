@@ -15,6 +15,7 @@ public class GoatFarmRequestDTO {
     @NotNull(message = "O nome da fazenda é obrigatório.")
     private String name;
 
+    @Size(min = 5, max = 5, message = "O TOD da fazenda deve conter exatamente 5 caracteres.")
     private String tod;
 
     @NotNull(message = "O endereço da fazenda é obrigatório.")

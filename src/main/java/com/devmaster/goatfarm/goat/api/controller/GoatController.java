@@ -202,7 +202,7 @@ public class GoatController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada."),
             @ApiResponse(responseCode = "409", description = "Conflito: Cabra referenciada por outro animal.") // 409 Conflict para DatabaseException
     })
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')") // Descomente para ativar a segurança
+    //@PreAuthorize("hasAuthority('ROLE_ADMIN')") // Descomente para ativar a segurança
     @DeleteMapping("/goats/{registrationNumber}") // DELETE /goatfarms/goats/{registrationNumber}
     public ResponseEntity<Void> deleteGoat(
             @Parameter(description = "Número de registro da cabra a ser removida", example = "2114517012", required = true)
