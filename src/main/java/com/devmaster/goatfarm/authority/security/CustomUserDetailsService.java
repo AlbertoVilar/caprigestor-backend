@@ -25,14 +25,16 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userDAO.findUserByUsername(username);
 
+        if (user == null) {
+            throw new UsernameNotFoundException("Usuário não encontrado com o username: " + username);
+        }
+
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority(role.getAuthority()))
                 .collect(Collectors.toList());
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
-                user.getPassword(),
-                authorities
-        );
+        user.setAuthorities(authorities); // importante: setar as authorities na sua entidade User
+
+        return user;
     }
 }

@@ -4,9 +4,7 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Entity
 @Table(name = "users")
@@ -15,10 +13,12 @@ public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String name;
 
     @Column(unique = true)
     private String email;
+
     private String password;
 
     @ManyToMany
@@ -27,8 +27,10 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    public User() {
-    }
+    @Transient
+    private List<GrantedAuthority> authorities; // usado dinamicamente
+
+    public User() {}
 
     public User(Long id, String name, String email, String password) {
         this.id = id;
@@ -36,6 +38,8 @@ public class User implements UserDetails {
         this.email = email;
         this.password = password;
     }
+
+    // Getters e Setters básicos
 
     public Long getId() {
         return id;
@@ -61,6 +65,7 @@ public class User implements UserDetails {
         this.email = email;
     }
 
+    @Override
     public String getPassword() {
         return password;
     }
@@ -73,11 +78,23 @@ public class User implements UserDetails {
         return roles;
     }
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles;
+    public void addRole(Role role) {
+        this.roles.add(role);
     }
 
+    public Boolean hasRole(String roleName) {
+        return roles.stream().anyMatch(role -> role.getAuthority().equals(roleName));
+    }
+
+    // Novo setter
+    public void setAuthorities(List<GrantedAuthority> authorities) {
+        this.authorities = authorities;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities != null ? authorities : roles;
+    }
 
     @Override
     public String getUsername() {
@@ -102,21 +119,5 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
-    }
-
-
-    public void addRole(Role role) {
-
-        this.roles.add(role);
-    }
-
-    public Boolean hasRole(String roleName) {
-        for (Role role : roles) {
-            if (role.getAuthority().equals(roleName)) {
-                return true;
-            }
-
-        }
-        return false;
     }
 }

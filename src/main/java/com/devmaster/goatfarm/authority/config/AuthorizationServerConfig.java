@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.authority.config;
 
 import com.devmaster.goatfarm.authority.config.customgrant.CustomPasswordAuthenticationConverter;
 import com.devmaster.goatfarm.authority.config.customgrant.CustomPasswordAuthenticationProvider;
-import com.devmaster.goatfarm.authority.config.customgrant.CustomUserAuthorities;
+import com.devmaster.goatfarm.authority.config.customgrant.CustomTokenCustomizer;
 import com.devmaster.goatfarm.authority.security.CustomUserDetailsService;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -42,7 +42,6 @@ import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
-import java.util.List;
 import java.util.UUID;
 
 @Configuration
@@ -62,6 +61,12 @@ public class AuthorizationServerConfig {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
+	private final CustomTokenCustomizer customTokenCustomizer;
+
+	public AuthorizationServerConfig(CustomTokenCustomizer customTokenCustomizer) {
+		this.customTokenCustomizer = customTokenCustomizer;
+	}
 
 	@Bean
 	@Order(2)
@@ -132,23 +137,10 @@ public class AuthorizationServerConfig {
 	public OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator() {
 		NimbusJwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource());
 		JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
-		jwtGenerator.setJwtCustomizer(tokenCustomizer());
+		jwtGenerator.setJwtCustomizer(customTokenCustomizer); // ✅ injeta a lógica do CustomTokenCustomizer
+
 		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
 		return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator);
-	}
-
-	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
-		return context -> {
-			OAuth2ClientAuthenticationToken principal = context.getPrincipal();
-			CustomUserAuthorities user = (CustomUserAuthorities) principal.getDetails();
-			List<String> authorities = user.getAuthorities().stream().map(x -> x.getAuthority()).toList();
-			if (context.getTokenType().getValue().equals("access_token")) {
-				context.getClaims()
-						.claim("authorities", authorities)
-						.claim("username", user.getUsername());
-			}
-		};
 	}
 
 	@Bean
