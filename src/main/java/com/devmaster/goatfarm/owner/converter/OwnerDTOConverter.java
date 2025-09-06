@@ -23,8 +23,7 @@ public class OwnerDTOConverter {
     public static OwnerRequestVO toVO(OwnerRequestDTO requestDTO) {
 
         return new OwnerRequestVO(
-
-
+                requestDTO.getId(),
                 requestDTO.getName(),
                 requestDTO.getCpf(),
                 requestDTO.getEmail()

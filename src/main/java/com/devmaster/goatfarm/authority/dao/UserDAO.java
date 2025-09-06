@@ -58,9 +58,9 @@ public class UserDAO {
         User user = UserEntityConverter.fromVO(vo);
 
         // Resolver roles já salvas no banco
+        user.getRoles().clear(); // evitar acúmulo ou roles duplicadas
+        
         if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
-            user.getRoles().clear(); // evitar acúmulo ou roles duplicadas
-
             vo.getRoles().forEach(roleName -> {
                 Optional<Role> optionalRole = roleRepository.findByAuthority(roleName);
                 if (optionalRole.isEmpty()) {
@@ -68,6 +68,13 @@ public class UserDAO {
                 }
                 user.addRole(optionalRole.get());
             });
+        } else {
+            // Atribuir ROLE_OPERATOR por padrão quando nenhuma role é fornecida
+            Optional<Role> defaultRole = roleRepository.findByAuthority("ROLE_OPERATOR");
+            if (defaultRole.isEmpty()) {
+                throw new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema");
+            }
+            user.addRole(defaultRole.get());
         }
 
         // Criptografar senha antes de salvar

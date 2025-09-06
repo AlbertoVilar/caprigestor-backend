@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 public class OwnerRequestVO {
 
-
+    private Long id;
     private String name;
     private String cpf;
     private String email;

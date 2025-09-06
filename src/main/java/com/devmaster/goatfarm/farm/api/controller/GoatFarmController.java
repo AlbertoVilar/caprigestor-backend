@@ -34,6 +34,7 @@ public class GoatFarmController {
     private GoatFarmFacade farmFacade;
 
     @Operation(summary = "Cadastra um novo capril completo com proprietário, endereço e telefones")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping("/full")
     public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(
             @RequestBody(description = "Dados completos para criação da fazenda")
@@ -52,6 +53,7 @@ public class GoatFarmController {
 
     @CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo capril")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
     public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(
             @RequestBody(description = "Dados do novo capril")
@@ -62,7 +64,7 @@ public class GoatFarmController {
     }
 
     @Operation(summary = "Atualiza os dados de um capril existente")
-//@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(
             @Parameter(description = "ID do capril a ser atualizado", example = "1") @PathVariable Long id,
@@ -113,7 +115,7 @@ public class GoatFarmController {
     }
 
     @Operation(summary = "Remove um capril pelo ID")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGoatFarm(
             @Parameter(description = "ID do capril a ser removido", example = "1") @PathVariable Long id) {

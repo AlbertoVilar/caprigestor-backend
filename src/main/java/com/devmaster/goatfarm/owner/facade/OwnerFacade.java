@@ -31,6 +31,11 @@ public class OwnerFacade {
 
         return ownerBusiness.findOwnerById(id);
     }
+
+    public OwnerResponseVO findOwnerByUserId(Long userId) {
+
+        return ownerBusiness.findOwnerByUserId(userId);
+    }
     public Page<OwnerResponseVO> searchOwnerByName(String name , Pageable pageable) {
 
         return ownerBusiness.searchOwnerByName(name, pageable);

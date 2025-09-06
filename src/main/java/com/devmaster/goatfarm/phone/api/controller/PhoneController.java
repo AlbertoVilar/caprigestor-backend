@@ -27,7 +27,7 @@ public class PhoneController {
     private PhoneFacade phoneFacade;
 
     @Operation(summary = "Cadastra um novo telefone")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
     public ResponseEntity<PhoneResponseDTO> createPhone(
             @RequestBody(description = "Dados do telefone a ser cadastrado")
@@ -43,7 +43,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Busca um telefone pelo ID")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping("/{id}")
     public ResponseEntity<PhoneResponseDTO> getPhoneById(
             @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long id) {
@@ -57,7 +57,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Lista todos os telefones cadastrados")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping
     public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
         List<PhoneResponseVO> responseVOs = phoneFacade.findAllPhones();
@@ -67,7 +67,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Atualiza um telefone existente")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/{id}")
     public ResponseEntity<PhoneResponseDTO> updatePhone(
             @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long id,
@@ -80,7 +80,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Remove um telefone existente")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePhone(
             @Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long id) {

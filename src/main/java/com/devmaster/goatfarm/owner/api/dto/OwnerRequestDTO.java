@@ -14,6 +14,8 @@ import org.hibernate.validator.constraints.br.CPF;
 @Builder
 public class OwnerRequestDTO {
 
+    private Long id;
+
     @NotBlank(message = "O nome do proprietário não pode estar em branco.")
     @Size(min = 3, max = 150, message = "O nome do proprietário deve ter entre 3 e 255 caracteres.")
     private String name;

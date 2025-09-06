@@ -24,4 +24,5 @@ public interface OwnerRepository extends JpaRepository<Owner, Long> {
     Page<Owner> searchOwnerByName(@Param("name") String name, Pageable pageable);
 
     Optional<Owner> findByCpf(String cpf);
+    Optional<Owner> findByEmail(String email);
 }

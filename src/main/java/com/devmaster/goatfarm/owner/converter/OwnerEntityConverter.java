@@ -12,7 +12,7 @@ public class OwnerEntityConverter {
 
         return new Owner(
 
-                null,
+                requestVO.getId(),
                 requestVO.getName(),
                 requestVO.getCpf(),
                 requestVO.getEmail()

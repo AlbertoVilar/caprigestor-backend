@@ -67,7 +67,7 @@ public class GoatController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos ou número de registro já existe."),
             @ApiResponse(responseCode = "404", description = "Proprietário ou fazenda não encontrados.")
     })
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')") // Descomente para ativar a segurança
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping("/goats") // POST /goatfarms/goats
     public ResponseEntity<GoatResponseDTO> createGoat(
             @Parameter(description = "Dados da cabra para cadastro", required = true)
@@ -92,7 +92,7 @@ public class GoatController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos."),
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
     })
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')") // Descomente para ativar a segurança
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/goats/{registrationNumber}") // PUT /goatfarms/goats/{registrationNumber}
     public ResponseEntity<GoatResponseDTO> updateGoat(
             @Parameter(description = "Número de registro da cabra", example = "2114517012", required = true)
@@ -202,7 +202,7 @@ public class GoatController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada."),
             @ApiResponse(responseCode = "409", description = "Conflito: Cabra referenciada por outro animal.") // 409 Conflict para DatabaseException
     })
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')") // Descomente para ativar a segurança
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/goats/{registrationNumber}") // DELETE /goatfarms/goats/{registrationNumber}
     public ResponseEntity<Void> deleteGoat(
             @Parameter(description = "Número de registro da cabra a ser removida", example = "2114517012", required = true)
@@ -210,4 +210,6 @@ public class GoatController {
         goatFacade.deleteGoatByRegistrationNumber(registrationNumber);
         return ResponseEntity.noContent().build();
     }
+
+
 }

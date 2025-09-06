@@ -25,7 +25,7 @@ public class AddressController {
     private AddressFacade addressFacade;
 
     @Operation(summary = "Cria um novo endereço")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
     public AddressResponseDTO createAddress(
             @RequestBody(description = "Dados do novo endereço")
@@ -37,7 +37,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Atualiza um endereço existente")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/{id}")
     public AddressResponseDTO updateAddress(
             @Parameter(description = "ID do endereço a ser atualizado", example = "1") @PathVariable Long id,
@@ -50,7 +50,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Busca um endereço pelo ID")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping("/{id}")
     public AddressResponseDTO findAddressById(
             @Parameter(description = "ID do endereço a ser buscado", example = "1") @PathVariable Long id) {
@@ -60,7 +60,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Lista todos os endereços cadastrados")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping
     public List<AddressResponseDTO> findAllAddresses() {
         return addressFacade.findAllAddresses().stream()

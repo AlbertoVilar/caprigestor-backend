@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.business.goatbusiness;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.dao.GoatDAO;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 public class GoatBusiness {
 
     private final GoatDAO goatDAO;
+    
+
 
     @Autowired
     public GoatBusiness(GoatDAO goatDAO) {
@@ -84,4 +87,6 @@ public class GoatBusiness {
     public void deleteGoat(String registrationNumber) {
         goatDAO.deleteGoat(registrationNumber);
     }
+
+
 }

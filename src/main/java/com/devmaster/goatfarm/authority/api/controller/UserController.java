@@ -29,7 +29,7 @@ public class UserController {
         return ResponseEntity.ok(UserDTOConverter.toDTO(vo));
     }
 
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping
     public ResponseEntity<UserResponseDTO> createUser(@RequestBody @Valid UserRequestDTO dto) {
         UserRequestVO requestVO = UserDTOConverter.toVO(dto);

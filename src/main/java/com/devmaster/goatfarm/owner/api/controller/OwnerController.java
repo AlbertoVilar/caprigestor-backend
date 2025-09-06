@@ -27,7 +27,7 @@ public class OwnerController {
     private OwnerFacade ownerFacade;
     @CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo proprietário")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
     public ResponseEntity<OwnerResponseDTO> createOwner(
             @RequestBody(description = "Dados do novo proprietário")
@@ -39,7 +39,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Atualiza um proprietário existente")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/{id}")
     public ResponseEntity<OwnerResponseDTO> updateOwner(
             @Parameter(description = "ID do proprietário a ser atualizado", example = "1") @PathVariable Long id,
@@ -52,7 +52,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Busca um proprietário pelo ID")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping("/{id}")
     public ResponseEntity<OwnerResponseDTO> getOwnerById(
             @Parameter(description = "ID do proprietário", example = "1") @PathVariable Long id) {
@@ -61,8 +61,18 @@ public class OwnerController {
         return ResponseEntity.ok(responseDTO);
     }
 
+    @Operation(summary = "Busca um proprietário pelo ID do usuário")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<OwnerResponseDTO> getOwnerByUserId(
+            @Parameter(description = "ID do usuário", example = "1") @PathVariable Long userId) {
+
+        OwnerResponseDTO responseDTO = OwnerDTOConverter.toDTO(ownerFacade.findOwnerByUserId(userId));
+        return ResponseEntity.ok(responseDTO);
+    }
+
     @Operation(summary = "Busca paginada de proprietários pelo nome")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping
     public ResponseEntity<Page<OwnerResponseDTO>> searchOwnersByName(
             @Parameter(description = "Nome ou parte do nome do proprietário", example = "João")
@@ -75,7 +85,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Lista todos os proprietários cadastrados (desativado)")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     // @GetMapping
     public ResponseEntity<Page<OwnerResponseDTO>> getAllOwners(
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
@@ -86,7 +96,7 @@ public class OwnerController {
     }
 
     @Operation(summary = "Remove um proprietário por ID")
-    //@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOwner(
             @Parameter(description = "ID do proprietário a ser removido", example = "1")

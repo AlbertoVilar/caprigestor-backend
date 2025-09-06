@@ -32,6 +32,11 @@ public class OwnerBusiness {
         return ownerDAO.findOwnerById(id);
     }
 
+    public OwnerResponseVO findOwnerByUserId(Long userId) {
+
+        return ownerDAO.findOwnerByUserId(userId);
+    }
+
     public Page<OwnerResponseVO> findAllOwners(Pageable pageable) {
 
         return ownerDAO.findAllOwners(pageable);

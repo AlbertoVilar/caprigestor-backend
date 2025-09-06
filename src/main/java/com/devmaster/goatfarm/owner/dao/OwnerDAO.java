@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,8 +26,26 @@ public class OwnerDAO {
     @Autowired
     private OwnerRepository ownerRepository;
 
+    @Autowired
+    private com.devmaster.goatfarm.authority.model.repository.UserRepository userRepository;
+
     @Transactional
     public Owner findOrCreateOwner(OwnerRequestVO requestVO) {
+        // Se o ID está presente, busca o proprietário existente pelo ID
+        if (requestVO.getId() != null) {
+            return ownerRepository.findById(requestVO.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Proprietário com ID " + requestVO.getId() + " não encontrado."));
+        }
+        
+        // Primeiro, tenta encontrar proprietário pelo email (associação com usuário)
+        if (requestVO.getEmail() != null && !requestVO.getEmail().trim().isEmpty()) {
+            Optional<Owner> existingOwnerByEmail = ownerRepository.findByEmail(requestVO.getEmail());
+            if (existingOwnerByEmail.isPresent()) {
+                return existingOwnerByEmail.get();
+            }
+        }
+        
+        // Se não encontrou por email, busca por CPF
         return ownerRepository.findByCpf(requestVO.getCpf())
                 .orElseGet(() -> {
                     try {
@@ -86,6 +105,19 @@ public class OwnerDAO {
     public OwnerResponseVO findOwnerById(Long id) {
         Owner owner = ownerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proprietário com ID " + id + " não encontrado."));
+        return OwnerEntityConverter.toVO(owner);
+    }
+
+    @Transactional
+    public OwnerResponseVO findOwnerByUserId(Long userId) {
+        // Busca o usuário pelo ID
+        com.devmaster.goatfarm.authority.model.entity.User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
+        
+        // Busca o proprietário pelo email do usuário
+        Owner owner = ownerRepository.findByEmail(user.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Proprietário não encontrado para o usuário com ID " + userId));
+        
         return OwnerEntityConverter.toVO(owner);
     }
 
