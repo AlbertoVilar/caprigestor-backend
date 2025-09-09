@@ -14,6 +14,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.converter.GoatDTOConverter;
 import com.devmaster.goatfarm.authority.conveter.UserDTOConverter;
 import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -36,6 +37,9 @@ public class GoatFarmController {
 
     @Autowired
     private GoatFarmFacade farmFacade;
+    
+    @Autowired
+    private OwnershipService ownershipService;
 
     @Operation(summary = "Cadastra um novo capril completo com proprietário, endereço e telefones")
 
@@ -147,6 +151,10 @@ public class GoatFarmController {
             @RequestBody(description = "Novos dados para o capril")
             @org.springframework.web.bind.annotation.RequestBody GoatFarmUpdateRequestDTO requestDTO) {
 
+        // Verificar ownership antes de atualizar
+        GoatFarmFullResponseVO existingFarm = farmFacade.findGoatFarmById(id);
+        ownershipService.verifyFarmOwnership(existingFarm.getFarm());
+
         GoatFarmFullResponseVO responseVO = farmFacade.updateGoatFarm(
                 id,
                 GoatFarmDTOConverter.toVO(requestDTO.getFarm()),
@@ -195,6 +203,10 @@ public class GoatFarmController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGoatFarm(
             @Parameter(description = "ID do capril a ser removido", example = "1") @PathVariable Long id) {
+
+        // Verificar ownership antes de deletar
+        GoatFarmFullResponseVO existingFarm = farmFacade.findGoatFarmById(id);
+        ownershipService.verifyFarmOwnership(existingFarm.getFarm());
 
         farmFacade.deleteGoatFarm(id);
         return ResponseEntity.noContent().build();

@@ -26,4 +26,8 @@ public class UserBusiness {
     public UserResponseVO saveUser(UserRequestVO vo) {
         return userDAO.saveUser(vo);
     }
+
+    public UserResponseVO findByEmail(String email) {
+        return userDAO.findByEmail(email);
+    }
 }

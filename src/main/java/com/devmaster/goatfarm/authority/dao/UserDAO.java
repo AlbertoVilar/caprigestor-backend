@@ -8,6 +8,9 @@ import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,15 +21,22 @@ public class UserDAO {
 
     private final UserRepository repository;
     private final RoleRepository roleRepository;
-    public UserDAO(UserRepository repository, RoleRepository roleRepository) {
+    private final PasswordEncoder passwordEncoder;
+    
+    public UserDAO(UserRepository repository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
         this.repository = repository;
         this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     protected User authenticated() {
-        // Retorna o primeiro usuário disponível (sem autenticação)
-        return repository.findAll().stream().findFirst()
-                .orElseThrow(() -> new RuntimeException("Nenhum usuário encontrado no sistema"));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String email = authentication.getName();
+            return repository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Usuário autenticado não encontrado: " + email));
+        }
+        throw new RuntimeException("Usuário não autenticado");
     }
 
     @Transactional(readOnly = true)
@@ -48,6 +58,18 @@ public class UserDAO {
         return user;
     }
 
+    @Transactional(readOnly = true)
+    public UserResponseVO findByEmail(String email) {
+        User user = repository.findByEmail(email)
+                .orElse(null);
+        
+        if (user == null) {
+            return null;
+        }
+        
+        return UserEntityConverter.toVO(user);
+    }
+
     @Transactional
     public UserResponseVO saveUser(UserRequestVO vo) {
         // Validar campos obrigatórios não nulos e não vazios
@@ -66,6 +88,9 @@ public class UserDAO {
         }
 
         User user = UserEntityConverter.fromVO(vo);
+        
+        // Criptografar a senha
+        user.setPassword(passwordEncoder.encode(vo.getPassword()));
 
         // Resolver roles já salvas no banco
         user.getRoles().clear(); // evitar acúmulo ou roles duplicadas
@@ -154,7 +179,7 @@ public class UserDAO {
         
         // Atualizar senha apenas se fornecida
         if (vo.getPassword() != null && !vo.getPassword().trim().isEmpty()) {
-            userToUpdate.setPassword(vo.getPassword()); // Senha sem criptografia
+            userToUpdate.setPassword(passwordEncoder.encode(vo.getPassword())); // Senha criptografada
         }
 
         // Atualizar roles se fornecidas

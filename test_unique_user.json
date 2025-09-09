@@ -1,8 +1,0 @@
-{
-  "name": "Usuario Teste Unico",
-  "email": "usuario.teste.unico.20250908195900@email.com",
-  "cpf": "11122233344",
-  "password": "senha123",
-  "confirmPassword": "senha123",
-  "roles": ["ROLE_OPERATOR"]
-}

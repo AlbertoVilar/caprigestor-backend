@@ -1,8 +1,0 @@
-{
-  "name": "João Silva",
-  "email": "joao.silva@email.com",
-  "cpf": "12345678901",
-  "password": "senha123",
-  "confirmPassword": "senha123",
-  "roles": ["ROLE_OPERATOR"]
-}

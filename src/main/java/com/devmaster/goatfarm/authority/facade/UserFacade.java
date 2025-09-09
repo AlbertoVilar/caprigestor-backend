@@ -27,4 +27,8 @@ public class UserFacade {
     public UserResponseVO saveUser(UserRequestVO requestVO) {
         return business.saveUser(requestVO);
     }
+
+    public UserResponseVO findByEmail(String email) {
+        return business.findByEmail(email);
+    }
 }

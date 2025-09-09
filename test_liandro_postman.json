@@ -1,8 +1,0 @@
-{
-  "name": "Liandro Medeiros",
-  "email": "liandro@gmail.com",
-  "cpf": "39162755005",
-  "password": "123456",
-  "confirmPassword": "123456",
-  "roles": ["ROLE_OPERATOR"]
-}

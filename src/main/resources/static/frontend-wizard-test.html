@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Fazenda - Modo Teste (Sem Login)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF6B35, #F7931E);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .test-mode {
+            background: #FFF3CD;
+            color: #856404;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #FFEAA7;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px;
+            position: relative;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .progress-step::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+
+        .progress-step:last-child::before {
+            display: none;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            position: relative;
+            z-index: 2;
+        }
+
+        .progress-step.active .step-circle {
+            background: #FF6B35;
+            color: white;
+        }
+
+        .progress-step.completed .step-circle {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .progress-step.completed::before {
+            background: #4CAF50;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #FF6B35;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #FF6B35;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #E55A2B;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF6B35;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .success-icon {
+            font-size: 60px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .user-info {
+            background: #E3F2FD;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐐 Cadastro de Fazenda</h1>
+            <p>Modo Teste - Sem Autenticação</p>
+        </div>
+
+        <div class="test-mode">
+            <strong>⚠️ MODO TESTE:</strong> Usuário padrão será usado automaticamente (ID: 1)
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div>Endereço</div>
+            </div>
+            <div class="progress-step" data-step="2">
+                <div class="step-circle">2</div>
+                <div>Telefone</div>
+            </div>
+            <div class="progress-step" data-step="3">
+                <div class="step-circle">3</div>
+                <div>Fazenda</div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="error" id="error-message"></div>
+
+            <!-- Informações do usuário padrão -->
+            <div class="user-info">
+                <h3>👤 Usuário Logado (Teste)</h3>
+                <p><strong>Nome:</strong> Usuário Teste</p>
+                <p><strong>Email:</strong> teste@goatfarm.com</p>
+                <p><strong>ID:</strong> 1</p>
+            </div>
+
+            <!-- Passo 1: Endereço -->
+            <div class="step active" id="step-1">
+                <h2>📍 Endereço da Fazenda</h2>
+                <form id="address-form">
+                    <div class="form-group">
+                        <label for="street">Rua/Logradouro *</label>
+                        <input type="text" id="street" name="street" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="neighborhood">Bairro *</label>
+                            <input type="text" id="neighborhood" name="neighborhood" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="city">Cidade *</label>
+                            <input type="text" id="city" name="city" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="state">Estado *</label>
+                            <select id="state" name="state" required>
+                                <option value="">Selecione...</option>
+                                <option value="AC">Acre</option>
+                                <option value="AL">Alagoas</option>
+                                <option value="AP">Amapá</option>
+                                <option value="AM">Amazonas</option>
+                                <option value="BA">Bahia</option>
+                                <option value="CE">Ceará</option>
+                                <option value="DF">Distrito Federal</option>
+                                <option value="ES">Espírito Santo</option>
+                                <option value="GO">Goiás</option>
+                                <option value="MA">Maranhão</option>
+                                <option value="MT">Mato Grosso</option>
+                                <option value="MS">Mato Grosso do Sul</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="PA">Pará</option>
+                                <option value="PB">Paraíba</option>
+                                <option value="PR">Paraná</option>
+                                <option value="PE">Pernambuco</option>
+                                <option value="PI">Piauí</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="RN">Rio Grande do Norte</option>
+                                <option value="RS">Rio Grande do Sul</option>
+                                <option value="RO">Rondônia</option>
+                                <option value="RR">Roraima</option>
+                                <option value="SC">Santa Catarina</option>
+                                <option value="SP">São Paulo</option>
+                                <option value="SE">Sergipe</option>
+                                <option value="TO">Tocantins</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="postalCode">CEP *</label>
+                            <input type="text" id="postalCode" name="postalCode" maxlength="8" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="country">País *</label>
+                        <input type="text" id="country" name="country" value="Brasil" required>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Passo 2: Telefone -->
+            <div class="step" id="step-2">
+                <h2>📞 Telefone de Contato</h2>
+                <form id="phone-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ddd">DDD *</label>
+                            <input type="text" id="ddd" name="ddd" maxlength="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="number">Número *</label>
+                            <input type="text" id="number" name="number" maxlength="9" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Passo 3: Fazenda -->
+            <div class="step" id="step-3">
+                <h2>🏡 Dados da Fazenda</h2>
+                <form id="farm-form">
+                    <div class="form-group">
+                        <label for="farmName">Nome da Fazenda *</label>
+                        <input type="text" id="farmName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tod">TOD (Código de Identificação) *</label>
+                        <input type="text" id="tod" name="tod" required>
+                    </div>
+                </form>
+            </div>
+
+            <div class="buttons">
+                <button type="button" class="btn btn-secondary" id="prev-btn" onclick="prevStep()" style="display: none;">Anterior</button>
+                <button type="button" class="btn btn-primary" id="next-btn" onclick="nextStep()">Próximo</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processando...</p>
+        </div>
+
+        <div class="success" id="success">
+            <div class="success-icon">✅</div>
+            <h2>Fazenda cadastrada com sucesso!</h2>
+            <p>Todos os dados foram salvos no sistema.</p>
+            <button class="btn btn-primary" onclick="resetForm()">Cadastrar Nova Fazenda</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let addressId = null;
+        let phoneId = null;
+        const userId = 1; // Usuário padrão para testes
+
+        function updateProgressBar(stepNumber) {
+            document.querySelectorAll('.progress-step').forEach((step, index) => {
+                if (index + 1 < stepNumber) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else if (index + 1 === stepNumber) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        function showStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            document.getElementById('prev-btn').style.display = step > 1 ? 'block' : 'none';
+            document.getElementById('next-btn').textContent = step === 3 ? 'Finalizar' : 'Próximo';
+            
+            updateProgressBar(step);
+        }
+
+        function nextStep() {
+            if (currentStep < 3) {
+                if (validateCurrentStep()) {
+                    currentStep++;
+                    processCurrentStep();
+                    showStep(currentStep);
+                }
+            } else {
+                if (validateCurrentStep()) {
+                    finalizeCadastro();
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+        function validateCurrentStep() {
+            const currentForm = document.querySelector(`#step-${currentStep} form`);
+            const inputs = currentForm.querySelectorAll('input[required], select[required]');
+            
+            for (let input of inputs) {
+                if (!input.value.trim()) {
+                    showError(`Por favor, preencha o campo: ${input.previousElementSibling.textContent}`);
+                    input.focus();
+                    return false;
+                }
+            }
+            
+            if (currentStep === 2) {
+                const ddd = document.getElementById('ddd').value;
+                const number = document.getElementById('number').value;
+                
+                if (ddd.length !== 2) {
+                    showError('DDD deve ter 2 dígitos');
+                    return false;
+                }
+                
+                if (number.length < 8 || number.length > 9) {
+                    showError('Número deve ter 8 ou 9 dígitos');
+                    return false;
+                }
+            }
+            
+            hideError();
+            return true;
+        }
+
+        async function processCurrentStep() {
+            showLoading();
+            
+            try {
+                if (currentStep === 2) {
+                    // Cadastrar endereço
+                    await createAddress();
+                } else if (currentStep === 3) {
+                    // Cadastrar telefone
+                    await createPhone();
+                }
+            } catch (error) {
+                showError('Erro ao processar dados: ' + error.message);
+                currentStep--;
+                showStep(currentStep);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function createAddress() {
+            const addressData = {
+                street: document.getElementById('street').value,
+                neighborhood: document.getElementById('neighborhood').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                postalCode: document.getElementById('postalCode').value,
+                country: document.getElementById('country').value
+            };
+
+            const response = await fetch('/addresses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(addressData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao cadastrar endereço');
+            }
+
+            const result = await response.json();
+            addressId = result.id;
+        }
+
+        async function createPhone() {
+            const phoneData = {
+                ddd: document.getElementById('ddd').value,
+                number: document.getElementById('number').value
+            };
+
+            const response = await fetch('/phones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(phoneData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao cadastrar telefone');
+            }
+
+            const result = await response.json();
+            phoneId = result.id;
+        }
+
+        async function finalizeCadastro() {
+            showLoading();
+            
+            try {
+                const farmData = {
+                    name: document.getElementById('farmName').value,
+                    tod: document.getElementById('tod').value,
+                    userId: userId,
+                    addressId: addressId,
+                    phoneIds: [phoneId]
+                };
+
+                const response = await fetch('/goatfarms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(farmData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao cadastrar fazenda');
+                }
+
+                showSuccess();
+            } catch (error) {
+                showError('Erro ao finalizar cadastro: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.querySelector('.form-container').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.querySelector('.form-container').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showSuccess() {
+            document.querySelector('.form-container').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('success').style.display = 'block';
+        }
+
+        function resetForm() {
+            currentStep = 1;
+            addressId = null;
+            phoneId = null;
+            
+            document.querySelectorAll('form').forEach(form => form.reset());
+            document.getElementById('country').value = 'Brasil';
+            
+            document.getElementById('success').style.display = 'none';
+            document.querySelector('.form-container').style.display = 'block';
+            
+            showStep(1);
+            hideError();
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            showStep(1);
+        });
+    </script>
+</body>
+</html>
