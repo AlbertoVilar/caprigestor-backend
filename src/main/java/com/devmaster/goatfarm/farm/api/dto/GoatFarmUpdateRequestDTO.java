@@ -24,4 +24,17 @@ public class GoatFarmUpdateRequestDTO {
 
     @NotNull(message = "A lista de telefones é obrigatória.")
     private List<PhoneRequestDTO> phones;
+
+    // Getters e Setters manuais para garantir compilação
+    public GoatFarmRequestDTO getFarm() { return farm; }
+    public void setFarm(GoatFarmRequestDTO farm) { this.farm = farm; }
+    
+    public UserRequestDTO getUser() { return user; }
+    public void setUser(UserRequestDTO user) { this.user = user; }
+    
+    public AddressRequestDTO getAddress() { return address; }
+    public void setAddress(AddressRequestDTO address) { this.address = address; }
+    
+    public List<PhoneRequestDTO> getPhones() { return phones; }
+    public void setPhones(List<PhoneRequestDTO> phones) { this.phones = phones; }
 }

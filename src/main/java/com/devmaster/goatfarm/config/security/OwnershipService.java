@@ -74,6 +74,30 @@ public class OwnershipService {
     }
 
     /**
+     * Verifica se o usuário atual tem permissão para acessar uma fazenda (versão para VO)
+     * ADMIN tem acesso a tudo, FARM_OWNER só à própria fazenda
+     * @param farmVO Fazenda VO a ser verificada
+     * @throws ResourceNotFoundException se não tem permissão
+     */
+    public void verifyFarmOwnership(com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO farmVO) {
+        User currentUser = getCurrentUser();
+        
+        // ADMIN tem acesso a tudo
+        if (isCurrentUserAdmin()) {
+            return;
+        }
+
+        // Verificar se o usuário é proprietário da fazenda
+        if (farmVO == null) {
+            throw new ResourceNotFoundException("Fazenda não encontrada");
+        }
+
+        if (farmVO.getUserId() == null || !farmVO.getUserId().equals(currentUser.getId())) {
+            throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar esta fazenda");
+        }
+    }
+
+    /**
      * Verifica se o usuário atual tem permissão para acessar uma cabra
      * ADMIN tem acesso a tudo, FARM_OWNER só às cabras da própria fazenda
      * @param goat Cabra a ser verificada

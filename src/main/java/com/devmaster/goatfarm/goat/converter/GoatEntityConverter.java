@@ -18,23 +18,23 @@ public class GoatEntityConverter {
                                 GoatFarm goatFarm  // Garantir que goatFarm seja passado corretamente
                                ) {
 
-        return new Goat(
-                requestVO.getRegistrationNumber(),
-                requestVO.getName(),
-                requestVO.getGender(),
-                requestVO.getBreed(),
-                requestVO.getColor(),
-                requestVO.getBirthDate(),
-                requestVO.getStatus(),
-                requestVO.getTod(),
-                requestVO.getToe(),
-                requestVO.getCategory(),
-                father,
-                mother,
-                user, // Atribuindo o usuário à cabra
-                goatFarm
-
-        );
+        Goat goat = new Goat();
+        goat.setRegistrationNumber(requestVO.getRegistrationNumber());
+        goat.setName(requestVO.getName());
+        goat.setGender(requestVO.getGender());
+        goat.setBreed(requestVO.getBreed());
+        goat.setColor(requestVO.getColor());
+        goat.setBirthDate(requestVO.getBirthDate());
+        goat.setStatus(requestVO.getStatus());
+        goat.setTod(requestVO.getTod());
+        goat.setToe(requestVO.getToe());
+        goat.setCategory(requestVO.getCategory());
+        goat.setFather(father);
+        goat.setMother(mother);
+        goat.setUser(user);
+        goat.setFarm(goatFarm);
+        
+        return goat;
     }
 
 

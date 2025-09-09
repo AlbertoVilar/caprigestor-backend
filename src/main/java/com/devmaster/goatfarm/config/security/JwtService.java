@@ -18,26 +18,41 @@ public class JwtService {
     private JwtEncoder jwtEncoder;
 
     public String generateToken(User user) {
-        Instant now = Instant.now();
-        long expiry = 24L; // 24 horas
+        try {
+            System.out.println("🔍 JWT: Iniciando geração de token para usuário: " + user.getEmail());
+            
+            Instant now = Instant.now();
+            long expiry = 24L; // 24 horas
+            
+            System.out.println("🔍 JWT: Coletando roles do usuário...");
+            String scope = user.getRoles()
+                    .stream()
+                    .map(role -> role.getAuthority())
+                    .collect(Collectors.joining(" "));
+            System.out.println("🔍 JWT: Scope gerado: " + scope);
 
-        String scope = user.getRoles()
-                .stream()
-                .map(role -> role.getAuthority())
-                .collect(Collectors.joining(" "));
-
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("goatfarm-api")
-                .issuedAt(now)
-                .expiresAt(now.plus(expiry, ChronoUnit.HOURS))
-                .subject(user.getEmail())
-                .claim("scope", scope)
-                .claim("userId", user.getId())
-                .claim("name", user.getName())
-                .claim("email", user.getEmail())
-                .build();
-
-        return this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+            System.out.println("🔍 JWT: Construindo claims...");
+            JwtClaimsSet claims = JwtClaimsSet.builder()
+                    .issuer("goatfarm-api")
+                    .issuedAt(now)
+                    .expiresAt(now.plus(expiry, ChronoUnit.HOURS))
+                    .subject(user.getEmail())
+                    .claim("scope", scope)
+                    .claim("userId", user.getId())
+                    .claim("name", user.getName())
+                    .claim("email", user.getEmail())
+                    .build();
+            
+            System.out.println("🔍 JWT: Codificando token...");
+            String token = this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+            System.out.println("🔍 JWT: Token gerado com sucesso, tamanho: " + token.length());
+            
+            return token;
+        } catch (Exception e) {
+            System.out.println("🔍 JWT ERROR: Erro ao gerar token - " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     public String generateRefreshToken(User user) {
@@ -49,7 +64,7 @@ public class JwtService {
                 .issuedAt(now)
                 .expiresAt(now.plus(expiry, ChronoUnit.HOURS))
                 .subject(user.getEmail())
-                .claim("type", "refresh")
+                .claim("scope", "REFRESH")
                 .claim("userId", user.getId())
                 .build();
 

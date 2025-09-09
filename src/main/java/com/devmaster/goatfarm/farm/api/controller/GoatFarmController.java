@@ -153,7 +153,7 @@ public class GoatFarmController {
 
         // Verificar ownership antes de atualizar
         GoatFarmFullResponseVO existingFarm = farmFacade.findGoatFarmById(id);
-        ownershipService.verifyFarmOwnership(existingFarm.getFarm());
+        ownershipService.verifyFarmOwnership(existingFarm);
 
         GoatFarmFullResponseVO responseVO = farmFacade.updateGoatFarm(
                 id,
@@ -206,7 +206,7 @@ public class GoatFarmController {
 
         // Verificar ownership antes de deletar
         GoatFarmFullResponseVO existingFarm = farmFacade.findGoatFarmById(id);
-        ownershipService.verifyFarmOwnership(existingFarm.getFarm());
+        ownershipService.verifyFarmOwnership(existingFarm);
 
         farmFacade.deleteGoatFarm(id);
         return ResponseEntity.noContent().build();

@@ -51,6 +51,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
         try {
+            System.out.println("🔍 LOGIN: Tentativa de login para: " + loginRequest.getEmail());
+            
             // Autenticar usuário
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -58,13 +60,18 @@ public class AuthController {
                     loginRequest.getPassword()
                 )
             );
+            
+            System.out.println("🔍 LOGIN: Autenticação bem-sucedida para: " + loginRequest.getEmail());
 
             // Obter usuário autenticado
             User user = (User) authentication.getPrincipal();
+            System.out.println("🔍 LOGIN: Usuário obtido: " + user.getEmail() + ", Roles: " + user.getRoles().size());
 
             // Gerar tokens
+            System.out.println("🔍 LOGIN: Gerando tokens JWT...");
             String accessToken = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
+            System.out.println("🔍 LOGIN: Tokens gerados com sucesso");
 
             // Criar resposta
             List<String> roles = user.getRoles().stream()
@@ -89,14 +96,25 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (BadCredentialsException e) {
+            System.out.println("🔍 LOGIN ERROR: Credenciais inválidas para: " + loginRequest.getEmail());
             Map<String, String> error = new HashMap<>();
             error.put("message", "Email ou senha inválidos");
             error.put("error", "INVALID_CREDENTIALS");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         } catch (Exception e) {
+            System.out.println("🔍 LOGIN ERROR: Erro interno - " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            System.out.println("🔍 LOGIN ERROR: Stack trace completo:");
+            e.printStackTrace();
+            
+            // Log adicional para debug
+            if (e.getCause() != null) {
+                System.out.println("🔍 LOGIN ERROR: Causa raiz - " + e.getCause().getClass().getSimpleName() + ": " + e.getCause().getMessage());
+            }
+            
             Map<String, String> error = new HashMap<>();
             error.put("message", "Erro interno do servidor");
             error.put("error", "INTERNAL_ERROR");
+            error.put("details", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }

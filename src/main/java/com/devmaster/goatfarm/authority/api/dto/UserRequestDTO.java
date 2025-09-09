@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRequestDTO {
@@ -39,4 +38,23 @@ public class UserRequestDTO {
     @NotNull(message = "Roles são obrigatórias")
     @NotEmpty(message = "Pelo menos uma role deve ser selecionada")
     private List<String> roles; // Ex: ["ROLE_ADMIN", "ROLE_OPERATOR"]
+
+    // Getters e setters manuais
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    
+    public String getCpf() { return cpf; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
+    
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    
+    public String getConfirmPassword() { return confirmPassword; }
+    public void setConfirmPassword(String confirmPassword) { this.confirmPassword = confirmPassword; }
+    
+    public List<String> getRoles() { return roles; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 }
