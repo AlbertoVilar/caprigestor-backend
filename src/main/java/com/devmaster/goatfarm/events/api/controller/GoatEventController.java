@@ -17,7 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -62,7 +62,7 @@ public class GoatEventController {
             description = "Cria e associa um evento como: COBERTURA, PARTO, MORTE, SAUDE, VACINACAO, TRANSFERENCIA, " +
                     "MUDANCA_PROPRIETARIO, PESAGEM ou OUTRO a uma cabra identificada pelo número de registro."
     )
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+
     @PostMapping
     public ResponseEntity<EventResponseDTO> createEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
@@ -82,7 +82,7 @@ public class GoatEventController {
             summary = "Atualiza um evento relacionado a uma cabra",
             description = "Permite atualizar ou corrigir os dados de um evento, sem alterar informações do animal vinculado."
     )
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+
     @PutMapping("/{id}")
     public ResponseEntity<EventResponseDTO> updateGoatEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
@@ -105,7 +105,7 @@ public class GoatEventController {
             summary = "Remove um evento existente",
             description = "Exclui permanentemente um evento do sistema com base no seu ID."
     )
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEventById(
             @Parameter(description = "ID do evento a ser removido", example = "3")

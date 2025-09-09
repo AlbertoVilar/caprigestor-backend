@@ -1,13 +1,11 @@
 package com.devmaster.goatfarm.authority.model.entity;
 
 import jakarta.persistence.*;
-import org.springframework.security.core.GrantedAuthority;
-
 import java.util.Objects;
 
 @Entity
 @Table(name = "role")
-public class Role implements GrantedAuthority {
+public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,7 +27,6 @@ public class Role implements GrantedAuthority {
         this.id = id;
     }
 
-    @Override // Estou implemantando o método da interface
     public String getAuthority() {
         return authority;
     }

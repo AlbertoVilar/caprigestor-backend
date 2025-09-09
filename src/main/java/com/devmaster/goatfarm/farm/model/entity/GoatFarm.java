@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.farm.model.entity;
 
 import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.owner.model.entity.Owner;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -28,13 +28,13 @@ public class GoatFarm {
     @Column(name = "TOD", nullable = false)
     private String tod;
 
-    // ✅ Cascade + orphanRemoval para excluir Owner junto com a fazenda
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "owner_id", referencedColumnName = "id", nullable = false)
-    private Owner owner;
+    // ✅ Relacionamento com User (proprietário da fazenda)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    private User user;
 
-    // ✅ Cascade + orphanRemoval para excluir Address junto com a fazenda
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    // ✅ Relacionamento com Address (múltiplas fazendas podem compartilhar o mesmo endereço)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "address_id", referencedColumnName = "id", nullable = false)
     private Address address;
 
@@ -57,11 +57,11 @@ public class GoatFarm {
 
     public GoatFarm() {}
 
-    public GoatFarm(Long id, String name, String tod, Owner owner, Address address) {
+    public GoatFarm(Long id, String name, String tod, User user, Address address) {
         this.id = id;
         this.name = name;
         this.tod = tod;
-        this.owner = owner;
+        this.user = user;
         this.address = address;
     }
 
@@ -91,12 +91,12 @@ public class GoatFarm {
         this.tod = tod;
     }
 
-    public Owner getOwner() {
-        return owner;
+    public User getUser() {
+        return user;
     }
 
-    public void setOwner(Owner owner) {
-        this.owner = owner;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public Address getAddress() {

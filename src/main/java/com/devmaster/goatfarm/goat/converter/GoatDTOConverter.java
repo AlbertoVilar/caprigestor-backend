@@ -22,7 +22,7 @@ public class GoatDTOConverter {
                 dto.getFatherRegistrationNumber(),
                 dto.getMotherRegistrationNumber(),
                 dto.getFarmId(),
-                dto.getOwnerId() // <-- adicionado aqui
+                dto.getUserId() // <-- atualizado para userId
         );
     }
 
@@ -41,7 +41,7 @@ public class GoatDTOConverter {
                 vo.getFatherRegistrationNumber(),
                 vo.getMotherRegistrationNumber(),
                 vo.getFarmId(),
-                vo.getOwnerId() // <-- adicionado aqui
+                vo.getUserId() // <-- adicionado aqui
         );
     }
 
@@ -61,7 +61,7 @@ public class GoatDTOConverter {
                 vo.getFatherRegistrationNumber(),
                 vo.getMotherName(),
                 vo.getMotherRegistrationNumber(),
-                vo.getOwnerName(),
+                vo.getUserName(),
                 vo.getFarmId(),
                 vo.getFarmName()
         );

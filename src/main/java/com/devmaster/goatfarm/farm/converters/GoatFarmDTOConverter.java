@@ -43,7 +43,7 @@ public class GoatFarmDTOConverter {
                 resRequestVO.getName(),
                 resRequestVO.getTod(),
                 resRequestVO.getAddressId(),
-                resRequestVO.getOwnerId(),
+                resRequestVO.getUserId(),
                 resRequestVO.getPhoneIds() // ✅ Adicionado
         );
     }
@@ -54,7 +54,7 @@ public class GoatFarmDTOConverter {
                 requestDTO.getName(),
                 requestDTO.getTod(),
                 requestDTO.getAddressId(),
-                requestDTO.getOwnerId(),
+                requestDTO.getUserId(),
                 requestDTO.getPhoneIds() // ✅ Adicionado
         );
     }
@@ -71,10 +71,10 @@ public class GoatFarmDTOConverter {
                 vo.getCreatedAt(),
                 vo.getUpdatedAt(),
 
-                vo.getOwnerId(),
-                vo.getOwnerName(),
-                vo.getOwnerEmail(), // ✅ novo
-                vo.getOwnerCpf(),   // ✅ novo
+                vo.getUserId(),
+                vo.getUserName(),
+                vo.getUserEmail(),
+                vo.getUserCpf(),
 
                 vo.getAddressId(),
                 vo.getStreet(),

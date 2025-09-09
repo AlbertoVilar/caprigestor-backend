@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.owner.model.entity.Owner;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -65,8 +65,8 @@ public class Goat {
         private Goat mother;
 
         @ManyToOne
-        @JoinColumn(name = "owner_id")
-        private Owner owner;
+        @JoinColumn(name = "user_id")
+        private User user;
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "capril_id")

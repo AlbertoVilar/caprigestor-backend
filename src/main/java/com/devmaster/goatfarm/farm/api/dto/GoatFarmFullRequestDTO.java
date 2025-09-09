@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.farm.api.dto;
 
 import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
-import com.devmaster.goatfarm.owner.api.dto.OwnerRequestDTO;
+import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import jakarta.validation.constraints.NotNull;
 
@@ -12,8 +12,8 @@ public class GoatFarmFullRequestDTO {
     @NotNull(message = "Os dados da fazenda são obrigatórios.")
     private GoatFarmRequestDTO farm;
 
-    @NotNull(message = "Os dados do proprietário são obrigatórios.")
-    private OwnerRequestDTO owner;
+    @NotNull(message = "Dados do usuário são obrigatórios")
+    private UserRequestDTO user;
 
     @NotNull(message = "Os dados do endereço são obrigatórios.")
     private AddressRequestDTO address;
@@ -24,9 +24,9 @@ public class GoatFarmFullRequestDTO {
     public GoatFarmFullRequestDTO() {
     }
 
-    public GoatFarmFullRequestDTO(GoatFarmRequestDTO farm, OwnerRequestDTO owner, AddressRequestDTO address, List<PhoneRequestDTO> phones) {
+    public GoatFarmFullRequestDTO(GoatFarmRequestDTO farm, UserRequestDTO user, AddressRequestDTO address, List<PhoneRequestDTO> phones) {
         this.farm = farm;
-        this.owner = owner;
+        this.user = user;
         this.address = address;
         this.phones = phones;
     }
@@ -39,12 +39,12 @@ public class GoatFarmFullRequestDTO {
         this.farm = farm;
     }
 
-    public OwnerRequestDTO getOwner() {
-        return owner;
+    public UserRequestDTO getUser() {
+        return user;
     }
 
-    public void setOwner(OwnerRequestDTO owner) {
-        this.owner = owner;
+    public void setUser(UserRequestDTO user) {
+        this.user = user;
     }
 
     public AddressRequestDTO getAddress() {

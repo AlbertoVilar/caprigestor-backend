@@ -1,0 +1,8 @@
+{
+  "name": "Maria Silva",
+  "email": "maria.silva@exemplo.com",
+  "cpf": "98765432100",
+  "password": "minhasenha456",
+  "confirmPassword": "minhasenha456",
+  "roles": ["ROLE_OPERATOR"]
+}

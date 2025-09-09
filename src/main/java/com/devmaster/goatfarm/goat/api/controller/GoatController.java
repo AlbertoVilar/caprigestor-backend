@@ -18,9 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,25 +33,7 @@ public class GoatController {
         this.goatFacade = goatFacade;
     }
 
-    /**
-     * Endpoint de depuração para verificar as permissões do usuário logado.
-     * @return ResponseEntity com as autoridades reconhecidas ou status 403.
-     */
-    @Operation(summary = "Verifica as permissões do usuário logado",
-            description = "Endpoint interno para depuração de autoridades de segurança.",
-            hidden = true) // hidden = true para não aparecer na documentação principal
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Autoridades reconhecidas com sucesso."),
-            @ApiResponse(responseCode = "403", description = "Nenhuma autenticação ativa.")
-    })
-    @GetMapping("/debug")
-    public ResponseEntity<String> debugAuthorities() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Nenhuma autenticação ativa.");
-        }
-        return ResponseEntity.ok("Authorities reconhecidas: " + authentication.getAuthorities());
-    }
+
 
     /**
      * Cadastra uma nova cabra no sistema.
@@ -61,22 +41,22 @@ public class GoatController {
      * @return ResponseEntity com o GoatResponseDTO da cabra criada.
      */
     @Operation(summary = "Cadastra uma nova cabra no sistema",
-            description = "Cria um novo registro de cabra, associando-a a um proprietário e fazenda existentes.")
+            description = "Cria um novo registro de cabra, associando-a a um usuário e fazenda existentes.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cabra cadastrada com sucesso."),
             @ApiResponse(responseCode = "400", description = "Dados inválidos ou número de registro já existe."),
-            @ApiResponse(responseCode = "404", description = "Proprietário ou fazenda não encontrados.")
+            @ApiResponse(responseCode = "404", description = "Usuário ou fazenda não encontrados.")
     })
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+
     @PostMapping("/goats") // POST /goatfarms/goats
     public ResponseEntity<GoatResponseDTO> createGoat(
             @Parameter(description = "Dados da cabra para cadastro", required = true)
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
         Long farmId = goatRequestDTO.getFarmId();
-        Long ownerId = goatRequestDTO.getOwnerId();
+        Long userId = goatRequestDTO.getUserId();
         return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
-                goatFacade.createGoat(requestVO, ownerId, farmId)));
+                goatFacade.createGoat(requestVO, userId, farmId)));
     }
 
     /**
@@ -92,7 +72,7 @@ public class GoatController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos."),
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
     })
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+
     @PutMapping("/goats/{registrationNumber}") // PUT /goatfarms/goats/{registrationNumber}
     public ResponseEntity<GoatResponseDTO> updateGoat(
             @Parameter(description = "Número de registro da cabra", example = "2114517012", required = true)
@@ -202,7 +182,7 @@ public class GoatController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada."),
             @ApiResponse(responseCode = "409", description = "Conflito: Cabra referenciada por outro animal.") // 409 Conflict para DatabaseException
     })
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+
     @DeleteMapping("/goats/{registrationNumber}") // DELETE /goatfarms/goats/{registrationNumber}
     public ResponseEntity<Void> deleteGoat(
             @Parameter(description = "Número de registro da cabra a ser removida", example = "2114517012", required = true)

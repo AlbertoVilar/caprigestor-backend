@@ -21,8 +21,8 @@ public class GoatFarmRequestDTO {
     @NotNull(message = "O endereço da fazenda é obrigatório.")
     private Long addressId;
 
-    @NotNull(message = "O proprietário da fazenda é obrigatório.")
-    private Long ownerId;
+    @NotNull(message = "O usuário da fazenda é obrigatório.")
+    private Long userId;
 
     @NotNull(message = "É obrigatório informar ao menos um telefone.")
     @Size(min = 1, message = "A fazenda deve conter ao menos um telefone.")
@@ -30,12 +30,12 @@ public class GoatFarmRequestDTO {
 
     public GoatFarmRequestDTO() {}
 
-    public GoatFarmRequestDTO(Long id, String name, String tod, Long addressId, Long ownerId, List<Long> phoneIds) {
+    public GoatFarmRequestDTO(Long id, String name, String tod, Long addressId, Long userId, List<Long> phoneIds) {
         this.id = id;
         this.name = name;
         this.tod = tod;
         this.addressId = addressId;
-        this.ownerId = ownerId;
+        this.userId = userId;
         this.phoneIds = phoneIds;
     }
 }

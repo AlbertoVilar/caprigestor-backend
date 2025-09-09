@@ -1,0 +1,8 @@
+{
+  "name": "Carlos Silva Santos",
+  "email": "carlos.santos@teste.com",
+  "cpf": "12345678909",
+  "password": "minhasenha123",
+  "confirmPassword": "minhasenha123",
+  "roles": ["ROLE_OPERATOR"]
+}

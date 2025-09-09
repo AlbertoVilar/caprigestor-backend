@@ -20,17 +20,17 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
     boolean existsByTod(String tod);
 
     // Buscar todas as fazendas com relacionamentos completos
-    @EntityGraph(attributePaths = {"owner", "address", "phones"})
+    @EntityGraph(attributePaths = {"user", "address", "phones"})
     @Query("SELECT g FROM GoatFarm g")
     Page<GoatFarm> searchAllFullFarms(Pageable pageable);
 
     // Buscar por nome com relacionamentos completos
-    @EntityGraph(attributePaths = {"owner", "address", "phones"})
+    @EntityGraph(attributePaths = {"user", "address", "phones"})
     @Query("SELECT g FROM GoatFarm g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<GoatFarm> searchGoatFarmByName(@Param("name") String name, Pageable pageable);
 
     // Buscar por ID com relacionamentos completos
-    @EntityGraph(attributePaths = {"owner", "address", "phones"})
+    @EntityGraph(attributePaths = {"user", "address", "phones"})
     @Query("SELECT g FROM GoatFarm g WHERE g.id = :id")
     Optional<GoatFarm> findById(@Param("id") Long id);
 

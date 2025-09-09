@@ -61,8 +61,8 @@ public class GoatRequestDTO {
     @NotNull(message = "O ID da fazenda é obrigatório.")
     private Long farmId;
 
-    @NotNull(message = "O ID do proprietário é obrigatório.")
-    private Long ownerId;
+    @NotNull(message = "O ID do usuário é obrigatório.")
+    private Long userId;
 
     public GoatRequestDTO() {
     }

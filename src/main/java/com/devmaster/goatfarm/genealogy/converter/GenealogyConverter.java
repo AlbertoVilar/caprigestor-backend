@@ -20,7 +20,7 @@ public class GenealogyConverter {
             response.setGoatName(goat.getName());
             response.setGoatRegistration(goat.getRegistrationNumber());
             response.setBreeder(goat.getFarm() != null ? goat.getFarm().getName() : null);
-            response.setOwner(goat.getOwner() != null ? goat.getOwner().getName() : null);
+            response.setOwner(goat.getUser() != null ? goat.getUser().getName() : null);
             response.setBreed(goat.getBreed() != null ? goat.getBreed().name() : null);
             response.setColor(goat.getColor());
             response.setStatus(goat.getStatus() != null ? goat.getStatus().name() : null);
@@ -172,7 +172,7 @@ public class GenealogyConverter {
             entity.setGoatName(goatData.getName());
             entity.setGoatRegistration(goatData.getRegistrationNumber());
             entity.setGoatCreator(goatData.getFarm() != null ? goatData.getFarm().getName() : null);
-            entity.setGoatOwner(goatData.getOwner() != null ? goatData.getOwner().getName() : null);
+            entity.setGoatOwner(goatData.getUser() != null ? goatData.getUser().getName() : null);
             entity.setGoatBreed(goatData.getBreed() != null ? goatData.getBreed().name() : null);
             entity.setGoatCoatColor(goatData.getColor());
             entity.setGoatStatus(goatData.getStatus() != null ? goatData.getStatus().name() : null);

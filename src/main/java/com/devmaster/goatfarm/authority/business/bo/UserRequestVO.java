@@ -13,6 +13,8 @@ public class UserRequestVO {
 
     private String name;
     private String email;
+    private String cpf;
     private String password;
+    private String confirmPassword;
     private List<String> roles;
 }

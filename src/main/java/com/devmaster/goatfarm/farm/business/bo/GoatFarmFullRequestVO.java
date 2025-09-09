@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.farm.business.bo;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
-import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
+import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,7 +15,7 @@ import java.util.List;
 public class GoatFarmFullRequestVO {
 
     private GoatFarmRequestVO farm;
-    private OwnerRequestVO owner;
+    private UserRequestVO user;
     private AddressRequestVO address;
     private List<PhoneRequestVO> phones;
 }

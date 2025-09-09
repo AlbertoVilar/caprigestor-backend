@@ -12,17 +12,17 @@ public class GoatFarmRequestVO {
     private String name;
     private String tod;
     private Long addressId;
-    private Long ownerId;
+    private Long userId;
     private List<Long> phoneIds; // ✅ Campo necessário
 
     public GoatFarmRequestVO() {}
 
-    public GoatFarmRequestVO(Long id, String name, String tod, Long addressId, Long ownerId, List<Long> phoneIds) {
+    public GoatFarmRequestVO(Long id, String name, String tod, Long addressId, Long userId, List<Long> phoneIds) {
         this.id = id;
         this.name = name;
         this.tod = tod;
         this.addressId = addressId;
-        this.ownerId = ownerId;
+        this.userId = userId;
         this.phoneIds = phoneIds;
     }
 }

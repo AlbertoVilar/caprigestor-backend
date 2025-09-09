@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import org.springframework.security.core.GrantedAuthority;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ public class UserEntityConverter {
 
     public static UserResponseVO toVO(User user) {
         List<String> roles = new ArrayList<>();
-        for (GrantedAuthority role : user.getRoles()) {
+        for (Role role : user.getRoles()) {
             roles.add(role.getAuthority());
         }
 
@@ -29,6 +29,7 @@ public class UserEntityConverter {
         User user = new User();
         user.setName(vo.getName());
         user.setEmail(vo.getEmail());
+        user.setCpf(vo.getCpf());
         user.setPassword(vo.getPassword());
         return user;
     }

@@ -10,8 +10,9 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.converter.GoatEntityConverter;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-import com.devmaster.goatfarm.owner.model.entity.Owner;
-import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
+import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.model.repository.UserRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -27,13 +28,13 @@ public class GoatDAO {
 
     private final GoatRepository goatRepository;
     private final GoatFarmRepository goatFarmRepository;
-    private final OwnerRepository ownerRepository;
+    private final UserRepository userRepository;
 
     @Autowired
-    public GoatDAO(GoatRepository goatRepository, GoatFarmRepository goatFarmRepository, OwnerRepository ownerRepository) {
+    public GoatDAO(GoatRepository goatRepository, GoatFarmRepository goatFarmRepository, UserRepository userRepository) {
         this.goatRepository = goatRepository;
         this.goatFarmRepository = goatFarmRepository;
-        this.ownerRepository = ownerRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -47,17 +48,18 @@ public class GoatDAO {
      * @throws ResourceNotFoundException se o proprietário ou a fazenda não forem encontrados.
      */
     @Transactional
-    public GoatResponseVO createGoat(GoatRequestVO requestVO, Long ownerId, Long farmId) {
+    public GoatResponseVO createGoat(GoatRequestVO requestVO, Long farmId) {
         if (goatRepository.existsById(requestVO.getRegistrationNumber())) {
             throw new DuplicateEntityException("Este registro '" + requestVO.getRegistrationNumber() + "' já existe.");
         }
 
         Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
         Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
-        Owner owner = findOwnerById(ownerId);
         GoatFarm farm = findGoatFarmById(farmId);
+        User user = userRepository.findById(requestVO.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com ID: " + requestVO.getUserId()));
 
-        Goat goat = GoatEntityConverter.toEntity(requestVO, father, mother, owner, farm);
+        Goat goat = GoatEntityConverter.toEntity(requestVO, father, mother, user, farm);
         goat = goatRepository.save(goat);
 
         return GoatEntityConverter.toResponseVO(goat);
@@ -198,13 +200,7 @@ public class GoatDAO {
         return goatRepository.findById(registrationNumber);
     }
 
-    /**
-     * Busca um Owner pelo ID ou lança ResourceNotFoundException.
-     */
-    private Owner findOwnerById(Long ownerId) {
-        return ownerRepository.findById(ownerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proprietário com ID '" + ownerId + "' não encontrado."));
-    }
+
 
     /**
      * Busca um GoatFarm pelo ID ou lança ResourceNotFoundException.

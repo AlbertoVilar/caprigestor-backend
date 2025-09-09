@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.owner.model.entity.Owner;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import org.springframework.stereotype.Component;
 
@@ -15,12 +15,12 @@ import java.util.stream.Collectors;
 @Component
 public class GoatFarmConverter {
 
-    public static GoatFarm toEntity(GoatFarmRequestVO requestVO, Owner owner, Address address) {
+    public static GoatFarm toEntity(GoatFarmRequestVO requestVO, User user, Address address) {
         return new GoatFarm(
                 null, // Passa null para o ID para que o banco de dados gere-o automaticamente
                 requestVO.getName(),
                 requestVO.getTod(),
-                owner,  // Passa o objeto Owner
+                user,  // Passa o objeto User
                 address // Passa o objeto Address
         );
     }
@@ -44,9 +44,11 @@ public class GoatFarmConverter {
 
     // Full ResponseVO
     public static GoatFarmFullResponseVO toFullVO(GoatFarm entity) {
-        List<PhoneResponseVO> phones = entity.getPhones().stream()
-                .map(p -> new PhoneResponseVO(p.getId(), p.getDdd(), p.getNumber()))
-                .collect(Collectors.toList());
+        List<PhoneResponseVO> phones = entity.getPhones() != null ? 
+                entity.getPhones().stream()
+                        .map(p -> new PhoneResponseVO(p.getId(), p.getDdd(), p.getNumber()))
+                        .collect(Collectors.toList()) : 
+                List.of();
 
         GoatFarmFullResponseVO vo = new GoatFarmFullResponseVO();
 
@@ -56,19 +58,23 @@ public class GoatFarmConverter {
         vo.setCreatedAt(entity.getCreatedAt());
         vo.setUpdatedAt(entity.getUpdatedAt());
 
-        // Proprietário
-        vo.setOwnerId(entity.getOwner().getId());
-        vo.setOwnerName(entity.getOwner().getName());
-        vo.setOwnerEmail(entity.getOwner().getEmail()); // ✅ Adicionado
-        vo.setOwnerCpf(entity.getOwner().getCpf());     // ✅ Adicionado
+        // Usuário
+        if (entity.getUser() != null) {
+            vo.setUserId(entity.getUser().getId());
+            vo.setUserName(entity.getUser().getName());
+            vo.setUserEmail(entity.getUser().getEmail());
+            vo.setUserCpf(entity.getUser().getCpf());
+        }
 
         // Endereço
-        vo.setAddressId(entity.getAddress().getId());
-        vo.setStreet(entity.getAddress().getStreet());
-        vo.setDistrict(entity.getAddress().getNeighborhood()); // Se for 'district' no VO
-        vo.setCity(entity.getAddress().getCity());
-        vo.setState(entity.getAddress().getState());
-        vo.setPostalCode(entity.getAddress().getPostalCode());
+        if (entity.getAddress() != null) {
+            vo.setAddressId(entity.getAddress().getId());
+            vo.setStreet(entity.getAddress().getStreet());
+            vo.setDistrict(entity.getAddress().getNeighborhood()); // Se for 'district' no VO
+            vo.setCity(entity.getAddress().getCity());
+            vo.setState(entity.getAddress().getState());
+            vo.setPostalCode(entity.getAddress().getPostalCode());
+        }
 
         vo.setPhones(phones);
 

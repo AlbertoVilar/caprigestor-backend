@@ -32,7 +32,7 @@ public class GoatRequestVO {
     private String motherRegistrationNumber;
 
     private Long farmId;
-    private Long ownerId;
+    private Long userId;
 
     public GoatRequestVO() {
     }

@@ -25,8 +25,8 @@ public class GoatBusiness {
      * Cria uma nova cabra.
      * Delega a operação para a camada DAO.
      */
-    public GoatResponseVO createGoat(GoatRequestVO requestVO, Long ownerId, Long farmId) {
-        return goatDAO.createGoat(requestVO, ownerId, farmId);
+    public GoatResponseVO createGoat(GoatRequestVO requestVO, Long userId, Long farmId) {
+        return goatDAO.createGoat(requestVO, farmId);
     }
 
     /**

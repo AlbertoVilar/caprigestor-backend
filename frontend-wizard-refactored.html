@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Fazenda - Fluxo Wizard Refatorado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px;
+            position: relative;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .progress-step::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+
+        .progress-step:last-child::before {
+            display: none;
+        }
+
+        .step-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            position: relative;
+            z-index: 2;
+            font-weight: bold;
+        }
+
+        .progress-step.active .step-circle {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .progress-step.completed .step-circle {
+            background: #2196F3;
+            color: white;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .success-icon {
+            font-size: 60px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐐 Cadastro de Fazenda</h1>
+            <p>Fluxo Wizard com Endpoints Atômicos</p>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div>Usuário</div>
+            </div>
+            <div class="progress-step" data-step="2">
+                <div class="step-circle">2</div>
+                <div>Endereço</div>
+            </div>
+            <div class="progress-step" data-step="3">
+                <div class="step-circle">3</div>
+                <div>Telefone</div>
+            </div>
+            <div class="progress-step" data-step="4">
+                <div class="step-circle">4</div>
+                <div>Fazenda</div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="error" id="error-message"></div>
+
+            <!-- Passo 1: Usuário -->
+            <div class="step active" id="step-1">
+                <h2>👤 Dados do Proprietário</h2>
+                <form id="user-form">
+                    <div class="form-group">
+                        <label for="name">Nome Completo *</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cpf">CPF *</label>
+                            <input type="text" id="cpf" name="cpf" maxlength="11" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="password">Senha *</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirmar Senha *</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Passo 2: Endereço -->
+            <div class="step" id="step-2">
+                <h2>📍 Endereço da Fazenda</h2>
+                <form id="address-form">
+                    <div class="form-group">
+                        <label for="street">Rua/Logradouro *</label>
+                        <input type="text" id="street" name="street" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="neighborhood">Bairro *</label>
+                            <input type="text" id="neighborhood" name="neighborhood" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="city">Cidade *</label>
+                            <input type="text" id="city" name="city" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="state">Estado *</label>
+                            <select id="state" name="state" required>
+                                <option value="">Selecione...</option>
+                                <option value="AC">Acre</option>
+                                <option value="AL">Alagoas</option>
+                                <option value="AP">Amapá</option>
+                                <option value="AM">Amazonas</option>
+                                <option value="BA">Bahia</option>
+                                <option value="CE">Ceará</option>
+                                <option value="DF">Distrito Federal</option>
+                                <option value="ES">Espírito Santo</option>
+                                <option value="GO">Goiás</option>
+                                <option value="MA">Maranhão</option>
+                                <option value="MT">Mato Grosso</option>
+                                <option value="MS">Mato Grosso do Sul</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="PA">Pará</option>
+                                <option value="PB">Paraíba</option>
+                                <option value="PR">Paraná</option>
+                                <option value="PE">Pernambuco</option>
+                                <option value="PI">Piauí</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="RN">Rio Grande do Norte</option>
+                                <option value="RS">Rio Grande do Sul</option>
+                                <option value="RO">Rondônia</option>
+                                <option value="RR">Roraima</option>
+                                <option value="SC">Santa Catarina</option>
+                                <option value="SP">São Paulo</option>
+                                <option value="SE">Sergipe</option>
+                                <option value="TO">Tocantins</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="postalCode">CEP *</label>
+                            <input type="text" id="postalCode" name="postalCode" maxlength="9" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="country">País *</label>
+                        <input type="text" id="country" name="country" value="Brasil" required>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Passo 3: Telefone -->
+            <div class="step" id="step-3">
+                <h2>📞 Telefone de Contato</h2>
+                <form id="phone-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ddd">DDD *</label>
+                            <input type="text" id="ddd" name="ddd" maxlength="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="number">Número *</label>
+                            <input type="text" id="number" name="number" maxlength="9" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Passo 4: Fazenda -->
+            <div class="step" id="step-4">
+                <h2>🏡 Dados da Fazenda</h2>
+                <form id="farm-form">
+                    <div class="form-group">
+                        <label for="farmName">Nome da Fazenda *</label>
+                        <input type="text" id="farmName" name="farmName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tod">Código TOD *</label>
+                        <input type="text" id="tod" name="tod" maxlength="5" placeholder="Ex: FAZ01" required>
+                        <small>5 caracteres alfanuméricos maiúsculos</small>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando cadastro...</p>
+            </div>
+
+            <!-- Success -->
+            <div class="success" id="success">
+                <div class="success-icon">✅</div>
+                <h2>Fazenda cadastrada com sucesso!</h2>
+                <p>Todos os dados foram salvos corretamente.</p>
+                <button class="btn btn-primary" onclick="location.reload()">Novo Cadastro</button>
+            </div>
+
+            <div class="buttons" id="navigation-buttons">
+                <button type="button" class="btn btn-secondary" id="prev-btn" onclick="previousStep()" disabled>Anterior</button>
+                <button type="button" class="btn btn-primary" id="next-btn" onclick="nextStep()">Próximo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado da aplicação
+        let currentStep = 1;
+        let userData = {};
+        let addressData = {};
+        let phoneData = {};
+        let farmData = {};
+
+        // IDs coletados durante o fluxo
+        let userId = null;
+        let addressId = null;
+        let phoneId = null;
+
+        const API_BASE = 'http://localhost:8080';
+
+        // Navegação entre passos
+        function updateProgressBar() {
+            document.querySelectorAll('.progress-step').forEach((step, index) => {
+                const stepNumber = index + 1;
+                step.classList.remove('active', 'completed');
+                
+                if (stepNumber < currentStep) {
+                    step.classList.add('completed');
+                } else if (stepNumber === currentStep) {
+                    step.classList.add('active');
+                }
+            });
+        }
+
+        function showStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            // Atualizar botões
+            document.getElementById('prev-btn').disabled = step === 1;
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.textContent = step === 4 ? 'Finalizar Cadastro' : 'Próximo';
+        }
+
+        function nextStep() {
+            if (currentStep < 4) {
+                if (validateCurrentStep()) {
+                    currentStep++;
+                    updateProgressBar();
+                    showStep(currentStep);
+                }
+            } else {
+                // Finalizar cadastro
+                if (validateCurrentStep()) {
+                    submitWizard();
+                }
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateProgressBar();
+                showStep(currentStep);
+            }
+        }
+
+        // Validação de cada passo
+        function validateCurrentStep() {
+            const currentForm = document.querySelector(`#step-${currentStep} form`);
+            if (!currentForm) return true;
+
+            const formData = new FormData(currentForm);
+            let isValid = true;
+
+            // Validações específicas por passo
+            if (currentStep === 1) {
+                const password = formData.get('password');
+                const confirmPassword = formData.get('confirmPassword');
+                
+                if (password !== confirmPassword) {
+                    showError('As senhas não coincidem');
+                    return false;
+                }
+
+                const cpf = formData.get('cpf');
+                if (!/^\d{11}$/.test(cpf)) {
+                    showError('CPF deve conter exatamente 11 dígitos');
+                    return false;
+                }
+
+                // Armazenar dados do usuário
+                userData = {
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    cpf: formData.get('cpf'),
+                    password: formData.get('password'),
+                    confirmPassword: formData.get('confirmPassword'),
+                    roles: ['ROLE_OPERATOR']
+                };
+            }
+
+            if (currentStep === 2) {
+                const postalCode = formData.get('postalCode');
+                if (!/^\d{5}-?\d{3}$/.test(postalCode)) {
+                    showError('CEP deve estar no formato 12345-678');
+                    return false;
+                }
+
+                // Armazenar dados do endereço
+                addressData = {
+                    street: formData.get('street'),
+                    neighborhood: formData.get('neighborhood'),
+                    city: formData.get('city'),
+                    state: formData.get('state'),
+                    postalCode: formData.get('postalCode'),
+                    country: formData.get('country')
+                };
+            }
+
+            if (currentStep === 3) {
+                const ddd = formData.get('ddd');
+                const number = formData.get('number');
+                
+                // Validações básicas de formato
+                if (!/^\d{2}$/.test(ddd)) {
+                    showError('DDD deve conter exatamente 2 dígitos');
+                    return false;
+                }
+
+                if (!/^\d{8,9}$/.test(number)) {
+                    showError('Número deve conter 8 ou 9 dígitos');
+                    return false;
+                }
+
+                // Validação de DDD brasileiro válido
+                const dddsValidos = ['11', '12', '13', '14', '15', '16', '17', '18', '19', // SP
+                                   '21', '22', '24', // RJ
+                                   '27', '28', // ES
+                                   '31', '32', '33', '34', '35', '37', '38', // MG
+                                   '41', '42', '43', '44', '45', '46', // PR
+                                   '47', '48', '49', // SC
+                                   '51', '53', '54', '55', // RS
+                                   '61', // DF
+                                   '62', '64', // GO
+                                   '63', // TO
+                                   '65', '66', // MT
+                                   '67', // MS
+                                   '68', // AC
+                                   '69', // RO
+                                   '71', '73', '74', '75', '77', // BA
+                                   '79', // SE
+                                   '81', '87', // PE
+                                   '82', // AL
+                                   '83', // PB
+                                   '84', // RN
+                                   '85', '88', // CE
+                                   '86', '89', // PI
+                                   '91', '93', '94', // PA
+                                   '92', '97', // AM
+                                   '95', // RR
+                                   '96', // AP
+                                   '98', '99']; // MA
+                
+                if (!dddsValidos.includes(ddd)) {
+                    showError('DDD inválido. Por favor, insira um DDD brasileiro válido.');
+                    return false;
+                }
+
+                // Validação de número de celular (9 dígitos deve começar com 9)
+                if (number.length === 9 && !number.startsWith('9')) {
+                    showError('Números com 9 dígitos devem começar com 9 (celular)');
+                    return false;
+                }
+
+                // Armazenar dados do telefone
+                phoneData = {
+                    ddd: formData.get('ddd'),
+                    number: formData.get('number'),
+                    goatFarmId: null // Será null pois o telefone é criado antes da fazenda
+                };
+            }
+
+            if (currentStep === 4) {
+                const tod = formData.get('tod');
+                if (!/^[A-Z0-9]{5}$/.test(tod)) {
+                    showError('TOD deve conter exatamente 5 caracteres alfanuméricos maiúsculos');
+                    return false;
+                }
+
+                // Armazenar dados da fazenda
+                farmData = {
+                    name: formData.get('farmName'),
+                    tod: formData.get('tod')
+                };
+            }
+
+            hideError();
+            return isValid;
+        }
+
+        // Submissão do wizard (orquestração sequencial)
+        async function submitWizard() {
+            try {
+                showLoading();
+
+                // Passo 1: Criar usuário
+                console.log('🔄 Criando usuário...', userData);
+                const userResponse = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                if (!userResponse.ok) {
+                    const error = await userResponse.json();
+                    throw new Error(error.message || 'Erro ao criar usuário');
+                }
+
+                const userResult = await userResponse.json();
+                userId = userResult.id;
+                console.log('✅ Usuário criado com ID:', userId);
+
+                // Passo 2: Criar endereço
+                console.log('🔄 Criando endereço...', addressData);
+                const addressResponse = await fetch(`${API_BASE}/address`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(addressData)
+                });
+
+                if (!addressResponse.ok) {
+                    const error = await addressResponse.json();
+                    throw new Error(error.message || 'Erro ao criar endereço');
+                }
+
+                const addressResult = await addressResponse.json();
+                addressId = addressResult.id;
+                console.log('✅ Endereço criado com ID:', addressId);
+
+                // Passo 3: Criar telefone
+                console.log('🔄 Criando telefone...', phoneData);
+                const phoneResponse = await fetch(`${API_BASE}/phones`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(phoneData)
+                });
+
+                if (!phoneResponse.ok) {
+                    const error = await phoneResponse.json();
+                    let errorMessage = 'Erro ao criar telefone';
+                    
+                    if (error.errors) {
+                        // Erros de validação específicos
+                        const validationErrors = [];
+                        if (error.errors.ddd) validationErrors.push(`DDD: ${error.errors.ddd}`);
+                        if (error.errors.number) validationErrors.push(`Número: ${error.errors.number}`);
+                        errorMessage = validationErrors.join(', ');
+                    } else if (error.message) {
+                        errorMessage = error.message;
+                    }
+                    
+                    // Voltar para o passo do telefone para correção
+                    currentStep = 3;
+                    updateStepDisplay();
+                    throw new Error(`Dados de telefone inválidos: ${errorMessage}. Por favor, corrija e tente novamente.`);
+                }
+
+                const phoneResult = await phoneResponse.json();
+                phoneId = phoneResult.id;
+                console.log('✅ Telefone criado com ID:', phoneId);
+
+                // Passo 4: Criar fazenda (usando IDs coletados)
+                const farmPayload = {
+                    name: farmData.name,
+                    tod: farmData.tod,
+                    userId: userId,
+                    addressId: addressId,
+                    phoneIds: [phoneId]
+                };
+
+                console.log('🔄 Criando fazenda...', farmPayload);
+                const farmResponse = await fetch(`${API_BASE}/goatfarms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(farmPayload)
+                });
+
+                if (!farmResponse.ok) {
+                    const error = await farmResponse.json();
+                    throw new Error(error.message || 'Erro ao criar fazenda');
+                }
+
+                const farmResult = await farmResponse.json();
+                console.log('✅ Fazenda criada com sucesso!', farmResult);
+
+                // Mostrar sucesso
+                hideLoading();
+                showSuccess();
+
+            } catch (error) {
+                console.error('❌ Erro no cadastro:', error);
+                hideLoading();
+                showError(error.message);
+            }
+        }
+
+        // Funções de UI
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('navigation-buttons').style.display = 'none';
+            document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showSuccess() {
+            document.getElementById('success').style.display = 'block';
+        }
+
+        // Máscaras de input
+        document.getElementById('cpf').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        document.getElementById('postalCode').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 5) {
+                value = value.substring(0, 5) + '-' + value.substring(5, 8);
+            }
+            e.target.value = value;
+        });
+
+        document.getElementById('ddd').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        document.getElementById('number').addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+
+        document.getElementById('tod').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        // Inicialização
+        updateProgressBar();
+        showStep(1);
+    </script>
+</body>
+</html>

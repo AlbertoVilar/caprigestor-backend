@@ -22,12 +22,12 @@ public class GoatFacade {
      * Cria uma nova cabra no sistema.
      * Delega a operação para a camada de negócio (GoatBusiness).
      * @param requestVO Objeto de requisição com os dados da cabra.
-     * @param ownerId ID do proprietário da cabra.
+     * @param userId ID do usuário da cabra.
      * @param farmId ID da fazenda onde a cabra será cadastrada.
      * @return GoatResponseVO com os dados da cabra criada.
      */
-    public GoatResponseVO createGoat(GoatRequestVO requestVO, Long ownerId, Long farmId) {
-        return goatBusiness.createGoat(requestVO, ownerId, farmId);
+    public GoatResponseVO createGoat(GoatRequestVO requestVO, Long userId, Long farmId) {
+        return goatBusiness.createGoat(requestVO, userId, farmId);
     }
 
     /**

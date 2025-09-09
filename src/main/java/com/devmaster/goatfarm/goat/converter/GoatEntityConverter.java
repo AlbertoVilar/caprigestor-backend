@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.owner.model.entity.Owner;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +14,7 @@ public class GoatEntityConverter {
 
     public static Goat toEntity(GoatRequestVO requestVO,
                                 Goat father, Goat mother,
-                                Owner owner,  // Incluindo o owner como parâmetro
+                                User user,  // Incluindo o usuário como parâmetro
                                 GoatFarm goatFarm  // Garantir que goatFarm seja passado corretamente
                                ) {
 
@@ -31,7 +31,7 @@ public class GoatEntityConverter {
                 requestVO.getCategory(),
                 father,
                 mother,
-                owner, // Atribuindo o owner à cabra
+                user, // Atribuindo o usuário à cabra
                 goatFarm
 
         );
@@ -79,7 +79,7 @@ public class GoatEntityConverter {
                 goat.getMother() != null ? goat.getMother().getName() : null,
                 goat.getMother() != null ? goat.getMother().getRegistrationNumber() : null,
 
-                goat.getOwner() != null ? goat.getOwner().getName() : null, // Incluindo o nome do proprietário
+                goat.getUser() != null ? goat.getUser().getName() : null, // Incluindo o nome do usuário
 
                 goat.getFarm() != null ? goat.getFarm().getId() : null,
                 goat.getFarm() != null ? goat.getFarm().getName() : null

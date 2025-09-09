@@ -2,6 +2,10 @@ package com.devmaster.goatfarm.farm.dao;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.dao.AddressDAO;
+import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
+import com.devmaster.goatfarm.authority.dao.UserDAO;
+import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
@@ -13,10 +17,7 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.converters.GoatFarmConverter;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
-import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
-import com.devmaster.goatfarm.owner.dao.OwnerDAO;
-import com.devmaster.goatfarm.owner.model.entity.Owner;
-import com.devmaster.goatfarm.owner.model.repository.OwnerRepository;
+
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.dao.PhoneDAO;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
@@ -40,16 +41,10 @@ public class GoatFarmDAO {
     private GoatFarmRepository goatFarmRepository;
 
     @Autowired
-    private OwnerRepository ownerRepository;
-
-    @Autowired
     private AddressRepository addressRepository;
 
     @Autowired
     private PhoneRepository phoneRepository;
-
-    @Autowired
-    private OwnerDAO ownerDAO;
 
     @Autowired
     private AddressDAO addressDAO;
@@ -57,17 +52,23 @@ public class GoatFarmDAO {
     @Autowired
     private PhoneDAO phoneDAO;
 
+    @Autowired
+    private UserDAO userDAO;
+
+    @Autowired
+    private UserRepository userRepository;
+
     @Transactional
     public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmRequestVO,
-                                                     OwnerRequestVO ownerRequestVO,
+                                                     UserRequestVO userRequestVO,
                                                      AddressRequestVO addressRequestVO,
                                                      List<PhoneRequestVO> phoneRequestVOs) {
         if (farmRequestVO == null) {
             throw new IllegalArgumentException("Os dados da fazenda para criação não podem ser nulos.");
         }
 
-        if (ownerRequestVO == null) {
-            throw new IllegalArgumentException("Dados do proprietário são obrigatórios.");
+        if (userRequestVO == null) {
+            throw new IllegalArgumentException("Dados do usuário são obrigatórios.");
         }
 
         if (addressRequestVO == null) {
@@ -87,8 +88,8 @@ public class GoatFarmDAO {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmRequestVO.getTod() + "'.");
         }
 
-        // 1. Proprietário
-        Owner owner = ownerDAO.findOrCreateOwner(ownerRequestVO);
+        // 1. Usuário
+        User user = userDAO.findOrCreateUser(userRequestVO);
 
         // 2. Endereço
         Address address = addressDAO.findOrCreateAddress(addressRequestVO);
@@ -113,7 +114,7 @@ public class GoatFarmDAO {
         }
 
         // 4. Criar a fazenda
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, owner, address);
+        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);
         goatFarm.setPhones(associatedPhones);
 
         try {
@@ -148,8 +149,8 @@ public class GoatFarmDAO {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + requestVO.getTod() + "'.");
         }
 
-        Owner owner = ownerRepository.findById(requestVO.getOwnerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Dono não encontrado com o ID: " + requestVO.getOwnerId()));
+        User user = userRepository.findById(requestVO.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com o ID: " + requestVO.getUserId()));
 
         Address address = addressRepository.findById(requestVO.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Endereço não encontrado com o ID: " + requestVO.getAddressId()));
@@ -166,7 +167,7 @@ public class GoatFarmDAO {
             }
         }
 
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO, owner, address);
+        GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO, user, address);
         goatFarm.setPhones(phones);
 
         try {
@@ -181,7 +182,7 @@ public class GoatFarmDAO {
     @Transactional
     public GoatFarmFullResponseVO updateGoatFarm(Long id,
                                                  GoatFarmRequestVO farmVO,
-                                                 OwnerRequestVO ownerVO,
+                                                 UserRequestVO userVO,
                                                  AddressRequestVO addressVO,
                                                  List<PhoneRequestVO> phoneVOs) {
 
@@ -203,7 +204,7 @@ public class GoatFarmDAO {
         }
 
         // Atualiza entidades relacionadas
-        ownerDAO.updateGoatOwner(farmVO.getOwnerId(), ownerVO);
+        userDAO.updateUser(farmVO.getUserId(), userVO);
         addressDAO.updateAddress(farmVO.getAddressId(), addressVO);
 
         // Validação de telefones

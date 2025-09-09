@@ -24,7 +24,9 @@ public class UserDTOConverter {
         return new UserRequestVO(
                 dto.getName(),
                 dto.getEmail(),
+                dto.getCpf(),
                 dto.getPassword(),
+                dto.getConfirmPassword(),
                 dto.getRoles() != null ? new ArrayList<>(dto.getRoles()) : new ArrayList<>()
         );
     }

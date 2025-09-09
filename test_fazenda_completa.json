@@ -1,0 +1,28 @@
+{
+  "farm": {
+    "name": "Fazenda Sao Jose",
+    "tod": "FSJ01"
+  },
+  "user": {
+    "name": "Jose Silva",
+    "email": "jose.silva@email.com",
+    "password": "senha123",
+    "confirmPassword": "senha123",
+    "cpf": "12345678901",
+    "roles": ["ROLE_OPERATOR"]
+  },
+  "address": {
+    "street": "Fazenda Sao Jose, s/n",
+    "neighborhood": "Zona Rural",
+    "city": "Monteiro",
+    "state": "PB",
+    "postalCode": "58500-000",
+    "country": "Brasil"
+  },
+  "phones": [
+    {
+      "ddd": "83",
+      "number": "987654321"
+    }
+  ]
+}

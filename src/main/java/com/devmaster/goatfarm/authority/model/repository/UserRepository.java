@@ -24,5 +24,62 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	List<UserDetailsProjection> searchUserAndRolesByEmail(String email);
 
 	@EntityGraph(attributePaths = "roles")
-	Optional<User> findByEmail(String email);
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByCpf(String cpf);
+
+    @Query("DELETE FROM User u WHERE u.email != :email")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByEmailNot(String email);
+
+    @Query("DELETE FROM GoatFarm gf WHERE gf.user.email != :email")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteGoatFarmsByUserEmailNot(String email);
+
+    @Query(nativeQuery = true, value = "DELETE FROM eventos WHERE goat_id IN (SELECT g.num_registro FROM cabras g JOIN capril c ON g.capril_id = c.id WHERE c.user_id != :adminId)")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteEventsFromOtherUsers(Long adminId);
+
+    @Query(nativeQuery = true, value = "DELETE FROM cabras WHERE capril_id IN (SELECT c.id FROM capril c WHERE c.user_id != :adminId)")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteGoatsFromOtherUsers(Long adminId);
+
+    @Query(nativeQuery = true, value = "DELETE FROM telefone WHERE goat_farm_id IN (SELECT c.id FROM capril c WHERE c.user_id != :adminId)")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deletePhonesFromOtherUsers(Long adminId);
+
+    @Query(nativeQuery = true, value = "DELETE FROM endereco WHERE id IN (SELECT c.address_id FROM capril c WHERE c.user_id != :adminId AND c.address_id IS NOT NULL)")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteAddressesFromOtherUsers(Long adminId);
+
+    @Query(nativeQuery = true, value = "DELETE FROM capril WHERE user_id != :adminId")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteGoatFarmsFromOtherUsers(Long adminId);
+
+    @Query(nativeQuery = true, value = "DELETE FROM tb_user_role WHERE user_id != :adminId")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteRolesFromOtherUsers(Long adminId);
+
+    @Query(nativeQuery = true, value = "DELETE FROM users WHERE id != :adminId")
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteOtherUsers(Long adminId);
+
+    default void cleanDatabaseStepByStep(Long adminId) {
+        deleteEventsFromOtherUsers(adminId);
+        deleteGoatsFromOtherUsers(adminId);
+        deletePhonesFromOtherUsers(adminId);
+        deleteGoatFarmsFromOtherUsers(adminId);
+        deleteAddressesFromOtherUsers(adminId);
+        deleteRolesFromOtherUsers(adminId);
+        deleteOtherUsers(adminId);
+    }
 }

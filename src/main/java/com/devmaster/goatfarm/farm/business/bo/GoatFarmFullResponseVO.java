@@ -19,11 +19,11 @@ public class GoatFarmFullResponseVO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Proprietário
-    private Long ownerId;
-    private String ownerName;
-    private String ownerEmail; // ✅ Novo campo
-    private String ownerCpf;   // ✅ Novo campo
+    // Usuário
+    private Long userId;
+    private String userName;
+    private String userEmail;
+    private String userCpf;
 
     // Endereço
     private Long addressId;

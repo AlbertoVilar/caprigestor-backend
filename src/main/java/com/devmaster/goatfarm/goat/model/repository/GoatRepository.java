@@ -20,7 +20,7 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
         SELECT g FROM Goat g
         LEFT JOIN FETCH g.father
         LEFT JOIN FETCH g.farm
-        LEFT JOIN FETCH g.owner
+        LEFT JOIN FETCH g.user
         WHERE g.registrationNumber = :registrationNumber
     """)
     Optional<Goat> findByRegistrationNumber(@Param("registrationNumber") String registrationNumber);
@@ -54,7 +54,7 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
                g1_0.sexo,
                g1_0.mae_id,
                g1_0.nome,
-               g1_0.owner_id,
+               g1_0.user_id,
                g1_0.status,
                g1_0.tod,
                g1_0.toe

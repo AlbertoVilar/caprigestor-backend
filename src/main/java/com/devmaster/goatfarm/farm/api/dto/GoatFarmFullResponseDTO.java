@@ -12,10 +12,10 @@ public record GoatFarmFullResponseDTO(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
 
-        Long ownerId,
-        String ownerName,
-        String ownerEmail,     // ✅ novo
-        String ownerCpf,       // ✅ novo
+        Long userId,
+        String userName,
+        String userEmail,
+        String userCpf,
 
         Long addressId,
         String street,

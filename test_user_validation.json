@@ -1,0 +1,8 @@
+{
+  "name": "Usuario Validacao Teste",
+  "email": "usuario.validacao.teste.20250908200500@email.com",
+  "cpf": "12345678901",
+  "password": "senha123456",
+  "confirmPassword": "senha123456",
+  "roles": ["ROLE_OPERATOR"]
+}

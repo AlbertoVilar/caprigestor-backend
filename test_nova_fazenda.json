@@ -1,0 +1,23 @@
+{
+  "user": {
+    "id": 1
+  },
+  "address": {
+    "rua": "Fazenda Esperança Verde",
+    "bairro": "Zona Rural",
+    "cidade": "Sousa",
+    "estado": "Paraíba",
+    "codigoPostal": "58800-000",
+    "pais": "Brasil"
+  },
+  "goatFarm": {
+    "nome": "Capril Esperança Verde",
+    "tod": "78901"
+  },
+  "telefones": [
+    {
+      "ddd": "83",
+      "numero": "99777-6666"
+    }
+  ]
+}

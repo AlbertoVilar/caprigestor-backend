@@ -16,7 +16,7 @@ public class GenealogyEntityConverter {
 
                 vo.getGoatName(),
                 vo.getGoatRegistration(),
-                vo.getOwner(),
+                vo.getBreeder(),
                 vo.getOwner(),
                 vo.getBreed(),
                 vo.getColor(),

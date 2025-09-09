@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
-import com.devmaster.goatfarm.owner.business.bo.OwnerRequestVO;
+import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -22,10 +22,10 @@ public class GoatFarmBusiness {
 
     // ✅ Criação completa (fazenda + owner + endereço + telefones)
     public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmVO,
-                                                     OwnerRequestVO ownerVO,
+                                                     UserRequestVO userVO,
                                                      AddressRequestVO addressVO,
                                                      List<PhoneRequestVO> phoneVOs) {
-        return goatFarmDAO.createFullGoatFarm(farmVO, ownerVO, addressVO, phoneVOs);
+        return goatFarmDAO.createFullGoatFarm(farmVO, userVO, addressVO, phoneVOs);
     }
 
     // Criação
@@ -35,10 +35,10 @@ public class GoatFarmBusiness {
 
     public GoatFarmFullResponseVO updateGoatFarm(Long id,
                                                  GoatFarmRequestVO requestVO,
-                                                 OwnerRequestVO ownerVO,
+                                                 UserRequestVO userVO,
                                                  AddressRequestVO addressVO,
                                                  List<PhoneRequestVO> phoneVOs) {
-        return goatFarmDAO.updateGoatFarm(id, requestVO, ownerVO, addressVO, phoneVOs);
+        return goatFarmDAO.updateGoatFarm(id, requestVO, userVO, addressVO, phoneVOs);
     }
 
 

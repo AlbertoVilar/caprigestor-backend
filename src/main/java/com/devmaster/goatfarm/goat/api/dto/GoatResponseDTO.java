@@ -34,7 +34,7 @@ public class GoatResponseDTO {
     private String motherName;
     private String motherRegistrationNumber;
 
-    private String ownerName;  // <-- Novo campo para o nome do proprietário
+    private String userName;  // <-- Campo para o nome do usuário
 
     private Long farmId;
     private String farmName;

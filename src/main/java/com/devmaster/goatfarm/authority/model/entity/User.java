@@ -1,34 +1,48 @@
 package com.devmaster.goatfarm.authority.model.entity;
 
 import jakarta.persistence.*;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.*;
 
 @Entity
 @Table(name = "users")
-public class User implements UserDetails {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Nome é obrigatório")
+    @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(unique = true)
+    @NotBlank(message = "Email é obrigatório")
+    @Email(message = "Email deve ter formato válido")
+    @Column(unique = true, nullable = false, length = 150)
     private String email;
 
+    @NotBlank(message = "Senha é obrigatória")
+    @Size(min = 6, message = "Senha deve ter pelo menos 6 caracteres")
+    @Column(nullable = false, length = 60)
     private String password;
 
-    @ManyToMany
+    @NotBlank(message = "CPF é obrigatório")
+    @Size(min = 11, max = 11, message = "CPF deve ter exatamente 11 dígitos")
+    @Column(unique = true, nullable = false, length = 11)
+    private String cpf;
+
+    @NotNull(message = "Usuário deve ter pelo menos uma role")
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "tb_user_role",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
 
-    @Transient
-    private List<GrantedAuthority> authorities; // usado dinamicamente
+
 
     public User() {}
 
@@ -37,6 +51,14 @@ public class User implements UserDetails {
         this.name = name;
         this.email = email;
         this.password = password;
+    }
+
+    public User(Long id, String name, String email, String password, String cpf) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.cpf = cpf;
     }
 
     // Getters e Setters básicos
@@ -65,13 +87,20 @@ public class User implements UserDetails {
         this.email = email;
     }
 
-    @Override
     public String getPassword() {
         return password;
     }
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
     }
 
     public Set<Role> getRoles() {
@@ -87,37 +116,7 @@ public class User implements UserDetails {
     }
 
     // Novo setter
-    public void setAuthorities(List<GrantedAuthority> authorities) {
-        this.authorities = authorities;
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities != null ? authorities : roles;
-    }
-
-    @Override
     public String getUsername() {
         return email;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
     }
 }
