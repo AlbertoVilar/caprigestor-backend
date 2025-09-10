@@ -43,98 +43,45 @@ public class GoatFarmController {
 
     @Operation(summary = "Cadastra um novo capril completo com proprietário, endereço e telefones")
     @PostMapping("/full")
-    public ResponseEntity<?> createFullGoatFarm(
+    public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(
             @RequestBody(description = "Dados completos para criação da fazenda")
             @org.springframework.web.bind.annotation.RequestBody com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO requestDTO) {
 
-        try {
-            GoatFarmFullResponseVO responseVO = farmFacade.createFullGoatFarm(
-                    GoatFarmDTOConverter.toVO(requestDTO.getFarm()),
-                    UserDTOConverter.toVO(requestDTO.getUser()),
-                    AddressDTOConverter.toVO(requestDTO.getAddress()),
-                    requestDTO.getPhones().stream().map(PhoneDTOConverter::toVO).toList()
-            );
+        GoatFarmFullResponseVO responseVO = farmFacade.createFullGoatFarm(
+                GoatFarmDTOConverter.toVO(requestDTO.getFarm()),
+                UserDTOConverter.toVO(requestDTO.getUser()),
+                AddressDTOConverter.toVO(requestDTO.getAddress()),
+                requestDTO.getPhones().stream().map(PhoneDTOConverter::toVO).toList()
+        );
 
-            return new ResponseEntity<>(GoatFarmDTOConverter.toFullDTO(responseVO), HttpStatus.CREATED);
-
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Fazenda já existe");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Recurso não encontrado");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.DatabaseException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro de banco de dados");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Dados inválidos");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro interno do servidor");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro inesperado");
-            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+        return new ResponseEntity<>(GoatFarmDTOConverter.toFullDTO(responseVO), HttpStatus.CREATED);
     }
 
     @CrossOrigin(origins = "http://localhost:5500")
     @Operation(summary = "Cadastra um novo capril usando IDs de entidades existentes")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping
-    public ResponseEntity<?> createGoatFarm(
+    public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(
             @RequestBody(description = "Dados do novo capril")
             @org.springframework.web.bind.annotation.RequestBody @Valid GoatFarmRequestDTO requestDTO) {
 
-        try {
-            // Validações granulares
-            Map<String, String> validationErrors = new HashMap<>();
-            if (requestDTO.getName() != null) {
-                String nome = requestDTO.getName().trim();
-                if (nome.length() < 3 || nome.length() > 100) {
-                    validationErrors.put("name", "Nome da fazenda deve ter entre 3 e 100 caracteres");
-                }
+        // Validações granulares
+        Map<String, String> validationErrors = new HashMap<>();
+        if (requestDTO.getName() != null) {
+            String nome = requestDTO.getName().trim();
+            if (nome.length() < 3 || nome.length() > 100) {
+                validationErrors.put("name", "Nome da fazenda deve ter entre 3 e 100 caracteres");
             }
-            // ... outras validações que você queira manter ...
-
-            if (!validationErrors.isEmpty()) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Dados da fazenda inválidos");
-                errorResponse.put("errors", validationErrors);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-            }
-
-            GoatFarmResponseVO responseVO = farmFacade.createGoatFarm(GoatFarmDTOConverter.toVO(requestDTO));
-            return new ResponseEntity<>(GoatFarmDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
-
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Fazenda já existe");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Recurso não encontrado");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro interno do servidor");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+        // ... outras validações que você queira manter ...
+
+        if (!validationErrors.isEmpty()) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
+                "Dados da fazenda inválidos", validationErrors);
+        }
+
+        GoatFarmResponseVO responseVO = farmFacade.createGoatFarm(GoatFarmDTOConverter.toVO(requestDTO));
+        return new ResponseEntity<>(GoatFarmDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
     }
 
     @Operation(summary = "Atualiza os dados de um capril existente")

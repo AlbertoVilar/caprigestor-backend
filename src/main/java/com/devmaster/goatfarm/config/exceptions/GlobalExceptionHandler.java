@@ -60,7 +60,71 @@ public class GlobalExceptionHandler {
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             error.addError(fieldError.getField(), fieldError.getDefaultMessage());
         }
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    // Handles InvalidArgumentException
+    @ExceptionHandler(InvalidArgumentException.class)
+    public ResponseEntity<CustomError> handleInvalidArgument(InvalidArgumentException ex, WebRequest request) {
+        CustomError err = new CustomError(
+                Instant.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+    }
+
+    // Handles ValidationException with custom validation errors
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ValidationError> handleCustomValidation(ValidationException ex, WebRequest request) {
+        ValidationError error = new ValidationError(
+                Instant.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        
+        // Add custom validation errors
+        ex.getValidationErrors().forEach(error::addError);
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    // Handles IllegalArgumentException
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<CustomError> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
+        CustomError err = new CustomError(
+                Instant.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Dados inválidos: " + ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+    }
+
+    // Handles generic RuntimeException
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<CustomError> handleRuntimeException(RuntimeException ex, WebRequest request) {
+        CustomError err = new CustomError(
+                Instant.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Erro interno do servidor: " + ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
+    }
+
+    // Handles generic Exception
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<CustomError> handleGenericException(Exception ex, WebRequest request) {
+        CustomError err = new CustomError(
+                Instant.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Erro inesperado. Tente novamente.",
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
     }
 
 }

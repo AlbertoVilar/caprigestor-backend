@@ -59,10 +59,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
+        System.out.println("🔍 LOGIN: Tentativa de login para: " + loginRequest.getEmail());
+        
         try {
-            System.out.println("🔍 LOGIN: Tentativa de login para: " + loginRequest.getEmail());
-            
             // Autenticar usuário
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -107,64 +107,32 @@ public class AuthController {
 
         } catch (BadCredentialsException e) {
             System.out.println("🔍 LOGIN ERROR: Credenciais inválidas para: " + loginRequest.getEmail());
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Email ou senha inválidos");
-            error.put("error", "INVALID_CREDENTIALS");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-        } catch (Exception e) {
-            System.out.println("🔍 LOGIN ERROR: Erro interno - " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            System.out.println("🔍 LOGIN ERROR: Stack trace completo:");
-            e.printStackTrace();
-            
-            // Log adicional para debug
-            if (e.getCause() != null) {
-                System.out.println("🔍 LOGIN ERROR: Causa raiz - " + e.getCause().getClass().getSimpleName() + ": " + e.getCause().getMessage());
-            }
-            
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Erro interno do servidor");
-            error.put("error", "INTERNAL_ERROR");
-            error.put("details", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(
+                "Email ou senha inválidos");
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDTO registerRequest) {
-        try {
-            // Validar se as senhas coincidem
-            if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {
-                Map<String, String> error = new HashMap<>();
-                error.put("message", "As senhas não coincidem");
-                error.put("error", "PASSWORD_MISMATCH");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-            }
-
-            // Criar usuário com role padrão FARM_OWNER
-            UserRequestVO userVO = new UserRequestVO(
-                registerRequest.getName(),
-                registerRequest.getEmail(),
-                registerRequest.getCpf(),
-                registerRequest.getPassword(), // Será criptografada no DAO
-                registerRequest.getConfirmPassword(),
-                List.of("ROLE_FARM_OWNER") // Role padrão para novos usuários
-            );
-            
-            var createdUser = userFacade.saveUser(userVO);
-            UserResponseDTO response = UserDTOConverter.toDTO(createdUser);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", e.getMessage());
-            error.put("error", "DUPLICATE_USER");
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Erro ao criar usuário: " + e.getMessage());
-            error.put("error", "REGISTRATION_ERROR");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO registerRequest) {
+        // Validar se as senhas coincidem
+        if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(
+                "As senhas não coincidem");
         }
+
+        // Criar usuário com role padrão FARM_OWNER
+        UserRequestVO userVO = new UserRequestVO(
+            registerRequest.getName(),
+            registerRequest.getEmail(),
+            registerRequest.getCpf(),
+            registerRequest.getPassword(), // Será criptografada no DAO
+            registerRequest.getConfirmPassword(),
+            List.of("ROLE_FARM_OWNER") // Role padrão para novos usuários
+        );
+        
+        var createdUser = userFacade.saveUser(userVO);
+        UserResponseDTO response = UserDTOConverter.toDTO(createdUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/refresh")
