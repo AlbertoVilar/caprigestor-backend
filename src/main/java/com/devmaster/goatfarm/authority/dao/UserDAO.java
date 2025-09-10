@@ -112,8 +112,7 @@ public class UserDAO {
             user.addRole(defaultRole.get());
         }
 
-        // Criptografar senha antes de salvar
-        user.setPassword(vo.getPassword()); // Senha sem criptografia
+        // Senha já foi criptografada acima na linha 92
 
         try {
             User savedUser = repository.save(user);
@@ -230,7 +229,7 @@ public class UserDAO {
         }
 
         // Criptografar senha antes de salvar
-        user.setPassword(vo.getPassword()); // Senha sem criptografia
+        user.setPassword(passwordEncoder.encode(vo.getPassword())); // Senha criptografada
 
         return repository.save(user);
     }

@@ -1,0 +1,30 @@
+{
+  "farm": {
+    "name": "Capril Vale Verde",
+    "tod": "CVV25"
+  },
+  "user": {
+    "name": "João da Silva",
+    "email": "joao.silva.teste@email.com",
+    "cpf": "11122233344",
+    "password": "senha123",
+    "confirmPassword": "senha123",
+    "roles": [
+      "ROLE_OPERATOR"
+    ]
+  },
+  "address": {
+    "street": "Estrada das Cabras, 123",
+    "neighborhood": "Zona Rural",
+    "city": "Teresópolis",
+    "state": "RJ",
+    "zipCode": "25950-123",
+    "country": "Brasil"
+  },
+  "phones": [
+    {
+      "ddd": "21",
+      "number": "987654321"
+    }
+  ]
+}

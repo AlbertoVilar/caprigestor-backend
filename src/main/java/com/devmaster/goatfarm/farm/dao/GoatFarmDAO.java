@@ -88,13 +88,23 @@ public class GoatFarmDAO {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmRequestVO.getTod() + "'.");
         }
 
-        // 1. Usuário
+        // 1. Usuário (pode ser existente ou novo)
         User user = userDAO.findOrCreateUser(userRequestVO);
 
-        // 2. Endereço
-        Address address = addressDAO.findOrCreateAddress(addressRequestVO);
+        // 2. Criar novo endereço (sempre novo devido ao relacionamento @OneToOne)
+        Address address = new Address();
+        address.setStreet(addressRequestVO.getStreet());
+        address.setNeighborhood(addressRequestVO.getNeighborhood());
+        address.setCity(addressRequestVO.getCity());
+        address.setState(addressRequestVO.getState());
+        address.setPostalCode(addressRequestVO.getPostalCode());
+        address.setCountry(addressRequestVO.getCountry());
 
-        // 3. Telefones
+        // 3. Criar a fazenda e associar o endereço
+        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);
+        goatFarm.setAddress(address);
+        
+        // 4. Telefones - Criar novos telefones com referência bidirecional
         List<Phone> associatedPhones = new ArrayList<>();
         Set<String> processedNumbers = new HashSet<>();
 
@@ -103,32 +113,29 @@ public class GoatFarmDAO {
                 throw new DuplicateEntityException("Número de telefone duplicado: " + phoneVO.getNumber());
             }
 
-            Phone phone = phoneDAO.findOrCreatePhone(phoneVO);
-
-            if (phone.getGoatFarm() != null) {
-                throw new DatabaseException("Telefone DDD (" + phone.getDdd() + ") número " + phone.getNumber()
-                        + " já está associado à fazenda: " + phone.getGoatFarm().getName());
+            // Verificar se já existe telefone com este DDD e número
+            if (phoneRepository.existsByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())) {
+                throw new DuplicateEntityException("Já existe um telefone com DDD (" + phoneVO.getDdd() + ") e número " + phoneVO.getNumber());
             }
 
+            // Criar novo telefone
+            Phone phone = new Phone();
+            phone.setDdd(phoneVO.getDdd());
+            phone.setNumber(phoneVO.getNumber());
+            phone.setGoatFarm(goatFarm); // Referência bidirecional
             associatedPhones.add(phone);
         }
 
-        // 4. Criar a fazenda
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);
+        // 5. Associa a lista de telefones à fazenda (referência bidirecional)
         goatFarm.setPhones(associatedPhones);
 
+        // 6. Salva APENAS a fazenda. O Cascade fará o resto.
         try {
-            goatFarm = goatFarmRepository.save(goatFarm);
-
-            // Atualiza referência de fazenda nos telefones
-            for (Phone phone : associatedPhones) {
-                phone.setGoatFarm(goatFarm);
-                phoneRepository.save(phone);
-            }
-
-            return GoatFarmConverter.toFullVO(goatFarm);
+            GoatFarm savedFarm = goatFarmRepository.save(goatFarm);
+            return GoatFarmConverter.toFullVO(savedFarm);
         } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Erro ao salvar a fazenda: " + e.getMessage());
+            // Este catch agora pegará erros de constraint do banco de forma mais limpa
+            throw new DatabaseException("Erro de integridade de dados ao salvar a fazenda: " + e.getMessage(), e);
         }
     }
     @Transactional

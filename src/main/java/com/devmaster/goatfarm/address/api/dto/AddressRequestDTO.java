@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.address.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -26,6 +27,7 @@ public class AddressRequestDTO {
 
     @NotBlank(message = "O código postal não pode estar em branco.")
     @Pattern(regexp = "^\\d{5}-?\\d{3}$", message = "O código postal deve estar no formato XXXXX-XXX ou XXXXX.")
+    @JsonProperty("zipCode")
     private String postalCode;
 
     @NotBlank(message = "O país não pode estar em branco.")

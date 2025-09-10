@@ -49,6 +49,11 @@ public class GoatFarmDTOConverter {
     }
 
     public static GoatFarmRequestVO toVO(GoatFarmRequestDTO requestDTO) {
+        // VERIFICAÇÃO DE NULO -- ADICIONE ESTA VERIFICAÇÃO
+        if (requestDTO == null) {
+            return null;
+        }
+        
         return new GoatFarmRequestVO(
                 requestDTO.getId(),
                 requestDTO.getName(),

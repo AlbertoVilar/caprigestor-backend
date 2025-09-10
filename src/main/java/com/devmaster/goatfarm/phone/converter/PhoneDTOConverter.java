@@ -16,6 +16,11 @@ public class PhoneDTOConverter {
     }
 
     public static PhoneRequestVO toVO(PhoneRequestDTO requestDTO) {
+
+        if (requestDTO == null) {
+            return null;
+        }
+
         return new PhoneRequestVO(
                 requestDTO.getId(),
                 requestDTO.getDdd(),

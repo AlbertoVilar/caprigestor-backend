@@ -1,0 +1,23 @@
+{
+  "name": "Fazenda Teste",
+  "code": "FT001",
+  "address": {
+    "street": "Rua das Cabras, 123",
+    "city": "Caruaru",
+    "state": "PE",
+    "zipCode": "55000-000"
+  },
+  "phones": [
+    {
+      "number": "81999887766",
+      "type": "MOBILE"
+    }
+  ],
+  "user": {
+    "name": "Joao Silva",
+    "cpf": "12345678901",
+    "email": "joao@teste.com",
+    "password": "senha123",
+    "roles": ["ROLE_OPERATOR"]
+  }
+}

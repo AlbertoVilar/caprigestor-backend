@@ -9,6 +9,14 @@ import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
 import com.devmaster.goatfarm.config.security.JwtService;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
+import com.devmaster.goatfarm.farm.converters.GoatFarmDTOConverter;
+import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
+import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
+import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,16 +41,18 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserFacade userFacade;
+    private final GoatFarmFacade farmFacade;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final JwtDecoder jwtDecoder;
 
     public AuthController(AuthenticationManager authenticationManager, JwtService jwtService, 
-                         UserFacade userFacade, PasswordEncoder passwordEncoder,
+                         UserFacade userFacade, GoatFarmFacade farmFacade, PasswordEncoder passwordEncoder,
                          RoleRepository roleRepository, JwtDecoder jwtDecoder) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userFacade = userFacade;
+        this.farmFacade = farmFacade;
         this.passwordEncoder = passwordEncoder;
         this.roleRepository = roleRepository;
         this.jwtDecoder = jwtDecoder;
@@ -234,6 +244,31 @@ public class AuthController {
             error.put("message", "Erro ao obter usuário atual");
             error.put("error", "USER_FETCH_ERROR");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @PostMapping("/register-farm")
+    @Operation(summary = "Registrar nova fazenda e usuário", description = "Endpoint público para criar uma nova fazenda junto com seu usuário proprietário")
+    public ResponseEntity<?> registerFarm(@Valid @RequestBody GoatFarmFullRequestDTO farmRequest) {
+        try {
+            // Criar a fazenda completa usando os dados do DTO
+            GoatFarmFullResponseVO farmResponse = farmFacade.createFullGoatFarm(
+                GoatFarmDTOConverter.toVO(farmRequest.getFarm()),
+                UserDTOConverter.toVO(farmRequest.getUser()),
+                AddressDTOConverter.toVO(farmRequest.getAddress()),
+                farmRequest.getPhones().stream().map(PhoneDTOConverter::toVO).toList()
+            );
+
+            // Converter para DTO de resposta
+            GoatFarmFullResponseDTO response = GoatFarmDTOConverter.toFullDTO(farmResponse);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Erro ao registrar fazenda: " + e.getMessage());
+            error.put("error", "FARM_REGISTRATION_ERROR");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 }

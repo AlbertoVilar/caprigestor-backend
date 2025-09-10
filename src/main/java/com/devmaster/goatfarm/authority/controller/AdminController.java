@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,9 @@ public class AdminController {
 
     @Autowired
     private RoleRepository roleRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
 
 
@@ -30,7 +34,7 @@ public class AdminController {
                 return ResponseEntity.notFound().build();
             }
 
-            user.setPassword(newPassword); // Senha sem criptografia
+            user.setPassword(passwordEncoder.encode(newPassword)); // Senha criptografada
             userRepository.save(user);
 
             System.out.println("[ADMIN] Senha atualizada para usuário: " + email);
@@ -67,7 +71,7 @@ public class AdminController {
 
             // Atualiza o CPF e senha do admin
             adminUser.setCpf("05202259450");
-            adminUser.setPassword("password"); // Senha sem criptografia
+            adminUser.setPassword(passwordEncoder.encode("password")); // Senha criptografada
             userRepository.save(adminUser);
             
             System.out.println("[ADMIN] Senha atualizada para: password");

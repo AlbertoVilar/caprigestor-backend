@@ -1,6 +1,6 @@
 -- Roles
-INSERT INTO role (authority) VALUES ('ROLE_OPERATOR');
 INSERT INTO role (authority) VALUES ('ROLE_ADMIN');
+INSERT INTO role (authority) VALUES ('ROLE_OPERATOR');
 
 -- Usuários
 INSERT INTO users (name, cpf, email, password) VALUES ('Alberto Vilar', '05202259450', 'albertovilar1@gmail.com', '$2a$10$iUULLtjqP/VsKkgI492POuxOGJMit9T/OodlmVFIEtFjabK2ZAqsG');

@@ -21,9 +21,12 @@ public class AddressDTOConverter {
     }
 
     public static AddressRequestVO toVO(AddressRequestDTO requestDTO) {
+        // VERIFICAÇÃO DE NULO -- ADICIONE ESTA VERIFICAÇÃO
+        if (requestDTO == null) {
+            return null;
+        }
 
         return new AddressRequestVO(
-
                 null,
                 requestDTO.getStreet(),
                 requestDTO.getNeighborhood(),

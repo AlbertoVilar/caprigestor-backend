@@ -33,9 +33,9 @@ public class GoatFarm {
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
 
-    // ✅ Relacionamento com Address (múltiplas fazendas podem compartilhar o mesmo endereço)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "address_id", referencedColumnName = "id", nullable = false)
+    // ✅ Relacionamento com Address (uma fazenda tem um endereço único)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "address_id", referencedColumnName = "id")
     private Address address;
 
     // ✅ Lista de telefones da fazenda com cascade e remoção automática

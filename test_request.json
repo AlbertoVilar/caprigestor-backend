@@ -1,0 +1,32 @@
+{
+  "farm": {
+    "name": "Fazenda São João",
+    "tod": "TEST1"
+  },
+  "user": {
+    "name": "João Silva",
+    "email": "joao.silva@email.com",
+    "cpf": "12345678901",
+    "password": "senha123",
+    "confirmPassword": "senha123",
+    "roles": ["ROLE_FARM_OWNER"]
+  },
+  "address": {
+    "street": "Rua das Flores, 123",
+    "neighborhood": "Centro",
+    "city": "São Paulo",
+    "state": "SP",
+    "postalCode": "01234-567",
+    "country": "Brasil"
+  },
+  "phones": [
+    {
+      "ddd": "11",
+      "number": "987654321"
+    },
+    {
+      "ddd": "11",
+      "number": "123456789"
+    }
+  ]
+}

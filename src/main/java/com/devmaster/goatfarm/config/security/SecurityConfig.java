@@ -93,13 +93,14 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // Regras de permissão para leitura pública (não exigem token)
                 .requestMatchers(HttpMethod.GET, "/api/goats/**", "/api/genealogy/**", "/api/farms/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/register-farm").permitAll()
                 
                 // Regras de autorização por ROLE (exigem token)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/users/**").hasAnyRole("FARM_OWNER", "ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN")
+                .requestMatchers("/api/users/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
+                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
                 
                 // Qualquer outra requisição /api/** que não corresponda às regras acima precisa de autenticação
                 .anyRequest().authenticated()
@@ -168,5 +169,4 @@ public class SecurityConfig {
         return authenticationConverter;
     }
 
-    // Bean corsConfigurationSource removido - já definido em CorsConfig.java
 }

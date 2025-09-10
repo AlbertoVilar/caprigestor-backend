@@ -15,13 +15,20 @@ import java.util.stream.Collectors;
 public class GoatFarmFullDTOConverter {
 
     public static GoatFarmFullRequestVO toVO(GoatFarmFullRequestDTO dto) {
+        // VERIFICAÇÃO DE NULO -- ADICIONE ESTA VERIFICAÇÃO
+        if (dto == null) {
+            return null;
+        }
+        
         GoatFarmRequestVO farmVO = GoatFarmDTOConverter.toVO(dto.getFarm());
         UserRequestVO userVO = UserDTOConverter.toVO(dto.getUser());
         var addressVO = AddressDTOConverter.toVO(dto.getAddress());
 
-        List<PhoneRequestVO> phoneVOs = dto.getPhones().stream()
-                .map(PhoneDTOConverter::toVO)
-                .collect(Collectors.toList());
+        List<PhoneRequestVO> phoneVOs = dto.getPhones() != null ? 
+                dto.getPhones().stream()
+                        .map(PhoneDTOConverter::toVO)
+                        .collect(Collectors.toList()) : 
+                null;
 
         return new GoatFarmFullRequestVO(farmVO, userVO, addressVO, phoneVOs);
     }

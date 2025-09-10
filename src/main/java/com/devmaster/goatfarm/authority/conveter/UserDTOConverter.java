@@ -21,6 +21,11 @@ public class UserDTOConverter {
     }
 
     public static UserRequestVO toVO(UserRequestDTO dto) {
+
+        if (dto == null) {
+            return null;
+        }
+        
         return new UserRequestVO(
                 dto.getName(),
                 dto.getEmail(),
