@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.genealogy.facade;
 
+import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,11 @@ public class GenealogyFacade {
     @Transactional
     public GenealogyResponseVO createGenealogy(String goatRegistrationNumber) {
         return genealogyBusiness.createGenealogy(goatRegistrationNumber);
+    }
+
+    @Transactional
+    public GenealogyResponseVO createGenealogyWithData(GenealogyRequestDTO requestDTO) {
+        return genealogyBusiness.createGenealogyWithData(requestDTO);
     }
 }
 

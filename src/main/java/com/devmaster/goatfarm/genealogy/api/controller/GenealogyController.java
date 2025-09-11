@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.genealogy.api.controller;
 
+import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.converter.GenealogyDTOConverter;
@@ -8,10 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
-@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500"})
+@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500", "http://localhost:5173"})
 @RestController
-@RequestMapping("/genealogies")
+@RequestMapping("/api/genealogies")
 public class GenealogyController {
 
     private final GenealogyFacade genealogyFacade;
@@ -35,8 +37,17 @@ public class GenealogyController {
     }
 
     @PostMapping("/{registrationNumber}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('FARM_OWNER') or hasRole('OPERATOR')")
     public ResponseEntity<GenealogyResponseDTO> createGenealogy(@PathVariable String registrationNumber) {
         GenealogyResponseVO createdResponseVO = genealogyFacade.createGenealogy(registrationNumber);
+        GenealogyResponseDTO createdResponseDTO = genealogyDTOConverter.toResponseDTO(createdResponseVO);
+        return new ResponseEntity<>(createdResponseDTO, HttpStatus.CREATED);
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('FARM_OWNER') or hasRole('OPERATOR')")
+    public ResponseEntity<GenealogyResponseDTO> createGenealogyWithData(@RequestBody GenealogyRequestDTO requestDTO) {
+        GenealogyResponseVO createdResponseVO = genealogyFacade.createGenealogyWithData(requestDTO);
         GenealogyResponseDTO createdResponseDTO = genealogyDTOConverter.toResponseDTO(createdResponseVO);
         return new ResponseEntity<>(createdResponseDTO, HttpStatus.CREATED);
     }
