@@ -28,11 +28,11 @@ public class AddressController {
     @Autowired
     private AddressFacade addressFacade;
 
-    @Operation(summary = "Cria um novo endereço")
+    @Operation(summary = "Create a new address")
 
     @PostMapping
     public ResponseEntity<?> createAddress(
-            @RequestBody(description = "Dados do novo endereço")
+            @RequestBody(description = "New address data")
             @org.springframework.web.bind.annotation.RequestBody @Valid AddressRequestDTO requestDTO) {
 
         try {
@@ -121,12 +121,12 @@ public class AddressController {
         }
     }
 
-    @Operation(summary = "Atualiza um endereço existente")
+    @Operation(summary = "Update an existing address")
 
     @PutMapping("/{id}")
     public AddressResponseDTO updateAddress(
-            @Parameter(description = "ID do endereço a ser atualizado", example = "1") @PathVariable Long id,
-            @RequestBody(description = "Novos dados do endereço")
+            @Parameter(description = "ID of the address to be updated", example = "1") @PathVariable Long id,
+            @RequestBody(description = "New address data")
             @org.springframework.web.bind.annotation.RequestBody @Valid AddressRequestDTO requestDTO) {
 
         AddressRequestVO requestVO = AddressDTOConverter.toVO(requestDTO);
@@ -134,17 +134,17 @@ public class AddressController {
         return AddressDTOConverter.toDTO(responseVO);
     }
 
-    @Operation(summary = "Busca um endereço pelo ID")
+    @Operation(summary = "Find an address by ID")
 
     @GetMapping("/{id}")
     public AddressResponseDTO findAddressById(
-            @Parameter(description = "ID do endereço a ser buscado", example = "1") @PathVariable Long id) {
+            @Parameter(description = "ID of the address to be searched", example = "1") @PathVariable Long id) {
 
         AddressResponseVO responseVO = addressFacade.findAddressById(id);
         return AddressDTOConverter.toDTO(responseVO);
     }
 
-    @Operation(summary = "Lista todos os endereços cadastrados")
+    @Operation(summary = "List all registered addresses")
 
     @GetMapping
     public List<AddressResponseDTO> findAllAddresses() {
@@ -153,11 +153,11 @@ public class AddressController {
                 .collect(Collectors.toList());
     }
 
-    @Operation(summary = "Remove um endereço pelo ID")
+    @Operation(summary = "Remove an address by ID")
 
     @DeleteMapping("/{id}")
     public String deleteAddress(
-            @Parameter(description = "ID do endereço a ser removido", example = "1") @PathVariable Long id) {
+            @Parameter(description = "ID of the address to be removed", example = "1") @PathVariable Long id) {
 
         return addressFacade.deleteAddress(id);
     }

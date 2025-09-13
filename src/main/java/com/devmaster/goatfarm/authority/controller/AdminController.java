@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/admin")
 @CrossOrigin(origins = "*")
 public class AdminController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -37,11 +41,11 @@ public class AdminController {
             user.setPassword(passwordEncoder.encode(newPassword)); // Senha criptografada
             userRepository.save(user);
 
-            System.out.println("[ADMIN] Senha atualizada para usuário: " + email);
+            logger.info("[ADMIN] Senha atualizada para usuário: {}", email);
 
             return ResponseEntity.ok("Senha atualizada com sucesso para " + email);
         } catch (Exception e) {
-            System.out.println("[ADMIN] Erro ao atualizar senha: " + e.getMessage());
+            logger.error("[ADMIN] Erro ao atualizar senha: {}", e.getMessage());
             return ResponseEntity.internalServerError().body("Erro: " + e.getMessage());
         }
     }
@@ -74,7 +78,7 @@ public class AdminController {
             adminUser.setPassword(passwordEncoder.encode("password")); // Senha criptografada
             userRepository.save(adminUser);
             
-            System.out.println("[ADMIN] Senha atualizada para: password");
+            logger.info("[ADMIN] Senha atualizada para: password");
 
             // Limpa o banco em etapas para evitar violação de chave estrangeira
             userRepository.cleanDatabaseStepByStep(adminUser.getId());
@@ -85,7 +89,7 @@ public class AdminController {
                 adminRole = new Role();
                 adminRole.setAuthority("ROLE_ADMIN");
                 adminRole = roleRepository.save(adminRole);
-                System.out.println("[ADMIN] Role ROLE_ADMIN criada");
+                logger.info("[ADMIN] Role ROLE_ADMIN criada");
             }
             
             Role operatorRole = roleRepository.findByAuthority("ROLE_OPERATOR").orElse(null);
@@ -93,22 +97,22 @@ public class AdminController {
                 operatorRole = new Role();
                 operatorRole.setAuthority("ROLE_OPERATOR");
                 operatorRole = roleRepository.save(operatorRole);
-                System.out.println("[ADMIN] Role ROLE_OPERATOR criada");
+                logger.info("[ADMIN] Role ROLE_OPERATOR criada");
             }
             
             // Adicionar as roles ao usuário admin
             adminUser.addRole(adminRole);
             adminUser.addRole(operatorRole);
-            System.out.println("[ADMIN] Roles ROLE_ADMIN e ROLE_OPERATOR adicionadas ao usuário");
+            logger.info("[ADMIN] Roles ROLE_ADMIN e ROLE_OPERATOR adicionadas ao usuário");
             
             userRepository.save(adminUser);
-            System.out.println("[ADMIN] Roles do usuário admin recriadas");
+            logger.info("[ADMIN] Roles do usuário admin recriadas");
 
-            System.out.println("[ADMIN] Banco limpo! Mantido apenas: " + adminUser.getEmail() + " com CPF: " + adminUser.getCpf());
+            logger.info("[ADMIN] Banco limpo! Mantido apenas: {} com CPF: {}", adminUser.getEmail(), adminUser.getCpf());
             
             return ResponseEntity.ok("Banco limpo com sucesso! Mantido apenas albertovilar1@gmail.com com CPF 05202259450");
         } catch (Exception e) {
-            System.out.println("[ADMIN] Erro ao limpar banco: " + e.getMessage());
+            logger.error("[ADMIN] Erro ao limpar banco: {}", e.getMessage());
             return ResponseEntity.internalServerError().body("Erro: " + e.getMessage());
         }
     }

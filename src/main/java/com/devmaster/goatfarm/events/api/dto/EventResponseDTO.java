@@ -23,7 +23,7 @@ public record EventResponseDTO(
         @Schema(description = "Data do evento", example = "2025-05-10")
         LocalDate date,
 
-        @Schema(description = "Descrição do evento", example = "Nascimento de dois cabritos machos sem complicações.")
+        @Schema(description = "Event description", example = "Birth of two male kids without complications.")
         String description,
 
         @Schema(description = "Local do evento", example = "Capril Vilar")
@@ -32,6 +32,6 @@ public record EventResponseDTO(
         @Schema(description = "Veterinário responsável", example = "Dr. João Silva")
         String veterinarian,
 
-        @Schema(description = "Resultado do evento", example = "Ambos os cabritos nasceram saudáveis.")
+        @Schema(description = "Event outcome", example = "Both kids were born healthy.")
         String outcome
 ) {}

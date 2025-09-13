@@ -16,7 +16,7 @@ import java.util.List;
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-        //Busca simples
+        // Simple search
         @Query("SELECT e FROM Event e WHERE e.goat.registrationNumber = :registrationNumber")
         List<Event> findEventsByGoatNumRegistro(String registrationNumber);
 

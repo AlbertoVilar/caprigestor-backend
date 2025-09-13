@@ -49,7 +49,7 @@ public class GoatFarmDTOConverter {
     }
 
     public static GoatFarmRequestVO toVO(GoatFarmRequestDTO requestDTO) {
-        // VERIFICAÇÃO DE NULO -- ADICIONE ESTA VERIFICAÇÃO
+        // NULL CHECK -- ADD THIS VERIFICATION
         if (requestDTO == null) {
             return null;
         }

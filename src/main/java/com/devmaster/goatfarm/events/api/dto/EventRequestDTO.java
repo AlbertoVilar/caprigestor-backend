@@ -24,7 +24,7 @@ public record EventRequestDTO(
         @NotNull(message = "A data do evento não pode estar em branco.")
         LocalDate date,
 
-        @Schema(description = "Descrição detalhada do evento", example = "Aplicação de vacina contra clostridiose.")
+        @Schema(description = "Detailed event description", example = "Application of clostridial vaccine.")
         @NotBlank(message = "A descrição é obrigatória")
         @Size(max = 200, message = "A descrição do evento deve ter no máximo 200 caracteres")
         String description,
@@ -37,7 +37,7 @@ public record EventRequestDTO(
         @NotBlank(message = "O nome do veterinário é obrigatório")
         String veterinarian,
 
-        @Schema(description = "Resultado ou observação do evento", example = "Animal vacinado com sucesso, sem reações.")
+        @Schema(description = "Event result or observation", example = "Animal vaccinated successfully, no reactions.")
         @NotBlank(message = "O resultado é obrigatório")
         @Size(max = 500, message = "O resultado do evento deve ter no máximo 500 caracteres")
         String outcome

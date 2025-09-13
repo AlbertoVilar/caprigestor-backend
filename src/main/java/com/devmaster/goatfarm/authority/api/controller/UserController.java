@@ -71,7 +71,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UserDTOConverter.toDTO(responseVO));
     }
 
-    // Endpoint temporário para debug - verificar roles do usuário
+    // Temporary endpoint for debug - check user roles
     @GetMapping("/debug/{email}")
     public ResponseEntity<Map<String, Object>> debugUserRoles(@PathVariable String email) {
         try {

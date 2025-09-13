@@ -15,7 +15,7 @@ public class GenealogyRequestVO {
     private String goatName;
     private String goatRegistration;
     private String breeder;
-    private String owner;
+    private String farmOwner;
     private String breed;
     private String color;
     private String status;

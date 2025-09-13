@@ -8,6 +8,9 @@ import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.events.model.repository.EventRepository;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
+import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -32,6 +35,10 @@ public class EventDaoTest {
     @Mock
     private GoatRepository goatRepository;
 
+    // Mock do serviço de ownership
+    @Mock
+    private OwnershipService ownershipService;
+
     // Injeta os mocks acima dentro de uma instância real de EventDao
     @InjectMocks
     private EventDao eventDao;
@@ -47,9 +54,22 @@ public class EventDaoTest {
         // Arrange: prepara os dados simulados
         String goatId = "1234567890";
 
+        // Simula um usuário
+        User user = new User();
+        user.setId(1L);
+        user.setName("Test User");
+        user.setEmail("test@example.com");
+
+        // Simula uma fazenda
+        GoatFarm farm = new GoatFarm();
+        farm.setId(1L);
+        farm.setName("Fazenda Teste");
+        farm.setUser(user);
+
         // Simula uma cabra existente com esse ID
         Goat goat = new Goat();
         goat.setRegistrationNumber(goatId);
+        goat.setFarm(farm);
 
         // Cria uma requisição de evento (como se fosse um POST)
         EventRequestVO requestVO = new EventRequestVO(
@@ -77,6 +97,8 @@ public class EventDaoTest {
         // Define o comportamento dos mocks
         when(goatRepository.findById(goatId)).thenReturn(Optional.of(goat)); // finge que a cabra existe
         when(eventRepository.save(any(Event.class))).thenReturn(savedEvent); // finge que o evento foi salvo
+        when(ownershipService.getCurrentUser()).thenReturn(user);
+        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
 
         // Act: executa o método a ser testado
         EventResponseVO response = eventDao.createEvent(requestVO, goatId);

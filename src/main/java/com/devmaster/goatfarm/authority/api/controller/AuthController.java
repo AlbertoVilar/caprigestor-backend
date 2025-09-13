@@ -18,6 +18,8 @@ import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
 import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -37,6 +39,8 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -60,10 +64,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
-        System.out.println("🔍 LOGIN: Tentativa de login para: " + loginRequest.getEmail());
+        logger.info("🔍 LOGIN: Tentativa de login para: {}", loginRequest.getEmail());
         
         try {
-            // Autenticar usuário
+            // Authenticate user
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                     loginRequest.getEmail(),
@@ -71,19 +75,19 @@ public class AuthController {
                 )
             );
             
-            System.out.println("🔍 LOGIN: Autenticação bem-sucedida para: " + loginRequest.getEmail());
+            logger.info("🔍 LOGIN: Autenticação bem-sucedida para: {}", loginRequest.getEmail());
 
-            // Obter usuário autenticado
+            // Get authenticated user
             User user = (User) authentication.getPrincipal();
-            System.out.println("🔍 LOGIN: Usuário obtido: " + user.getEmail() + ", Roles: " + user.getRoles().size());
+            logger.debug("🔍 LOGIN: Usuário obtido: {}, Roles: {}", user.getEmail(), user.getRoles().size());
 
             // Gerar tokens
-            System.out.println("🔍 LOGIN: Gerando tokens JWT...");
+            logger.debug("🔍 LOGIN: Gerando tokens JWT...");
             String accessToken = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
-            System.out.println("🔍 LOGIN: Tokens gerados com sucesso");
+            logger.debug("🔍 LOGIN: Tokens gerados com sucesso");
 
-            // Criar resposta
+            // Create response
             List<String> roles = user.getRoles().stream()
                 .map(Role::getAuthority)
                 .toList();
@@ -106,7 +110,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (BadCredentialsException e) {
-            System.out.println("🔍 LOGIN ERROR: Credenciais inválidas para: " + loginRequest.getEmail());
+            logger.warn("🔍 LOGIN ERROR: Credenciais inválidas para: {}", loginRequest.getEmail());
             throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(
                 "Email ou senha inválidos");
         }
@@ -120,14 +124,14 @@ public class AuthController {
                 "As senhas não coincidem");
         }
 
-        // Criar usuário com role padrão FARM_OWNER
+        // Create user with default role FARM_OWNER
         UserRequestVO userVO = new UserRequestVO(
             registerRequest.getName(),
             registerRequest.getEmail(),
             registerRequest.getCpf(),
             registerRequest.getPassword(), // Será criptografada no DAO
             registerRequest.getConfirmPassword(),
-            List.of("ROLE_FARM_OWNER") // Role padrão para novos usuários
+            List.of("ROLE_FARM_OWNER") // Default role for new users
         );
         
         var createdUser = userFacade.saveUser(userVO);
@@ -142,13 +146,13 @@ public class AuthController {
             var jwt = jwtDecoder.decode(refreshRequest.getRefreshToken());
             String email = jwt.getSubject();
             
-            // Verificar se é um refresh token
+            // Check if it's a refresh token
             String scope = jwt.getClaimAsString("scope");
             if (!"REFRESH".equals(scope)) {
                 throw new RuntimeException("Token inválido");
             }
 
-            // Buscar usuário
+            // Find user
             var userVO = userFacade.findByEmail(email);
             if (userVO == null) {
                 throw new RuntimeException("Usuário não encontrado");
@@ -176,7 +180,7 @@ public class AuthController {
                 newRefreshToken,
                 "Bearer",
                 3600L,
-                null // Não precisamos retornar dados do usuário no refresh
+                null // We don't need to return user data on refresh
             );
 
             return ResponseEntity.ok(response);
@@ -216,10 +220,10 @@ public class AuthController {
     }
 
     @PostMapping("/register-farm")
-    @Operation(summary = "Registrar nova fazenda e usuário", description = "Endpoint público para criar uma nova fazenda junto com seu usuário proprietário")
+    @Operation(summary = "Register new farm and user", description = "Public endpoint to create a new farm along with its owner user")
     public ResponseEntity<?> registerFarm(@Valid @RequestBody GoatFarmFullRequestDTO farmRequest) {
         try {
-            // Criar a fazenda completa usando os dados do DTO
+            // Create complete farm using DTO data
             GoatFarmFullResponseVO farmResponse = farmFacade.createFullGoatFarm(
                 GoatFarmDTOConverter.toVO(farmRequest.getFarm()),
                 UserDTOConverter.toVO(farmRequest.getUser()),

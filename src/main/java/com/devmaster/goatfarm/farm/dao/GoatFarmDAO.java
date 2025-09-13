@@ -79,7 +79,7 @@ public class GoatFarmDAO {
             throw new IllegalArgumentException("É obrigatório informar ao menos um telefone para a fazenda.");
         }
 
-        // Verificações duplicadas
+        // Duplicate checks
         if (goatFarmRepository.existsByName(farmRequestVO.getName())) {
             throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmRequestVO.getName() + "'.");
         }
@@ -91,14 +91,14 @@ public class GoatFarmDAO {
         // 1. Usuário (pode ser existente ou novo)
         User user = userDAO.findOrCreateUser(userRequestVO);
 
-        // 2. Criar novo endereço usando o AddressDAO
+        // 2. Create new address using AddressDAO
         Address address = addressDAO.findOrCreateAddress(addressRequestVO);
 
-        // 3. Criar a fazenda e associar o endereço
+        // 3. Create the farm and associate the address
         GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);
         goatFarm.setAddress(address);
         
-        // 4. Telefones - Criar novos telefones com referência bidirecional
+        // 4. Phones - Create new phones with bidirectional reference
         List<Phone> associatedPhones = new ArrayList<>();
         Set<String> processedNumbers = new HashSet<>();
 
@@ -107,12 +107,12 @@ public class GoatFarmDAO {
                 throw new DuplicateEntityException("Número de telefone duplicado: " + phoneVO.getNumber());
             }
 
-            // Verificar se já existe telefone com este DDD e número
+            // Check if phone with this area code and number already exists
             if (phoneRepository.existsByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())) {
                 throw new DuplicateEntityException("Já existe um telefone com DDD (" + phoneVO.getDdd() + ") e número " + phoneVO.getNumber());
             }
 
-            // Criar novo telefone
+            // Create new phone
             Phone phone = new Phone();
             phone.setDdd(phoneVO.getDdd());
             phone.setNumber(phoneVO.getNumber());
@@ -123,7 +123,7 @@ public class GoatFarmDAO {
         // 5. Associa a lista de telefones à fazenda (referência bidirecional)
         goatFarm.setPhones(associatedPhones);
 
-        // 6. Salva APENAS a fazenda. O Cascade fará o resto.
+        // 6. Save ONLY the farm. Cascade will do the rest.
         try {
             GoatFarm savedFarm = goatFarmRepository.save(goatFarm);
             return GoatFarmConverter.toFullVO(savedFarm);
@@ -204,7 +204,7 @@ public class GoatFarmDAO {
             throw new DuplicateEntityException("Já existe outra fazenda com o código '" + farmVO.getTod() + "'.");
         }
 
-        // Atualiza entidades relacionadas
+        // Update related entities
         userDAO.updateUser(farmVO.getUserId(), userVO);
         addressDAO.updateAddress(farmVO.getAddressId(), addressVO);
 
@@ -213,12 +213,12 @@ public class GoatFarmDAO {
             throw new IllegalArgumentException("É obrigatório informar ao menos um telefone.");
         }
 
-        // Atualiza os telefones individualmente
+        // Update phones individually
         for (PhoneRequestVO phoneVO : phoneVOs) {
             phoneDAO.updatePhone(phoneVO.getId(), phoneVO);
         }
 
-        // Busca entidades Phone e atualiza na fazenda
+        // Find Phone entities and update in the farm
         List<Long> phoneIds = phoneVOs.stream().map(PhoneRequestVO::getId).toList();
         List<Phone> phones = phoneRepository.findAllById(phoneIds);
 
@@ -230,7 +230,7 @@ public class GoatFarmDAO {
         goatFarmToUpdate.getPhones().clear();
         goatFarmToUpdate.getPhones().addAll(phones);
 
-        // Atualiza os dados da fazenda em si
+        // Update the farm data itself
         GoatFarmConverter.entityUpdate(goatFarmToUpdate, farmVO);
 
         try {

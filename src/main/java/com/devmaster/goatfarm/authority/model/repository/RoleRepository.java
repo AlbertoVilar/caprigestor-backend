@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface RoleRepository extends JpaRepository<Role, Long> {
 
-    // Busca a role pelo campo "authority" (ou "name", se for o seu atributo)
+    // Find role by "authority" field (or "name", if that's your attribute)
     Optional<Role> findByAuthority(String authority);
 }

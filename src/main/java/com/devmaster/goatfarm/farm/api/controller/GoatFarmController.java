@@ -42,7 +42,12 @@ public class GoatFarmController {
     private OwnershipService ownershipService;
 
     @CrossOrigin(origins = {"http://localhost:5500", "http://localhost:5173", "http://localhost:8080"})
-    @Operation(summary = "Cadastra um novo capril completo com proprietário, endereço e telefones")
+    @Operation(summary = "Registra uma nova fazenda completa com proprietário, endereço e telefones",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Fazenda criada com sucesso"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Fazenda já existe")
+            })
     @PreAuthorize("permitAll()")
     @PostMapping("/full")
     public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(
@@ -60,11 +65,17 @@ public class GoatFarmController {
     }
 
     @CrossOrigin(origins = {"http://localhost:5500", "http://localhost:5173"})
-    @Operation(summary = "Cadastra um novo capril usando IDs de entidades existentes")
+    @Operation(summary = "Cadastra uma nova fazenda usando IDs de entidades existentes",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Fazenda criada com sucesso"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acesso negado"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Fazenda já existe")
+            })
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping
     public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(
-            @RequestBody(description = "Dados do novo capril")
+            @RequestBody(description = "Dados da nova fazenda")
             @org.springframework.web.bind.annotation.RequestBody @Valid GoatFarmRequestDTO requestDTO) {
 
         // Validações granulares
@@ -86,17 +97,19 @@ public class GoatFarmController {
         return new ResponseEntity<>(GoatFarmDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Atualiza os dados de um capril existente")
+    @Operation(summary = "Atualiza os dados de uma fazenda existente",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Fazenda atualizada com sucesso"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Fazenda não encontrada")
+            })
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PutMapping("/{id}")
     public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(
-            @Parameter(description = "ID do capril a ser atualizado", example = "1") @PathVariable Long id,
-            @RequestBody(description = "Novos dados para o capril")
+            @Parameter(description = "ID da fazenda a ser atualizada", example = "1") @PathVariable Long id,
+            @RequestBody(description = "Novos dados para a fazenda")
             @org.springframework.web.bind.annotation.RequestBody GoatFarmUpdateRequestDTO requestDTO) {
-
-        // Verificar ownership antes de atualizar
-        GoatFarmFullResponseVO existingFarm = farmFacade.findGoatFarmById(id);
-        ownershipService.verifyFarmOwnership(existingFarm);
 
         GoatFarmFullResponseVO responseVO = farmFacade.updateGoatFarm(
                 id,
@@ -109,19 +122,28 @@ public class GoatFarmController {
         return ResponseEntity.ok(GoatFarmDTOConverter.toFullDTO(responseVO));
     }
 
-    @Operation(summary = "Busca um capril pelo ID")
+    @Operation(summary = "Busca uma fazenda pelo ID",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Fazenda encontrada com sucesso"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Fazenda não encontrada")
+            })
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @GetMapping("/{id}")
     public ResponseEntity<GoatFarmFullResponseDTO> findGoatFarmById(
-            @Parameter(description = "ID do capril", example = "1") @PathVariable Long id) {
+            @Parameter(description = "ID da fazenda", example = "1") @PathVariable Long id) {
 
         GoatFarmFullResponseVO responseVO = farmFacade.findGoatFarmById(id);
         return ResponseEntity.ok(GoatFarmDTOConverter.toFullDTO(responseVO));
     }
 
-    @Operation(summary = "Busca paginada de capris pelo nome")
+    @Operation(summary = "Busca paginada de fazendas pelo nome",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Busca realizada com sucesso")
+            })
     @GetMapping("/name")
     public ResponseEntity<Page<GoatFarmFullResponseDTO>> searchGoatFarmByName(
-            @Parameter(description = "Nome ou parte do nome do capril", example = "Capril Vilar")
+            @Parameter(description = "Nome ou parte do nome da fazenda", example = "Fazenda Vilar")
             @RequestParam(value = "name", defaultValue = "") String name,
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
 
@@ -129,7 +151,10 @@ public class GoatFarmController {
                 .map(GoatFarmDTOConverter::toFullDTO));
     }
 
-    @Operation(summary = "Lista todos os capris com paginação")
+    @Operation(summary = "Lista todas as fazendas com paginação",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Lista obtida com sucesso")
+            })
     @GetMapping
     public ResponseEntity<Page<GoatFarmFullResponseDTO>> findAllGoatFarm(
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
@@ -138,15 +163,17 @@ public class GoatFarmController {
                 .map(GoatFarmDTOConverter::toFullDTO));
     }
 
-    @Operation(summary = "Remove um capril pelo ID")
+    @Operation(summary = "Remove uma fazenda pelo ID",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "Fazenda removida com sucesso"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Fazenda não encontrada"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Fazenda não pode ser removida - possui dependências")
+            })
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGoatFarm(
-            @Parameter(description = "ID do capril a ser removido", example = "1") @PathVariable Long id) {
-
-        // Verificar ownership antes de deletar
-        GoatFarmFullResponseVO existingFarm = farmFacade.findGoatFarmById(id);
-        ownershipService.verifyFarmOwnership(existingFarm);
+            @Parameter(description = "ID da fazenda a ser removida", example = "1") @PathVariable Long id) {
 
         farmFacade.deleteGoatFarm(id);
         return ResponseEntity.noContent().build();

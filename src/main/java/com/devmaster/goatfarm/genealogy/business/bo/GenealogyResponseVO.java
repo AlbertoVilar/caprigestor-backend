@@ -15,7 +15,7 @@ public class GenealogyResponseVO {
     private String goatName;
     private String goatRegistration;
     private String breeder;
-    private String owner;
+    private String farmOwner;
     private String breed;
     private String color;
     private String status;
@@ -76,8 +76,8 @@ public class GenealogyResponseVO {
     public String getBreeder() { return breeder; }
     public void setBreeder(String breeder) { this.breeder = breeder; }
     
-    public String getOwner() { return owner; }
-    public void setOwner(String owner) { this.owner = owner; }
+    public String getFarmOwner() { return farmOwner; }
+    public void setFarmOwner(String farmOwner) { this.farmOwner = farmOwner; }
     
     public String getBreed() { return breed; }
     public void setBreed(String breed) { this.breed = breed; }

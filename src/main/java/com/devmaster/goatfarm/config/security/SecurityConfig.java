@@ -6,6 +6,8 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +38,8 @@ import java.security.interfaces.RSAPublicKey;
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Value("${jwt.public.key}")
     private RSAPublicKey rsaPublicKey;
@@ -151,17 +155,17 @@ public class SecurityConfig {
     @Bean
     public JwtEncoder jwtEncoder() {
         try {
-            System.out.println("🔍 SECURITY: Inicializando JwtEncoder...");
-            System.out.println("🔍 SECURITY: Chave pública carregada: " + (this.rsaPublicKey != null));
-            System.out.println("🔍 SECURITY: Chave privada carregada: " + (this.rsaPrivateKey != null));
+            logger.debug("🔍 SECURITY: Inicializando JwtEncoder...");
+            logger.debug("🔍 SECURITY: Chave pública carregada: {}", (this.rsaPublicKey != null));
+            logger.debug("🔍 SECURITY: Chave privada carregada: {}", (this.rsaPrivateKey != null));
             
             JWK jwk = new RSAKey.Builder(this.rsaPublicKey).privateKey(this.rsaPrivateKey).build();
             JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(jwk));
             
-            System.out.println("🔍 SECURITY: JwtEncoder criado com sucesso");
+            logger.debug("🔍 SECURITY: JwtEncoder criado com sucesso");
             return new NimbusJwtEncoder(jwks);
         } catch (Exception e) {
-            System.out.println("🔍 SECURITY ERROR: Erro ao criar JwtEncoder - " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            logger.error("🔍 SECURITY ERROR: Erro ao criar JwtEncoder - {}: {}", e.getClass().getSimpleName(), e.getMessage());
             e.printStackTrace();
             throw e;
         }

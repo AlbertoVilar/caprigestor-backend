@@ -4,7 +4,15 @@ import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
+import com.devmaster.goatfarm.events.model.entity.Event;
+import com.devmaster.goatfarm.events.model.repository.EventRepository;
+import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.phone.model.entity.Phone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,8 +25,19 @@ import org.springframework.stereotype.Service;
 @Service
 public class OwnershipService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OwnershipService.class);
+
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private GoatFarmRepository goatFarmRepository;
+    
+    @Autowired
+    private GoatRepository goatRepository;
+    
+    @Autowired
+    private EventRepository eventRepository;
 
     /**
      * Obtém o usuário atualmente autenticado
@@ -71,30 +90,27 @@ public class OwnershipService {
      */
     public void verifyFarmOwnership(GoatFarm farm) {
         User currentUser = getCurrentUser();
-        System.out.println("🔍 OWNERSHIP: Verificando acesso para usuário: " + currentUser.getEmail());
-        System.out.println("🔍 OWNERSHIP: Roles do usuário: " + currentUser.getRoles().stream().map(r -> r.getAuthority()).toList());
+        logger.debug("🔍 OWNERSHIP: Verificando acesso para usuário: {}", currentUser.getEmail());
+        logger.debug("🔍 OWNERSHIP: Roles do usuário: {}", currentUser.getRoles().stream().map(r -> r.getAuthority()).toList());
         
         // ADMIN e OPERATOR têm acesso a tudo
         if (isCurrentUserAdminOrOperator()) {
-            System.out.println("✅ OWNERSHIP: Usuário é ADMIN ou OPERATOR - acesso liberado");
+            logger.debug("✅ OWNERSHIP: Usuário é ADMIN ou OPERATOR - acesso liberado");
             return;
         }
 
         // Verificar se o usuário é proprietário da fazenda
         if (farm == null) {
-            System.out.println("❌ OWNERSHIP: Fazenda é null");
+            logger.warn("❌ OWNERSHIP: Fazenda é null");
             throw new ResourceNotFoundException("Fazenda não encontrada");
         }
 
-        System.out.println("🔍 OWNERSHIP: Fazenda ID: " + farm.getId() + ", Proprietário ID: " + (farm.getUser() != null ? farm.getUser().getId() : "null"));
-        System.out.println("🔍 OWNERSHIP: Usuário atual ID: " + currentUser.getId());
+        logger.debug("🔍 OWNERSHIP: Fazenda ID: {}, Proprietário ID: {}", farm.getId(), (farm.getUser() != null ? farm.getUser().getId() : "null"));
+        logger.debug("🔍 OWNERSHIP: Usuário atual ID: {}", currentUser.getId());
         
         if (farm.getUser() == null || !farm.getUser().getId().equals(currentUser.getId())) {
-            System.out.println("❌ OWNERSHIP: Acesso negado - usuário não é proprietário da fazenda");
             throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar esta fazenda");
         }
-        
-        System.out.println("✅ OWNERSHIP: Acesso liberado - usuário é proprietário da fazenda");
     }
 
     /**
@@ -190,7 +206,146 @@ public class OwnershipService {
             return;
         }
 
-        // Caso contrário, verificar pelo ID (seria necessário injetar repository)
-        throw new RuntimeException("Verificação de ownership por ID não implementada. Forneça a entidade da fazenda.");
+        // Buscar fazenda pelo ID e verificar ownership
+        GoatFarm foundFarm = goatFarmRepository.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
+        verifyFarmOwnership(foundFarm);
+    }
+    
+    // ========== MÉTODOS DE VERIFICAÇÃO POR ID ==========
+    
+    /**
+     * Verifica ownership de fazenda por ID
+     * @param farmId ID da fazenda
+     * @throws ResourceNotFoundException se não tem permissão
+     */
+    public void verifyFarmOwnershipById(Long farmId) {
+        if (isCurrentUserAdminOrOperator()) {
+            return;
+        }
+        
+        GoatFarm farm = goatFarmRepository.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
+        verifyFarmOwnership(farm);
+    }
+    
+    /**
+     * Verifica ownership de cabra por número de registro
+     * @param registrationNumber Número de registro da cabra
+     * @throws ResourceNotFoundException se não tem permissão
+     */
+    public void verifyOwnershipByGoatId(String registrationNumber) {
+        if (isCurrentUserAdminOrOperator()) {
+            return;
+        }
+        
+        Goat goat = goatRepository.findById(registrationNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada com registro: " + registrationNumber));
+        verifyGoatOwnership(goat);
+    }
+    
+    /**
+     * Verifica ownership de evento por ID
+     * @param eventId ID do evento
+     * @throws ResourceNotFoundException se não tem permissão
+     */
+    public void verifyOwnershipByEventId(Long eventId) {
+        if (isCurrentUserAdminOrOperator()) {
+            return;
+        }
+        
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado com ID: " + eventId));
+        
+        if (event.getGoat() == null || event.getGoat().getFarm() == null) {
+            throw new ResourceNotFoundException("Evento não está associado a uma fazenda válida");
+        }
+        
+        verifyFarmOwnership(event.getGoat().getFarm());
+    }
+    
+    /**
+     * Verifica se o usuário atual tem permissão para acessar um endereço
+     * Endereços são acessíveis apenas se estão associados a fazendas do usuário
+     * @param address Endereço a ser verificado
+     * @throws ResourceNotFoundException se não tem permissão
+     */
+    public void verifyAddressOwnership(Address address) {
+        if (isCurrentUserAdminOrOperator()) {
+            return;
+        }
+        
+        if (address == null) {
+            throw new ResourceNotFoundException("Endereço não encontrado");
+        }
+        
+        // Buscar fazenda que usa este endereço
+        GoatFarm farm = goatFarmRepository.findAll().stream()
+                .filter(f -> f.getAddress() != null && f.getAddress().getId().equals(address.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço não está associado a nenhuma fazenda"));
+        
+        verifyFarmOwnership(farm);
+    }
+    
+    /**
+     * Verifica se o usuário atual tem permissão para acessar um telefone
+     * Telefones são acessíveis apenas se estão associados a fazendas do usuário
+     * @param phone Telefone a ser verificado
+     * @throws ResourceNotFoundException se não tem permissão
+     */
+    public void verifyPhoneOwnership(Phone phone) {
+        if (isCurrentUserAdminOrOperator()) {
+            return;
+        }
+        
+        if (phone == null) {
+            throw new ResourceNotFoundException("Telefone não encontrado");
+        }
+        
+        if (phone.getGoatFarm() == null) {
+            throw new ResourceNotFoundException("Telefone não está associado a nenhuma fazenda");
+        }
+        
+        verifyFarmOwnership(phone.getGoatFarm());
+    }
+    
+    // ========== MÉTODOS AUXILIARES ==========
+    
+    /**
+     * Verifica se o usuário atual é proprietário de uma fazenda específica
+     * @param farmId ID da fazenda
+     * @return true se for proprietário, false caso contrário
+     */
+    public boolean isOwnerOfFarm(Long farmId) {
+        try {
+            verifyFarmOwnershipById(farmId);
+            return true;
+        } catch (ResourceNotFoundException e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Obtém o ID do usuário atual
+     * @return ID do usuário autenticado
+     */
+    public Long getCurrentUserId() {
+        return getCurrentUser().getId();
+    }
+    
+    /**
+     * Verifica se o usuário atual tem uma role específica
+     * @param roleName Nome da role (ex: "ROLE_ADMIN")
+     * @return true se tem a role, false caso contrário
+     */
+    public boolean hasRole(String roleName) {
+        try {
+            User currentUser = getCurrentUser();
+            return currentUser.getRoles().stream()
+                    .anyMatch(role -> role.getAuthority().equals(roleName));
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }

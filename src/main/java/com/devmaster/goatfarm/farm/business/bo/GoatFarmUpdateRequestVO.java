@@ -17,7 +17,7 @@ public class GoatFarmUpdateRequestVO {
     private GoatFarmRequestDTO farm;
 
 
-    // Owner functionality migrated to User entity
+    // Funcionalidade de proprietário migrada para entidade User
 
 
     private AddressRequestDTO address;

@@ -26,14 +26,14 @@ public class PhoneDAO {
     @Autowired
     private GoatFarmRepository farmRepository;
 
-    // ✅ Cria ou reutiliza uma lista de telefones
+    // ✅ Create or reuse a list of phones
     public List<Phone> findOrCreatePhones(List<PhoneRequestVO> phoneVOList) {
         return phoneVOList.stream()
                 .map(this::findOrCreatePhone)
                 .collect(Collectors.toList());
     }
 
-    // ✅ Cria ou reutiliza um único telefone
+    // ✅ Create or reuse a single phone
     public Phone findOrCreatePhone(PhoneRequestVO phoneVO) {
         return phoneRepository.findByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())
                 .orElseGet(() -> {
@@ -50,20 +50,20 @@ public class PhoneDAO {
             throw new IllegalArgumentException("Os dados do telefone para criação não podem ser nulos.");
         }
 
-        // Verifica duplicidade de telefone (DDD + Número)
+        // Check phone duplication (Area Code + Number)
         boolean exists = phoneRepository.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
         if (exists) {
             throw new DatabaseException("Já existe um telefone com este DDD e número cadastrado.");
         }
 
-        // Se for informado um goatFarmId, tenta buscar a fazenda
+        // If goatFarmId is provided, try to find the farm
         GoatFarm capril = null;
         if (goatFarmId != null) {
             capril = farmRepository.findById(goatFarmId)
                     .orElseThrow(() -> new ResourceNotFoundException("Capril com ID " + goatFarmId + " não encontrado."));
         }
 
-        // Converte VO para entidade com ou sem fazenda associada
+        // Convert VO to entity with or without associated farm
         Phone phone = PhoneEntityConverter.toEntity(requestVO, capril);
 
         // Salva e retorna

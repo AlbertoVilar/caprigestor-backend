@@ -14,7 +14,7 @@ public class GoatEntityConverter {
 
     public static Goat toEntity(GoatRequestVO requestVO,
                                 Goat father, Goat mother,
-                                User user,  // Incluindo o usuário como parâmetro
+                                User user,  // Including user as parameter
                                 GoatFarm goatFarm  // Garantir que goatFarm seja passado corretamente
                                ) {
 
@@ -79,7 +79,7 @@ public class GoatEntityConverter {
                 goat.getMother() != null ? goat.getMother().getName() : null,
                 goat.getMother() != null ? goat.getMother().getRegistrationNumber() : null,
 
-                goat.getUser() != null ? goat.getUser().getName() : null, // Incluindo o nome do usuário
+                goat.getUser() != null ? goat.getUser().getName() : null, // Including user name
 
                 goat.getFarm() != null ? goat.getFarm().getId() : null,
                 goat.getFarm() != null ? goat.getFarm().getName() : null

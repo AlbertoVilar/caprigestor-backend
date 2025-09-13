@@ -110,7 +110,7 @@ public class GenealogyDAO {
             final Genealogy entity = convertRequestDTOToEntity(requestDTO);
             final Genealogy savedEntity = genealogyRepository.save(entity);
             
-            // Converter entidade salva para ResponseVO
+            // Convert saved entity to ResponseVO
             return GenealogyEntityConverter.toResponseVO(savedEntity);
 
         } catch (Exception e) {
@@ -126,7 +126,7 @@ public class GenealogyDAO {
                 .goatName(dto.getGoatName())
                 .goatRegistration(dto.getGoatRegistration())
                 .goatCreator(dto.getBreeder())
-                .goatOwner(dto.getOwner())
+                .goatOwner(dto.getFarmOwner())
                 .goatBreed(dto.getBreed())
                 .goatCoatColor(dto.getColor())
                 .goatStatus(dto.getStatus())

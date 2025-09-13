@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.authority.model.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -14,24 +16,26 @@ import java.util.stream.Collectors;
 @Service
 public class JwtService {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
+
     @Autowired
     private JwtEncoder jwtEncoder;
 
     public String generateToken(User user) {
         try {
-            System.out.println("🔍 JWT: Iniciando geração de token para usuário: " + user.getEmail());
+            logger.debug("🔍 JWT: Iniciando geração de token para usuário: {}", user.getEmail());
             
             Instant now = Instant.now();
             long expiry = 24L; // 24 horas
             
-            System.out.println("🔍 JWT: Coletando roles do usuário...");
+            logger.debug("🔍 JWT: Coletando roles do usuário...");
             String scope = user.getRoles()
                     .stream()
                     .map(role -> role.getAuthority())
                     .collect(Collectors.joining(" "));
-            System.out.println("🔍 JWT: Scope gerado: " + scope);
+            logger.debug("🔍 JWT: Scope gerado: {}", scope);
 
-            System.out.println("🔍 JWT: Construindo claims...");
+            logger.debug("🔍 JWT: Construindo claims...");
             JwtClaimsSet claims = JwtClaimsSet.builder()
                     .issuer("goatfarm-api")
                     .issuedAt(now)
@@ -43,13 +47,13 @@ public class JwtService {
                     .claim("email", user.getEmail())
                     .build();
             
-            System.out.println("🔍 JWT: Codificando token...");
+            logger.debug("🔍 JWT: Codificando token...");
             String token = this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-            System.out.println("🔍 JWT: Token gerado com sucesso, tamanho: " + token.length());
+            logger.debug("🔍 JWT: Token gerado com sucesso, tamanho: {}", token.length());
             
             return token;
         } catch (Exception e) {
-            System.out.println("🔍 JWT ERROR: Erro ao gerar token - " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            logger.error("🔍 JWT ERROR: Erro ao gerar token - {}: {}", e.getClass().getSimpleName(), e.getMessage());
             e.printStackTrace();
             throw e;
         }

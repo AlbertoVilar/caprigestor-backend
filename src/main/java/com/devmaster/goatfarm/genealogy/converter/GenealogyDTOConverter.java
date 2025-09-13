@@ -16,7 +16,7 @@ public class GenealogyDTOConverter {
                 .goatName(responseVO.getGoatName())
                 .goatRegistration(responseVO.getGoatRegistration())
                 .breeder(responseVO.getBreeder())
-                .owner(responseVO.getOwner())
+                .farmOwner(responseVO.getFarmOwner())
                 .breed(responseVO.getBreed())
                 .color(responseVO.getColor())
                 .status(responseVO.getStatus())

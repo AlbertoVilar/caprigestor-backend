@@ -9,15 +9,17 @@ import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.facade.EventFacade;
 
 import io.swagger.v3.oas.annotations.Operation;
-
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -25,6 +27,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/goats/{registrationNumber}/events")
+@Tag(name = "Eventos de Cabras", description = "Gerenciamento de eventos relacionados às cabras")
 public class GoatEventController {
 
     @Autowired
@@ -34,7 +37,13 @@ public class GoatEventController {
             summary = "Busca eventos da cabra por registro e filtros opcionais",
             description = "Permite buscar eventos de uma cabra específica com filtros por tipo de evento e intervalo de datas."
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Eventos encontrados com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada")
+    })
     @GetMapping
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Page<EventResponseDTO>> getGoatEvents(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable String registrationNumber,
@@ -48,7 +57,7 @@ public class GoatEventController {
             @Parameter(description = "Data final", example = "2025-12-31")
             @RequestParam(required = false) LocalDate endDate,
 
-            @Parameter(hidden = true) Pageable pageable // oculto no Swagger para evitar poluição
+            @Parameter(hidden = true) Pageable pageable
     ) {
         Page<EventResponseVO> voPage = eventFacade.findEventsByGoatWithFilters(
                 registrationNumber, eventType, startDate, endDate, pageable);
@@ -62,8 +71,14 @@ public class GoatEventController {
             description = "Cria e associa um evento como: COBERTURA, PARTO, MORTE, SAUDE, VACINACAO, TRANSFERENCIA, " +
                     "MUDANCA_PROPRIETARIO, PESAGEM ou OUTRO a uma cabra identificada pelo número de registro."
     )
-
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Evento criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada")
+    })
     @PostMapping
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<EventResponseDTO> createEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable("registrationNumber") String registrationNumber,
@@ -82,8 +97,14 @@ public class GoatEventController {
             summary = "Atualiza um evento relacionado a uma cabra",
             description = "Permite atualizar ou corrigir os dados de um evento, sem alterar informações do animal vinculado."
     )
-
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Evento atualizado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Evento ou cabra não encontrada")
+    })
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<EventResponseDTO> updateGoatEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable("registrationNumber") String registrationNumber,
@@ -105,13 +126,18 @@ public class GoatEventController {
             summary = "Remove um evento existente",
             description = "Exclui permanentemente um evento do sistema com base no seu ID."
     )
-
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Evento removido com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado")
+    })
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Void> deleteEventById(
             @Parameter(description = "ID do evento a ser removido", example = "3")
             @PathVariable Long id
     ) {
         eventFacade.deleteEventById(id);
-        return ResponseEntity.status(HttpStatus.GONE).build();
+        return ResponseEntity.noContent().build();
     }
 }

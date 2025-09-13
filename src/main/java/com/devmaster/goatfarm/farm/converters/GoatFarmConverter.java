@@ -29,7 +29,7 @@ public class GoatFarmConverter {
         goatFarm.setId(requestVO.getId());
         goatFarm.setName(requestVO.getName());
         goatFarm.setTod(requestVO.getTod());
-        // Não atualiza owner e address aqui, a lógica de atualização do relacionamento deve estar no DAO
+        // Não atualiza proprietário e endereço aqui, a lógica de atualização do relacionamento deve estar no DAO
     }
 
     public static GoatFarmResponseVO toVO(GoatFarm goatFarm) {

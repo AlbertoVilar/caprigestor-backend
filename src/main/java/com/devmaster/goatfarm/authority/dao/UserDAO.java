@@ -8,6 +8,8 @@ import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +20,8 @@ import java.util.Optional;
 
 @Service
 public class UserDAO {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserDAO.class);
 
     private final UserRepository repository;
     private final RoleRepository roleRepository;
@@ -51,9 +55,9 @@ public class UserDAO {
         User user = repository.findByEmail(username)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com email: " + username));
         
-        System.out.println("🔍 UserDAO: Usuário carregado: " + user.getEmail());
-        System.out.println("🔍 UserDAO: Roles carregadas: " + user.getRoles().size());
-        user.getRoles().forEach(role -> System.out.println("🔍 UserDAO: Role: " + role.getAuthority()));
+        logger.debug("🔍 UserDAO: Usuário carregado: {}", user.getEmail());
+        logger.debug("🔍 UserDAO: Roles carregadas: {}", user.getRoles().size());
+        user.getRoles().forEach(role -> logger.debug("🔍 UserDAO: Role: {}", role.getAuthority()));
         
         return user;
     }
