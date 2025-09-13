@@ -82,6 +82,15 @@ public class AddressDAO {
             throw new IllegalArgumentException("Os dados do endereço são obrigatórios.");
         }
 
+        // Debug logs
+        System.out.println("DEBUG - AddressDAO.findOrCreateAddress:");
+        System.out.println("  Street: " + requestVO.getStreet());
+        System.out.println("  Neighborhood: " + requestVO.getNeighborhood());
+        System.out.println("  City: " + requestVO.getCity());
+        System.out.println("  State: " + requestVO.getState());
+        System.out.println("  PostalCode: " + requestVO.getPostalCode());
+        System.out.println("  Country: " + requestVO.getCountry());
+
         // Verifica se já existe um endereço igual
         Optional<Address> existing = adressRepository.searchExactAddress(
                         requestVO.getStreet(),
@@ -92,10 +101,12 @@ public class AddressDAO {
                 );
 
         if (existing.isPresent()) {
+            System.out.println("DEBUG - Endereço existente encontrado, retornando: " + existing.get().getId());
             return existing.get();
         }
 
         // Se não existir, cria um novo endereço usando o conversor
+        System.out.println("DEBUG - Criando novo endereço");
         Address newAddress = AddressEntityConverter.toEntity(requestVO);
         return adressRepository.save(newAddress);
     }

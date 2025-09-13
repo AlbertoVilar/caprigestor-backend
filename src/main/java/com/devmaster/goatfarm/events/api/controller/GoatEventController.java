@@ -24,7 +24,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/goats/{registrationNumber}/events")
+@RequestMapping("/api/goats/{registrationNumber}/events")
 public class GoatEventController {
 
     @Autowired

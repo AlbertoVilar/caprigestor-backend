@@ -91,14 +91,8 @@ public class GoatFarmDAO {
         // 1. Usuário (pode ser existente ou novo)
         User user = userDAO.findOrCreateUser(userRequestVO);
 
-        // 2. Criar novo endereço (sempre novo devido ao relacionamento @OneToOne)
-        Address address = new Address();
-        address.setStreet(addressRequestVO.getStreet());
-        address.setNeighborhood(addressRequestVO.getNeighborhood());
-        address.setCity(addressRequestVO.getCity());
-        address.setState(addressRequestVO.getState());
-        address.setPostalCode(addressRequestVO.getPostalCode());
-        address.setCountry(addressRequestVO.getCountry());
+        // 2. Criar novo endereço usando o AddressDAO
+        Address address = addressDAO.findOrCreateAddress(addressRequestVO);
 
         // 3. Criar a fazenda e associar o endereço
         GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);

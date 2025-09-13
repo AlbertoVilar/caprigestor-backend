@@ -44,10 +44,12 @@ public class SecurityConfig {
     private RSAPrivateKey rsaPrivateKey;
 
     private final UserDetailsService userDetailsService;
+    private final JwtDebugFilter jwtDebugFilter;
 
     // Injeção via construtor é uma prática recomendada
-    public SecurityConfig(UserDetailsService userDetailsService) {
+    public SecurityConfig(UserDetailsService userDetailsService, JwtDebugFilter jwtDebugFilter) {
         this.userDetailsService = userDetailsService;
+        this.jwtDebugFilter = jwtDebugFilter;
     }
 
     @Bean
@@ -68,7 +70,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/goatfarms/full")
             .authorizeHttpRequests(authorize -> authorize
                 .anyRequest().permitAll() // Permite tudo que corresponder ao securityMatcher
             )
@@ -91,16 +93,22 @@ public class SecurityConfig {
             // CORREÇÃO: Captura TODOS os endpoints /api/** que não foram pegos pelo filtro de ordem 1
             .securityMatcher("/api/**")
             .authorizeHttpRequests(authorize -> authorize
-                // Regras de permissão para leitura pública (não exigem token)
-                .requestMatchers(HttpMethod.GET, "/api/goats/**", "/api/genealogy/**", "/api/farms/**").permitAll()
+                // Regras específicas PRIMEIRO (mais específicas têm prioridade)
                 .requestMatchers(HttpMethod.POST, "/api/auth/register-farm").permitAll()
                 
+                // Regras de permissão para leitura pública (não exigem token)
+                .requestMatchers(HttpMethod.GET, "/api/goats/**", "/api/genealogies/**", "/api/farms/**", "/api/goatfarms/**").permitAll()
+                
                 // Regras de autorização por ROLE (exigem token)
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/users/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
-                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyRole("FARM_OWNER", "ADMIN", "OPERATOR")
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                // Excluir /api/goatfarms/full da regra genérica para não conflitar com permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/goatfarms").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/goatfarms/{id}").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/goatfarms/goats").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogy/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogy/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
                 
                 // Qualquer outra requisição /api/** que não corresponda às regras acima precisa de autenticação
                 .anyRequest().authenticated()
@@ -108,6 +116,7 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
             ))
+            .addFilterBefore(jwtDebugFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .cors(Customizer.withDefaults()); // Aplica a configuração de CORS do seu CorsConfig
 
@@ -161,11 +170,15 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
+        authoritiesConverter.setAuthorityPrefix(""); // Remover prefixo pois o scope já contém ROLE_
         authoritiesConverter.setAuthoritiesClaimName("scope");
 
         JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
         authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        
+        // Adicionar logs de debug
+        authenticationConverter.setPrincipalClaimName("sub");
+        
         return authenticationConverter;
     }
 

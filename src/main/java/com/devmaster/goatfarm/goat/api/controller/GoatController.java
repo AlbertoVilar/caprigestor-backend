@@ -20,17 +20,25 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 
 @RestController
-@RequestMapping("/goatfarms")
+@RequestMapping("/api/goatfarms")
 @Tag(name = "Goat API", description = "Gerenciamento de cabras na fazenda") // Adicionado Tag para o Swagger
 public class GoatController {
 
     private final GoatFacade goatFacade;
+    private final OwnershipService ownershipService;
+    private final GoatFarmRepository goatFarmRepository;
 
     @Autowired
-    public GoatController(GoatFacade goatFacade) {
+    public GoatController(GoatFacade goatFacade, OwnershipService ownershipService, GoatFarmRepository goatFarmRepository) {
         this.goatFacade = goatFacade;
+        this.ownershipService = ownershipService;
+        this.goatFarmRepository = goatFarmRepository;
     }
 
 
@@ -48,15 +56,38 @@ public class GoatController {
             @ApiResponse(responseCode = "404", description = "Usuário ou fazenda não encontrados.")
     })
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping("/goats") // POST /goatfarms/goats
     public ResponseEntity<GoatResponseDTO> createGoat(
             @Parameter(description = "Dados da cabra para cadastro", required = true)
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
-        GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
-        Long farmId = goatRequestDTO.getFarmId();
-        Long userId = goatRequestDTO.getUserId();
-        return ResponseEntity.ok(GoatDTOConverter.toResponseDTO(
-                goatFacade.createGoat(requestVO, userId, farmId)));
+        
+        try {
+            System.out.println("🚀 CONTROLLER: Iniciando cadastro de cabra");
+            System.out.println("🚀 CONTROLLER: Dados recebidos: " + goatRequestDTO);
+            System.out.println("🚀 CONTROLLER: Farm ID: " + goatRequestDTO.getFarmId());
+            
+            // Verificar ownership da fazenda antes de criar a cabra
+            Long farmId = goatRequestDTO.getFarmId();
+            GoatFarm farm = goatFarmRepository.findById(farmId)
+                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
+            
+            System.out.println("🚀 CONTROLLER: Fazenda encontrada: " + farm.getName() + " (ID: " + farm.getId() + ")");
+            
+            ownershipService.verifyFarmOwnership(farm);
+            
+            System.out.println("🚀 CONTROLLER: Verificação de ownership passou, criando cabra...");
+            GoatRequestVO requestVO = GoatDTOConverter.toRequestVO(goatRequestDTO);
+            Long userId = goatRequestDTO.getUserId();
+            GoatResponseDTO result = GoatDTOConverter.toResponseDTO(
+                    goatFacade.createGoat(requestVO, userId, farmId));
+            System.out.println("🚀 CONTROLLER: Cabra criada com sucesso!");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            System.out.println("❌ CONTROLLER ERROR: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /**

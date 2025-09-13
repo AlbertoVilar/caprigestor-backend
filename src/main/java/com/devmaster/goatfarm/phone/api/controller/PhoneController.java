@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/phones")
+@RequestMapping("/api/phones")
 public class PhoneController {
 
     @Autowired

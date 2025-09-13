@@ -1,23 +1,21 @@
 package com.devmaster.goatfarm.authority.api.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserResponseDTO {
 
     private Long id;
     private String name;
     private String email;
-
-
-    List<String> roles = new ArrayList<>();
-
-    public UserResponseDTO(Long id, String name, String email, List<String> roles) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.roles = roles;
-    }
+    private List<String> roles = new ArrayList<>();
 
 
     public Long getId() {

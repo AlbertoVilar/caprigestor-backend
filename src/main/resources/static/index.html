@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CapriGestor - Sistema de Gestão de Capris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .menu {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .menu-item {
+            display: block;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .menu-item.test {
+            background: linear-gradient(135deg, #FF6B35, #F7931E);
+        }
+
+        .menu-item.test:hover {
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        .description {
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 5px;
+        }
+
+        .status {
+            background: #E8F5E8;
+            color: #2E7D32;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🐐 CapriGestor</div>
+        <div class="subtitle">Sistema de Gestão de Capris</div>
+        
+        <div class="menu">
+            <a href="/frontend-wizard-refactored.html" class="menu-item">
+                📝 Cadastro de Fazenda
+                <div class="description">Fluxo completo de cadastro com wizard</div>
+            </a>
+            
+            <a href="/frontend-wizard-test.html" class="menu-item test">
+                🧪 Cadastro de Teste
+                <div class="description">Versão de teste sem autenticação</div>
+            </a>
+            
+            <a href="/test-login.html" class="menu-item test">
+                🔐 Teste de Login
+                <div class="description">Teste de autenticação da API</div>
+            </a>
+            
+            <a href="/cors-test.html" class="menu-item test">
+                🌐 Teste CORS
+                <div class="description">Verificação de configurações CORS</div>
+            </a>
+        </div>
+        
+        <div class="status">
+            ✅ Sistema funcionando corretamente<br>
+            Backend: Spring Boot (Porta 8080)<br>
+            Frontend: Arquivos estáticos servidos pelo Spring
+        </div>
+        
+        <div class="footer">
+            Desenvolvido com Spring Boot + HTML/CSS/JavaScript
+        </div>
+    </div>
+</body>
+</html>

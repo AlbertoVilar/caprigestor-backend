@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste CORS - Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico CORS - Endpoint de Login</h1>
+        <p><strong>Objetivo:</strong> Identificar problemas de CORS entre frontend e backend</p>
+        
+        <div>
+            <button onclick="testPreflight()">1. Testar Preflight (OPTIONS)</button>
+            <button onclick="testSimpleLogin()">2. Login Simples (Fetch)</button>
+            <button onclick="testLoginWithCors()">3. Login com Headers CORS</button>
+            <button onclick="testSameOrigin()">4. Testar Same-Origin</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        const LOGIN_DATA = {
+            email: 'albertovilar1@gmail.com',
+            password: '132747'
+        };
+        
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+            console.log(message);
+        }
+        
+        // Teste 1: Verificar se o preflight OPTIONS funciona
+        async function testPreflight() {
+            showResult('🔄 Testando requisição OPTIONS (preflight)...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials')
+                };
+                
+                showResult(`✅ OPTIONS Response:\nStatus: ${response.status}\nCORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}`, 'success');
+                
+            } catch (error) {
+                showResult(`❌ Erro no OPTIONS:\n${error.message}\n${error.stack}`, 'error');
+            }
+        }
+        
+        // Teste 2: Login simples com fetch
+        async function testSimpleLogin() {
+            showResult('🔄 Testando login simples com fetch...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(LOGIN_DATA)
+                });
+                
+                const responseText = await response.text();
+                
+                if (response.ok) {
+                    const data = JSON.parse(responseText);
+                    showResult(`✅ Login bem-sucedido!\nStatus: ${response.status}\nToken recebido: ${data.accessToken ? 'SIM' : 'NÃO'}\nUser: ${data.user?.name || 'N/A'}`, 'success');
+                } else {
+                    showResult(`❌ Login falhou!\nStatus: ${response.status}\nResponse: ${responseText}`, 'error');
+                }
+                
+            } catch (error) {
+                showResult(`❌ Erro na requisição:\n${error.message}\n${error.stack}`, 'error');
+            }
+        }
+        
+        // Teste 3: Login com headers CORS explícitos
+        async function testLoginWithCors() {
+            showResult('🔄 Testando login com headers CORS explícitos...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    body: JSON.stringify(LOGIN_DATA)
+                });
+                
+                const responseText = await response.text();
+                
+                if (response.ok) {
+                    const data = JSON.parse(responseText);
+                    showResult(`✅ Login com CORS bem-sucedido!\nStatus: ${response.status}\nToken: ${data.accessToken ? 'SIM' : 'NÃO'}\nUser: ${data.user?.name || 'N/A'}`, 'success');
+                } else {
+                    showResult(`❌ Login com CORS falhou!\nStatus: ${response.status}\nResponse: ${responseText}`, 'error');
+                }
+                
+            } catch (error) {
+                showResult(`❌ Erro CORS:\n${error.message}\n${error.stack}`, 'error');
+            }
+        }
+        
+        // Teste 4: Verificar se estamos no mesmo domínio
+        function testSameOrigin() {
+            const currentOrigin = window.location.origin;
+            const apiOrigin = 'http://localhost:8080';
+            
+            const isSameOrigin = currentOrigin === apiOrigin;
+            
+            showResult(`🔍 Verificação de Origem:\nFrontend Origin: ${currentOrigin}\nAPI Origin: ${apiOrigin}\nSame Origin: ${isSameOrigin ? 'SIM' : 'NÃO'}\n\n${isSameOrigin ? '✅ Não deveria haver problemas de CORS' : '⚠️ CORS necessário - origens diferentes'}`, isSameOrigin ? 'success' : 'info');
+        }
+        
+        // Executar teste inicial
+        window.onload = function() {
+            testSameOrigin();
+        };
+    </script>
+</body>
+</html>

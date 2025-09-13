@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/goatfarms")
+@RequestMapping("/api/goatfarms")
 public class GoatFarmController {
 
     @Autowired
@@ -41,7 +41,9 @@ public class GoatFarmController {
     @Autowired
     private OwnershipService ownershipService;
 
+    @CrossOrigin(origins = {"http://localhost:5500", "http://localhost:5173", "http://localhost:8080"})
     @Operation(summary = "Cadastra um novo capril completo com proprietário, endereço e telefones")
+    @PreAuthorize("permitAll()")
     @PostMapping("/full")
     public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(
             @RequestBody(description = "Dados completos para criação da fazenda")
@@ -57,7 +59,7 @@ public class GoatFarmController {
         return new ResponseEntity<>(GoatFarmDTOConverter.toFullDTO(responseVO), HttpStatus.CREATED);
     }
 
-    @CrossOrigin(origins = "http://localhost:5500")
+    @CrossOrigin(origins = {"http://localhost:5500", "http://localhost:5173"})
     @Operation(summary = "Cadastra um novo capril usando IDs de entidades existentes")
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping

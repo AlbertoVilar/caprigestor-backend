@@ -9,9 +9,17 @@ import org.springframework.stereotype.Component;
 public class AddressEntityConverter {
 
     public static Address toEntity(AddressRequestVO requestVO) {
+        
+        // Debug logs
+        System.out.println("DEBUG - AddressEntityConverter.toEntity:");
+        System.out.println("  Street: " + requestVO.getStreet());
+        System.out.println("  Neighborhood: " + requestVO.getNeighborhood());
+        System.out.println("  City: " + requestVO.getCity());
+        System.out.println("  State: " + requestVO.getState());
+        System.out.println("  PostalCode: " + requestVO.getPostalCode());
+        System.out.println("  Country: " + requestVO.getCountry());
 
         return new Address(
-
                 null,
                 requestVO.getStreet(),
                 requestVO.getNeighborhood(),

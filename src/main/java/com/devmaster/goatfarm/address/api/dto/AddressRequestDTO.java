@@ -27,7 +27,7 @@ public class AddressRequestDTO {
 
     @NotBlank(message = "O código postal não pode estar em branco.")
     @Pattern(regexp = "^\\d{5}-?\\d{3}$", message = "O código postal deve estar no formato XXXXX-XXX ou XXXXX.")
-    @JsonProperty("zipCode")
+    @JsonProperty("postalCode")
     private String postalCode;
 
     @NotBlank(message = "O país não pode estar em branco.")
