@@ -26,6 +26,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	@EntityGraph(attributePaths = "roles")
     Optional<User> findByEmail(String email);
 
+    @EntityGraph(attributePaths = "roles")
+    Optional<User> findById(Long id);
+
     Optional<User> findByCpf(String cpf);
 
     @Query("DELETE FROM User u WHERE u.email != :email")

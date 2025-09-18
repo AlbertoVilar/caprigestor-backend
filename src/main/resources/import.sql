@@ -12,9 +12,9 @@ INSERT INTO tb_user_role (user_id, role_id) VALUES (1, 2); -- Alberto como OPERA
 INSERT INTO tb_user_role (user_id, role_id) VALUES (2, 2); -- Carlos como OPERATOR
 
 -- Endereços
-INSERT INTO endereco (rua, bairro, cidade, estado, codigo_postal, pais) VALUES ('Sítio São Felix', 'Zona Rural', 'Santo Andre', 'Paraíba', '58670-000', 'Brasil');
+INSERT INTO endereco (rua, bairro, cidade, estado, zip_code, pais) VALUES ('Sítio São Felix', 'Zona Rural', 'Santo Andre', 'Paraíba', '58670-000', 'Brasil');
 
-INSERT INTO endereco (rua, bairro, cidade, estado, codigo_postal, pais) VALUES ('Sítio Jacaré', 'Zona Rural', 'Juazeirinho', 'Paraíba', '58660-000', 'Brasil');
+INSERT INTO endereco (rua, bairro, cidade, estado, zip_code, pais) VALUES ('Sítio Jacaré', 'Zona Rural', 'Juazeirinho', 'Paraíba', '58660-000', 'Brasil');
 
 -- Fazendas
 INSERT INTO capril (nome, TOD, user_id, address_id, criado, atualizado) VALUES ('Capril Vilar', '16432', 1, 1, NOW(), NOW());

@@ -4,9 +4,10 @@ import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
-import com.devmaster.goatfarm.events.converter.EventDTOConverter;
+import com.devmaster.goatfarm.events.mapper.EventMapper;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.facade.EventFacade;
+import com.devmaster.goatfarm.events.facade.dto.EventFacadeResponseDTO;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -33,6 +34,9 @@ public class GoatEventController {
     @Autowired
     private EventFacade eventFacade;
 
+    @Autowired
+    private EventMapper eventMapper;
+
     @Operation(
             summary = "Busca eventos da cabra por registro e filtros opcionais",
             description = "Permite buscar eventos de uma cabra específica com filtros por tipo de evento e intervalo de datas."
@@ -43,7 +47,7 @@ public class GoatEventController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada")
     })
     @GetMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<Page<EventResponseDTO>> getGoatEvents(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable String registrationNumber,
@@ -59,10 +63,12 @@ public class GoatEventController {
 
             @Parameter(hidden = true) Pageable pageable
     ) {
-        Page<EventResponseVO> voPage = eventFacade.findEventsByGoatWithFilters(
+        Page<EventResponseVO> responseVOPage = eventFacade.findEventsByGoatWithFilters(
                 registrationNumber, eventType, startDate, endDate, pageable);
 
-        return ResponseEntity.ok(voPage.map(EventDTOConverter::responseDTO));
+        return ResponseEntity.ok(responseVOPage.map(responseVO -> 
+            eventMapper.responseDTO(responseVO)
+        ));
     }
 
 
@@ -78,7 +84,7 @@ public class GoatEventController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada")
     })
     @PostMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<EventResponseDTO> createEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable("registrationNumber") String registrationNumber,
@@ -86,9 +92,10 @@ public class GoatEventController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Dados do evento a ser criado")
             @RequestBody @Valid EventRequestDTO requestDTO
     ) {
-        EventRequestVO requestVO = EventDTOConverter.toRequestVO(requestDTO);
-        EventResponseVO responseVO = eventFacade.createEvent(requestVO, registrationNumber);
-        EventResponseDTO responseDTO = EventDTOConverter.responseDTO(responseVO);
+        EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
+        EventFacadeResponseDTO facadeDTO = eventFacade.createEvent(requestVO, registrationNumber);
+        EventResponseVO responseVO = new EventResponseVO(facadeDTO.getId(), facadeDTO.getGoatRegistrationNumber(), facadeDTO.getGoatName(), facadeDTO.getEventType(), facadeDTO.getEventDate(), facadeDTO.getDescription(), null, null, null);
+        EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
@@ -104,7 +111,7 @@ public class GoatEventController {
             @ApiResponse(responseCode = "404", description = "Evento ou cabra não encontrada")
     })
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<EventResponseDTO> updateGoatEvent(
             @Parameter(description = "Número de registro da cabra", example = "2114517012")
             @PathVariable("registrationNumber") String registrationNumber,
@@ -115,9 +122,10 @@ public class GoatEventController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Novos dados para o evento")
             @RequestBody @Valid EventRequestDTO requestDTO
     ) {
-        EventRequestVO requestVO = EventDTOConverter.toRequestVO(requestDTO);
-        EventResponseVO responseVO = eventFacade.updateEvent(id, requestVO, registrationNumber);
-        EventResponseDTO responseDTO = EventDTOConverter.responseDTO(responseVO);
+        EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
+        EventFacadeResponseDTO facadeDTO = eventFacade.updateEvent(id, requestVO, registrationNumber);
+        EventResponseVO responseVO = new EventResponseVO(facadeDTO.getId(), facadeDTO.getGoatRegistrationNumber(), facadeDTO.getGoatName(), facadeDTO.getEventType(), facadeDTO.getEventDate(), facadeDTO.getDescription(), null, null, null);
+        EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
 
         return ResponseEntity.ok(responseDTO);
     }
@@ -132,7 +140,7 @@ public class GoatEventController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado")
     })
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<Void> deleteEventById(
             @Parameter(description = "ID do evento a ser removido", example = "3")
             @PathVariable Long id

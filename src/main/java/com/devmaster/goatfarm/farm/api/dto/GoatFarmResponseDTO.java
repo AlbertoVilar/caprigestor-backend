@@ -17,6 +17,10 @@ public class GoatFarmResponseDTO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
 
+    public GoatFarmResponseDTO() {
+        // Construtor padrão
+    }
+
     public GoatFarmResponseDTO(Long id,
                                String name,
                                String tod,

@@ -8,14 +8,15 @@ public class UserResponseVO {
     private Long id;
     private String name;
     private String email;
-
+    private String cpf;
 
     List<String> roles = new ArrayList<>();
 
-    public UserResponseVO(Long id, String name, String email, List<String> roles) {
+    public UserResponseVO(Long id, String name, String email, String cpf, List<String> roles) {
         this.id = id;
         this.name = name;
         this.email = email;
+        this.cpf = cpf;
         this.roles = roles;
     }
 
@@ -29,6 +30,10 @@ public class UserResponseVO {
 
     public String getEmail() {
         return email;
+    }
+
+    public String getCpf() {
+        return cpf;
     }
 
     public List<String> getRoles() {

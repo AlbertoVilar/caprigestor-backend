@@ -1,9 +1,10 @@
 package com.devmaster.goatfarm.farm.model.entity;
 
 import com.devmaster.goatfarm.address.model.entity.Address;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -31,6 +32,7 @@ public class GoatFarm {
     // ✅ Relacionamento com User (proprietário da fazenda)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    @JsonBackReference
     private User user;
 
     // ✅ Relacionamento com Address (uma fazenda tem um endereço único)

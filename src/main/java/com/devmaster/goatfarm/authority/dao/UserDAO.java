@@ -5,8 +5,9 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.conveter.UserEntityConverter;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
+import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class UserDAO {
@@ -38,9 +40,9 @@ public class UserDAO {
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String email = authentication.getName();
             return repository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Usuário autenticado não encontrado: " + email));
+                    .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
         }
-        throw new RuntimeException("Usuário não autenticado");
+        throw new UnauthorizedException("Usuário não autenticado");
     }
 
     @Transactional(readOnly = true)
@@ -75,48 +77,14 @@ public class UserDAO {
     }
 
     @Transactional
-    public UserResponseVO saveUser(UserRequestVO vo) {
-        // Validar campos obrigatórios não nulos e não vazios
-        validateRequiredFields(vo);
-        
-        // Verificar se já existe usuário com o mesmo email
-        if (repository.findByEmail(vo.getEmail().trim()).isPresent()) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException(
-                "Já existe um usuário cadastrado com o email: " + vo.getEmail());
-        }
-
-        // Verificar se já existe usuário com o mesmo CPF
-        if (repository.findByCpf(vo.getCpf().trim()).isPresent()) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException(
-                "Já existe um usuário cadastrado com o CPF: " + vo.getCpf());
-        }
-
+    public UserResponseVO saveUser(UserRequestVO vo, String encryptedPassword, Set<Role> resolvedRoles) {
+        // Operação CRUD mecânica: converter VO para entidade
         User user = UserEntityConverter.fromVO(vo);
         
-        // Criptografar a senha
-        user.setPassword(passwordEncoder.encode(vo.getPassword()));
-
-        // Resolver roles já salvas no banco
-        user.getRoles().clear(); // evitar acúmulo ou roles duplicadas
-        
-        if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
-            vo.getRoles().forEach(roleName -> {
-                Optional<Role> optionalRole = roleRepository.findByAuthority(roleName);
-                if (optionalRole.isEmpty()) {
-                    throw new RuntimeException("Role não encontrada: " + roleName);
-                }
-                user.addRole(optionalRole.get());
-            });
-        } else {
-            // Atribuir ROLE_OPERATOR por padrão quando nenhuma role é fornecida
-            Optional<Role> defaultRole = roleRepository.findByAuthority("ROLE_OPERATOR");
-            if (defaultRole.isEmpty()) {
-                throw new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema");
-            }
-            user.addRole(defaultRole.get());
-        }
-
-        // Senha já foi criptografada acima na linha 92
+        // Aplicar senha criptografada e roles resolvidas pelo Business
+        user.setPassword(encryptedPassword);
+        user.getRoles().clear();
+        user.getRoles().addAll(resolvedRoles);
 
         try {
             User savedUser = repository.save(user);
@@ -127,52 +95,18 @@ public class UserDAO {
         }
     }
 
-    private void validateRequiredFields(UserRequestVO vo) {
-        if (vo.getName() == null || vo.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Nome é obrigatório e não pode estar em branco");
-        }
-        
-        if (vo.getEmail() == null || vo.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Email é obrigatório e não pode estar em branco");
-        }
-        
-        if (vo.getCpf() == null || vo.getCpf().trim().isEmpty()) {
-            throw new IllegalArgumentException("CPF é obrigatório e não pode estar em branco");
-        }
-        
-        if (vo.getPassword() == null || vo.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("Senha é obrigatória e não pode estar em branco");
-        }
-        
-        if (vo.getRoles() == null || vo.getRoles().isEmpty()) {
-            throw new IllegalArgumentException("Pelo menos uma role deve ser selecionada");
-        }
-        
-        // Validar formato do CPF (apenas dígitos, 11 caracteres)
-        String cpfClean = vo.getCpf().trim().replaceAll("\\D", "");
-        if (cpfClean.length() != 11) {
-            throw new IllegalArgumentException("CPF deve conter exatamente 11 dígitos numéricos");
-        }
-        
-        // Validar formato do email
-        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
-        if (!vo.getEmail().trim().matches(emailRegex)) {
-            throw new IllegalArgumentException("Email deve ter formato válido");
-        }
-        
-        // Validar tamanho mínimo da senha
-        if (vo.getPassword().length() < 6) {
-            throw new IllegalArgumentException("Senha deve ter pelo menos 6 caracteres");
-        }
-        
-        // Validar tamanho do nome
-        if (vo.getName().trim().length() < 2 || vo.getName().trim().length() > 100) {
-            throw new IllegalArgumentException("Nome deve ter entre 2 e 100 caracteres");
-        }
+
+
+    @Transactional(readOnly = true)
+    public UserResponseVO findById(Long userId) {
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
+        return UserEntityConverter.toVO(user);
     }
 
     @Transactional
-    public UserResponseVO updateUser(Long userId, UserRequestVO vo) {
+    public UserResponseVO updateUser(Long userId, UserRequestVO vo, String encryptedPassword, Set<Role> resolvedRoles) {
+        // Operação CRUD mecânica: buscar usuário existente
         User userToUpdate = repository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário com ID " + userId + " não encontrado."));
 
@@ -180,21 +114,15 @@ public class UserDAO {
         userToUpdate.setName(vo.getName());
         userToUpdate.setEmail(vo.getEmail());
         
-        // Atualizar senha apenas se fornecida
-        if (vo.getPassword() != null && !vo.getPassword().trim().isEmpty()) {
-            userToUpdate.setPassword(passwordEncoder.encode(vo.getPassword())); // Senha criptografada
+        // Atualizar senha se fornecida pelo Business
+        if (encryptedPassword != null) {
+            userToUpdate.setPassword(encryptedPassword);
         }
 
-        // Atualizar roles se fornecidas
-        if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
+        // Atualizar roles se fornecidas pelo Business
+        if (resolvedRoles != null) {
             userToUpdate.getRoles().clear();
-            vo.getRoles().forEach(roleName -> {
-                Optional<Role> optionalRole = roleRepository.findByAuthority(roleName);
-                if (optionalRole.isEmpty()) {
-                    throw new RuntimeException("Role não encontrada: " + roleName);
-                }
-                userToUpdate.addRole(optionalRole.get());
-            });
+            userToUpdate.getRoles().addAll(resolvedRoles);
         }
 
         User updatedUser = repository.save(userToUpdate);

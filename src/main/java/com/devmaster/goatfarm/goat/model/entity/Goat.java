@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.authority.model.entity.User;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -64,8 +65,9 @@ public class Goat {
         private Goat mother;
 
         @ManyToOne
-        @JoinColumn(name = "user_id")
-        private User user;
+    @JoinColumn(name = "user_id")
+    @JsonBackReference
+    private User user;
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "capril_id")

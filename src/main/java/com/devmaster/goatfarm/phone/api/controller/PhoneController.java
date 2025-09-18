@@ -4,8 +4,9 @@ import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
+import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.facade.PhoneFacade;
+import com.devmaster.goatfarm.phone.facade.dto.PhoneFacadeResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -28,6 +29,9 @@ public class PhoneController {
     @Autowired
     private PhoneFacade phoneFacade;
 
+    @Autowired
+    private PhoneMapper phoneMapper;
+
     @Operation(summary = "Cadastra um novo telefone")
 
     @PostMapping
@@ -36,76 +40,20 @@ public class PhoneController {
             @org.springframework.web.bind.annotation.RequestBody @Valid PhoneRequestDTO requestDTO) {
 
         try {
-            // Validações granulares
-            Map<String, String> validationErrors = new HashMap<>();
-            
-            // Validar DDD brasileiro
-            if (requestDTO.getDdd() != null) {
-                String[] dddsValidos = {"11", "12", "13", "14", "15", "16", "17", "18", "19", // SP
-                                      "21", "22", "24", // RJ
-                                      "27", "28", // ES
-                                      "31", "32", "33", "34", "35", "37", "38", // MG
-                                      "41", "42", "43", "44", "45", "46", // PR
-                                      "47", "48", "49", // SC
-                                      "51", "53", "54", "55", // RS
-                                      "61", // DF
-                                      "62", "64", // GO
-                                      "63", // TO
-                                      "65", "66", // MT
-                                      "67", // MS
-                                      "68", // AC
-                                      "69", // RO
-                                      "71", "73", "74", "75", "77", // BA
-                                      "79", // SE
-                                      "81", "87", // PE
-                                      "82", // AL
-                                      "83", // PB
-                                      "84", // RN
-                                      "85", "88", // CE
-                                      "86", "89", // PI
-                                      "91", "93", "94", // PA
-                                      "92", "97", // AM
-                                      "95", // RR
-                                      "96", // AP
-                                      "98", "99"}; // MA
-                
-                boolean dddValido = false;
-                for (String ddd : dddsValidos) {
-                    if (ddd.equals(requestDTO.getDdd().trim())) {
-                        dddValido = true;
-                        break;
-                    }
-                }
-                if (!dddValido) {
-                    validationErrors.put("ddd", "DDD inválido. Deve ser um DDD brasileiro válido");
-                }
-            }
-            
-            // Validar formato do número (8 ou 9 dígitos)
-            if (requestDTO.getNumber() != null) {
-                String numero = requestDTO.getNumber().trim();
-                if (!numero.matches("^\\d{8,9}$")) {
-                    validationErrors.put("number", "Número deve ter 8 ou 9 dígitos numéricos");
-                } else if (numero.length() == 9 && !numero.startsWith("9")) {
-                    validationErrors.put("number", "Números com 9 dígitos devem começar com 9 (celular)");
-                }
-            }
-            
-            if (!validationErrors.isEmpty()) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Dados de telefone inválidos");
-                errorResponse.put("errors", validationErrors);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-            }
-            
-            PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
+            PhoneRequestVO requestVO = phoneMapper.toRequestVO(requestDTO);
             Long goatFarmId = requestDTO.getGoatFarmId();
 
-            PhoneResponseVO responseVO = phoneFacade.createPhone(requestVO, goatFarmId);
-            PhoneResponseDTO responseDTO = PhoneDTOConverter.toDTO(responseVO);
+            PhoneFacadeResponseDTO facadeDTO = phoneFacade.createPhone(requestVO, goatFarmId);
+            PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
+            PhoneResponseDTO responseDTO = phoneMapper.toResponseDTO(responseVO);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
             
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Dados de telefone inválidos");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         } catch (com.devmaster.goatfarm.config.exceptions.custom.DatabaseException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Telefone já existe");
@@ -135,9 +83,10 @@ public class PhoneController {
     public ResponseEntity<PhoneResponseDTO> getPhoneById(
             @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long id) {
 
-        PhoneResponseVO responseVO = phoneFacade.findPhoneById(id);
-        if (responseVO != null) {
-            return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
+        PhoneFacadeResponseDTO facadeDTO = phoneFacade.findPhoneById(id);
+        if (facadeDTO != null) {
+            PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
+            return ResponseEntity.ok(phoneMapper.toResponseDTO(responseVO));
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -147,23 +96,50 @@ public class PhoneController {
 
     @GetMapping
     public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
-        List<PhoneResponseVO> responseVOs = phoneFacade.findAllPhones();
-        return ResponseEntity.ok(responseVOs.stream()
-                .map(PhoneDTOConverter::toDTO)
+        List<PhoneFacadeResponseDTO> facadeDTOs = phoneFacade.findAllPhones();
+        return ResponseEntity.ok(facadeDTOs.stream()
+                .map(facadeDTO -> {
+                    PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
+                    return phoneMapper.toResponseDTO(responseVO);
+                })
                 .collect(Collectors.toList()));
     }
 
     @Operation(summary = "Atualiza um telefone existente")
 
     @PutMapping("/{id}")
-    public ResponseEntity<PhoneResponseDTO> updatePhone(
+    public ResponseEntity<?> updatePhone(
             @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long id,
             @RequestBody(description = "Novos dados do telefone")
             @org.springframework.web.bind.annotation.RequestBody @Valid PhoneRequestDTO requestDTO) {
 
-        PhoneRequestVO requestVO = PhoneDTOConverter.toVO(requestDTO);
-        PhoneResponseVO responseVO = phoneFacade.updatePhone(id, requestVO);
-        return ResponseEntity.ok(PhoneDTOConverter.toDTO(responseVO));
+        try {
+            PhoneRequestVO requestVO = phoneMapper.toRequestVO(requestDTO);
+            PhoneFacadeResponseDTO facadeDTO = phoneFacade.updatePhone(id, requestVO);
+            PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
+            return ResponseEntity.ok(phoneMapper.toResponseDTO(responseVO));
+            
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Dados de telefone inválidos");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        } catch (com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Telefone não encontrado");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Erro interno do servidor");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Erro inesperado");
+            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     @Operation(summary = "Remove um telefone existente")

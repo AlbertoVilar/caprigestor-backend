@@ -1,21 +1,22 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
 import com.devmaster.goatfarm.authority.api.dto.*;
+import com.devmaster.goatfarm.authority.business.AuthBusiness;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.facade.UserFacade;
-import com.devmaster.goatfarm.authority.conveter.UserDTOConverter;
-import com.devmaster.goatfarm.authority.model.entity.Role;
+import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
-import com.devmaster.goatfarm.config.security.JwtService;
+import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
-import com.devmaster.goatfarm.farm.converters.GoatFarmDTOConverter;
+import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
-import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
-import com.devmaster.goatfarm.phone.converter.PhoneDTOConverter;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
+import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
+import com.devmaster.goatfarm.config.security.JwtService;
+import com.devmaster.goatfarm.authority.repository.RoleRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -42,77 +43,35 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+    private final AuthBusiness authBusiness;
     private final UserFacade userFacade;
     private final GoatFarmFacade farmFacade;
     private final PasswordEncoder passwordEncoder;
-    private final RoleRepository roleRepository;
-    private final JwtDecoder jwtDecoder;
+    private final UserMapper userMapper;
+    private final GoatFarmMapper farmMapper;
+    private final AddressMapper addressMapper;
+    private final PhoneMapper phoneMapper;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtService jwtService, 
-                         UserFacade userFacade, GoatFarmFacade farmFacade, PasswordEncoder passwordEncoder,
-                         RoleRepository roleRepository, JwtDecoder jwtDecoder) {
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
+    public AuthController(AuthBusiness authBusiness, UserFacade userFacade, GoatFarmFacade farmFacade, 
+                         PasswordEncoder passwordEncoder, UserMapper userMapper, GoatFarmMapper farmMapper, 
+                         AddressMapper addressMapper, PhoneMapper phoneMapper) {
+        this.authBusiness = authBusiness;
         this.userFacade = userFacade;
         this.farmFacade = farmFacade;
         this.passwordEncoder = passwordEncoder;
-        this.roleRepository = roleRepository;
-        this.jwtDecoder = jwtDecoder;
+        this.userMapper = userMapper;
+        this.farmMapper = farmMapper;
+        this.addressMapper = addressMapper;
+        this.phoneMapper = phoneMapper;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
-        logger.info("🔍 LOGIN: Tentativa de login para: {}", loginRequest.getEmail());
-        
         try {
-            // Authenticate user
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
-            );
-            
-            logger.info("🔍 LOGIN: Autenticação bem-sucedida para: {}", loginRequest.getEmail());
-
-            // Get authenticated user
-            User user = (User) authentication.getPrincipal();
-            logger.debug("🔍 LOGIN: Usuário obtido: {}, Roles: {}", user.getEmail(), user.getRoles().size());
-
-            // Gerar tokens
-            logger.debug("🔍 LOGIN: Gerando tokens JWT...");
-            String accessToken = jwtService.generateToken(user);
-            String refreshToken = jwtService.generateRefreshToken(user);
-            logger.debug("🔍 LOGIN: Tokens gerados com sucesso");
-
-            // Create response
-            List<String> roles = user.getRoles().stream()
-                .map(Role::getAuthority)
-                .toList();
-            
-            UserResponseDTO userResponse = new UserResponseDTO(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                roles
-            );
-
-            LoginResponseDTO response = new LoginResponseDTO(
-                accessToken,
-                refreshToken,
-                "Bearer",
-                3600L, // 1 hora
-                userResponse
-            );
-
+            LoginResponseDTO response = authBusiness.authenticateUser(loginRequest);
             return ResponseEntity.ok(response);
-
-        } catch (BadCredentialsException e) {
-            logger.warn("🔍 LOGIN ERROR: Credenciais inválidas para: {}", loginRequest.getEmail());
-            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(
-                "Email ou senha inválidos");
+        } catch (com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException e) {
+            throw e;
         }
     }
 
@@ -125,67 +84,28 @@ public class AuthController {
         }
 
         // Create user with default role FARM_OWNER
-        UserRequestVO userVO = new UserRequestVO(
-            registerRequest.getName(),
-            registerRequest.getEmail(),
-            registerRequest.getCpf(),
-            registerRequest.getPassword(), // Será criptografada no DAO
-            registerRequest.getConfirmPassword(),
-            List.of("ROLE_FARM_OWNER") // Default role for new users
-        );
+        UserRequestVO userVO = UserRequestVO.builder()
+            .name(registerRequest.getName())
+            .email(registerRequest.getEmail())
+            .cpf(registerRequest.getCpf())
+            .password(registerRequest.getPassword()) // Será criptografada no DAO
+            .confirmPassword(registerRequest.getConfirmPassword())
+            .roles(List.of("ROLE_OPERATOR")) // Default role for new users
+            .build();
         
         var createdUser = userFacade.saveUser(userVO);
-        UserResponseDTO response = UserDTOConverter.toDTO(createdUser);
+        UserResponseVO userVO_response = new UserResponseVO(createdUser.getId(), createdUser.getName(), createdUser.getEmail(), createdUser.getCpf(), createdUser.getRoles());
+        UserResponseDTO response = userMapper.toResponseDTO(userVO_response);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO refreshRequest) {
         try {
-            // Validar e decodificar o refresh token
-            var jwt = jwtDecoder.decode(refreshRequest.getRefreshToken());
-            String email = jwt.getSubject();
-            
-            // Check if it's a refresh token
-            String scope = jwt.getClaimAsString("scope");
-            if (!"REFRESH".equals(scope)) {
-                throw new RuntimeException("Token inválido");
-            }
-
-            // Find user
-            var userVO = userFacade.findByEmail(email);
-            if (userVO == null) {
-                throw new RuntimeException("Usuário não encontrado");
-            }
-
-            // Converter para User entity (simulado)
-            User user = new User();
-            user.setId(userVO.getId());
-            user.setName(userVO.getName());
-            user.setEmail(userVO.getEmail());
-            
-            // Adicionar roles
-            for (String roleName : userVO.getRoles()) {
-                Role role = roleRepository.findByAuthority(roleName)
-                    .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName));
-                user.addRole(role);
-            }
-
-            // Gerar novos tokens
-            String newAccessToken = jwtService.generateToken(user);
-            String newRefreshToken = jwtService.generateRefreshToken(user);
-
-            LoginResponseDTO response = new LoginResponseDTO(
-                newAccessToken,
-                newRefreshToken,
-                "Bearer",
-                3600L,
-                null // We don't need to return user data on refresh
-            );
-
+            LoginResponseDTO response = authBusiness.refreshToken(refreshRequest);
             return ResponseEntity.ok(response);
-
         } catch (Exception e) {
+            logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
             Map<String, String> error = new HashMap<>();
             error.put("message", "Token inválido ou expirado");
             error.put("error", "INVALID_REFRESH_TOKEN");
@@ -205,7 +125,8 @@ public class AuthController {
                     throw new RuntimeException("Usuário não encontrado");
                 }
 
-                UserResponseDTO response = UserDTOConverter.toDTO(userVO);
+                UserResponseVO userResponseVO = new UserResponseVO(userVO.getId(), userVO.getName(), userVO.getEmail(), userVO.getCpf(), userVO.getRoles());
+                UserResponseDTO response = userMapper.toResponseDTO(userResponseVO);
                 return ResponseEntity.ok(response);
             }
 
@@ -225,14 +146,14 @@ public class AuthController {
         try {
             // Create complete farm using DTO data
             GoatFarmFullResponseVO farmResponse = farmFacade.createFullGoatFarm(
-                GoatFarmDTOConverter.toVO(farmRequest.getFarm()),
-                UserDTOConverter.toVO(farmRequest.getUser()),
-                AddressDTOConverter.toVO(farmRequest.getAddress()),
-                farmRequest.getPhones().stream().map(PhoneDTOConverter::toVO).toList()
+                farmMapper.toRequestVO(farmRequest.getFarm()),
+                userMapper.toRequestVO(farmRequest.getUser()),
+                addressMapper.toVO(farmRequest.getAddress()),
+                farmRequest.getPhones().stream().map(phoneMapper::toRequestVO).toList()
             );
 
             // Converter para DTO de resposta
-            GoatFarmFullResponseDTO response = GoatFarmDTOConverter.toFullDTO(farmResponse);
+            GoatFarmFullResponseDTO response = farmMapper.toFullDTO(farmResponse);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 

@@ -14,7 +14,7 @@ public class AddressResponseVO {
     private String city;
     private String neighborhood;
     private String state;
-    private String postalCode;
+    private String zipCode;
     private String country;
 
     public AddressResponseVO() {
@@ -25,7 +25,7 @@ public class AddressResponseVO {
                              String city,
                              String neighborhood,
                              String state,
-                             String postalCode,
+                             String zipCode,
                              String country) {
 
         this.id = id;
@@ -33,7 +33,7 @@ public class AddressResponseVO {
         this.neighborhood = neighborhood;
         this.city = city;
         this.state = state;
-        this.postalCode = postalCode;
+        this.zipCode = zipCode;
         this.country = country;
     }
 
@@ -77,12 +77,12 @@ public class AddressResponseVO {
         this.state = state;
     }
 
-    public String getPostalCode() {
-        return postalCode;
+    public String getZipCode() {
+        return zipCode;
     }
 
-    public void setPostalCode(String postalCode) {
-        this.postalCode = postalCode;
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
     }
 
     public String getCountry() {

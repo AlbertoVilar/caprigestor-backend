@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.business.eventbusiness.EventBusiness;
 import com.devmaster.goatfarm.events.enuns.EventType;
+import com.devmaster.goatfarm.events.facade.dto.EventFacadeResponseDTO;
+import com.devmaster.goatfarm.events.facade.mapper.EventFacadeMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +20,9 @@ public class EventFacade {
 
     @Autowired
     private EventBusiness eventBusiness;
+    
+    @Autowired
+    private EventFacadeMapper facadeMapper;
 
     /**
      * Cria um novo evento para uma cabra.
@@ -26,8 +31,9 @@ public class EventFacade {
      * @return EventResponseVO com os dados do evento criado
      */
     @Transactional
-    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        return eventBusiness.createEvent(requestVO, goatRegistrationNumber);
+    public EventFacadeResponseDTO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
+        EventResponseVO responseVO = eventBusiness.createEvent(requestVO, goatRegistrationNumber);
+        return facadeMapper.toFacadeDTO(responseVO);
     }
 
     /**
@@ -38,8 +44,9 @@ public class EventFacade {
      * @return EventResponseVO com os dados atualizados
      */
     @Transactional
-    public EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
-        return eventBusiness.updateEvent(id, requestVO, goatRegistrationNumber);
+    public EventFacadeResponseDTO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
+        EventResponseVO responseVO = eventBusiness.updateEvent(id, requestVO, goatRegistrationNumber);
+        return facadeMapper.toFacadeDTO(responseVO);
     }
 
     /**
@@ -47,8 +54,9 @@ public class EventFacade {
      * @param goatNumRegistration Número de registro da cabra
      * @return Lista de EventResponseVO
      */
-    public List<EventResponseVO> findEventByGoat(String goatNumRegistration) {
-        return eventBusiness.findEventByGoat(goatNumRegistration);
+    public List<EventFacadeResponseDTO> findEventByGoat(String goatNumRegistration) {
+        List<EventResponseVO> responseVOs = eventBusiness.findEventByGoat(goatNumRegistration);
+        return facadeMapper.toFacadeDTOList(responseVOs);
     }
 
     /**

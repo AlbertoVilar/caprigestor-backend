@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,10 +53,10 @@ class AuthControllerIntegrationTest {
     @BeforeEach
     void setUp() {
         // Criar role se não existir
-        farmOwnerRole = roleRepository.findByAuthority("ROLE_FARM_OWNER")
+        farmOwnerRole = roleRepository.findByAuthority("ROLE_OPERATOR")
                 .orElseGet(() -> {
                     Role role = new Role();
-                    role.setAuthority("ROLE_FARM_OWNER");
+                    role.setAuthority("ROLE_OPERATOR");
                     return roleRepository.save(role);
                 });
 

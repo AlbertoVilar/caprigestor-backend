@@ -1,8 +1,10 @@
 package com.devmaster.goatfarm.address.facade;
 
+import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.dao.AddressDAO;
+import com.devmaster.goatfarm.address.facade.dto.AddressFacadeResponseDTO;
+import com.devmaster.goatfarm.address.facade.mapper.AddressFacadeMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,25 +14,32 @@ import java.util.List;
 public class AddressFacade {
 
     @Autowired
-    private AddressDAO addressDAO;
+    private AddressBusiness addressBusiness;
+    
+    @Autowired
+    private AddressFacadeMapper facadeMapper;
 
-    public AddressResponseVO createAddress(AddressRequestVO requestVO) {
-        return addressDAO.createAddress(requestVO);
+    public AddressFacadeResponseDTO createAddress(AddressRequestVO requestVO) {
+        AddressResponseVO responseVO = addressBusiness.createAddress(requestVO);
+        return facadeMapper.toFacadeDTO(responseVO);
     }
 
-    public AddressResponseVO updateAddress(Long id, AddressRequestVO requestVO) {
-        return addressDAO.updateAddress(id, requestVO);
+    public AddressFacadeResponseDTO updateAddress(Long id, AddressRequestVO requestVO) {
+        AddressResponseVO responseVO = addressBusiness.updateAddress(id, requestVO);
+        return facadeMapper.toFacadeDTO(responseVO);
     }
 
-    public AddressResponseVO findAddressById(Long id) {
-        return addressDAO.findAddressById(id);
+    public AddressFacadeResponseDTO findAddressById(Long id) {
+        AddressResponseVO responseVO = addressBusiness.findAddressById(id);
+        return facadeMapper.toFacadeDTO(responseVO);
     }
 
-    public List<AddressResponseVO> findAllAddresses() {
-        return addressDAO.findAllAddresses();
+    public List<AddressFacadeResponseDTO> findAllAddresses() {
+        List<AddressResponseVO> responseVOs = addressBusiness.findAllAddresses();
+        return facadeMapper.toFacadeDTOList(responseVOs);
     }
 
     public String deleteAddress(Long id) {
-        return addressDAO.deleteAddress(id);
+        return addressBusiness.deleteAddress(id);
     }
 }

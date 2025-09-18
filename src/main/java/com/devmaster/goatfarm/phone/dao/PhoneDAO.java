@@ -45,39 +45,21 @@ public class PhoneDAO {
     }
 
     @Transactional
-    public PhoneResponseVO createPhone(PhoneRequestVO requestVO, Long goatFarmId) {
-        if (requestVO == null) {
-            throw new IllegalArgumentException("Os dados do telefone para criação não podem ser nulos.");
-        }
-
-        // Check phone duplication (Area Code + Number)
-        boolean exists = phoneRepository.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
-        if (exists) {
-            throw new DatabaseException("Já existe um telefone com este DDD e número cadastrado.");
-        }
-
-        // If goatFarmId is provided, try to find the farm
-        GoatFarm capril = null;
-        if (goatFarmId != null) {
-            capril = farmRepository.findById(goatFarmId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Capril com ID " + goatFarmId + " não encontrado."));
-        }
-
-        // Convert VO to entity with or without associated farm
+    public PhoneResponseVO createPhone(PhoneRequestVO requestVO, GoatFarm capril) {
+        // Operação CRUD mecânica: converter VO para entidade e salvar
         Phone phone = PhoneEntityConverter.toEntity(requestVO, capril);
-
-        // Salva e retorna
         phone = phoneRepository.save(phone);
         return PhoneEntityConverter.toVO(phone);
     }
 
     @Transactional
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {
+        // Operação CRUD mecânica: buscar, atualizar e salvar
         Phone phoneToUpdate = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
 
         PhoneEntityConverter.toUpdateEntity(phoneToUpdate, requestVO);
-
+        
         try {
             return PhoneEntityConverter.toVO(phoneRepository.save(phoneToUpdate));
         } catch (DataIntegrityViolationException e) {
@@ -102,10 +84,7 @@ public class PhoneDAO {
 
     @Transactional
     public String deletePhone(Long id) {
-        if (!phoneRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Telefone com ID " + id + " não encontrado.");
-        }
-
+        // Operação CRUD mecânica: deletar por ID
         try {
             phoneRepository.deleteById(id);
             return "Telefone com ID " + id + " foi deletado com sucesso.";

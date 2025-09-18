@@ -15,7 +15,7 @@ public class AddressDTOConverter {
                 responseVO.getNeighborhood(),
                 responseVO.getCity(),
                 responseVO.getState(),
-                responseVO.getPostalCode(),
+                responseVO.getZipCode(),
                 responseVO.getCountry()
         );
     }
@@ -32,7 +32,7 @@ public class AddressDTOConverter {
                 requestDTO.getNeighborhood(),
                 requestDTO.getCity(),
                 requestDTO.getState(),
-                requestDTO.getPostalCode(),
+                requestDTO.getZipCode(),
                 requestDTO.getCountry()
         );
     }

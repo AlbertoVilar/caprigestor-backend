@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.config.exceptions;
 
-import com.devmaster.goatfarm.config.exceptions.custom.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -8,147 +7,48 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.http.ProblemDetail;
 
-import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<CustomError> ResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.NOT_FOUND.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(err);
-    }
-
-    // Handles referential integrity violation errors
-    @ExceptionHandler(DatabaseException.class)
-    public ResponseEntity<CustomError> handleDatabase(DatabaseException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.CONFLICT.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
+    public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setTitle("Recurso não encontrado");
+        problem.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
     }
 
     @ExceptionHandler(DuplicateEntityException.class)
-    public ResponseEntity<CustomError> DuplicateEntity(DuplicateEntityException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.CONFLICT.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri = ", "")
-        );
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
+    public ResponseEntity<ProblemDetail> handleDuplicateEntity(DuplicateEntityException ex, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setTitle("Entidade duplicada");
+        problem.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
-    // Handles Bean Validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<CustomError> handleValidationException(MethodArgumentNotValidException ex, WebRequest request) {
-        ValidationError error = new ValidationError(
-                Instant.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                "Validation failed for one or more fields.",
-                request.getDescription(false).replace("uri=", "")
-        );
-        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
-            error.addError(fieldError.getField(), fieldError.getDefaultMessage());
+    public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
+            errors.put(error.getField(), error.getDefaultMessage());
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Erro de validação");
+        problem.setDetail("Campos inválidos no payload");
+        problem.setProperty("errors", errors);
+        return ResponseEntity.badRequest().body(problem);
     }
 
-    // Handles InvalidArgumentException
-    @ExceptionHandler(InvalidArgumentException.class)
-    public ResponseEntity<CustomError> handleInvalidArgument(InvalidArgumentException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
-    }
-
-    // Handles ValidationException with custom validation errors
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ValidationError> handleCustomValidation(ValidationException ex, WebRequest request) {
-        ValidationError error = new ValidationError(
-                Instant.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        
-        // Add custom validation errors
-        ex.getValidationErrors().forEach(error::addError);
-        
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
-
-    // Handles IllegalArgumentException
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<CustomError> handleIllegalArgument(IllegalArgumentException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                "Dados inválidos: " + ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
-    }
-
-    // Handles generic RuntimeException
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<CustomError> handleRuntimeException(RuntimeException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Erro interno do servidor: " + ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
-    }
-
-    // Handles UnauthorizedException
-    @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<CustomError> handleUnauthorized(UnauthorizedException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.UNAUTHORIZED.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(err);
-    }
-
-    // Handles ForbiddenException
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<CustomError> handleForbidden(ForbiddenException ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.FORBIDDEN.value(),
-                ex.getMessage(),
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(err);
-    }
-
-    // Handles generic Exception
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<CustomError> handleGenericException(Exception ex, WebRequest request) {
-        CustomError err = new CustomError(
-                Instant.now(),
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Erro inesperado. Tente novamente.",
-                request.getDescription(false).replace("uri=", "")
-        );
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
+    public ResponseEntity<ProblemDetail> handleAllOtherExceptions(Exception ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        problem.setTitle("Erro interno do servidor");
+        problem.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
     }
-
 }

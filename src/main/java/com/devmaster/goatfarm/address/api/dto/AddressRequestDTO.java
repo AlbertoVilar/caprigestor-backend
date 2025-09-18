@@ -27,8 +27,8 @@ public class AddressRequestDTO {
 
     @NotBlank(message = "O código postal não pode estar em branco.")
     @Pattern(regexp = "^\\d{5}-?\\d{3}$", message = "O código postal deve estar no formato XXXXX-XXX ou XXXXX.")
-    @JsonProperty("postalCode")
-    private String postalCode;
+    @JsonProperty("zipCode")
+    private String zipCode;
 
     @NotBlank(message = "O país não pode estar em branco.")
     @Size(max = 100, message = "O país não pode ter mais de 100 caracteres.")
@@ -42,7 +42,7 @@ public class AddressRequestDTO {
                              String neighborhood,
                              String city,
                              String state,
-                             String postalCode,
+                             String zipCode,
                              String country) {
 
         this.id = id;
@@ -50,7 +50,7 @@ public class AddressRequestDTO {
         this.neighborhood = neighborhood;
         this.city = city;
         this.state = state;
-        this.postalCode = postalCode;
+        this.zipCode = zipCode;
         this.country = country;
     }
 
@@ -94,12 +94,12 @@ public class AddressRequestDTO {
         this.state = state;
     }
 
-    public String getPostalCode() {
-        return postalCode;
+    public String getZipCode() {
+        return zipCode;
     }
 
-    public void setPostalCode(String postalCode) {
-        this.postalCode = postalCode;
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
     }
 
     public String getCountry() {

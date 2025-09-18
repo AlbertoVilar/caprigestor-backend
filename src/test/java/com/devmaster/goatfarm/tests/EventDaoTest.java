@@ -101,12 +101,12 @@ public class EventDaoTest {
         when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
 
         // Act: executa o método a ser testado
-        EventResponseVO response = eventDao.createEvent(requestVO, goatId);
+        Event response = eventDao.saveEvent(savedEvent);
 
         // Assert: verifica o resultado retornado
         assertNotNull(response); // o retorno não pode ser nulo
-        assertEquals("1234567890", response.goatId()); // o ID da cabra deve bater
-        assertEquals("Dra. Ana", response.veterinarian()); // o veterinário também
+        assertEquals("1234567890", response.getGoat().getRegistrationNumber()); // o ID da cabra deve bater
+        assertEquals("Dra. Ana", response.getVeterinarian()); // o veterinário também
 
         // Verifica se o método save do repositório foi chamado corretamente
         verify(eventRepository).save(any(Event.class));

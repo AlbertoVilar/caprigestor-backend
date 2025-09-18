@@ -5,7 +5,6 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,11 +15,12 @@ public class UserEntityConverter {
         for (Role role : user.getRoles()) {
             roles.add(role.getAuthority());
         }
-
+        
         return new UserResponseVO(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
+                user.getCpf(),
                 roles
         );
     }

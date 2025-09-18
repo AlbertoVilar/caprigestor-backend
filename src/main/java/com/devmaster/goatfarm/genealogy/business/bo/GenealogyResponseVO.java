@@ -3,12 +3,14 @@ package com.devmaster.goatfarm.genealogy.business.bo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @Builder
+@NoArgsConstructor
 public class GenealogyResponseVO {
 
     // Animal data
@@ -63,41 +65,7 @@ public class GenealogyResponseVO {
     private String maternalGreatGrandmother2Name;
     private String maternalGreatGrandmother2Registration;
 
-    public GenealogyResponseVO() {
-    }
 
-    // Getters e Setters manuais para garantir compilação
-    public String getGoatName() { return goatName; }
-    public void setGoatName(String goatName) { this.goatName = goatName; }
-    
-    public String getGoatRegistration() { return goatRegistration; }
-    public void setGoatRegistration(String goatRegistration) { this.goatRegistration = goatRegistration; }
-    
-    public String getBreeder() { return breeder; }
-    public void setBreeder(String breeder) { this.breeder = breeder; }
-    
-    public String getFarmOwner() { return farmOwner; }
-    public void setFarmOwner(String farmOwner) { this.farmOwner = farmOwner; }
-    
-    public String getBreed() { return breed; }
-    public void setBreed(String breed) { this.breed = breed; }
-    
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
-    
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
-    
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-    
-    public String getTod() { return tod; }
-    public void setTod(String tod) { this.tod = tod; }
-    
-    public String getToe() { return toe; }
     public void setToe(String toe) { this.toe = toe; }
     
     public String getBirthDate() { return birthDate; }

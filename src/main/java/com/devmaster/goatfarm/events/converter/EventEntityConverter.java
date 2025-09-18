@@ -10,16 +10,15 @@ import org.springframework.stereotype.Component;
 public class EventEntityConverter {
 
     public static Event toEntity(EventRequestVO requestVO, Goat goat) {
-        return new Event(
-                null,
-                goat,
-                requestVO.eventType(),
-                requestVO.date(),
-                requestVO.description(),
-                requestVO.location(),
-                requestVO.veterinarian(),
-                requestVO.outcome()
-        );
+        return Event.builder()
+                .goat(goat)
+                .eventType(requestVO.eventType())
+                .date(requestVO.date())
+                .description(requestVO.description())
+                .location(requestVO.location())
+                .veterinarian(requestVO.veterinarian())
+                .outcome(requestVO.outcome())
+                .build();
     }
 
     public static void toUpdateEvent(Event event, EventRequestVO requestVO) {

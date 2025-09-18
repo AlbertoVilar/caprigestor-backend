@@ -8,16 +8,15 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.converter.GoatEntityConverter;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository; // <<< MUDANÇA: Convenção para a camada DAO
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+@Repository // <<< MUDANÇA: Convenção para a camada DAO
 public class GoatDAO {
 
     private final GoatRepository goatRepository;
@@ -28,9 +27,9 @@ public class GoatDAO {
     }
 
     /**
-     * Saves a goat entity to the database.
-     * @param goat Goat entity to be saved.
-     * @return Saved goat entity.
+     * Salva uma entidade Goat no banco de dados.
+     * @param goat Entidade Goat a ser salva.
+     * @return A entidade Goat salva.
      */
     @Transactional
     public Goat saveGoat(Goat goat) {
@@ -38,35 +37,38 @@ public class GoatDAO {
     }
 
     /**
-     * Updates data of an existing goat.
-     * @param registrationNumber Registration number of the goat to be updated.
-     * @param requestVO Update data.
-     * @return GoatResponseVO of the updated goat.
-     * @throws ResourceNotFoundException if the goat is not found.
+     * Atualiza os dados de uma cabra existente.
+     * Este método agora recebe as entidades relacionadas (farm, father, mother) já buscadas
+     * pela camada de negócio para garantir a correta associação.
+     *
+     * @param registrationNumber Número de registro da cabra a ser atualizada.
+     * @param requestVO Dados da atualização.
+     * @param farm A entidade GoatFarm a ser associada.
+     * @param father A entidade Goat do pai a ser associada (pode ser null).
+     * @param mother A entidade Goat da mãe a ser associada (pode ser null).
+     * @return GoatResponseVO da cabra atualizada.
+     * @throws ResourceNotFoundException se a cabra não for encontrada.
      */
     @Transactional
-    public GoatResponseVO updateGoat(String registrationNumber, GoatRequestVO requestVO) {
-        // Uses findById to get the entity or Optional.empty(), allowing clear handling of "not found".
+    // <<< MUDANÇA: A assinatura do método foi alterada para receber as entidades
+    public GoatResponseVO updateGoat(String registrationNumber, GoatRequestVO requestVO, GoatFarm farm, Goat father, Goat mother) {
         Goat goatToUpdate = goatRepository.findById(registrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal com registro '" + registrationNumber + "' não encontrado."));
 
-        // Note: Parent relationships and farm assignment should be handled by the Business layer
-        // This DAO method focuses only on updating the basic goat data
-        Goat father = null; // Parent relationships handled by Business layer
-        Goat mother = null; // Parent relationships handled by Business layer  
-        GoatFarm farm = null; // Farm assignment handled by Business layer
-
+        // <<< MUDANÇA: As linhas que anulavam as associações foram removidas.
+        // O método agora usa os objetos recebidos como parâmetro.
         GoatEntityConverter.updateGoatEntity(goatToUpdate, requestVO, father, mother, farm);
+
         goatRepository.save(goatToUpdate);
 
         return GoatEntityConverter.toResponseVO(goatToUpdate);
     }
 
     /**
-     * Searches for a goat by registration number, loading its relationships.
-     * @param registrationNumber Goat registration number.
-     * @return GoatResponseVO of the found goat.
-     * @throws ResourceNotFoundException if the animal is not found.
+     * Busca uma cabra pelo número de registro, carregando seus relacionamentos.
+     * @param registrationNumber Número de registro da cabra.
+     * @return GoatResponseVO da cabra encontrada.
+     * @throws ResourceNotFoundException se o animal não for encontrado.
      */
     @Transactional(readOnly = true)
     public GoatResponseVO findGoatById(String registrationNumber) {
@@ -76,10 +78,10 @@ public class GoatDAO {
     }
 
     /**
-     * Paginated search for goats by name, without considering the farm.
-     * @param name Name or part of the goat's name.
-     * @param pageable Pageable object for pagination.
-     * @return Page of GoatResponseVOs.
+     * Busca paginada por cabras por nome, sem considerar a fazenda.
+     * @param name Nome ou parte do nome da cabra.
+     * @param pageable Objeto Pageable para paginação.
+     * @return Página de GoatResponseVOs.
      */
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
@@ -88,11 +90,11 @@ public class GoatDAO {
     }
 
     /**
-     * Paginated search for goats by name within a specific farm.
-     * @param farmId Farm ID.
-     * @param name Name or part of the goat's name.
-     * @param pageable Pageable object for pagination.
-     * @return Page of GoatResponseVOs.
+     * Busca paginada por cabras por nome dentro de uma fazenda específica.
+     * @param farmId ID da fazenda.
+     * @param name Nome ou parte do nome da cabra.
+     * @param pageable Objeto Pageable para paginação.
+     * @return Página de GoatResponseVOs.
      */
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> searchGoatByNameAndFarmId(Long farmId, String name, Pageable pageable) {
@@ -101,22 +103,20 @@ public class GoatDAO {
     }
 
     /**
-     * Paginated search for goats by farm ID and optional registration number.
-     * @param farmId Farm ID.
-     * @param registrationNumber Goat registration number (optional).
-     * @param pageable Pageable object for pagination.
-     * @return Page of GoatResponseVOs.
-     * @throws ResourceNotFoundException if no goat is found for the criteria.
+     * Busca paginada por cabras por ID da fazenda e número de registro opcional.
+     * @param farmId ID da fazenda.
+     * @param registrationNumber Número de registro da cabra (opcional).
+     * @param pageable Objeto Pageable para paginação.
+     * @return Página de GoatResponseVOs.
+     * @throws ResourceNotFoundException se nenhuma cabra for encontrada para os critérios.
      */
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> findByFarmIdAndOptionalRegistrationNumber(
             Long farmId, String registrationNumber, Pageable pageable) {
 
-        // Calls the repository method that now uses Native Query with CAST
         Page<Goat> goats = goatRepository.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
 
         if (goats.isEmpty()) {
-            // Customize the error message as needed, considering that registrationNumber can be null
             String message = "Nenhuma cabra encontrada para a fazenda com ID " + farmId;
             if (registrationNumber != null && !registrationNumber.isBlank()) {
                 message += " e registro '" + registrationNumber + "'.";
@@ -130,9 +130,9 @@ public class GoatDAO {
     }
 
     /**
-     * Lists all registered goats with pagination.
-     * @param pageable Pageable object for pagination.
-     * @return Page of GoatResponseVOs.
+     * Lista todas as cabras registradas com paginação.
+     * @param pageable Objeto Pageable para paginação.
+     * @return Página de GoatResponseVOs.
      */
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
@@ -141,12 +141,12 @@ public class GoatDAO {
     }
 
     /**
-     * Removes a goat from the system, as long as it is not linked to another goat.
-     * @param registrationNumber Registration number of the goat to be removed.
-     * @throws ResourceNotFoundException if the goat is not found.
-     * @throws DatabaseException if the goat is referenced by another animal (violating integrity).
+     * Remove uma cabra do sistema, desde que não esteja vinculada a outra cabra.
+     * @param registrationNumber Número de registro da cabra a ser removida.
+     * @throws ResourceNotFoundException se a cabra não for encontrada.
+     * @throws DatabaseException se a cabra for referenciada por outro animal (violando a integridade).
      */
-    @Transactional(propagation = Propagation.SUPPORTS) // SUPPORTS allows joining an existing transaction, or running without one
+    @Transactional(propagation = Propagation.SUPPORTS)
     public void deleteGoat(String registrationNumber) {
         if (!goatRepository.existsById(registrationNumber)) {
             throw new ResourceNotFoundException("Registro '" + registrationNumber + "' não encontrado.");
@@ -155,13 +155,8 @@ public class GoatDAO {
         try {
             goatRepository.deleteById(registrationNumber);
         } catch (DataIntegrityViolationException e) {
-            // Captures Spring's specific data integrity violation exception
-            // and wraps it in a more user-friendly business exception.
             throw new DatabaseException("Animal com registro '" + registrationNumber
-                    + "' cannot be deleted because it is referenced by another animal.", e); // Includes the original cause
+                    + "' não pode ser deletado pois é referenciado por outro animal.", e);
         }
     }
-
-    // --- Private Helper Methods for Reuse ---
-
 }

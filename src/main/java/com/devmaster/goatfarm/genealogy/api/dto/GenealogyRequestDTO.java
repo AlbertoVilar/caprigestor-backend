@@ -4,11 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @Builder
+@NoArgsConstructor
 public class GenealogyRequestDTO {
 
     // Animal data
@@ -63,6 +65,5 @@ public class GenealogyRequestDTO {
     private String maternalGreatGrandmother2Name;
     private String maternalGreatGrandmother2Registration;
 
-    public GenealogyRequestDTO() {
-    }
+
 }

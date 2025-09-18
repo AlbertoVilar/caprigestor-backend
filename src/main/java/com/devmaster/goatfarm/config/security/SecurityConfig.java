@@ -105,18 +105,20 @@ public class SecurityConfig {
                 
                 // Regras de autorização por ROLE (exigem token)
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogy/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
-                // Excluir /api/goatfarms/full da regra genérica para não conflitar com permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/goatfarms").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/goatfarms/{id}").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/goatfarms/goats").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogy/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogy/**").hasAnyAuthority("ROLE_FARM_OWNER", "ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                
+                // Operações de modificação exigem autenticação (POST, PUT, DELETE)
+                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogies/**", "/api/phones/**", "/api/addresses/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/goatfarms").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/goatfarms/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/api/goatfarms/goats").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogies/**", "/api/phones/**", "/api/addresses/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogies/**", "/api/phones/**", "/api/addresses/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
                 
                 // Qualquer outra requisição /api/** que não corresponda às regras acima precisa de autenticação
                 .anyRequest().authenticated()
             )
+            .csrf(csrf -> csrf.disable()) // Desabilita CSRF para APIs
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
             ))

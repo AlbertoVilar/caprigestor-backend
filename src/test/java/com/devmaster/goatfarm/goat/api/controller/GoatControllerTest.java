@@ -213,14 +213,14 @@ class GoatControllerTest {
     @WithMockUser(roles = "FARM_OWNER")
     void shouldDeleteGoatSuccessfully() throws Exception {
         // Arrange
-        doNothing().when(goatFacade).deleteGoatByRegistrationNumber("001");
+        doNothing().when(goatFacade).deleteGoat("001");
 
         // Act & Assert
         mockMvc.perform(delete("/api/goats/001")
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(goatFacade).deleteGoatByRegistrationNumber("001");
+        verify(goatFacade).deleteGoat("001");
     }
 
     @Test
@@ -228,15 +228,15 @@ class GoatControllerTest {
     void shouldReturnNotFoundWhenDeletingNonExistentGoat() throws Exception {
         // Arrange
         doThrow(new ResourceNotFoundException("Goat not found with id: 999"))
-                .when(goatFacade).deleteGoatByRegistrationNumber("999");
+                .when(goatFacade).deleteGoat("999");
 
         // Act & Assert
         mockMvc.perform(delete("/api/goats/999")
                         .with(csrf()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Goat not found with id: 999"));
+                .andExpect(jsonPath("$.title").value("Goat not found with id: 999"));
 
-        verify(goatFacade).deleteGoatByRegistrationNumber("999");
+        verify(goatFacade).deleteGoat("999");
     }
 
     @Test

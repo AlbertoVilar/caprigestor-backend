@@ -16,12 +16,12 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
             "LOWER(a.neighborhood) = LOWER(:neighborhood) AND " +
             "LOWER(a.city) = LOWER(:city) AND " +
             "LOWER(a.state) = LOWER(:state) AND " +
-            "a.postalCode = :postalCode")
+            "a.zipCode = :zipCode")
     Optional<Address> searchExactAddress(
             @Param("street") String street,
             @Param("neighborhood") String neighborhood,
             @Param("city") String city,
             @Param("state") String state,
-            @Param("postalCode") String postalCode
+            @Param("zipCode") String zipCode
     );
 }

@@ -1,69 +1,32 @@
 package com.devmaster.goatfarm.goat.converter;
 
-import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
-import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 
 public class GoatDTOConverter {
-
-    public static GoatRequestVO toRequestVO(GoatRequestDTO dto) {
-        return new GoatRequestVO(
-                dto.getRegistrationNumber(),
-                dto.getName(),
-                dto.getGender(),
-                dto.getBreed(),
-                dto.getColor(),
-                dto.getBirthDate(),
-                dto.getStatus(),
-                dto.getTod(),
-                dto.getToe(),
-                dto.getCategory(),
-                dto.getFatherRegistrationNumber(),
-                dto.getMotherRegistrationNumber(),
-                dto.getFarmId(),
-                dto.getUserId() // <-- atualizado para userId
-        );
-    }
-
-    public static GoatRequestDTO toRequestDTO(GoatRequestVO vo) {
-        return new GoatRequestDTO(
-                vo.getRegistrationNumber(),
-                vo.getName(),
-                vo.getGender(),
-                vo.getBreed(),
-                vo.getColor(),
-                vo.getBirthDate(),
-                vo.getStatus(),
-                vo.getTod(),
-                vo.getToe(),
-                vo.getCategory(),
-                vo.getFatherRegistrationNumber(),
-                vo.getMotherRegistrationNumber(),
-                vo.getFarmId(),
-                vo.getUserId() // <-- adicionado aqui
-        );
-    }
+    private static final GoatMapper goatMapper = GoatMapper.INSTANCE;
 
     public static GoatResponseDTO toResponseDTO(GoatResponseVO vo) {
-        return new GoatResponseDTO(
-                vo.getRegistrationNumber(),
-                vo.getName(),
-                vo.getGender(),
-                vo.getBreed(),
-                vo.getColor(),
-                vo.getBirthDate(),
-                vo.getStatus(),
-                vo.getTod(),
-                vo.getToe(),
-                vo.getCategory(),
-                vo.getFatherName(),
-                vo.getFatherRegistrationNumber(),
-                vo.getMotherName(),
-                vo.getMotherRegistrationNumber(),
-                vo.getUserName(),
-                vo.getFarmId(),
-                vo.getFarmName()
-        );
+        if (vo == null) return null;
+        return GoatResponseDTO.builder()
+            .registrationNumber(vo.getRegistrationNumber())
+            .name(vo.getName())
+            .gender(vo.getGender())
+            .breed(vo.getBreed())
+            .color(vo.getColor())
+            .birthDate(vo.getBirthDate())
+            .status(vo.getStatus())
+            .tod(vo.getTod())
+            .toe(vo.getToe())
+            .category(vo.getCategory())
+            .fatherName(vo.getFatherName())
+            .fatherRegistrationNumber(vo.getFatherRegistrationNumber())
+            .motherName(vo.getMotherName())
+            .motherRegistrationNumber(vo.getMotherRegistrationNumber())
+            .userName(vo.getUserName())
+            .farmId(vo.getFarmId())
+            .farmName(vo.getFarmName())
+            .build();
     }
 }

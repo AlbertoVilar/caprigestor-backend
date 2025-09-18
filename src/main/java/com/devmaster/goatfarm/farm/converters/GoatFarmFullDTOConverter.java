@@ -30,6 +30,11 @@ public class GoatFarmFullDTOConverter {
                         .collect(Collectors.toList()) : 
                 null;
 
-        return new GoatFarmFullRequestVO(farmVO, userVO, addressVO, phoneVOs);
+        return GoatFarmFullRequestVO.builder()
+                .farm(farmVO)
+                .user(userVO)
+                .address(addressVO)
+                .phones(phoneVOs)
+                .build();
     }
 }

@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,6 +46,10 @@ public class User implements UserDetails {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<com.devmaster.goatfarm.farm.model.entity.GoatFarm> goatFarms = new ArrayList<>();
 
 
 
@@ -117,6 +122,14 @@ public class User implements UserDetails {
 
     public Boolean hasRole(String roleName) {
         return roles.stream().anyMatch(role -> role.getAuthority().equals(roleName));
+    }
+
+    public List<com.devmaster.goatfarm.farm.model.entity.GoatFarm> getGoatFarms() {
+        return goatFarms;
+    }
+
+    public void setGoatFarms(List<com.devmaster.goatfarm.farm.model.entity.GoatFarm> goatFarms) {
+        this.goatFarms = goatFarms;
     }
 
     // Novo setter

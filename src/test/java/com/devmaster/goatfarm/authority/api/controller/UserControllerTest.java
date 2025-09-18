@@ -61,7 +61,7 @@ class UserControllerTest {
         
         userRequestVO = new UserRequestVO("Test User", "test@example.com", "12345678901", "password123", "password123", List.of("USER"));
         
-        userResponseVO = new UserResponseVO(1L, "Test User", "test@example.com", List.of("USER"));
+        userResponseVO = new UserResponseVO(1L, "Test User", "test@example.com", "12345678901", List.of("USER"));
 
         user = new User();
         user.setId(1L);

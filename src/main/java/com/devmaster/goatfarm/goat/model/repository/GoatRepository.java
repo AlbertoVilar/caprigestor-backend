@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.Optional;
 
@@ -19,6 +20,7 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     @Query("""
         SELECT g FROM Goat g
         LEFT JOIN FETCH g.father
+        LEFT JOIN FETCH g.mother
         LEFT JOIN FETCH g.farm
         LEFT JOIN FETCH g.user
         WHERE g.registrationNumber = :registrationNumber
@@ -28,6 +30,8 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     /**
      * Lista paginada de todas as cabras sem filtros.
      */
+    @Override
+    @EntityGraph(attributePaths = {"farm", "user", "father", "mother"})
     Page<Goat> findAll(Pageable pageable);
 
     /**

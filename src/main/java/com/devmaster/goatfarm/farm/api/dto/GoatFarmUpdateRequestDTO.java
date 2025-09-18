@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.farm.api.dto;
 import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,15 +15,19 @@ import java.util.List;
 public class GoatFarmUpdateRequestDTO {
 
     @NotNull(message = "Os dados da fazenda são obrigatórios.")
+    @Valid
     private GoatFarmRequestDTO farm;
 
     @NotNull(message = "Dados do usuário são obrigatórios")
+    @Valid
     private UserRequestDTO user;
 
     @NotNull(message = "Os dados do endereço são obrigatórios.")
+    @Valid
     private AddressRequestDTO address;
 
     @NotNull(message = "A lista de telefones é obrigatória.")
+    @Valid
     private List<PhoneRequestDTO> phones;
 
     // Getters e Setters manuais para garantir compilação

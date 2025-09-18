@@ -59,7 +59,6 @@ public class GoatEntityConverter {
         goatToUpdate.setFarm(goatFarm);
     }
 
-    @Transactional
     public static GoatResponseVO toResponseVO(Goat goat) {
         return new GoatResponseVO(
                 goat.getRegistrationNumber(),

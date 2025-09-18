@@ -10,61 +10,48 @@ public class GenealogyEntityConverter {
 
     @Transactional
     public static Genealogy toEntity(GenealogyResponseVO vo) {
-        return new Genealogy(
-                null,
-
-
-                vo.getGoatName(),
-                vo.getGoatRegistration(),
-                vo.getBreeder(),
-                vo.getFarmOwner(),
-                vo.getBreed(),
-                vo.getColor(),
-                vo.getStatus(),
-                vo.getGender(),
-                vo.getCategory(),
-                vo.getTod(),
-                vo.getToe(),
-                vo.getBirthDate(),
-
-
-                vo.getFatherName(),
-                vo.getFatherRegistration(),
-                vo.getMotherName(),
-                vo.getMotherRegistration(),
-
-
-                vo.getPaternalGrandfatherName(),
-                vo.getPaternalGrandfatherRegistration(),
-                vo.getPaternalGrandmotherName(),
-                vo.getPaternalGrandmotherRegistration(),
-
-
-                vo.getMaternalGrandfatherName(),
-                vo.getMaternalGrandfatherRegistration(),
-                vo.getMaternalGrandmotherName(),
-                vo.getMaternalGrandmotherRegistration(),
-
-
-                vo.getPaternalGreatGrandfather1Name(),
-                vo.getPaternalGreatGrandfather1Registration(),
-                vo.getPaternalGreatGrandmother1Name(),
-                vo.getPaternalGreatGrandmother1Registration(),
-                vo.getPaternalGreatGrandfather2Name(),
-                vo.getPaternalGreatGrandfather2Registration(),
-                vo.getPaternalGreatGrandmother2Name(),
-                vo.getPaternalGreatGrandmother2Registration(),
-
-
-                vo.getMaternalGreatGrandfather1Name(),
-                vo.getMaternalGreatGrandfather1Registration(),
-                vo.getMaternalGreatGrandmother1Name(),
-                vo.getMaternalGreatGrandmother1Registration(),
-                vo.getMaternalGreatGrandfather2Name(),
-                vo.getMaternalGreatGrandfather2Registration(),
-                vo.getMaternalGreatGrandmother2Name(),
-                vo.getMaternalGreatGrandmother2Registration()
-        );
+        return Genealogy.builder()
+            .goatName(vo.getGoatName())
+            .goatRegistration(vo.getGoatRegistration())
+            .goatCreator(vo.getBreeder())
+            .goatOwner(vo.getFarmOwner())
+            .goatBreed(vo.getBreed())
+            .goatCoatColor(vo.getColor())
+            .goatStatus(vo.getStatus())
+            .goatSex(vo.getGender())
+            .goatCategory(vo.getCategory())
+            .goatTOD(vo.getTod())
+            .goatTOE(vo.getToe())
+            .goatBirthDate(vo.getBirthDate())
+            .fatherName(vo.getFatherName())
+            .fatherRegistration(vo.getFatherRegistration())
+            .motherName(vo.getMotherName())
+            .motherRegistration(vo.getMotherRegistration())
+            .paternalGrandfatherName(vo.getPaternalGrandfatherName())
+            .paternalGrandfatherRegistration(vo.getPaternalGrandfatherRegistration())
+            .paternalGrandmotherName(vo.getPaternalGrandmotherName())
+            .paternalGrandmotherRegistration(vo.getPaternalGrandmotherRegistration())
+            .maternalGrandfatherName(vo.getMaternalGrandfatherName())
+            .maternalGrandfatherRegistration(vo.getMaternalGrandfatherRegistration())
+            .maternalGrandmotherName(vo.getMaternalGrandmotherName())
+            .maternalGrandmotherRegistration(vo.getMaternalGrandmotherRegistration())
+            .paternalGreatGrandfather1Name(vo.getPaternalGreatGrandfather1Name())
+            .paternalGreatGrandfather1Registration(vo.getPaternalGreatGrandfather1Registration())
+            .paternalGreatGrandmother1Name(vo.getPaternalGreatGrandmother1Name())
+            .paternalGreatGrandmother1Registration(vo.getPaternalGreatGrandmother1Registration())
+            .paternalGreatGrandfather2Name(vo.getPaternalGreatGrandfather2Name())
+            .paternalGreatGrandfather2Registration(vo.getPaternalGreatGrandfather2Registration())
+            .paternalGreatGrandmother2Name(vo.getPaternalGreatGrandmother2Name())
+            .paternalGreatGrandmother2Registration(vo.getPaternalGreatGrandmother2Registration())
+            .maternalGreatGrandfather1Name(vo.getMaternalGreatGrandfather1Name())
+            .maternalGreatGrandfather1Registration(vo.getMaternalGreatGrandfather1Registration())
+            .maternalGreatGrandmother1Name(vo.getMaternalGreatGrandmother1Name())
+            .maternalGreatGrandmother1Registration(vo.getMaternalGreatGrandmother1Registration())
+            .maternalGreatGrandfather2Name(vo.getMaternalGreatGrandfather2Name())
+            .maternalGreatGrandfather2Registration(vo.getMaternalGreatGrandfather2Registration())
+            .maternalGreatGrandmother2Name(vo.getMaternalGreatGrandmother2Name())
+            .maternalGreatGrandmother2Registration(vo.getMaternalGreatGrandmother2Registration())
+            .build();
     }
 
     @Transactional

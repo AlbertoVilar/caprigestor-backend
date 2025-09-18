@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.dao.AddressDAO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.dao.UserDAO;
+import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.address.model.entity.Address;
@@ -22,6 +23,8 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.dao.PhoneDAO;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -37,11 +40,16 @@ import java.util.Set;
 @Service
 public class GoatFarmDAO {
 
+    private static final Logger logger = LoggerFactory.getLogger(GoatFarmDAO.class);
+
     @Autowired
     private GoatFarmRepository goatFarmRepository;
 
     @Autowired
     private AddressRepository addressRepository;
+
+    @Autowired
+    private UserBusiness userBusiness;
 
     @Autowired
     private PhoneRepository phoneRepository;
@@ -63,7 +71,11 @@ public class GoatFarmDAO {
                                                      UserRequestVO userRequestVO,
                                                      AddressRequestVO addressRequestVO,
                                                      List<PhoneRequestVO> phoneRequestVOs) {
+        logger.info("Iniciando criação de fazenda completa com nome: {}", 
+                   farmRequestVO != null ? farmRequestVO.getName() : "null");
+        
         if (farmRequestVO == null) {
+            logger.error("Tentativa de criar fazenda com dados nulos");
             throw new IllegalArgumentException("Os dados da fazenda para criação não podem ser nulos.");
         }
 
@@ -125,11 +137,16 @@ public class GoatFarmDAO {
 
         // 6. Save ONLY the farm. Cascade will do the rest.
         try {
+            logger.info("Salvando fazenda: {}", farmRequestVO.getName());
             GoatFarm savedFarm = goatFarmRepository.save(goatFarm);
+            logger.info("Fazenda {} criada com sucesso com ID: {}", savedFarm.getName(), savedFarm.getId());
             return GoatFarmConverter.toFullVO(savedFarm);
         } catch (DataIntegrityViolationException e) {
-            // Este catch agora pegará erros de constraint do banco de forma mais limpa
+            logger.error("Erro de integridade ao criar fazenda {}: {}", farmRequestVO.getName(), e.getMessage(), e);
             throw new DatabaseException("Erro de integridade de dados ao salvar a fazenda: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Erro inesperado ao criar fazenda {}: {}", farmRequestVO.getName(), e.getMessage(), e);
+            throw new DatabaseException("Erro inesperado ao criar a fazenda", e);
         }
     }
     @Transactional
@@ -187,9 +204,14 @@ public class GoatFarmDAO {
                                                  AddressRequestVO addressVO,
                                                  List<PhoneRequestVO> phoneVOs) {
 
+        logger.info("Iniciando atualização da fazenda com ID: {}", id);
+        
         // Validação de existência da fazenda
         GoatFarm goatFarmToUpdate = goatFarmRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada."));
+                .orElseThrow(() -> {
+                    logger.error("Fazenda com ID {} não encontrada", id);
+                    return new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada.");
+                });
 
         // Validação de nome duplicado
         if (!goatFarmToUpdate.getName().equals(farmVO.getName()) &&
@@ -205,42 +227,98 @@ public class GoatFarmDAO {
         }
 
         // Update related entities
-        userDAO.updateUser(farmVO.getUserId(), userVO);
-        addressDAO.updateAddress(farmVO.getAddressId(), addressVO);
+        logger.debug("Atualizando usuário com ID: {}", farmVO.getUserId());
+        try {
+            userBusiness.updateUser(farmVO.getUserId(), userVO);
+            logger.debug("Usuário atualizado com sucesso");
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar usuário com ID {}: {}", farmVO.getUserId(), e.getMessage());
+            throw e;
+        }
+        
+        logger.debug("Atualizando endereço com ID: {}", farmVO.getAddressId());
+        try {
+            addressDAO.updateAddress(farmVO.getAddressId(), addressVO);
+            logger.debug("Endereço atualizado com sucesso");
+        } catch (Exception e) {
+            logger.error("Erro ao atualizar endereço com ID {}: {}", farmVO.getAddressId(), e.getMessage());
+            throw e;
+        }
 
         // Validação de telefones
         if (phoneVOs == null || phoneVOs.isEmpty()) {
+            logger.error("Lista de telefones vazia ou nula para fazenda ID: {}", id);
             throw new IllegalArgumentException("É obrigatório informar ao menos um telefone.");
         }
-
+        
+        logger.debug("Atualizando {} telefones", phoneVOs.size());
         // Update phones individually
         for (PhoneRequestVO phoneVO : phoneVOs) {
-            phoneDAO.updatePhone(phoneVO.getId(), phoneVO);
+            try {
+                logger.debug("Atualizando telefone com ID: {}", phoneVO.getId());
+                phoneDAO.updatePhone(phoneVO.getId(), phoneVO);
+            } catch (Exception e) {
+                logger.error("Erro ao atualizar telefone com ID {}: {}", phoneVO.getId(), e.getMessage());
+                throw e;
+            }
         }
+        logger.debug("Todos os telefones atualizados com sucesso");
 
         // Find Phone entities and update in the farm
+        logger.debug("Buscando entidades de telefone no banco de dados");
         List<Long> phoneIds = phoneVOs.stream().map(PhoneRequestVO::getId).toList();
         List<Phone> phones = phoneRepository.findAllById(phoneIds);
 
         if (phones.size() != phoneIds.size()) {
+            logger.error("Telefones não encontrados. Esperados: {}, Encontrados: {}", phoneIds.size(), phones.size());
             throw new ResourceNotFoundException("Um ou mais telefones informados não foram encontrados.");
         }
-
-        // ⚠️ Correção do problema de orphanRemoval
-        goatFarmToUpdate.getPhones().clear();
-        goatFarmToUpdate.getPhones().addAll(phones);
+        
+        logger.debug("Atualizando coleção de telefones da fazenda");
+        // ✅ Correção: Atualização segura de telefones sem usar clear()
+        // Remove telefones que não estão mais na lista
+        int removedCount = goatFarmToUpdate.getPhones().size();
+        goatFarmToUpdate.getPhones().removeIf(phone -> !phoneIds.contains(phone.getId()));
+        removedCount = removedCount - goatFarmToUpdate.getPhones().size();
+        logger.debug("Removidos {} telefones da coleção", removedCount);
+        
+        // Adiciona apenas telefones que ainda não estão na coleção
+        Set<Long> currentPhoneIds = goatFarmToUpdate.getPhones().stream()
+                .map(Phone::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        
+        int addedCount = 0;
+        for (Phone phone : phones) {
+            if (!currentPhoneIds.contains(phone.getId())) {
+                goatFarmToUpdate.getPhones().add(phone);
+                addedCount++;
+            }
+        }
+        logger.debug("Adicionados {} telefones à coleção", addedCount);
 
         // Update the farm data itself
         GoatFarmConverter.entityUpdate(goatFarmToUpdate, farmVO);
 
         try {
+            logger.info("Salvando fazenda atualizada no banco de dados");
             GoatFarm updatedFarm = goatFarmRepository.save(goatFarmToUpdate);
+            logger.info("Fazenda com ID {} atualizada com sucesso. Nome: {}, TOD: {}", 
+                       id, updatedFarm.getName(), updatedFarm.getTod());
 
             // ✅ Retorna dados completos
             return GoatFarmConverter.toFullVO(updatedFarm);
 
         } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Erro ao atualizar a fazenda com ID " + id + ": " + e.getMessage());
+            logger.error("Erro de integridade de dados ao salvar fazenda ID {}: {}", id, e.getMessage());
+            logger.error("Causa raiz da violação de integridade: {}", e.getRootCause() != null ? e.getRootCause().getMessage() : "N/A");
+            throw new DatabaseException("Erro de integridade ao atualizar a fazenda: " + e.getMessage(), e);
+        } catch (org.springframework.dao.DataAccessException e) {
+            logger.error("Erro de acesso aos dados ao salvar fazenda ID {}: {}", id, e.getMessage());
+            throw new DatabaseException("Erro de acesso aos dados ao atualizar a fazenda: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Erro inesperado ao salvar fazenda ID {}: {} - Tipo: {}", id, e.getMessage(), e.getClass().getSimpleName());
+            logger.error("Stack trace completo:", e);
+            throw new DatabaseException("Erro inesperado ao atualizar a fazenda com ID " + id + ": " + e.getMessage(), e);
         }
     }
 
@@ -266,15 +344,24 @@ public class GoatFarmDAO {
 
     @Transactional
     public String deleteGoatFarm(Long id) {
+        logger.info("Tentando deletar fazenda com ID: {}", id);
+        
         if (!goatFarmRepository.existsById(id)) {
+            logger.warn("Tentativa de deletar fazenda inexistente com ID: {}", id);
             throw new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada.");
         }
+        
         try {
             goatFarmRepository.deleteById(id);
+            logger.info("Fazenda com ID {} deletada com sucesso", id);
             return "Fazenda com ID " + id + " foi deletada com sucesso.";
         } catch (DataIntegrityViolationException e) {
+            logger.error("Erro de integridade ao deletar fazenda com ID {}: {}", id, e.getMessage(), e);
             throw new DatabaseException("Não é possível deletar a fazenda com ID " + id +
-                    " porque ela possui relacionamentos com outras entidades.");
+                    " porque ela possui relacionamentos com outras entidades.", e);
+        } catch (Exception e) {
+            logger.error("Erro inesperado ao deletar fazenda com ID {}: {}", id, e.getMessage(), e);
+            throw new DatabaseException("Erro inesperado ao deletar a fazenda com ID " + id, e);
         }
     }
 }

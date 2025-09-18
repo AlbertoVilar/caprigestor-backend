@@ -30,6 +30,7 @@ public class GoatFarmBusiness {
 
     // Criação
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
+        validateFarmData(requestVO);
         return goatFarmDAO.createGoatFarm(requestVO);
     }
 
@@ -60,5 +61,26 @@ public class GoatFarmBusiness {
     // Deleção
     public String deleteGoatFarm(Long id) {
         return goatFarmDAO.deleteGoatFarm(id);
+    }
+
+    /**
+     * Valida os dados de uma fazenda antes da criação/atualização.
+     * @param requestVO Dados da fazenda a serem validados
+     * @throws com.devmaster.goatfarm.config.exceptions.custom.ValidationException se os dados forem inválidos
+     */
+    private void validateFarmData(GoatFarmRequestVO requestVO) {
+        java.util.Map<String, String> validationErrors = new java.util.HashMap<>();
+        
+        if (requestVO.getName() != null) {
+            String nome = requestVO.getName().trim();
+            if (nome.length() < 3 || nome.length() > 100) {
+                validationErrors.put("name", "Nome da fazenda deve ter entre 3 e 100 caracteres");
+            }
+        }
+        
+        if (!validationErrors.isEmpty()) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
+                "Dados da fazenda inválidos", validationErrors);
+        }
     }
 }

@@ -88,7 +88,7 @@ public class AddressDAO {
                         requestVO.getNeighborhood(),
                         requestVO.getCity(),
                         requestVO.getState(),
-                        requestVO.getPostalCode()
+                        requestVO.getZipCode()
                 );
 
         if (existing.isPresent()) {

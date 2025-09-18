@@ -86,7 +86,7 @@ public class GoatFarmDTOConverter {
                 vo.getDistrict(),
                 vo.getCity(),
                 vo.getState(),
-                vo.getPostalCode(),
+                vo.getZipCode(),
 
                 phones
         );

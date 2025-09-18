@@ -77,13 +77,12 @@ public class GoatFarmFacade {
 
     /**
      * Busca uma fazenda pelo ID.
-     * Verifica ownership antes de delegar para a camada de negócio.
+     * Endpoint público - não requer autenticação.
      * @param id ID da fazenda
      * @return GoatFarmFullResponseVO com os dados da fazenda
      */
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        // Verifica ownership da fazenda antes de buscar
-        ownershipService.verifyFarmOwnershipById(id);
+        // Endpoint público - busca direta sem verificação de ownership
         return farmBusiness.findGoatFarmById(id);
     }
 

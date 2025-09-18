@@ -4,8 +4,10 @@ import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.converter.AddressDTOConverter;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.facade.AddressFacade;
+import com.devmaster.goatfarm.address.facade.dto.AddressFacadeResponseDTO;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -22,11 +24,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/address")
+@RequestMapping("/api/addresses")
 public class AddressController {
 
     @Autowired
     private AddressFacade addressFacade;
+
+    @Autowired
+    private AddressMapper addressMapper;
 
     @Operation(summary = "Create a new address")
 
@@ -36,73 +41,16 @@ public class AddressController {
             @org.springframework.web.bind.annotation.RequestBody @Valid AddressRequestDTO requestDTO) {
 
         try {
-            // Validações granulares
-            Map<String, String> validationErrors = new HashMap<>();
+            AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
+            AddressFacadeResponseDTO facadeDTO = addressFacade.createAddress(requestVO);
+            AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
+            return ResponseEntity.status(HttpStatus.CREATED).body(addressMapper.toDTO(responseVO));
             
-            // Validar CEP brasileiro mais rigorosamente
-            if (requestDTO.getPostalCode() != null) {
-                String cep = requestDTO.getPostalCode().replaceAll("[^0-9]", "");
-                if (!cep.matches("^\\d{8}$")) {
-                    validationErrors.put("postalCode", "CEP deve conter exatamente 8 dígitos numéricos");
-                }
-            }
-            
-            // Validar estado brasileiro (siglas ou nomes completos válidos)
-            if (requestDTO.getState() != null) {
-                String[] siglasValidas = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", 
-                                         "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", 
-                                         "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"};
-                String[] nomesValidos = {"Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", 
-                                        "Distrito Federal", "Espírito Santo", "Goiás", "Maranhão", 
-                                        "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará", 
-                                        "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro", 
-                                        "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia", 
-                                        "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"};
-                
-                boolean estadoValido = false;
-                String estadoInput = requestDTO.getState().trim();
-                
-                // Verificar siglas
-                for (String sigla : siglasValidas) {
-                    if (sigla.equalsIgnoreCase(estadoInput)) {
-                        estadoValido = true;
-                        break;
-                    }
-                }
-                
-                // Se não encontrou pela sigla, verificar nomes completos
-                if (!estadoValido) {
-                    for (String nome : nomesValidos) {
-                        if (nome.equalsIgnoreCase(estadoInput)) {
-                            estadoValido = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!estadoValido) {
-                    validationErrors.put("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
-                }
-            }
-            
-            // Validar país (aceitar apenas Brasil por enquanto)
-            if (requestDTO.getCountry() != null && 
-                !requestDTO.getCountry().trim().equalsIgnoreCase("Brasil") && 
-                !requestDTO.getCountry().trim().equalsIgnoreCase("Brazil")) {
-                validationErrors.put("country", "Por enquanto, apenas endereços do Brasil são aceitos");
-            }
-            
-            if (!validationErrors.isEmpty()) {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Dados de endereço inválidos");
-                errorResponse.put("errors", validationErrors);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-            }
-            
-            AddressRequestVO requestVO = AddressDTOConverter.toVO(requestDTO);
-            AddressResponseVO responseVO = addressFacade.createAddress(requestVO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(AddressDTOConverter.toDTO(responseVO));
-            
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Dados de endereço inválidos");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         } catch (com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Endereço já existe");
@@ -124,14 +72,38 @@ public class AddressController {
     @Operation(summary = "Update an existing address")
 
     @PutMapping("/{id}")
-    public AddressResponseDTO updateAddress(
-            @Parameter(description = "ID of the address to be updated", example = "1") @PathVariable Long id,
-            @RequestBody(description = "New address data")
+    public ResponseEntity<?> updateAddress(
+            @PathVariable("id") Long id,
+            @RequestBody(description = "Updated address data")
             @org.springframework.web.bind.annotation.RequestBody @Valid AddressRequestDTO requestDTO) {
 
-        AddressRequestVO requestVO = AddressDTOConverter.toVO(requestDTO);
-        AddressResponseVO responseVO = addressFacade.updateAddress(id, requestVO);
-        return AddressDTOConverter.toDTO(responseVO);
+        try {
+            AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
+            AddressFacadeResponseDTO facadeDTO = addressFacade.updateAddress(id, requestVO);
+            AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
+            return ResponseEntity.ok(addressMapper.toDTO(responseVO));
+            
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Dados de endereço inválidos");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        } catch (ResourceNotFoundException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Endereço não encontrado");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Erro interno do servidor");
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Erro inesperado");
+            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     @Operation(summary = "Find an address by ID")
@@ -140,8 +112,9 @@ public class AddressController {
     public AddressResponseDTO findAddressById(
             @Parameter(description = "ID of the address to be searched", example = "1") @PathVariable Long id) {
 
-        AddressResponseVO responseVO = addressFacade.findAddressById(id);
-        return AddressDTOConverter.toDTO(responseVO);
+        AddressFacadeResponseDTO facadeDTO = addressFacade.findAddressById(id);
+        AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
+        return addressMapper.toDTO(responseVO);
     }
 
     @Operation(summary = "List all registered addresses")
@@ -149,7 +122,10 @@ public class AddressController {
     @GetMapping
     public List<AddressResponseDTO> findAllAddresses() {
         return addressFacade.findAllAddresses().stream()
-                .map(AddressDTOConverter::toDTO)
+                .map(facadeDTO -> {
+                    AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
+                    return addressMapper.toDTO(responseVO);
+                })
                 .collect(Collectors.toList());
     }
 

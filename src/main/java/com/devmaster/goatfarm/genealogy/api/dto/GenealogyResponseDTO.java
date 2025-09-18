@@ -3,12 +3,14 @@ package com.devmaster.goatfarm.genealogy.api.dto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @Builder
+@NoArgsConstructor
 public class GenealogyResponseDTO {
 
     // Animal data
@@ -63,6 +65,5 @@ public class GenealogyResponseDTO {
     private String maternalGreatGrandmother2Name;
     private String maternalGreatGrandmother2Registration;
 
-    public GenealogyResponseDTO() {
-    }
+
 }

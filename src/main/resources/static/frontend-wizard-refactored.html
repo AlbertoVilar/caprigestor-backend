@@ -328,8 +328,8 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="postalCode">CEP *</label>
-                            <input type="text" id="postalCode" name="postalCode" maxlength="9" required>
+                            <label for="zipCode">CEP *</label>
+                            <input type="text" id="zipCode" name="zipCode" maxlength="9" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -491,8 +491,8 @@
             }
 
             if (currentStep === 2) {
-                const postalCode = formData.get('postalCode');
-                if (!/^\d{5}-?\d{3}$/.test(postalCode)) {
+                const zipCode = formData.get('zipCode');
+                if (!/^\d{5}-?\d{3}$/.test(zipCode)) {
                     showError('CEP deve estar no formato 12345-678');
                     return false;
                 }
@@ -503,7 +503,7 @@
                     neighborhood: formData.get('neighborhood'),
                     city: formData.get('city'),
                     state: formData.get('state'),
-                    postalCode: formData.get('postalCode'),
+                    zipCode: formData.get('zipCode'),
                     country: formData.get('country')
                 };
             }
@@ -725,7 +725,7 @@
             e.target.value = e.target.value.replace(/\D/g, '');
         });
 
-        document.getElementById('postalCode').addEventListener('input', function(e) {
+        document.getElementById('zipCode').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length > 5) {
                 value = value.substring(0, 5) + '-' + value.substring(5, 8);

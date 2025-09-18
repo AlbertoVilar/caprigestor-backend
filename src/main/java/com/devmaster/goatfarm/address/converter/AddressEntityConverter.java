@@ -20,7 +20,7 @@ public class AddressEntityConverter {
         logger.debug("  Neighborhood: {}", requestVO.getNeighborhood());
         logger.debug("  City: {}", requestVO.getCity());
         logger.debug("  State: {}", requestVO.getState());
-        logger.debug("  PostalCode: {}", requestVO.getPostalCode());
+        logger.debug("  ZipCode: {}", requestVO.getZipCode());
         logger.debug("  Country: {}", requestVO.getCountry());
 
         return new Address(
@@ -29,7 +29,7 @@ public class AddressEntityConverter {
                 requestVO.getNeighborhood(),
                 requestVO.getCity(),
                 requestVO.getState(),
-                requestVO.getPostalCode(),
+                requestVO.getZipCode(),
                 requestVO.getCountry()
         );
     }
@@ -40,7 +40,7 @@ public class AddressEntityConverter {
         address.setNeighborhood(requestVO.getNeighborhood());
         address.setCity(requestVO.getCity());
         address.setState(requestVO.getState());
-        address.setPostalCode(requestVO.getPostalCode());
+        address.setZipCode(requestVO.getZipCode());
         address.setCountry(requestVO.getCountry());
     }
 
@@ -53,7 +53,7 @@ public class AddressEntityConverter {
                 address.getNeighborhood(),
                 address.getCity(),
                 address.getState(),
-                address.getPostalCode(),
+                address.getZipCode(),
                 address.getCountry()
         );
     }

@@ -73,7 +73,7 @@ public class GoatFarmConverter {
             vo.setDistrict(entity.getAddress().getNeighborhood()); // Se for 'district' no VO
             vo.setCity(entity.getAddress().getCity());
             vo.setState(entity.getAddress().getState());
-            vo.setPostalCode(entity.getAddress().getPostalCode());
+            vo.setZipCode(entity.getAddress().getZipCode());
         }
 
         vo.setPhones(phones);

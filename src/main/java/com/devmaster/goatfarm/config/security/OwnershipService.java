@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.config.security;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
@@ -42,16 +43,28 @@ public class OwnershipService {
     /**
      * Obtém o usuário atualmente autenticado
      * @return User autenticado
-     * @throws RuntimeException se não há usuário autenticado
+     * @throws UnauthorizedException se não há usuário autenticado
      */
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String email = authentication.getName();
             return userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Usuário autenticado não encontrado: " + email));
+                    .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
         }
-        throw new RuntimeException("Usuário não autenticado");
+        throw new UnauthorizedException("Usuário não autenticado");
+    }
+
+    /**
+     * Obtém o usuário atualmente autenticado ou null se não estiver autenticado
+     * @return User autenticado ou null
+     */
+    public User getCurrentUserOrNull() {
+        try {
+            return getCurrentUser();
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /**
@@ -73,10 +86,18 @@ public class OwnershipService {
      * @return true se for ADMIN ou OPERATOR, false caso contrário
      */
     public boolean isCurrentUserAdminOrOperator() {
+        return isCurrentUserAdmin() || isCurrentUserOperator();
+    }
+
+    /**
+     * Verifica se o usuário atual é OPERATOR (dono de fazenda)
+     * @return true se for OPERATOR, false caso contrário
+     */
+    public boolean isCurrentUserOperator() {
         try {
             User currentUser = getCurrentUser();
             return currentUser.getRoles().stream()
-                    .anyMatch(role -> role.getAuthority().equals("ROLE_ADMIN") || role.getAuthority().equals("ROLE_OPERATOR"));
+                    .anyMatch(role -> role.getAuthority().equals("ROLE_OPERATOR"));
         } catch (RuntimeException e) {
             return false;
         }
@@ -84,7 +105,7 @@ public class OwnershipService {
 
     /**
      * Verifica se o usuário atual tem permissão para acessar uma fazenda
-     * ADMIN e OPERATOR têm acesso a tudo, FARM_OWNER só à própria fazenda
+     * ADMIN tem acesso a tudo, OPERATOR só à própria fazenda
      * @param farm Fazenda a ser verificada
      * @throws ResourceNotFoundException se não tem permissão
      */
@@ -93,9 +114,9 @@ public class OwnershipService {
         logger.debug("🔍 OWNERSHIP: Verificando acesso para usuário: {}", currentUser.getEmail());
         logger.debug("🔍 OWNERSHIP: Roles do usuário: {}", currentUser.getRoles().stream().map(r -> r.getAuthority()).toList());
         
-        // ADMIN e OPERATOR têm acesso a tudo
-        if (isCurrentUserAdminOrOperator()) {
-            logger.debug("✅ OWNERSHIP: Usuário é ADMIN ou OPERATOR - acesso liberado");
+        // ADMIN tem acesso a tudo
+        if (isCurrentUserAdmin()) {
+            logger.debug("✅ OWNERSHIP: Usuário é ADMIN - acesso liberado");
             return;
         }
 
@@ -115,15 +136,15 @@ public class OwnershipService {
 
     /**
      * Verifica se o usuário atual tem permissão para acessar uma fazenda (versão para VO)
-     * ADMIN e OPERATOR têm acesso a tudo, FARM_OWNER só à própria fazenda
+     * ADMIN tem acesso a tudo, OPERATOR só à própria fazenda
      * @param farmVO Fazenda VO a ser verificada
      * @throws ResourceNotFoundException se não tem permissão
      */
     public void verifyFarmOwnership(com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO farmVO) {
         User currentUser = getCurrentUser();
         
-        // ADMIN e OPERATOR têm acesso a tudo
-        if (isCurrentUserAdminOrOperator()) {
+        // ADMIN tem acesso a tudo
+        if (isCurrentUserAdmin()) {
             return;
         }
 
@@ -139,15 +160,15 @@ public class OwnershipService {
 
     /**
      * Verifica se o usuário atual tem permissão para acessar uma cabra
-     * ADMIN e OPERATOR têm acesso a tudo, FARM_OWNER só às cabras da própria fazenda
+     * ADMIN tem acesso a tudo, OPERATOR só às cabras da própria fazenda
      * @param goat Cabra a ser verificada
      * @throws ResourceNotFoundException se não tem permissão
      */
     public void verifyGoatOwnership(Goat goat) {
         User currentUser = getCurrentUser();
         
-        // ADMIN e OPERATOR têm acesso a tudo
-        if (isCurrentUserAdminOrOperator()) {
+        // ADMIN tem acesso a tudo
+        if (isCurrentUserAdmin()) {
             return;
         }
 

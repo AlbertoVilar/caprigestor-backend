@@ -31,7 +31,7 @@ public class GoatFarmFullResponseVO {
     private String district;
     private String city;
     private String state;
-    private String postalCode;
+    private String zipCode;
 
     // Telefones
     private List<PhoneResponseVO> phones;
@@ -79,8 +79,8 @@ public class GoatFarmFullResponseVO {
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }
     
-    public String getPostalCode() { return postalCode; }
-    public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
+    public String getZipCode() { return zipCode; }
+    public void setZipCode(String zipCode) { this.zipCode = zipCode; }
     
     public List<PhoneResponseVO> getPhones() { return phones; }
     public void setPhones(List<PhoneResponseVO> phones) { this.phones = phones; }

@@ -24,8 +24,8 @@ public class Address {
     @Column(name = "estado", nullable = false)
     private String state;
 
-    @Column(name = "codigo_postal", nullable = false)
-    private String postalCode;
+    @Column(name = "zip_code", nullable = false)
+    private String zipCode;
 
     @Column(name = "pais", nullable = false)
     private String country;
@@ -38,7 +38,7 @@ public class Address {
                    String neighborhood,
                    String city,
                    String state,
-                   String postalCode,
+                   String zipCode,
                    String country) {
 
         this.id = id;
@@ -46,7 +46,7 @@ public class Address {
         this.neighborhood = neighborhood;
         this.city = city;
         this.state = state;
-        this.postalCode = postalCode;
+        this.zipCode = zipCode;
         this.country = country;
     }
 
@@ -90,12 +90,12 @@ public class Address {
         this.state = state;
     }
 
-    public String getPostalCode() {
-        return postalCode;
+    public String getZipCode() {
+        return zipCode;
     }
 
-    public void setPostalCode(String postalCode) {
-        this.postalCode = postalCode;
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
     }
 
     public String getCountry() {
