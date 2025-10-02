@@ -2,6 +2,8 @@
 
 Sistema backend do CapriGestor, plataforma completa para gestão de caprinos (cabras), genealogia animal, fazendas, eventos e controle por usuário. Este serviço expõe uma API REST segura, integrando-se ao frontend React e ao PostgreSQL.
 
+> Nota: Este repositório é o **Backend** do sistema CapriGestor. Para o **Frontend** (aplicação React), consulte: https://github.com/albertovilar/caprigestor-frontend
+
 ## ✅ Nome do Projeto e Descrição
 - Nome: `CapriGestor — Backend`
 - Descrição: API REST em Java 21 + Spring Boot para cadastro e gestão de animais, fazendas, eventos e genealogia, com autenticação baseada em OAuth2 + JWT e autorização por roles.
