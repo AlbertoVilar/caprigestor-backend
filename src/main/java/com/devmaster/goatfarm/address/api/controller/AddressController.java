@@ -51,7 +51,7 @@ public class AddressController {
             errorResponse.put("message", "Dados de endereço inválidos");
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException e) {
+        } catch (com.devmaster.goatfarm.config.exceptions.DuplicateEntityException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Endereço já existe");
             errorResponse.put("error", e.getMessage());

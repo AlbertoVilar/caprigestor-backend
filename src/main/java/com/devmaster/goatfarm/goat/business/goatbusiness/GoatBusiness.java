@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.goat.business.goatbusiness;
 
-import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;

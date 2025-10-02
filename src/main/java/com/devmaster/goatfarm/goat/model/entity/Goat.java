@@ -39,7 +39,7 @@ public class Goat {
         @Column(name = "cor", length = 30)
         private String color;
 
-        @Column(name = "nascimento", nullable = false)
+        @Column(name = "data_nascimento", nullable = false)
         private LocalDate birthDate;
 
         @Enumerated(EnumType.STRING)
@@ -57,15 +57,15 @@ public class Goat {
         private Category category;
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "pai_id", referencedColumnName = "num_registro")
+        @JoinColumn(name = "pai_num_registro", referencedColumnName = "num_registro")
         private Goat father;
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "mae_id", referencedColumnName = "num_registro")
+        @JoinColumn(name = "mae_num_registro", referencedColumnName = "num_registro")
         private Goat mother;
 
         @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "usuario_id")
     @JsonBackReference
     private User user;
 

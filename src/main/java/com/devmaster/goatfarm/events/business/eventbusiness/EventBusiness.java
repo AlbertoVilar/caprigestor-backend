@@ -145,20 +145,8 @@ public class EventBusiness {
      * Permite acesso apenas para ADMIN ou proprietário da fazenda
      */
     private void verifyFarmOwnership(Goat goat) {
-        User currentUser = ownershipService.getCurrentUser();
-        
-        // ADMIN has access to everything - simplified check
-        if (ownershipService.isCurrentUserAdmin()) {
-            return;
-        }
-
-        // Check if user is owner of the farm
-        if (goat.getFarm() == null) {
-            throw new ResourceNotFoundException("Cabra não está associada a nenhuma fazenda");
-        }
-
-        if (!goat.getFarm().getUser().getId().equals(currentUser.getId())) {
-            throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar eventos desta fazenda");
-        }
+        // Usar o OwnershipService que já tem a lógica correta implementada
+        // e resolve problemas de lazy loading
+        ownershipService.verifyGoatOwnership(goat);
     }
 }

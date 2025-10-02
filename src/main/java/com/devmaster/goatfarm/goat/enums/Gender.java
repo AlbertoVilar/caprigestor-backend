@@ -30,6 +30,23 @@ public enum Gender {
                 return gender;
             }
         }
+        
+        // Aceitar valores específicos em português que podem estar no banco
+        if ("MACHO".equalsIgnoreCase(value)) {
+            return MALE;
+        }
+        if ("FÊMEA".equalsIgnoreCase(value) || "FEMEA".equalsIgnoreCase(value)) {
+            return FEMALE;
+        }
+        
+        // Aceitar valores em inglês que podem estar no banco de dados
+        if ("MALE".equalsIgnoreCase(value)) {
+            return MALE;
+        }
+        if ("FEMALE".equalsIgnoreCase(value)) {
+            return FEMALE;
+        }
+        
         throw new IllegalArgumentException("Valor inválido para Gender: " + value);
     }
 }

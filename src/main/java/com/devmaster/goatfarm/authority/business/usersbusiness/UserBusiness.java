@@ -7,7 +7,7 @@ import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
-import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

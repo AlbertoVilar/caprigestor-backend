@@ -31,14 +31,10 @@ public class GenealogyController {
     @GetMapping("/{registrationNumber}")
     public ResponseEntity<GenealogyResponseDTO> getGenealogy(@PathVariable String registrationNumber) {
         GenealogyFacadeResponseDTO facadeDTO = genealogyFacade.findGenealogy(registrationNumber);
-        if (facadeDTO != null) {
-            // Converter FacadeDTO para ResponseVO para manter compatibilidade
-            GenealogyResponseVO responseVO = convertFacadeDTOToResponseVO(facadeDTO);
-            GenealogyResponseDTO responseDTO = genealogyMapper.toResponseDTO(responseVO);
-            return ResponseEntity.ok(responseDTO);
-        } else {
-          return ResponseEntity.notFound().build();
-       }
+        // Converter FacadeDTO para ResponseVO para manter compatibilidade
+        GenealogyResponseVO responseVO = convertFacadeDTOToResponseVO(facadeDTO);
+        GenealogyResponseDTO responseDTO = genealogyMapper.toResponseDTO(responseVO);
+        return ResponseEntity.ok(responseDTO);
     }
 
     @PostMapping("/{registrationNumber}")
@@ -67,18 +63,53 @@ public class GenealogyController {
         responseVO.setGender(facadeDTO.getGender());
         responseVO.setToe(facadeDTO.getToe());
         responseVO.setBirthDate(facadeDTO.getBirthDate());
+        
+        // Campos que estavam faltando
+        responseVO.setBreeder(facadeDTO.getBreeder());
+        responseVO.setFarmOwner(facadeDTO.getFarmOwner());
+        responseVO.setColor(facadeDTO.getColor());
+        responseVO.setStatus(facadeDTO.getStatus());
+        responseVO.setCategory(facadeDTO.getCategory());
+        responseVO.setTod(facadeDTO.getTod());
+        
+        // Pais
         responseVO.setFatherName(facadeDTO.getFatherName());
         responseVO.setFatherRegistration(facadeDTO.getFatherRegistration());
         responseVO.setMotherName(facadeDTO.getMotherName());
         responseVO.setMotherRegistration(facadeDTO.getMotherRegistration());
+        
+        // Avós paternos
         responseVO.setPaternalGrandfatherName(facadeDTO.getPaternalGrandfatherName());
         responseVO.setPaternalGrandfatherRegistration(facadeDTO.getPaternalGrandfatherRegistration());
         responseVO.setPaternalGrandmotherName(facadeDTO.getPaternalGrandmotherName());
         responseVO.setPaternalGrandmotherRegistration(facadeDTO.getPaternalGrandmotherRegistration());
+        
+        // Avós maternos
         responseVO.setMaternalGrandfatherName(facadeDTO.getMaternalGrandfatherName());
         responseVO.setMaternalGrandfatherRegistration(facadeDTO.getMaternalGrandfatherRegistration());
         responseVO.setMaternalGrandmotherName(facadeDTO.getMaternalGrandmotherName());
         responseVO.setMaternalGrandmotherRegistration(facadeDTO.getMaternalGrandmotherRegistration());
+        
+        // Bisavós paternos
+        responseVO.setPaternalGreatGrandfather1Name(facadeDTO.getPaternalGreatGrandfather1Name());
+        responseVO.setPaternalGreatGrandfather1Registration(facadeDTO.getPaternalGreatGrandfather1Registration());
+        responseVO.setPaternalGreatGrandmother1Name(facadeDTO.getPaternalGreatGrandmother1Name());
+        responseVO.setPaternalGreatGrandmother1Registration(facadeDTO.getPaternalGreatGrandmother1Registration());
+        responseVO.setPaternalGreatGrandfather2Name(facadeDTO.getPaternalGreatGrandfather2Name());
+        responseVO.setPaternalGreatGrandfather2Registration(facadeDTO.getPaternalGreatGrandfather2Registration());
+        responseVO.setPaternalGreatGrandmother2Name(facadeDTO.getPaternalGreatGrandmother2Name());
+        responseVO.setPaternalGreatGrandmother2Registration(facadeDTO.getPaternalGreatGrandmother2Registration());
+        
+        // Bisavós maternos
+        responseVO.setMaternalGreatGrandfather1Name(facadeDTO.getMaternalGreatGrandfather1Name());
+        responseVO.setMaternalGreatGrandfather1Registration(facadeDTO.getMaternalGreatGrandfather1Registration());
+        responseVO.setMaternalGreatGrandmother1Name(facadeDTO.getMaternalGreatGrandmother1Name());
+        responseVO.setMaternalGreatGrandmother1Registration(facadeDTO.getMaternalGreatGrandmother1Registration());
+        responseVO.setMaternalGreatGrandfather2Name(facadeDTO.getMaternalGreatGrandfather2Name());
+        responseVO.setMaternalGreatGrandfather2Registration(facadeDTO.getMaternalGreatGrandfather2Registration());
+        responseVO.setMaternalGreatGrandmother2Name(facadeDTO.getMaternalGreatGrandmother2Name());
+        responseVO.setMaternalGreatGrandmother2Registration(facadeDTO.getMaternalGreatGrandmother2Registration());
+        
         return responseVO;
     }
 }

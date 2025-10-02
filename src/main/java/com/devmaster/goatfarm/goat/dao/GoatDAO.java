@@ -95,10 +95,22 @@ public class GoatDAO {
      * @param name Nome ou parte do nome da cabra.
      * @param pageable Objeto Pageable para paginação.
      * @return Página de GoatResponseVOs.
+     * @throws ResourceNotFoundException se nenhuma cabra for encontrada para os critérios.
      */
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> searchGoatByNameAndFarmId(Long farmId, String name, Pageable pageable) {
         Page<Goat> goatResult = goatRepository.findByNameAndFarmId(farmId, name, pageable);
+        
+        if (goatResult.isEmpty()) {
+            String message = "Nenhuma cabra encontrada para a fazenda com ID " + farmId;
+            if (name != null && !name.isBlank()) {
+                message += " com o nome '" + name + "'.";
+            } else {
+                message += ".";
+            }
+            throw new ResourceNotFoundException(message);
+        }
+        
         return goatResult.map(GoatEntityConverter::toResponseVO);
     }
 

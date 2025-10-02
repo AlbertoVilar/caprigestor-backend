@@ -50,11 +50,11 @@ public class GoatFarm {
     private List<Goat> goats = new ArrayList<>();
 
     @CreatedDate
-    @Column(name = "criado", nullable = false)
+    @Column(name = "criado_em", nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(name = "atualizado", nullable = false)
+    @Column(name = "atualizado_em", nullable = false)
     private LocalDateTime updatedAt;
 
     public GoatFarm() {}

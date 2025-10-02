@@ -24,7 +24,7 @@ public class Event {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "goat_id", referencedColumnName = "num_registro", nullable = false)
+    @JoinColumn(name = "goat_registration_number", referencedColumnName = "num_registro", nullable = false)
     private Goat goat;
 
     @Enumerated(EnumType.STRING)

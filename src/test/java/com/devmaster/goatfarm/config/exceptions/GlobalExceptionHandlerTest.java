@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.config.exceptions;
 
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;

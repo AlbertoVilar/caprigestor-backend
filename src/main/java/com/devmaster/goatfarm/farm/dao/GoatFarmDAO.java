@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
-import com.devmaster.goatfarm.config.exceptions.custom.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;

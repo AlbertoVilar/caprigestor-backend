@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.config.exceptions;
 
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -42,6 +44,14 @@ public class GlobalExceptionHandler {
         problem.setDetail("Campos inválidos no payload");
         problem.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(problem);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Argumento inválido");
+        problem.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
     }
 
     @ExceptionHandler(Exception.class)

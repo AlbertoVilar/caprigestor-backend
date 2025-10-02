@@ -49,16 +49,16 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
      */
     @Query(value = """
         SELECT g1_0.num_registro,
-               g1_0.nascimento,
+               g1_0.data_nascimento,
                g1_0.raca,
                g1_0.categoria,
                g1_0.cor,
                g1_0.capril_id,
-               g1_0.pai_id,
+               g1_0.pai_num_registro,
                g1_0.sexo,
-               g1_0.mae_id,
+               g1_0.mae_num_registro,
                g1_0.nome,
-               g1_0.user_id,
+               g1_0.usuario_id,
                g1_0.status,
                g1_0.tod,
                g1_0.toe

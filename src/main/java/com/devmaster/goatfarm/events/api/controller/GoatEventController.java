@@ -117,13 +117,24 @@ public class GoatEventController {
             @PathVariable("registrationNumber") String registrationNumber,
 
             @Parameter(description = "ID do evento a ser atualizado", example = "3")
-            @PathVariable Long id,
+            @PathVariable String id,
 
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Novos dados para o evento")
             @RequestBody @Valid EventRequestDTO requestDTO
     ) {
+        // Validação para evitar conversão de "null" string
+        if ("null".equals(id) || id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("ID do evento não pode ser null ou vazio");
+        }
+        
+        Long eventId;
+        try {
+            eventId = Long.parseLong(id);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("ID do evento deve ser um número válido: " + id);
+        }
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
-        EventFacadeResponseDTO facadeDTO = eventFacade.updateEvent(id, requestVO, registrationNumber);
+        EventFacadeResponseDTO facadeDTO = eventFacade.updateEvent(eventId, requestVO, registrationNumber);
         EventResponseVO responseVO = new EventResponseVO(facadeDTO.getId(), facadeDTO.getGoatRegistrationNumber(), facadeDTO.getGoatName(), facadeDTO.getEventType(), facadeDTO.getEventDate(), facadeDTO.getDescription(), null, null, null);
         EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
 
@@ -143,9 +154,21 @@ public class GoatEventController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<Void> deleteEventById(
             @Parameter(description = "ID do evento a ser removido", example = "3")
-            @PathVariable Long id
+            @PathVariable String id
     ) {
-        eventFacade.deleteEventById(id);
+        // Validação para evitar conversão de "null" string
+        if ("null".equals(id) || id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("ID do evento não pode ser null ou vazio");
+        }
+        
+        Long eventId;
+        try {
+            eventId = Long.parseLong(id);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("ID do evento deve ser um número válido: " + id);
+        }
+        
+        eventFacade.deleteEventById(eventId);
         return ResponseEntity.noContent().build();
     }
 }

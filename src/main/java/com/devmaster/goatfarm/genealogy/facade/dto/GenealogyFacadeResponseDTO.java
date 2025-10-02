@@ -37,6 +37,26 @@ public class GenealogyFacadeResponseDTO {
     private String maternalGrandmotherName;
     private String maternalGrandmotherRegistration;
 
+    // Bisavós paternos
+    private String paternalGreatGrandfather1Name;
+    private String paternalGreatGrandfather1Registration;
+    private String paternalGreatGrandmother1Name;
+    private String paternalGreatGrandmother1Registration;
+    private String paternalGreatGrandfather2Name;
+    private String paternalGreatGrandfather2Registration;
+    private String paternalGreatGrandmother2Name;
+    private String paternalGreatGrandmother2Registration;
+
+    // Bisavós maternos
+    private String maternalGreatGrandfather1Name;
+    private String maternalGreatGrandfather1Registration;
+    private String maternalGreatGrandmother1Name;
+    private String maternalGreatGrandmother1Registration;
+    private String maternalGreatGrandfather2Name;
+    private String maternalGreatGrandfather2Registration;
+    private String maternalGreatGrandmother2Name;
+    private String maternalGreatGrandmother2Registration;
+
     public GenealogyFacadeResponseDTO() {
     }
 
@@ -231,5 +251,135 @@ public class GenealogyFacadeResponseDTO {
 
     public void setMaternalGrandmotherRegistration(String maternalGrandmotherRegistration) {
         this.maternalGrandmotherRegistration = maternalGrandmotherRegistration;
+    }
+
+    // Getters e Setters para Bisavós Paternos
+    public String getPaternalGreatGrandfather1Name() {
+        return paternalGreatGrandfather1Name;
+    }
+
+    public void setPaternalGreatGrandfather1Name(String paternalGreatGrandfather1Name) {
+        this.paternalGreatGrandfather1Name = paternalGreatGrandfather1Name;
+    }
+
+    public String getPaternalGreatGrandfather1Registration() {
+        return paternalGreatGrandfather1Registration;
+    }
+
+    public void setPaternalGreatGrandfather1Registration(String paternalGreatGrandfather1Registration) {
+        this.paternalGreatGrandfather1Registration = paternalGreatGrandfather1Registration;
+    }
+
+    public String getPaternalGreatGrandmother1Name() {
+        return paternalGreatGrandmother1Name;
+    }
+
+    public void setPaternalGreatGrandmother1Name(String paternalGreatGrandmother1Name) {
+        this.paternalGreatGrandmother1Name = paternalGreatGrandmother1Name;
+    }
+
+    public String getPaternalGreatGrandmother1Registration() {
+        return paternalGreatGrandmother1Registration;
+    }
+
+    public void setPaternalGreatGrandmother1Registration(String paternalGreatGrandmother1Registration) {
+        this.paternalGreatGrandmother1Registration = paternalGreatGrandmother1Registration;
+    }
+
+    public String getPaternalGreatGrandfather2Name() {
+        return paternalGreatGrandfather2Name;
+    }
+
+    public void setPaternalGreatGrandfather2Name(String paternalGreatGrandfather2Name) {
+        this.paternalGreatGrandfather2Name = paternalGreatGrandfather2Name;
+    }
+
+    public String getPaternalGreatGrandfather2Registration() {
+        return paternalGreatGrandfather2Registration;
+    }
+
+    public void setPaternalGreatGrandfather2Registration(String paternalGreatGrandfather2Registration) {
+        this.paternalGreatGrandfather2Registration = paternalGreatGrandfather2Registration;
+    }
+
+    public String getPaternalGreatGrandmother2Name() {
+        return paternalGreatGrandmother2Name;
+    }
+
+    public void setPaternalGreatGrandmother2Name(String paternalGreatGrandmother2Name) {
+        this.paternalGreatGrandmother2Name = paternalGreatGrandmother2Name;
+    }
+
+    public String getPaternalGreatGrandmother2Registration() {
+        return paternalGreatGrandmother2Registration;
+    }
+
+    public void setPaternalGreatGrandmother2Registration(String paternalGreatGrandmother2Registration) {
+        this.paternalGreatGrandmother2Registration = paternalGreatGrandmother2Registration;
+    }
+
+    // Getters e Setters para Bisavós Maternos
+    public String getMaternalGreatGrandfather1Name() {
+        return maternalGreatGrandfather1Name;
+    }
+
+    public void setMaternalGreatGrandfather1Name(String maternalGreatGrandfather1Name) {
+        this.maternalGreatGrandfather1Name = maternalGreatGrandfather1Name;
+    }
+
+    public String getMaternalGreatGrandfather1Registration() {
+        return maternalGreatGrandfather1Registration;
+    }
+
+    public void setMaternalGreatGrandfather1Registration(String maternalGreatGrandfather1Registration) {
+        this.maternalGreatGrandfather1Registration = maternalGreatGrandfather1Registration;
+    }
+
+    public String getMaternalGreatGrandmother1Name() {
+        return maternalGreatGrandmother1Name;
+    }
+
+    public void setMaternalGreatGrandmother1Name(String maternalGreatGrandmother1Name) {
+        this.maternalGreatGrandmother1Name = maternalGreatGrandmother1Name;
+    }
+
+    public String getMaternalGreatGrandmother1Registration() {
+        return maternalGreatGrandmother1Registration;
+    }
+
+    public void setMaternalGreatGrandmother1Registration(String maternalGreatGrandmother1Registration) {
+        this.maternalGreatGrandmother1Registration = maternalGreatGrandmother1Registration;
+    }
+
+    public String getMaternalGreatGrandfather2Name() {
+        return maternalGreatGrandfather2Name;
+    }
+
+    public void setMaternalGreatGrandfather2Name(String maternalGreatGrandfather2Name) {
+        this.maternalGreatGrandfather2Name = maternalGreatGrandfather2Name;
+    }
+
+    public String getMaternalGreatGrandfather2Registration() {
+        return maternalGreatGrandfather2Registration;
+    }
+
+    public void setMaternalGreatGrandfather2Registration(String maternalGreatGrandfather2Registration) {
+        this.maternalGreatGrandfather2Registration = maternalGreatGrandfather2Registration;
+    }
+
+    public String getMaternalGreatGrandmother2Name() {
+        return maternalGreatGrandmother2Name;
+    }
+
+    public void setMaternalGreatGrandmother2Name(String maternalGreatGrandmother2Name) {
+        this.maternalGreatGrandmother2Name = maternalGreatGrandmother2Name;
+    }
+
+    public String getMaternalGreatGrandmother2Registration() {
+        return maternalGreatGrandmother2Registration;
+    }
+
+    public void setMaternalGreatGrandmother2Registration(String maternalGreatGrandmother2Registration) {
+        this.maternalGreatGrandmother2Registration = maternalGreatGrandmother2Registration;
     }
 }
