@@ -1,5 +1,14 @@
 # CapriGestor — Backend
 
+> Status: Em desenvolvimento (MVP) até 02/10/2025.
+
+### Contato
+
+- Nome: José Alberto Vilar Pereira
+- E-mail: [albertovilar1@gmail.com](mailto:albertovilar1@gmail.com)
+- LinkedIn: [linkedin.com/in/alberto-vilar-316725ab](https://www.linkedin.com/in/alberto-vilar-316725ab)
+- GitHub: [github.com/albertovilar](https://github.com/albertovilar)
+
 ## 1. Descrição
 
 CapriGestor é um sistema backend para gerenciamento de caprinos (cabras) que suporta cadastro, acompanhamento de eventos e genealogia, além de recursos de fazenda e autoridades/usuários. O backend é desenvolvido em Spring Boot 3, segue princípios de arquitetura hexagonal (ports & adapters) e expõe APIs REST seguras, documentadas via Swagger.
@@ -103,13 +112,6 @@ Frontend associado: `https://github.com/albertovilar/caprigestor-frontend`
 ## 10. Status do projeto
 
 MVP em desenvolvimento, já funcional.
-
-## 11. Autor e contato
-
-- Nome: José Alberto Vilar Pereira
-- E-mail: `albertovilar1@gmail.com`
-- LinkedIn: `https://www.linkedin.com/in/alberto-vilar-316725ab`
-- GitHub: `https://github.com/albertovilar`
 
 ---
 
