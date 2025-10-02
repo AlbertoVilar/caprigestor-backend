@@ -1,36 +1,118 @@
-# Caprigestor Backend
+# CapriGestor — Backend
 
-Backend do Caprigestor (Spring Boot), responsável por APIs, regras de negócio, migrações de banco (Flyway) e integração com infraestrutura local via Docker.
+## 1. Descrição
 
-## Requisitos
-- Java 17+
-- Banco de dados compatível (ex.: PostgreSQL)
-- Maven ou Gradle (conforme configurado no projeto)
-- Docker (opcional) para subir serviços locais
+CapriGestor é um sistema backend para gerenciamento de caprinos (cabras) que suporta cadastro, acompanhamento de eventos e genealogia, além de recursos de fazenda e autoridades/usuários. O backend é desenvolvido em Spring Boot 3, segue princípios de arquitetura hexagonal (ports & adapters) e expõe APIs REST seguras, documentadas via Swagger.
 
-## Configuração
-- Arquivos de propriedades:
-  - `src/main/resources/application.properties`
-  - `src/main/resources/application-dev.properties`
-  - `src/main/resources/application-test.properties`
-- Ajuste credenciais de banco e variáveis necessárias (porta, host, usuário/senha) nos arquivos acima.
-- Seed inicial: `src/main/resources/import.sql` (inclui dados básicos como usuário admin, perfis, etc.).
+## 2. Tecnologias Utilizadas
 
-## Migrações (Flyway)
-- Migrações residem em `src/main/resources/db/migration/` com versão `V{N}__Descricao.sql`.
-- Em ambientes novos, utilize baseline conforme configuração do projeto (se necessário).
-- Após atualizar/organizar migrações, rode a aplicação para aplicar `migrate` automaticamente.
+- Java 21
+- Spring Boot 3
+- JWT
+- OAuth2
+- PostgreSQL
+- Flyway (migrações de banco)
 
-## Desenvolvimento
-1. Compile e rode com sua ferramenta de build (Maven/Gradle):
-   - Maven: `mvn spring-boot:run`
-   - Gradle: `./gradlew bootRun`
-2. Ajuste perfis (`dev`, `test`) conforme necessário via `application-*.properties`.
+## 3. Organização dos pacotes
 
-## Infraestrutura
-- Docker Compose: `docker/docker-compose.yml` para subir serviços de apoio (ex.: banco de dados).
-- Atualize variáveis de ambiente e volumes conforme seu ambiente local.
+Resumo por módulo (camadas seguindo hexagonal: `domain`, `application`, `infrastructure`):
 
-## Notas
-- Este README foi corrigido para remover referência indevida ao frontend.
-- Repositório remoto correto: `git@github.com:AlbertoVilar/caprigestor-backend.git`.
+- `goat`: regras de negócio, cadastro, atributos, conversores e acesso a dados de caprinos.
+- `events`: eventos relacionados aos caprinos (nascimentos, coberturas, pesagens, etc.).
+- `genealogy`: relacionamento e linhagem entre caprinos (ascendência/descendência).
+- `farm`: entidades e serviços de fazendas/estábulos/locais associados.
+- `authority`: autenticação, autorização, usuários e papéis.
+- `shared`: utilitários, DTOs comuns, exceções e infra compartilhada.
+
+Observação: os pacotes seguem o padrão de separação por domínio, mantendo baixo acoplamento e alta coesão, com conversores e facades onde aplicável.
+
+## 4. Perfis de execução
+
+- `dev`: desenvolvimento local com configurações e dados de exemplo, logs mais verbosos.
+- `test`: execução de testes, banco em memória/containers e configurações de teste.
+- `prod`: produção, variáveis externas, segurança reforçada e tuning de performance.
+
+Ative via propriedade `spring.profiles.active`.
+
+Exemplos:
+
+```bash
+# Windows (PowerShell)
+./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Linux/Mac
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+## 5. Banco de dados
+
+- Migrações: `src/main/resources/db/migration` (controladas pelo Flyway).
+- Seed inicial: `import.sql` (carregado para dados básicos quando aplicável).
+- Banco padrão: PostgreSQL. Configure credenciais e URL no `application-<profile>.properties`.
+
+As migrações versionadas (ex.: `V9__Create_Event_Table.sql`) garantem a evolução consistente do schema.
+
+## 6. Como rodar o projeto
+
+Você pode rodar na IDE ou via Docker Compose.
+
+- IDE (IntelliJ/Eclipse):
+  - Java 21 instalado.
+  - Importar o projeto Maven.
+  - Selecionar o perfil desejado (`dev`, `test`, `prod`).
+  - Executar a aplicação (classe principal Spring Boot).
+
+- Maven CLI:
+  ```bash
+  # Dev
+  ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+  ```
+
+- Docker Compose:
+  - Arquivo: `docker/docker-compose.yml`.
+  - Sobe serviços (ex.: PostgreSQL) e integra com a aplicação.
+  - Comandos:
+    ```bash
+    # Windows (PowerShell)
+    docker compose up -d
+    
+    # Para parar
+    docker compose down
+    ```
+
+Após subir, a API estará acessível em `http://localhost:8080` (ajuste conforme perfil/porta).
+
+## 7. Segurança com JWT + OAuth2
+
+- Autenticação via OAuth2/JWT.
+- Autorização baseada em papéis:
+  - `ROLE_ADMIN`
+  - `ROLE_OPERATOR`
+- Endpoints protegidos exigem cabeçalho `Authorization: Bearer <token>`.
+- Políticas de acesso definidas nas configurações de segurança do Spring.
+
+## 8. Swagger
+
+- UI: `http://localhost:8080/swagger-ui/index.html`
+- Permite explorar e testar endpoints REST com schemas e exemplos.
+
+## 9. Link cruzado com o repositório do frontend
+
+Frontend associado: `https://github.com/albertovilar/caprigestor-frontend`
+
+## 10. Status do projeto
+
+MVP em desenvolvimento, já funcional.
+
+## 11. Autor e contato
+
+- Nome: José Alberto Vilar Pereira
+- E-mail: `albertovilar1@gmail.com`
+- LinkedIn: `https://www.linkedin.com/in/alberto-vilar-316725ab`
+- GitHub: `https://github.com/albertovilar`
+
+---
+
+## 📸 Prints ou GIFs
+
+Espaço reservado para screenshots, GIFs de uso e observações futuras sobre UX e integração.
