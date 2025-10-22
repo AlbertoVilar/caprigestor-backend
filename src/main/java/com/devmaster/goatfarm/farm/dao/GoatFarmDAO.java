@@ -71,84 +71,9 @@ public class GoatFarmDAO {
                                                      UserRequestVO userRequestVO,
                                                      AddressRequestVO addressRequestVO,
                                                      List<PhoneRequestVO> phoneRequestVOs) {
-        logger.info("Iniciando criação de fazenda completa com nome: {}", 
-                   farmRequestVO != null ? farmRequestVO.getName() : "null");
-        
-        if (farmRequestVO == null) {
-            logger.error("Tentativa de criar fazenda com dados nulos");
-            throw new IllegalArgumentException("Os dados da fazenda para criação não podem ser nulos.");
-        }
-
-        if (userRequestVO == null) {
-            throw new IllegalArgumentException("Dados do usuário são obrigatórios.");
-        }
-
-        if (addressRequestVO == null) {
-            throw new IllegalArgumentException("Dados do endereço são obrigatórios.");
-        }
-
-        if (phoneRequestVOs == null || phoneRequestVOs.isEmpty()) {
-            throw new IllegalArgumentException("É obrigatório informar ao menos um telefone para a fazenda.");
-        }
-
-        // Duplicate checks
-        if (goatFarmRepository.existsByName(farmRequestVO.getName())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmRequestVO.getName() + "'.");
-        }
-
-        if (farmRequestVO.getTod() != null && goatFarmRepository.existsByTod(farmRequestVO.getTod())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmRequestVO.getTod() + "'.");
-        }
-
-        // 1. Usuário (pode ser existente ou novo)
-        User user = userDAO.findOrCreateUser(userRequestVO);
-
-        // 2. Endereço via AddressBusiness (find-or-create de entidade)
-        Address address = addressBusiness.findOrCreateAddressEntity(addressRequestVO);
-
-        // 3. Create the farm and associate the address
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);
-        goatFarm.setAddress(address);
-        
-        // 4. Phones - Create new phones with bidirectional reference
-        List<Phone> associatedPhones = new ArrayList<>();
-        Set<String> processedNumbers = new HashSet<>();
-
-        for (PhoneRequestVO phoneVO : phoneRequestVOs) {
-            if (!processedNumbers.add(phoneVO.getNumber())) {
-                throw new DuplicateEntityException("Número de telefone duplicado: " + phoneVO.getNumber());
-            }
-
-            // Check if phone with this area code and number already exists
-            if (phoneRepository.existsByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())) {
-                throw new DuplicateEntityException("Já existe um telefone com DDD (" + phoneVO.getDdd() + ") e número " + phoneVO.getNumber());
-            }
-
-            // Create new phone
-            Phone phone = new Phone();
-            phone.setDdd(phoneVO.getDdd());
-            phone.setNumber(phoneVO.getNumber());
-            phone.setGoatFarm(goatFarm); // Referência bidirecional
-            associatedPhones.add(phone);
-        }
-
-        // 5. Associa a lista de telefones à fazenda (referência bidirecional)
-        goatFarm.setPhones(associatedPhones);
-
-        // 6. Save ONLY the farm. Cascade will do the rest.
-        try {
-            logger.info("Salvando fazenda: {}", farmRequestVO.getName());
-            GoatFarm savedFarm = goatFarmRepository.save(goatFarm);
-            logger.info("Fazenda {} criada com sucesso com ID: {}", savedFarm.getName(), savedFarm.getId());
-            return GoatFarmConverter.toFullVO(savedFarm);
-        } catch (DataIntegrityViolationException e) {
-            logger.error("Erro de integridade ao criar fazenda {}: {}", farmRequestVO.getName(), e.getMessage(), e);
-            throw new DatabaseException("Erro de integridade de dados ao salvar a fazenda: " + e.getMessage(), e);
-        } catch (Exception e) {
-            logger.error("Erro inesperado ao criar fazenda {}: {}", farmRequestVO.getName(), e.getMessage(), e);
-            throw new DatabaseException("Erro inesperado ao criar a fazenda", e);
-        }
+        throw new IllegalStateException("Operação movida para camada Business. Use GoatFarmBusiness.createFullGoatFarm.");
     }
+
     @Transactional
     public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
         if (requestVO == null) {
