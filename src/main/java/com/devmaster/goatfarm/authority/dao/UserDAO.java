@@ -129,40 +129,4 @@ public class UserDAO {
         return UserEntityConverter.toVO(updatedUser);
     }
 
-    @Transactional
-    public User findOrCreateUser(UserRequestVO vo) {
-        // Primeiro, tenta encontrar usuário pelo email
-        Optional<User> existingUser = repository.findByEmail(vo.getEmail());
-        if (existingUser.isPresent()) {
-            return existingUser.get();
-        }
-
-        // Se não encontrou, cria um novo usuário
-        User user = UserEntityConverter.fromVO(vo);
-
-        // Resolver roles já salvas no banco
-        user.getRoles().clear();
-        
-        if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
-            vo.getRoles().forEach(roleName -> {
-                Optional<Role> optionalRole = roleRepository.findByAuthority(roleName);
-                if (optionalRole.isEmpty()) {
-                    throw new RuntimeException("Role não encontrada: " + roleName);
-                }
-                user.addRole(optionalRole.get());
-            });
-        } else {
-            // Atribuir ROLE_OPERATOR por padrão quando nenhuma role é fornecida
-            Optional<Role> defaultRole = roleRepository.findByAuthority("ROLE_OPERATOR");
-            if (defaultRole.isEmpty()) {
-                throw new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema");
-            }
-            user.addRole(defaultRole.get());
-        }
-
-        // Criptografar senha antes de salvar
-        user.setPassword(passwordEncoder.encode(vo.getPassword())); // Senha criptografada
-
-        return repository.save(user);
-    }
 }

@@ -3,7 +3,6 @@ package com.devmaster.goatfarm.phone.dao;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
@@ -24,32 +23,10 @@ public class PhoneDAO {
     private PhoneRepository phoneRepository;
 
     @Autowired
-    private GoatFarmRepository farmRepository;
-
-    @Autowired
     private PhoneMapper phoneMapper;
-
-    // ✅ Create or reuse a list of phones
-    public List<Phone> findOrCreatePhones(List<PhoneRequestVO> phoneVOList) {
-        return phoneVOList.stream()
-                .map(this::findOrCreatePhone)
-                .collect(Collectors.toList());
-    }
-
-    // ✅ Create or reuse a single phone
-    public Phone findOrCreatePhone(PhoneRequestVO phoneVO) {
-        return phoneRepository.findByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())
-                .orElseGet(() -> {
-                    Phone phone = new Phone();
-                    phone.setDdd(phoneVO.getDdd());
-                    phone.setNumber(phoneVO.getNumber());
-                    return phoneRepository.save(phone);
-                });
-    }
 
     @Transactional
     public PhoneResponseVO createPhone(PhoneRequestVO requestVO, GoatFarm capril) {
-        // Converter VO para entidade (ignorando id) e salvar
         Phone phone = phoneMapper.toEntity(requestVO);
         if (capril != null) {
             phone.setGoatFarm(capril);
@@ -60,12 +37,10 @@ public class PhoneDAO {
 
     @Transactional
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {
-        // Buscar entidade gerenciada e aplicar dados do VO
         Phone phoneToUpdate = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
 
         phoneMapper.toEntity(phoneToUpdate, requestVO);
-        
         try {
             Phone saved = phoneRepository.save(phoneToUpdate);
             return phoneMapper.toResponseVO(saved);
@@ -91,7 +66,6 @@ public class PhoneDAO {
 
     @Transactional
     public String deletePhone(Long id) {
-        // Operação CRUD mecânica: deletar por ID
         try {
             phoneRepository.deleteById(id);
             return "Telefone com ID " + id + " foi deletado com sucesso.";

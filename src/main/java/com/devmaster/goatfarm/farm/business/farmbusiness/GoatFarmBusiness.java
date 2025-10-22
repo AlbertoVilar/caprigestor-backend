@@ -7,6 +7,10 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
+import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.phone.model.entity.Phone;
+import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,14 +23,9 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
-import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.address.model.repository.AddressRepository;
-import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
-import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
-import com.devmaster.goatfarm.phone.dao.PhoneDAO;
-import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
 import com.devmaster.goatfarm.farm.converters.GoatFarmConverter;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,9 +45,8 @@ public class GoatFarmBusiness {
     @Autowired private UserRepository userRepository;
     @Autowired private AddressBusiness addressBusiness;
     @Autowired private UserBusiness userBusiness;
-    @Autowired private UserDAO userDAO;
     @Autowired private PhoneRepository phoneRepository;
-    @Autowired private PhoneDAO phoneDAO;
+    @Autowired private PhoneBusiness phoneBusiness;
 
     // ✅ Criação completa (fazenda + proprietário + endereço + telefones)
     @Transactional
@@ -77,7 +75,7 @@ public class GoatFarmBusiness {
         }
 
         // Cria/recupera usuário e endereço
-        User user = userDAO.findOrCreateUser(userVO);
+        User user = userBusiness.findOrCreateUser(userVO);
         Address address = addressBusiness.findOrCreateAddressEntity(addressVO);
 
         // Constrói a entidade de fazenda
@@ -176,7 +174,7 @@ public class GoatFarmBusiness {
             throw new IllegalArgumentException("É obrigatório informar ao menos um telefone.");
         }
         for (PhoneRequestVO phoneVO : phoneVOs) {
-            phoneDAO.updatePhone(phoneVO.getId(), phoneVO);
+            phoneBusiness.updatePhone(phoneVO.getId(), phoneVO);
         }
 
         List<Long> phoneIds = phoneVOs.stream().map(PhoneRequestVO::getId).toList();
