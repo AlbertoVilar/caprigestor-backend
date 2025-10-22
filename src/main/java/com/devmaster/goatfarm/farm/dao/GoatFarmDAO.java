@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.farm.dao;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
-import com.devmaster.goatfarm.address.dao.AddressDAO;
+import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
@@ -55,7 +55,7 @@ public class GoatFarmDAO {
     private PhoneRepository phoneRepository;
 
     @Autowired
-    private AddressDAO addressDAO;
+    private AddressBusiness addressBusiness;
 
     @Autowired
     private PhoneDAO phoneDAO;
@@ -103,8 +103,8 @@ public class GoatFarmDAO {
         // 1. Usuário (pode ser existente ou novo)
         User user = userDAO.findOrCreateUser(userRequestVO);
 
-        // 2. Create new address using AddressDAO
-        Address address = addressDAO.findOrCreateAddress(addressRequestVO);
+        // 2. Endereço via AddressBusiness (find-or-create de entidade)
+        Address address = addressBusiness.findOrCreateAddressEntity(addressRequestVO);
 
         // 3. Create the farm and associate the address
         GoatFarm goatFarm = GoatFarmConverter.toEntity(farmRequestVO, user, address);
@@ -238,7 +238,7 @@ public class GoatFarmDAO {
         
         logger.debug("Atualizando endereço com ID: {}", farmVO.getAddressId());
         try {
-            addressDAO.updateAddress(farmVO.getAddressId(), addressVO);
+            addressBusiness.updateAddress(farmVO.getAddressId(), addressVO);
             logger.debug("Endereço atualizado com sucesso");
         } catch (Exception e) {
             logger.error("Erro ao atualizar endereço com ID {}: {}", farmVO.getAddressId(), e.getMessage());

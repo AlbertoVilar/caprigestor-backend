@@ -2,7 +2,9 @@ package com.devmaster.goatfarm.address.business;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.dao.AddressDAO;
+import com.devmaster.goatfarm.address.model.entity.Address;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -18,95 +21,104 @@ public class AddressBusiness {
     @Autowired
     private AddressDAO addressDAO;
 
+    @Autowired
+    private AddressMapper addressMapper;
+
     public AddressResponseVO createAddress(AddressRequestVO requestVO) {
-        // Validações de negócio
         Map<String, String> validationErrors = validateAddressData(requestVO);
-        
         if (!validationErrors.isEmpty()) {
-            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors.toString());
+            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
         }
-        
-        return addressDAO.createAddress(requestVO);
+        Address entity = addressMapper.toEntity(requestVO);
+        Address saved = addressDAO.createAddress(entity);
+        return addressMapper.toResponseVO(saved);
     }
 
     public AddressResponseVO updateAddress(Long id, AddressRequestVO requestVO) {
-        // Validações de negócio
         Map<String, String> validationErrors = validateAddressData(requestVO);
-        
         if (!validationErrors.isEmpty()) {
-            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors.toString());
+            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
         }
-        
-        return addressDAO.updateAddress(id, requestVO);
+        Address current = addressDAO.findAddressById(id);
+        addressMapper.toEntity(current, requestVO);
+        Address updated = addressDAO.updateAddress(id, current);
+        return addressMapper.toResponseVO(updated);
     }
 
     public AddressResponseVO findAddressById(Long id) {
-        return addressDAO.findAddressById(id);
+        Address entity = addressDAO.findAddressById(id);
+        return addressMapper.toResponseVO(entity);
     }
 
     public List<AddressResponseVO> findAllAddresses() {
-        return addressDAO.findAllAddresses();
+        return addressDAO.findAllAddresses().stream()
+                .map(addressMapper::toResponseVO)
+                .collect(Collectors.toList());
     }
 
     public String deleteAddress(Long id) {
         return addressDAO.deleteAddress(id);
     }
 
+    // Método utilitário para uso interno em outros módulos: retorna Entidade
+    public Address findOrCreateAddressEntity(AddressRequestVO requestVO) {
+        Map<String, String> validationErrors = validateAddressData(requestVO);
+        if (!validationErrors.isEmpty()) {
+            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
+        }
+        return addressDAO.searchExactAddress(
+                        requestVO.getStreet(),
+                        requestVO.getNeighborhood(),
+                        requestVO.getCity(),
+                        requestVO.getState(),
+                        requestVO.getZipCode()
+                )
+                .orElseGet(() -> addressDAO.createAddress(addressMapper.toEntity(requestVO)));
+    }
+
     private Map<String, String> validateAddressData(AddressRequestVO requestVO) {
         Map<String, String> validationErrors = new HashMap<>();
-        
-        // Validar CEP brasileiro mais rigorosamente
         if (requestVO.getZipCode() != null) {
             String cep = requestVO.getZipCode().replaceAll("[^0-9]", "");
             if (!cep.matches("^\\d{8}$")) {
                 validationErrors.put("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
             }
         }
-        
-        // Validar estado brasileiro (siglas ou nomes completos válidos)
         if (requestVO.getState() != null) {
             if (!isValidBrazilianState(requestVO.getState())) {
                 validationErrors.put("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
             }
         }
-        
-        // Validar país (aceitar apenas Brasil por enquanto)
-        if (requestVO.getCountry() != null && 
-            !requestVO.getCountry().trim().equalsIgnoreCase("Brasil") && 
-            !requestVO.getCountry().trim().equalsIgnoreCase("Brazil")) {
+        if (requestVO.getCountry() != null &&
+                !requestVO.getCountry().trim().equalsIgnoreCase("Brasil") &&
+                !requestVO.getCountry().trim().equalsIgnoreCase("Brazil")) {
             validationErrors.put("country", "Por enquanto, apenas endereços do Brasil são aceitos");
         }
-        
         return validationErrors;
     }
 
     private boolean isValidBrazilianState(String state) {
-        String[] siglasValidas = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", 
-                                 "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", 
-                                 "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"};
-        String[] nomesValidos = {"Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará", 
-                                "Distrito Federal", "Espírito Santo", "Goiás", "Maranhão", 
-                                "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará", 
-                                "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro", 
-                                "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia", 
-                                "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"};
-        
+        String[] siglasValidas = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+                "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+                "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"};
+        String[] nomesValidos = {"Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará",
+                "Distrito Federal", "Espírito Santo", "Goiás", "Maranhão",
+                "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará",
+                "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro",
+                "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia",
+                "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"};
+
         String estadoInput = state.trim();
-        
-        // Verificar siglas
         for (String sigla : siglasValidas) {
             if (sigla.equalsIgnoreCase(estadoInput)) {
                 return true;
             }
         }
-        
-        // Se não encontrou pela sigla, verificar nomes completos
         for (String nome : nomesValidos) {
             if (nome.equalsIgnoreCase(estadoInput)) {
                 return true;
             }
         }
-        
         return false;
     }
 }

@@ -4,13 +4,11 @@ import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.facade.AddressFacade;
-import com.devmaster.goatfarm.address.facade.dto.AddressFacadeResponseDTO;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
+
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,9 +16,7 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -33,77 +29,29 @@ public class AddressController {
     @Autowired
     private AddressMapper addressMapper;
 
-    @Operation(summary = "Create a new address")
+    @Operation(summary = "Create a new address", description = "New address data")
 
     @PostMapping
     public ResponseEntity<?> createAddress(
-            @RequestBody(description = "New address data")
-            @org.springframework.web.bind.annotation.RequestBody @Valid AddressRequestDTO requestDTO) {
+            @RequestBody @Valid AddressRequestDTO requestDTO) {
 
-        try {
-            AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
-            AddressFacadeResponseDTO facadeDTO = addressFacade.createAddress(requestVO);
-            AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
-            return ResponseEntity.status(HttpStatus.CREATED).body(addressMapper.toDTO(responseVO));
-            
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Dados de endereço inválidos");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.DuplicateEntityException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Endereço já existe");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro interno do servidor");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro inesperado");
-            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+        AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
+        AddressResponseVO responseVO = addressFacade.createAddress(requestVO);
+        AddressResponseDTO responseDTO = addressMapper.toDTO(responseVO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
-    @Operation(summary = "Update an existing address")
+    @Operation(summary = "Update an existing address", description = "Updated address data")
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateAddress(
             @PathVariable("id") Long id,
-            @RequestBody(description = "Updated address data")
-            @org.springframework.web.bind.annotation.RequestBody @Valid AddressRequestDTO requestDTO) {
+            @RequestBody @Valid AddressRequestDTO requestDTO) {
 
-        try {
-            AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
-            AddressFacadeResponseDTO facadeDTO = addressFacade.updateAddress(id, requestVO);
-            AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
-            return ResponseEntity.ok(addressMapper.toDTO(responseVO));
-            
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Dados de endereço inválidos");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (ResourceNotFoundException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Endereço não encontrado");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro interno do servidor");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro inesperado");
-            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+        AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
+        AddressResponseVO responseVO = addressFacade.updateAddress(id, requestVO);
+        AddressResponseDTO responseDTO = addressMapper.toDTO(responseVO);
+        return ResponseEntity.ok(responseDTO);
     }
 
     @Operation(summary = "Find an address by ID")
@@ -112,8 +60,7 @@ public class AddressController {
     public AddressResponseDTO findAddressById(
             @Parameter(description = "ID of the address to be searched", example = "1") @PathVariable Long id) {
 
-        AddressFacadeResponseDTO facadeDTO = addressFacade.findAddressById(id);
-        AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
+        AddressResponseVO responseVO = addressFacade.findAddressById(id);
         return addressMapper.toDTO(responseVO);
     }
 
@@ -121,11 +68,9 @@ public class AddressController {
 
     @GetMapping
     public List<AddressResponseDTO> findAllAddresses() {
-        return addressFacade.findAllAddresses().stream()
-                .map(facadeDTO -> {
-                    AddressResponseVO responseVO = new AddressResponseVO(facadeDTO.getId(), facadeDTO.getStreet(), facadeDTO.getCity(), facadeDTO.getNeighborhood(), facadeDTO.getState(), facadeDTO.getZipCode(), facadeDTO.getCountry());
-                    return addressMapper.toDTO(responseVO);
-                })
+        return addressFacade.findAllAddresses()
+                .stream()
+                .map(addressMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
