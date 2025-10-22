@@ -49,8 +49,12 @@ Exemplos:
 # Windows (PowerShell)
 ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 
+# Test
+./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=test
+
 # Linux/Mac
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw spring-boot:run -Dspring-boot.run.profiles=test
 ```
 
 ## 5. Banco de dados
