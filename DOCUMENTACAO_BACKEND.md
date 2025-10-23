@@ -247,19 +247,20 @@ Cada entidade possui seu mapper específico seguindo o mesmo padrão:
 ### GoatFarmController (/api/goatfarms)
 
 #### GET /api/goatfarms
-**Descrição**: Lista fazendas (leitura pública)
+**Descrição**: Lista paginada de fazendas (leitura pública)
 **Permissões**: Público
-**DTO de Resposta**: `List<GoatFarmResponseDTO>`
+**DTO de Resposta**: `Page<GoatFarmFullResponseDTO>`
 
-#### GET /api/goatfarms/full
-**Descrição**: Lista fazendas com informações completas
+#### GET /api/goatfarms/name
+**Descrição**: Busca paginada por nome
 **Permissões**: Público
-**DTO de Resposta**: `List<GoatFarmFullResponseDTO>`
+**Parâmetros**: `name` (query), `page`, `size`
+**DTO de Resposta**: `Page<GoatFarmFullResponseDTO>`
 
 #### GET /api/goatfarms/{id}
 **Descrição**: Busca fazenda por ID
 **Permissões**: Público
-**DTO de Resposta**: `GoatFarmResponseDTO`
+**DTO de Resposta**: `GoatFarmFullResponseDTO`
 
 #### POST /api/goatfarms
 **Descrição**: Cria nova fazenda
@@ -280,9 +281,9 @@ Cada entidade possui seu mapper específico seguindo o mesmo padrão:
 ### GoatController (/api/goats)
 
 #### GET /api/goats
-**Descrição**: Lista animais (leitura pública)
+**Descrição**: Lista paginada de animais (leitura pública)
 **Permissões**: Público
-**DTO de Resposta**: `List<GoatResponseDTO>`
+**DTO de Resposta**: `Page<GoatResponseDTO>`
 
 #### GET /api/goats/{registrationNumber}
 **Descrição**: Busca animal por número de registro
@@ -325,7 +326,7 @@ O sistema utiliza **múltiplos filtros de segurança** com diferentes ordens:
 @Order(1)
 public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) {
     return http
-        .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/goatfarms/full")
+        .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -539,23 +540,23 @@ CREATE INDEX idx_event_goat_registration_number ON event(goat_registration_numbe
 
 #### Teste (H2)
 ```properties
-spring.datasource.url=jdbc:h2:mem:testdb
-spring.jpa.hibernate.ddl-auto=create-drop
-spring.sql.init.mode=always
-spring.flyway.enabled=false
+spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
 ```
 
 #### Desenvolvimento (PostgreSQL)
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/caprigestor_test
-spring.jpa.hibernate.ddl-auto=update
+spring.jpa.hibernate.ddl-auto=validate
 spring.flyway.enabled=true
 spring.flyway.baseline-on-migrate=true
 ```
 
 ### Dados de Teste (import.sql)
 
-O arquivo `import.sql` contém dados iniciais para desenvolvimento:
+Por padrão, o `import.sql` está desabilitado. Se necessário, habilite via `spring.sql.init.mode=always` e ajuste o perfil conforme o ambiente. O arquivo contém dados iniciais para desenvolvimento:
 - Roles padrão (ROLE_ADMIN, ROLE_OPERATOR)
 - Usuários de teste com senhas criptografadas
 - Fazendas de exemplo
