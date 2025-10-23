@@ -22,8 +22,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/goatfarms")
+@RequestMapping({"/api", "/api/goatfarms"})
 @Tag(name = "Goat API", description = "Gerenciamento de cabras na fazenda")
 public class GoatController {
 
@@ -39,7 +42,7 @@ public class GoatController {
     /**
      * Cadastra uma nova cabra no sistema.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping("/goats")
     @Operation(summary = "Cadastra uma nova cabra no sistema",
             description = "Cria um novo registro de cabra, associando-a a um usuário e fazenda existentes.")
@@ -54,8 +57,8 @@ public class GoatController {
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
 
         GoatRequestVO requestVO = goatMapper.toRequestVO(goatRequestDTO);
-        Long userId = goatRequestDTO.getUserId();
-        Long farmId = goatRequestDTO.getFarmId();
+        Long userId = goatRequestDTO.getUserId() != null ? goatRequestDTO.getUserId() : 0L;
+        Long farmId = goatRequestDTO.getFarmId() != null ? goatRequestDTO.getFarmId() : 0L;
         GoatResponseVO vo = goatFacade.createGoat(requestVO, userId, farmId);
         return ResponseEntity.status(HttpStatus.CREATED).body(goatMapper.toResponseDTO(vo));
     }
@@ -63,7 +66,7 @@ public class GoatController {
     /**
      * Atualiza os dados de uma cabra existente.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PutMapping("/goats/{registrationNumber}")
     @Operation(summary = "Atualiza os dados de uma cabra existente",
             description = "Modifica os dados de uma cabra específica pelo seu número de registro.")
@@ -87,7 +90,7 @@ public class GoatController {
     /**
      * Remove uma cabra pelo número de registro.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @DeleteMapping("/goats/{registrationNumber}")
     @Operation(summary = "Remove uma cabra do sistema",
             description = "Exclui uma cabra do sistema pelo seu número de registro.")
@@ -114,30 +117,37 @@ public class GoatController {
      */
     @GetMapping("/goats")
     @Operation(summary = "Busca paginada de todas as cabras")
-    public ResponseEntity<Page<GoatResponseDTO>> findAllGoats(@PageableDefault(size = 12) Pageable pageable) {
+    public ResponseEntity<Map<String, Object>> findAllGoats(@PageableDefault(size = 12) Pageable pageable) {
         Page<GoatResponseVO> page = goatFacade.findAllGoats(pageable);
-        return ResponseEntity.ok(page.map(goatMapper::toResponseDTO));
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", page.map(goatMapper::toResponseDTO).getContent());
+        body.put("totalElements", page.getTotalElements());
+        return ResponseEntity.ok(body);
     }
 
     /**
      * Busca paginada por cabras usando parte do nome.
      */
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @GetMapping("/goats/name")
     @Operation(summary = "Busca paginada por cabras usando parte do nome")
-    public ResponseEntity<Page<GoatResponseDTO>> searchGoatByName(
+    public ResponseEntity<Map<String, Object>> searchGoatByName(
             @Parameter(description = "Nome ou parte do nome da cabra", example = "NAIDE")
             @RequestParam(defaultValue = "") String name,
             @PageableDefault(size = 12) Pageable pageable) {
         Page<GoatResponseVO> page = goatFacade.searchGoatByName(name, pageable);
-        return ResponseEntity.ok(page.map(goatMapper::toResponseDTO));
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", page.map(goatMapper::toResponseDTO).getContent());
+        body.put("totalElements", page.getTotalElements());
+        return ResponseEntity.ok(body);
     }
 
     /**
      * Lista cabras de uma fazenda com filtros opcionais.
      */
-    @GetMapping("/{farmId}/goats")
+    @GetMapping({"/{farmId}/goats", "/goats/farm/{farmId}"})
     @Operation(summary = "Busca cabras por fazenda e filtros opcionais")
-    public ResponseEntity<Page<GoatResponseDTO>> findGoatsByFarmId(
+    public ResponseEntity<Map<String, Object>> findGoatsByFarmId(
             @Parameter(description = "ID do capril", example = "1", required = true)
             @PathVariable Long farmId,
             @Parameter(description = "Número de registro da cabra")
@@ -151,13 +161,16 @@ public class GoatController {
         } else {
             page = goatFacade.findGoatsByFarmIdAndRegistrationNumber(farmId, registrationNumber, pageable);
         }
-        return ResponseEntity.ok(page.map(goatMapper::toResponseDTO));
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", page.map(goatMapper::toResponseDTO).getContent());
+        body.put("totalElements", page.getTotalElements());
+        return ResponseEntity.ok(body);
     }
 
     /**
      * Busca uma cabra pelo seu número de registro.
      */
-    @GetMapping("/goats/registration/{registrationNumber}")
+    @GetMapping({"/goats/registration/{registrationNumber}", "/goats/{registrationNumber}"})
     @Operation(summary = "Busca uma cabra pelo número de registro")
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(@PathVariable String registrationNumber) {
         GoatResponseVO goatVO = goatFacade.findGoatByRegistrationNumber(registrationNumber);
