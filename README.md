@@ -60,8 +60,9 @@ Exemplos:
 ## 5. Banco de dados
 
 - Migrações: `src/main/resources/db/migration` (controladas pelo Flyway).
-- Seed inicial: `import.sql` (carregado para dados básicos quando aplicável).
-- Banco padrão: PostgreSQL. Configure credenciais e URL no `application-<profile>.properties`.
+- Seed inicial: `import.sql` (desabilitado por padrão; habilite `spring.sql.init.mode=always` se necessário).
+- Perfis: `test` usa H2 em memória com `MODE=PostgreSQL`, `ddl-auto=validate` e `Flyway` habilitado; `dev` usa PostgreSQL com `ddl-auto=validate` e `Flyway` habilitado.
+- Banco padrão (dev): PostgreSQL. Configure credenciais e URL no `application-dev.properties`.
 
 As migrações versionadas (ex.: `V9__Create_Event_Table.sql`) garantem a evolução consistente do schema.
 
