@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.farm.dao;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
-import com.devmaster.goatfarm.farm.converters.GoatFarmConverter;
+import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import org.slf4j.Logger;
@@ -28,6 +28,9 @@ public class GoatFarmDAO {
     @Autowired
     private GoatFarmRepository goatFarmRepository;
 
+    @Autowired
+    private GoatFarmMapper goatFarmMapper;
+
     @Transactional
     public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmRequestVO,
                                                      com.devmaster.goatfarm.authority.business.bo.UserRequestVO userRequestVO,
@@ -38,20 +41,21 @@ public class GoatFarmDAO {
 
     @Transactional(readOnly = true)
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        return GoatFarmConverter.toFullVO(goatFarmRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Fazenda não encontrada: " + id)));
+        GoatFarm farm = goatFarmRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Fazenda não encontrada: " + id));
+        return goatFarmMapper.toFullResponseVO(farm);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
         Page<GoatFarm> resultGoatFarms = goatFarmRepository.searchGoatFarmByName(name, pageable);
-        return resultGoatFarms.map(GoatFarmConverter::toFullVO);
+        return resultGoatFarms.map(goatFarmMapper::toFullResponseVO);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
         Page<GoatFarm> farms = goatFarmRepository.findAll(pageable);
-        return farms.map(GoatFarmConverter::toFullVO);
+        return farms.map(goatFarmMapper::toFullResponseVO);
     }
 
     // Deleção de fazenda por ID

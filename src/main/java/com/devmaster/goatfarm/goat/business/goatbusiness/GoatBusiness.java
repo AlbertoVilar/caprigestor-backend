@@ -54,6 +54,14 @@ public class GoatBusiness {
         Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
 
         Goat goat = goatMapper.toEntity(requestVO);
+        // Set usuário responsável pelo cadastro (usuario_id NOT NULL)
+        Long reqUserId = requestVO.getUserId();
+        if (reqUserId == null) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException("É obrigatório informar o usuário (userId) para cadastrar a cabra.");
+        }
+        User user = userRepository.findById(reqUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado com ID: " + reqUserId));
+        goat.setUser(user);
         if (farm != null) goat.setFarm(farm);
         if (father != null) goat.setFather(father);
         if (mother != null) goat.setMother(mother);
@@ -79,17 +87,20 @@ public class GoatBusiness {
         return goatDAO.updateGoat(registrationNumber, requestVO, farm, father, mother);
     }
 
+    @Transactional(readOnly = true)
     public GoatResponseVO findGoatByRegistrationNumber(String registrationNumber) {
         Goat goat = goatRepository.findByRegistrationNumber(registrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
         return goatMapper.toResponseVO(goat);
     }
 
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> searchGoatByNameAndFarmId(String goatName, Long farmId, Pageable pageable) {
         Page<Goat> goats = goatDAO.searchGoatByNameAndFarmId(goatName, farmId, pageable);
         return goats.map(goatMapper::toResponseVO);
     }
 
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> findByFarmIdAndOptionalRegistrationNumber(Long farmId, String registrationNumber, Pageable pageable) {
         Page<Goat> goats = goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
         return goats.map(goatMapper::toResponseVO);
@@ -101,21 +112,25 @@ public class GoatBusiness {
         goatDAO.deleteGoat(registrationNumber);
     }
 
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
         Page<Goat> goats = goatRepository.findAll(pageable);
         return goats.map(goatMapper::toResponseVO);
     }
 
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
         Page<Goat> goats = goatRepository.searchGoatByName(name, pageable);
         return goats.map(goatMapper::toResponseVO);
     }
 
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> findGoatsByNameAndFarmId(Long farmId, String name, Pageable pageable) {
         Page<Goat> goats = goatRepository.findByNameAndFarmId(farmId, name, pageable);
         return goats.map(goatMapper::toResponseVO);
     }
 
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId, String registrationNumber, Pageable pageable) {
         Page<Goat> goats = goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
         return goats.map(goatMapper::toResponseVO);

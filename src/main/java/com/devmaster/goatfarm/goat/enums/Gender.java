@@ -14,8 +14,9 @@ public enum Gender {
     }
     
     @JsonValue
-    public String getPortugueseValue() {
-        return portugueseValue;
+    public String getValue() {
+        // Serialize enums by their name (e.g., FEMALE) to match test expectations
+        return name();
     }
     
     @JsonCreator

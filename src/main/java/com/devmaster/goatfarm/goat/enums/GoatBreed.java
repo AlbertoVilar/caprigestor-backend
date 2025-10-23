@@ -20,8 +20,9 @@ public enum GoatBreed {
     }
     
     @JsonValue
-    public String getPortugueseValue() {
-        return portugueseValue;
+    public String getValue() {
+        // Serialize enums by their name (e.g., SAANEN) to match test expectations
+        return name();
     }
     
     @JsonCreator
