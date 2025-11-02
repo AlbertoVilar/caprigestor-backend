@@ -51,10 +51,11 @@ public class AuthController {
     private final GoatFarmMapper farmMapper;
     private final AddressMapper addressMapper;
     private final PhoneMapper phoneMapper;
+    private final jakarta.validation.Validator validator;
 
-    public AuthController(AuthBusiness authBusiness, UserFacade userFacade, GoatFarmFacade farmFacade, 
-                         PasswordEncoder passwordEncoder, UserMapper userMapper, GoatFarmMapper farmMapper, 
-                         AddressMapper addressMapper, PhoneMapper phoneMapper) {
+    public AuthController(AuthBusiness authBusiness, UserFacade userFacade, GoatFarmFacade farmFacade,
+                         PasswordEncoder passwordEncoder, UserMapper userMapper, GoatFarmMapper farmMapper,
+                         AddressMapper addressMapper, PhoneMapper phoneMapper, jakarta.validation.Validator validator) {
         this.authBusiness = authBusiness;
         this.userFacade = userFacade;
         this.farmFacade = farmFacade;
@@ -63,15 +64,32 @@ public class AuthController {
         this.farmMapper = farmMapper;
         this.addressMapper = addressMapper;
         this.phoneMapper = phoneMapper;
+        this.validator = validator;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequestDTO loginRequest) {
+        // Validação programática para garantir que $.errors seja retornado mesmo se @Valid não interceptar
+        java.util.Set<jakarta.validation.ConstraintViolation<LoginRequestDTO>> violations = validator.validate(loginRequest);
+        if (!violations.isEmpty()) {
+            java.util.List<java.util.Map<String, String>> errors = new java.util.ArrayList<>();
+            for (jakarta.validation.ConstraintViolation<LoginRequestDTO> v : violations) {
+                java.util.Map<String, String> item = new java.util.HashMap<>();
+                item.put("field", v.getPropertyPath().toString());
+                item.put("message", v.getMessage());
+                errors.add(item);
+            }
+            java.util.Map<String, Object> body = new java.util.HashMap<>();
+            body.put("errors", errors);
+            return ResponseEntity.badRequest().body(body);
+        }
         try {
             LoginResponseDTO response = authBusiness.authenticateUser(loginRequest);
             return ResponseEntity.ok(response);
         } catch (com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException e) {
-            throw e;
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 
@@ -83,15 +101,14 @@ public class AuthController {
                 "As senhas não coincidem");
         }
 
-        // Create user with default role FARM_OWNER
-        UserRequestVO userVO = UserRequestVO.builder()
-            .name(registerRequest.getName())
-            .email(registerRequest.getEmail())
-            .cpf(registerRequest.getCpf())
-            .password(registerRequest.getPassword()) // Será criptografada no DAO
-            .confirmPassword(registerRequest.getConfirmPassword())
-            .roles(List.of("ROLE_OPERATOR")) // Default role for new users
-            .build();
+        // Create user with default role OPERATOR
+        UserRequestVO userVO = new UserRequestVO();
+        userVO.setName(registerRequest.getName());
+        userVO.setEmail(registerRequest.getEmail());
+        userVO.setCpf(registerRequest.getCpf());
+        userVO.setPassword(registerRequest.getPassword()); // Será criptografada no DAO
+        userVO.setConfirmPassword(registerRequest.getConfirmPassword());
+        userVO.setRoles(List.of("ROLE_OPERATOR")); // Default role for new users
         
         var createdUser = userFacade.saveUser(userVO);
         UserResponseVO userVO_response = new UserResponseVO(createdUser.getId(), createdUser.getName(), createdUser.getEmail(), createdUser.getCpf(), createdUser.getRoles());
@@ -115,29 +132,24 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication.isAuthenticated()) {
-                String email = authentication.getName();
-                var userVO = userFacade.findByEmail(email);
-                
-                if (userVO == null) {
-                    throw new RuntimeException("Usuário não encontrado");
-                }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean authenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal());
 
-                UserResponseVO userResponseVO = new UserResponseVO(userVO.getId(), userVO.getName(), userVO.getEmail(), userVO.getCpf(), userVO.getRoles());
-                UserResponseDTO response = userMapper.toResponseDTO(userResponseVO);
-                return ResponseEntity.ok(response);
-            }
-
+        if (!authenticated) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "Erro ao obter usuário atual");
-            error.put("error", "USER_FETCH_ERROR");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
+
+        String email = authentication.getName();
+        var userVO = userFacade.findByEmail(email);
+        if (userVO == null) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário não encontrado: " + email);
+        }
+
+        UserResponseVO userResponseVO = new UserResponseVO(userVO.getId(), userVO.getName(), userVO.getEmail(), userVO.getCpf(), userVO.getRoles());
+        UserResponseDTO response = userMapper.toResponseDTO(userResponseVO);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register-farm")

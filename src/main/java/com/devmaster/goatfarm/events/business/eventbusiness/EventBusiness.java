@@ -3,15 +3,13 @@ package com.devmaster.goatfarm.events.business.eventbusiness;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
-import com.devmaster.goatfarm.events.converter.EventEntityConverter;
-import com.devmaster.goatfarm.events.dao.EventDAO;
+import com.devmaster.goatfarm.events.mapper.EventMapper;
+import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,14 +21,16 @@ import java.util.List;
 @Service
 public class EventBusiness {
 
-    private final EventDAO eventDao;
+    private final EventDao eventDao;
     private final GoatRepository goatRepository;
     private final OwnershipService ownershipService;
+    private final EventMapper eventMapper;
 
-    public EventBusiness(EventDAO eventDao, GoatRepository goatRepository, OwnershipService ownershipService) {
+    public EventBusiness(EventDao eventDao, GoatRepository goatRepository, OwnershipService ownershipService, EventMapper eventMapper) {
         this.eventDao = eventDao;
         this.goatRepository = goatRepository;
         this.ownershipService = ownershipService;
+        this.eventMapper = eventMapper;
     }
 
     /**
@@ -47,8 +47,10 @@ public class EventBusiness {
         // Verificar se o usuário logado é proprietário da fazenda da cabra
         verifyFarmOwnership(goat);
 
-        Event event = eventDao.saveEvent(EventEntityConverter.toEntity(requestVO, goat));
-        return EventEntityConverter.toResponseVO(event);
+        Event event = eventMapper.toEntity(requestVO);
+        event.setGoat(goat);
+        event = eventDao.saveEvent(event);
+        return eventMapper.toResponseVO(event);
     }
 
     /**
@@ -73,9 +75,9 @@ public class EventBusiness {
         // Verificar se o usuário logado é proprietário da fazenda da cabra
         verifyFarmOwnership(goat);
 
-        EventEntityConverter.toUpdateEvent(event, requestVO);
+        eventMapper.updateEvent(event, requestVO);
         Event updatedEvent = eventDao.saveEvent(event);
-        return EventEntityConverter.toResponseVO(updatedEvent);
+        return eventMapper.toResponseVO(updatedEvent);
     }
 
     /**
@@ -95,7 +97,7 @@ public class EventBusiness {
         if (events.isEmpty()) {
             throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com número de registro: " + goatNumRegistration);
         }
-        return events.stream().map(EventEntityConverter::toResponseVO).toList();
+        return events.stream().map(eventMapper::toResponseVO).toList();
     }
 
     /**
@@ -123,7 +125,7 @@ public class EventBusiness {
         if (page.isEmpty()) {
             throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com os filtros fornecidos.");
         }
-        return page.map(EventEntityConverter::toResponseVO);
+        return page.map(eventMapper::toResponseVO);
     }
 
     /**

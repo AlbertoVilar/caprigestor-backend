@@ -47,4 +47,11 @@ public class UserRequestVO {
     public List<String> getRoles() {
         return roles;
     }
+
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
+    public void setPassword(String password) { this.password = password; }
+    public void setConfirmPassword(String confirmPassword) { this.confirmPassword = confirmPassword; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 }

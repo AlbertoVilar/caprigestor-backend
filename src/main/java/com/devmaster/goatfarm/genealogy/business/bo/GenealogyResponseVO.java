@@ -158,4 +158,30 @@ public class GenealogyResponseVO {
     
     public String getMaternalGreatGrandmother2Registration() { return maternalGreatGrandmother2Registration; }
     public void setMaternalGreatGrandmother2Registration(String maternalGreatGrandmother2Registration) { this.maternalGreatGrandmother2Registration = maternalGreatGrandmother2Registration; }
+    
+    public String getBreeder() { return breeder; }
+    public void setBreeder(String breeder) { this.breeder = breeder; }
+    
+    public String getFarmOwner() { return farmOwner; }
+    public void setFarmOwner(String farmOwner) { this.farmOwner = farmOwner; }
+    
+    public String getBreed() { return breed; }
+    public void setBreed(String breed) { this.breed = breed; }
+    
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
+    
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+    
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    
+    public String getTod() { return tod; }
+    public void setTod(String tod) { this.tod = tod; }
+    public void setGoatName(String goatName) { this.goatName = goatName; }
+    public void setGoatRegistration(String goatRegistration) { this.goatRegistration = goatRegistration; }
 }

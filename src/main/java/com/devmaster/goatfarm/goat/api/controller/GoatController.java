@@ -42,7 +42,7 @@ public class GoatController {
     /**
      * Cadastra uma nova cabra no sistema.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping("/goats")
     @Operation(summary = "Cadastra uma nova cabra no sistema",
             description = "Cria um novo registro de cabra, associando-a a um usuário e fazenda existentes.")
@@ -66,7 +66,7 @@ public class GoatController {
     /**
      * Atualiza os dados de uma cabra existente.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/goats/{registrationNumber}")
     @Operation(summary = "Atualiza os dados de uma cabra existente",
             description = "Modifica os dados de uma cabra específica pelo seu número de registro.")
@@ -90,7 +90,7 @@ public class GoatController {
     /**
      * Remove uma cabra pelo número de registro.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @DeleteMapping("/goats/{registrationNumber}")
     @Operation(summary = "Remove uma cabra do sistema",
             description = "Exclui uma cabra do sistema pelo seu número de registro.")
@@ -128,7 +128,7 @@ public class GoatController {
     /**
      * Busca paginada por cabras usando parte do nome.
      */
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @GetMapping("/goats/name")
     @Operation(summary = "Busca paginada por cabras usando parte do nome")
     public ResponseEntity<Map<String, Object>> searchGoatByName(

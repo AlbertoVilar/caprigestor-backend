@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.authority.dao;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.conveter.UserEntityConverter;
+import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.repository.RoleRepository;
@@ -28,11 +28,13 @@ public class UserDAO {
     private final UserRepository repository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
     
-    public UserDAO(UserRepository repository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public UserDAO(UserRepository repository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, UserMapper userMapper) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
     protected User authenticated() {
@@ -48,7 +50,7 @@ public class UserDAO {
     @Transactional(readOnly = true)
     public UserResponseVO getMe() {
         User user = authenticated();
-        return UserEntityConverter.toVO(user);
+        return userMapper.toResponseVO(user);
     }
 
     @Transactional(readOnly = true)
@@ -73,13 +75,13 @@ public class UserDAO {
             return null;
         }
         
-        return UserEntityConverter.toVO(user);
+        return userMapper.toResponseVO(user);
     }
 
     @Transactional
     public UserResponseVO saveUser(UserRequestVO vo, String encryptedPassword, Set<Role> resolvedRoles) {
         // Operação CRUD mecânica: converter VO para entidade
-        User user = UserEntityConverter.fromVO(vo);
+        User user = userMapper.toEntity(vo);
         
         // Aplicar senha criptografada e roles resolvidas pelo Business
         user.setPassword(encryptedPassword);
@@ -88,7 +90,7 @@ public class UserDAO {
 
         try {
             User savedUser = repository.save(user);
-            return UserEntityConverter.toVO(savedUser);
+            return userMapper.toResponseVO(savedUser);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException(
                 "Erro ao salvar usuário: Violação de integridade dos dados", e);
@@ -101,7 +103,7 @@ public class UserDAO {
     public UserResponseVO findById(Long userId) {
         User user = repository.findById(userId)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
-        return UserEntityConverter.toVO(user);
+        return userMapper.toResponseVO(user);
     }
 
     @Transactional
@@ -113,6 +115,7 @@ public class UserDAO {
         // Atualizar dados básicos
         userToUpdate.setName(vo.getName());
         userToUpdate.setEmail(vo.getEmail());
+        userToUpdate.setCpf(vo.getCpf());
         
         // Atualizar senha se fornecida pelo Business
         if (encryptedPassword != null) {
@@ -126,7 +129,7 @@ public class UserDAO {
         }
 
         User updatedUser = repository.save(userToUpdate);
-        return UserEntityConverter.toVO(updatedUser);
+        return userMapper.toResponseVO(updatedUser);
     }
 
 }

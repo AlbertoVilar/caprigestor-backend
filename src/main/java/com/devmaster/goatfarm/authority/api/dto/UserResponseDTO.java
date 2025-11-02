@@ -42,4 +42,10 @@ public class UserResponseDTO {
     public List<String> getRoles() {
         return roles;
     }
+
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
 }

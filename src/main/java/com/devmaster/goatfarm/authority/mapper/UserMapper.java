@@ -25,6 +25,13 @@ public interface UserMapper {
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringList")
     UserResponseVO toResponseVO(User user);
 
+    // Novo: construir entidade a partir do VO de requisição (senha e roles serão tratados na Business/DAO)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "goatFarms", ignore = true)
+    User toEntity(UserRequestVO vo);
+
     @Named("rolesToStringList")
     default List<String> rolesToStringList(Set<Role> roles) {
         return roles == null ? null : roles.stream().map(Role::getAuthority).collect(Collectors.toList());

@@ -5,7 +5,6 @@ import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
-import com.devmaster.goatfarm.authority.conveter.UserDTOConverter;
 import com.devmaster.goatfarm.authority.facade.UserFacade;
 import com.devmaster.goatfarm.authority.facade.dto.UserFacadeResponseDTO;
 import com.devmaster.goatfarm.authority.dao.UserDAO;
@@ -44,7 +43,7 @@ public class UserController {
     public ResponseEntity<UserResponseDTO> getMe() {
         UserFacadeResponseDTO facadeDTO = userFacade.getMe();
         UserResponseVO vo = new UserResponseVO(facadeDTO.getId(), facadeDTO.getName(), facadeDTO.getEmail(), facadeDTO.getCpf(), facadeDTO.getRoles());
-        return ResponseEntity.ok(UserDTOConverter.toDTO(vo));
+        return ResponseEntity.ok(userMapper.toResponseDTO(vo));
     }
 
     @GetMapping("/{id}")
@@ -57,7 +56,7 @@ public class UserController {
             
             logger.info("Convertendo para DTO...");
             UserResponseVO vo = new UserResponseVO(facadeDTO.getId(), facadeDTO.getName(), facadeDTO.getEmail(), facadeDTO.getCpf(), facadeDTO.getRoles());
-            UserResponseDTO userDTO = UserDTOConverter.toDTO(vo);
+            UserResponseDTO userDTO = userMapper.toResponseDTO(vo);
             logger.info("DTO convertido com sucesso: {}", userDTO != null ? userDTO.getName() : "null");
             
             return ResponseEntity.ok(userDTO);
@@ -74,7 +73,7 @@ public class UserController {
             UserRequestVO requestVO = userMapper.toRequestVO(dto);
             UserFacadeResponseDTO facadeDTO = userFacade.saveUser(requestVO);
             UserResponseVO responseVO = new UserResponseVO(facadeDTO.getId(), facadeDTO.getName(), facadeDTO.getEmail(), facadeDTO.getCpf(), facadeDTO.getRoles());
-            return ResponseEntity.status(HttpStatus.CREATED).body(UserDTOConverter.toDTO(responseVO));
+            return ResponseEntity.status(HttpStatus.CREATED).body(userMapper.toResponseDTO(responseVO));
         } catch (IllegalArgumentException e) {
             Map<String, String> validationErrors = new HashMap<>();
             validationErrors.put("validation", e.getMessage());
@@ -92,7 +91,7 @@ public class UserController {
             UserRequestVO requestVO = userMapper.toRequestVO(dto);
             UserResponseVO responseVO = userBusiness.updateUser(id, requestVO);
             logger.info("Usuário atualizado com sucesso: {}", responseVO.getName());
-            return ResponseEntity.ok(UserDTOConverter.toDTO(responseVO));
+            return ResponseEntity.ok(userMapper.toResponseDTO(responseVO));
         } catch (IllegalArgumentException e) {
             Map<String, String> validationErrors = new HashMap<>();
             validationErrors.put("validation", e.getMessage());

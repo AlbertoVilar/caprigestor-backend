@@ -46,4 +46,6 @@ public class Event {
     @Column(name = "resultado")
     private String outcome;
 
+    public Goat getGoat() { return goat; }
+    public void setGoat(Goat goat) { this.goat = goat; }
 }

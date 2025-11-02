@@ -74,15 +74,14 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/goatfarms/full")
+            .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/goatfarms/full")
             .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().permitAll() // Permite tudo que corresponder ao securityMatcher
+                .anyRequest().permitAll()
             )
-            .csrf(csrf -> csrf.disable()) // Desabilita CSRF
-            .headers(headers -> headers.frameOptions().disable()) // Para H2 console
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)); // API é stateless
+            .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions().disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // A configuração de CORS não é necessária aqui se for aplicada globalmente no próximo filtro
         return http.build();
     }
 

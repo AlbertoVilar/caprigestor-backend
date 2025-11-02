@@ -71,21 +71,20 @@ public class AuthBusiness {
                 .map(Role::getAuthority)
                 .toList();
             
-            UserResponseDTO userResponse = new UserResponseDTO(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getCpf(),
-                roles
-            );
+            UserResponseDTO userResponse = new UserResponseDTO();
+            userResponse.setId(user.getId());
+            userResponse.setName(user.getName());
+            userResponse.setEmail(user.getEmail());
+            userResponse.setCpf(user.getCpf());
+            userResponse.setRoles(roles);
 
-            return LoginResponseDTO.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(3600L) // 1 hora
-                .user(userResponse)
-                .build();
+            LoginResponseDTO response = new LoginResponseDTO();
+            response.setAccessToken(accessToken);
+            response.setRefreshToken(refreshToken);
+            response.setTokenType("Bearer");
+            response.setExpiresIn(3600L); // 1 hora
+            response.setUser(userResponse);
+            return response;
 
         } catch (BadCredentialsException e) {
             logger.warn("🔍 LOGIN ERROR: Credenciais inválidas para: {}", loginRequest.getEmail());
@@ -144,13 +143,13 @@ public class AuthBusiness {
             String newRefreshToken = jwtService.generateRefreshToken(user);
             logger.info("🔄 REFRESH: Tokens renovados com sucesso para: {}", email);
 
-            return LoginResponseDTO.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .tokenType("Bearer")
-                .expiresIn(3600L)
-                .user(null) // Não retornamos dados do usuário no refresh
-                .build();
+            LoginResponseDTO response = new LoginResponseDTO();
+            response.setAccessToken(newAccessToken);
+            response.setRefreshToken(newRefreshToken);
+            response.setTokenType("Bearer");
+            response.setExpiresIn(3600L);
+            response.setUser(null); // Não retornamos dados do usuário no refresh
+            return response;
 
         } catch (Exception e) {
             logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
