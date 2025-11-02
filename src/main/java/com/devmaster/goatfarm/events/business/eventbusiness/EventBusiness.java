@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.converter.EventEntityConverter;
-import com.devmaster.goatfarm.events.dao.EventDao;
+import com.devmaster.goatfarm.events.dao.EventDAO;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
@@ -23,14 +23,15 @@ import java.util.List;
 @Service
 public class EventBusiness {
 
-    @Autowired
-    private EventDao eventDao;
-    
-    @Autowired
-    private GoatRepository goatRepository;
-    
-    @Autowired
-    private OwnershipService ownershipService;
+    private final EventDAO eventDao;
+    private final GoatRepository goatRepository;
+    private final OwnershipService ownershipService;
+
+    public EventBusiness(EventDAO eventDao, GoatRepository goatRepository, OwnershipService ownershipService) {
+        this.eventDao = eventDao;
+        this.goatRepository = goatRepository;
+        this.ownershipService = ownershipService;
+    }
 
     /**
      * Cria um novo evento para uma cabra.

@@ -174,4 +174,40 @@ public class UserBusiness {
         
         return tempUser.getRoles();
     }
+
+    @Transactional
+    public User findOrCreateUser(UserRequestVO vo) {
+        Optional<User> existingUser = userRepository.findByEmail(vo.getEmail());
+        if (existingUser.isPresent()) {
+            return existingUser.get();
+        }
+
+        User user = new User();
+        user.setName(vo.getName());
+        user.setEmail(vo.getEmail());
+        user.setCpf(vo.getCpf());
+
+        // Resolver roles
+        user.getRoles().clear();
+        if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
+            for (String roleName : vo.getRoles()) {
+                Optional<Role> optionalRole = roleRepository.findByAuthority(roleName);
+                if (optionalRole.isEmpty()) {
+                    throw new RuntimeException("Role não encontrada: " + roleName);
+                }
+                user.addRole(optionalRole.get());
+            }
+        } else {
+            Optional<Role> defaultRole = roleRepository.findByAuthority("ROLE_OPERATOR");
+            if (defaultRole.isEmpty()) {
+                throw new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema");
+            }
+            user.addRole(defaultRole.get());
+        }
+
+        // Criptografar senha
+        user.setPassword(passwordEncoder.encode(vo.getPassword()));
+
+        return userRepository.save(user);
+    }
 }

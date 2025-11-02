@@ -6,6 +6,8 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
@@ -23,7 +25,11 @@ public interface PhoneMapper {
      * Converte um VO de requisição para a Entidade JPA.
      * VO (Business) -> Entity (JPA)
      */
+    @Mapping(target = "id", ignore = true)
     Phone toEntity(PhoneRequestVO vo);
+
+    @Mapping(target = "id", ignore = true)
+    void toEntity(@MappingTarget Phone target, PhoneRequestVO vo);
 
 
     // --- FLUXO DE RESPOSTA (SAÍDA DE DADOS) ---

@@ -95,14 +95,21 @@ public class PhoneController {
     @Operation(summary = "Lista todos os telefones cadastrados")
 
     @GetMapping
-    public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
+    public ResponseEntity<?> getAllPhones() {
         List<PhoneFacadeResponseDTO> facadeDTOs = phoneFacade.findAllPhones();
-        return ResponseEntity.ok(facadeDTOs.stream()
+        if (facadeDTOs == null || facadeDTOs.isEmpty()) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("message", "Nenhum telefone cadastrado");
+            body.put("count", 0);
+            return ResponseEntity.ok(body);
+        }
+        List<PhoneResponseDTO> response = facadeDTOs.stream()
                 .map(facadeDTO -> {
                     PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
                     return phoneMapper.toResponseDTO(responseVO);
                 })
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Atualiza um telefone existente")

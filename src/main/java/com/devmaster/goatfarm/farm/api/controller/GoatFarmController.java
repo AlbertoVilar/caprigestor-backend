@@ -61,7 +61,6 @@ public class GoatFarmController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Fazenda já existe")
             })
-    @PreAuthorize("permitAll()")
     @PostMapping("/full")
     public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(
             @RequestBody(description = "Dados completos para criação da fazenda")

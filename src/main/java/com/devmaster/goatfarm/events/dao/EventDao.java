@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class EventDao {
+public class EventDAO {
 
     @Autowired
     private EventRepository eventRepository;

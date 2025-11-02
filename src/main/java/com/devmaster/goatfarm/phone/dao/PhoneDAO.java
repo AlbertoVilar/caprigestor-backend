@@ -3,10 +3,9 @@ package com.devmaster.goatfarm.phone.dao;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import com.devmaster.goatfarm.phone.converter.PhoneEntityConverter;
+import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,44 +23,27 @@ public class PhoneDAO {
     private PhoneRepository phoneRepository;
 
     @Autowired
-    private GoatFarmRepository farmRepository;
-
-    // ✅ Create or reuse a list of phones
-    public List<Phone> findOrCreatePhones(List<PhoneRequestVO> phoneVOList) {
-        return phoneVOList.stream()
-                .map(this::findOrCreatePhone)
-                .collect(Collectors.toList());
-    }
-
-    // ✅ Create or reuse a single phone
-    public Phone findOrCreatePhone(PhoneRequestVO phoneVO) {
-        return phoneRepository.findByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())
-                .orElseGet(() -> {
-                    Phone phone = new Phone();
-                    phone.setDdd(phoneVO.getDdd());
-                    phone.setNumber(phoneVO.getNumber());
-                    return phoneRepository.save(phone);
-                });
-    }
+    private PhoneMapper phoneMapper;
 
     @Transactional
     public PhoneResponseVO createPhone(PhoneRequestVO requestVO, GoatFarm capril) {
-        // Operação CRUD mecânica: converter VO para entidade e salvar
-        Phone phone = PhoneEntityConverter.toEntity(requestVO, capril);
+        Phone phone = phoneMapper.toEntity(requestVO);
+        if (capril != null) {
+            phone.setGoatFarm(capril);
+        }
         phone = phoneRepository.save(phone);
-        return PhoneEntityConverter.toVO(phone);
+        return phoneMapper.toResponseVO(phone);
     }
 
     @Transactional
     public PhoneResponseVO updatePhone(Long id, PhoneRequestVO requestVO) {
-        // Operação CRUD mecânica: buscar, atualizar e salvar
         Phone phoneToUpdate = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
 
-        PhoneEntityConverter.toUpdateEntity(phoneToUpdate, requestVO);
-        
+        phoneMapper.toEntity(phoneToUpdate, requestVO);
         try {
-            return PhoneEntityConverter.toVO(phoneRepository.save(phoneToUpdate));
+            Phone saved = phoneRepository.save(phoneToUpdate);
+            return phoneMapper.toResponseVO(saved);
         } catch (DataIntegrityViolationException e) {
             throw new DatabaseException("Erro ao atualizar o telefone com ID " + id + ": " + e.getMessage());
         }
@@ -71,20 +53,19 @@ public class PhoneDAO {
     public PhoneResponseVO findPhoneById(Long id) {
         Phone phone = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
-        return PhoneEntityConverter.toVO(phone);
+        return phoneMapper.toResponseVO(phone);
     }
 
     @Transactional(readOnly = true)
     public List<PhoneResponseVO> findAllPhones() {
         List<Phone> phones = phoneRepository.findAll();
         return phones.stream()
-                .map(PhoneEntityConverter::toVO)
+                .map(phoneMapper::toResponseVO)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public String deletePhone(Long id) {
-        // Operação CRUD mecânica: deletar por ID
         try {
             phoneRepository.deleteById(id);
             return "Telefone com ID " + id + " foi deletado com sucesso.";

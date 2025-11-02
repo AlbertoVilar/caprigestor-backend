@@ -31,7 +31,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.devmaster.goatfarm.goat.mapper.GoatMapperImpl;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+
 @WebMvcTest(GoatController.class)
+@Import(GoatMapperImpl.class)
 class GoatControllerTest {
 
     @Autowired
@@ -42,6 +47,9 @@ class GoatControllerTest {
 
     @MockBean
     private GoatFacade goatFacade;
+
+    @MockBean
+    private JpaMetamodelMappingContext jpaMappingContext;
 
     private GoatResponseDTO goatResponseDTO;
     private GoatResponseVO goatResponseVO;

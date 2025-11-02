@@ -44,7 +44,7 @@ public class GoatFacade {
         GoatFarm farm = goatFarmRepository.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
         ownershipService.verifyFarmOwnership(farm);
-        return goatBusiness.createGoat(requestVO, userId, farmId);
+        return goatBusiness.createGoat(requestVO);
     }
 
     /**

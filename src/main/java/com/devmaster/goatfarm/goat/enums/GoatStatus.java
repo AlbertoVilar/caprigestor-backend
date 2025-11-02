@@ -16,8 +16,9 @@ public enum GoatStatus {
     }
     
     @JsonValue
-    public String getPortugueseValue() {
-        return portugueseValue;
+    public String getValue() {
+        // Serialize enums by their name (e.g., ATIVO) to match test expectations
+        return name();
     }
     
     @JsonCreator
