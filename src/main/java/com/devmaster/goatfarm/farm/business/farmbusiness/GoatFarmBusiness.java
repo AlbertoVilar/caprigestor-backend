@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
+import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +28,7 @@ import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
-import com.devmaster.goatfarm.farm.converters.GoatFarmConverter;
+
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ public class GoatFarmBusiness {
     @Autowired private UserBusiness userBusiness;
     @Autowired private PhoneRepository phoneRepository;
     @Autowired private PhoneBusiness phoneBusiness;
+    @Autowired private GoatFarmMapper goatFarmMapper;
 
     // ✅ Criação completa (fazenda + proprietário + endereço + telefones)
     @Transactional
@@ -79,7 +81,8 @@ public class GoatFarmBusiness {
         Address address = addressBusiness.findOrCreateAddressEntity(addressVO);
 
         // Constrói a entidade de fazenda
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(farmVO, user, address);
+        GoatFarm goatFarm = goatFarmMapper.toEntity(farmVO);
+        goatFarm.setUser(user);
         goatFarm.setAddress(address);
 
         // Validação e construção dos telefones
@@ -102,7 +105,7 @@ public class GoatFarmBusiness {
 
         try {
             GoatFarm savedFarm = goatFarmRepository.save(goatFarm);
-            return GoatFarmConverter.toFullVO(savedFarm);
+            return goatFarmMapper.toFullResponseVO(savedFarm);
         } catch (DataIntegrityViolationException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Erro de integridade de dados ao salvar a fazenda: " + e.getMessage(), e);
         }
@@ -139,11 +142,13 @@ public class GoatFarmBusiness {
             }
         }
 
-        GoatFarm goatFarm = GoatFarmConverter.toEntity(requestVO, user, address);
+        GoatFarm goatFarm = goatFarmMapper.toEntity(requestVO);
+        goatFarm.setUser(user);
+        goatFarm.setAddress(address);
         goatFarm.setPhones(phones);
         try {
             goatFarm = goatFarmRepository.save(goatFarm);
-            return GoatFarmConverter.toVO(goatFarm);
+            return goatFarmMapper.toResponseVO(goatFarm);
         } catch (DataIntegrityViolationException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Ocorreu um erro ao salvar a fazenda: " + e.getMessage());
         }
@@ -194,10 +199,10 @@ public class GoatFarmBusiness {
             }
         }
 
-        GoatFarmConverter.entityUpdate(goatFarmToUpdate, farmVO);
+        goatFarmMapper.updateEntity(goatFarmToUpdate, farmVO);
         try {
             GoatFarm updatedFarm = goatFarmRepository.save(goatFarmToUpdate);
-            return GoatFarmConverter.toFullVO(updatedFarm);
+            return goatFarmMapper.toFullResponseVO(updatedFarm);
         } catch (DataIntegrityViolationException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Erro de integridade ao atualizar a fazenda: " + e.getMessage(), e);
         }

@@ -7,7 +7,7 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.farm.converters.GoatFarmDTOConverter;
+
 import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
@@ -92,7 +92,7 @@ public class GoatFarmController {
 
         try {
             GoatFarmResponseVO responseVO = farmFacade.createGoatFarm(farmMapper.toRequestVO(requestDTO));
-            return new ResponseEntity<>(GoatFarmDTOConverter.toDTO(responseVO), HttpStatus.CREATED);
+            return new ResponseEntity<>(farmMapper.toResponseDTO(responseVO), HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(e.getMessage());
         }

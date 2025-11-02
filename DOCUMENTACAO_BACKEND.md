@@ -497,9 +497,7 @@ CREATE TABLE goat (
 - Criação de roles (ROLE_ADMIN, ROLE_OPERATOR)
 - Associação de authorities às roles
 
-**V3__Convert_Farm_Owner_To_Operator.sql**
-- Migração de ROLE_FARM_OWNER para ROLE_OPERATOR
-- Atualização de associações existentes
+Observação: O sistema utiliza apenas `ROLE_ADMIN` e `ROLE_OPERATOR`. Permissões do proprietário da fazenda são tratadas por verificação de posse (Ownership) e não por um papel dedicado.
 
 **V4__Add_Unique_Constraint_Goat_Registration_Number.sql**
 ```sql

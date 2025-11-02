@@ -35,4 +35,10 @@ public class RegisterRequestDTO {
 
     @NotBlank(message = "Confirmação de senha é obrigatória")
     private String confirmPassword;
+
+    public String getCpf() { return cpf; }
+    public String getPassword() { return password; }
+    public String getConfirmPassword() { return confirmPassword; }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
 }

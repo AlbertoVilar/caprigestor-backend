@@ -21,4 +21,7 @@ public class LoginRequestDTO {
 
     @NotBlank(message = "Senha é obrigatória")
     private String password;
+
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
 }

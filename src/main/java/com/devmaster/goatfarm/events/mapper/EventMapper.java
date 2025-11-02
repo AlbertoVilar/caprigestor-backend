@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
 import java.util.List;
 
@@ -65,4 +66,10 @@ public interface EventMapper {
      * List<VO> -> List<DTO>
      */
     List<EventResponseDTO> toResponseDTOList(List<EventResponseVO> vos);
+
+    /**
+     * Atualiza a entidade Event com os dados do VO de requisição.
+     * Mantém associações existentes como Goat.
+     */
+    void updateEvent(@MappingTarget Event event, EventRequestVO vo);
 }

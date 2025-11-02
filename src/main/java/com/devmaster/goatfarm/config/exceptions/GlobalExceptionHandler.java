@@ -16,6 +16,8 @@ import org.springframework.http.ProblemDetail;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -23,8 +25,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleResourceNotFound(ResourceNotFoundException ex, WebRequest request) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
-        problem.setTitle("Recurso não encontrado");
+        problem.setTitle(ex.getMessage());
         problem.setDetail(ex.getMessage());
+        problem.setProperty("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
     }
 
@@ -37,16 +40,17 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+    public ResponseEntity<java.util.Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        java.util.List<java.util.Map<String, String>> errors = new java.util.ArrayList<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), error.getDefaultMessage());
+            java.util.Map<String, String> item = new java.util.HashMap<>();
+            item.put("field", error.getField());
+            item.put("message", error.getDefaultMessage());
+            errors.add(item);
         }
-        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problem.setTitle("Erro de validação");
-        problem.setDetail("Campos inválidos no payload");
-        problem.setProperty("errors", errors);
-        return ResponseEntity.badRequest().body(problem);
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("errors", errors);
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

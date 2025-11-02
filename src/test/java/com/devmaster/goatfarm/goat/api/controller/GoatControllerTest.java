@@ -86,7 +86,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldGetAllGoatsSuccessfully() throws Exception {
         // Arrange
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
@@ -109,7 +109,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldGetGoatByIdSuccessfully() throws Exception {
         // Arrange
         when(goatFacade.findGoatByRegistrationNumber("001")).thenReturn(goatResponseVO);
@@ -126,7 +126,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldReturnNotFoundWhenGoatDoesNotExist() throws Exception {
         // Arrange
         when(goatFacade.findGoatByRegistrationNumber("999")).thenThrow(new ResourceNotFoundException("Goat not found with id: 999"));
@@ -140,7 +140,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldCreateGoatSuccessfully() throws Exception {
         // Arrange
         GoatRequestDTO newGoatRequestDTO = new GoatRequestDTO();
@@ -179,7 +179,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldUpdateGoatSuccessfully() throws Exception {
         // Arrange
         GoatRequestDTO updateGoatRequestDTO = new GoatRequestDTO();
@@ -218,7 +218,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldDeleteGoatSuccessfully() throws Exception {
         // Arrange
         doNothing().when(goatFacade).deleteGoat("001");
@@ -232,7 +232,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldReturnNotFoundWhenDeletingNonExistentGoat() throws Exception {
         // Arrange
         doThrow(new ResourceNotFoundException("Goat not found with id: 999"))
@@ -267,7 +267,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldReturnBadRequestForInvalidGoatData() throws Exception {
         // Arrange
         GoatRequestDTO invalidGoatRequestDTO = new GoatRequestDTO();
@@ -284,7 +284,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "FARM_OWNER")
+@WithMockUser(roles = "OPERATOR")
     void shouldGetGoatsByFarmSuccessfully() throws Exception {
         // Arrange
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);

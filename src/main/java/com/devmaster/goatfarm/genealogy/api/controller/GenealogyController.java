@@ -38,7 +38,7 @@ public class GenealogyController {
     }
 
     @PostMapping("/{registrationNumber}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('FARM_OWNER') or hasRole('OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     public ResponseEntity<GenealogyResponseDTO> createGenealogy(@PathVariable String registrationNumber) {
         GenealogyFacadeResponseDTO facadeDTO = genealogyFacade.createGenealogy(registrationNumber);
         GenealogyResponseVO createdResponseVO = convertFacadeDTOToResponseVO(facadeDTO);
@@ -47,7 +47,7 @@ public class GenealogyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('FARM_OWNER') or hasRole('OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     public ResponseEntity<GenealogyResponseDTO> createGenealogyWithData(@RequestBody GenealogyRequestDTO requestDTO) {
         GenealogyFacadeResponseDTO facadeDTO = genealogyFacade.createGenealogyWithData(requestDTO);
         GenealogyResponseVO createdResponseVO = convertFacadeDTOToResponseVO(facadeDTO);

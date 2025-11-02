@@ -53,7 +53,7 @@ public class GoatEventController {
             @PathVariable String registrationNumber,
 
             @Parameter(description = "Tipo do evento", example = "SAUDE")
-            @RequestParam(required = false) EventType eventType,
+            @RequestParam(required = false) String eventType,
 
             @Parameter(description = "Data inicial", example = "2025-01-01")
             @RequestParam(required = false) LocalDate startDate,
@@ -63,8 +63,13 @@ public class GoatEventController {
 
             @Parameter(hidden = true) Pageable pageable
     ) {
+        EventType enumEventType = null;
+        if (eventType != null && !eventType.trim().isEmpty() && !"null".equalsIgnoreCase(eventType)) {
+            enumEventType = EventType.valueOf(eventType.trim().toUpperCase());
+        }
+
         Page<EventResponseVO> responseVOPage = eventFacade.findEventsByGoatWithFilters(
-                registrationNumber, eventType, startDate, endDate, pageable);
+                registrationNumber, enumEventType, startDate, endDate, pageable);
 
         return ResponseEntity.ok(responseVOPage.map(responseVO -> 
             eventMapper.responseDTO(responseVO)
