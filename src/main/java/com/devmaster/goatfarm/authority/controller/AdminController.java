@@ -1,66 +1,44 @@
 package com.devmaster.goatfarm.authority.controller;
 
 import com.devmaster.goatfarm.authority.business.AdminBusiness;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/admin/maintenance")
 public class AdminController {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
-    @Autowired
-    private AdminBusiness adminBusiness;
+    private final AdminBusiness adminBusiness;
+    private final AdminMaintenanceBusiness adminMaintenanceBusiness;
 
-
-
-    @PostMapping("/update-password")
-    public ResponseEntity<String> updatePassword(@RequestParam String email, @RequestParam String newPassword) {
-        try {
-            boolean updated = adminBusiness.updateUserPassword(email, newPassword);
-            if (!updated) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.ok("Senha atualizada com sucesso para " + email);
-        } catch (Exception e) {
-            logger.error("[ADMIN] Erro ao atualizar senha: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body("Erro: " + e.getMessage());
-        }
+    public AdminController(AdminBusiness adminBusiness, AdminMaintenanceBusiness adminMaintenanceBusiness) {
+        this.adminBusiness = adminBusiness;
+        this.adminMaintenanceBusiness = adminMaintenanceBusiness;
     }
 
-    @GetMapping("/user-info/{email}")
-    public ResponseEntity<String> getUserInfo(@PathVariable String email) {
-        try {
-            User user = adminBusiness.getUserByEmail(email);
-            if (user == null) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.ok("Email: " + user.getEmail() + ", Hash: " + user.getPassword());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Erro: " + e.getMessage());
-        }
+    // Dispara a rotina de limpeza mantendo apenas dados do admin informado
+    @PostMapping("/clean-admin")
+    public ResponseEntity<String> cleanDatabaseAndSetupAdmin(@RequestParam("adminId") Long adminId) {
+        logger.info("[AdminController] Iniciando limpeza de banco mantendo adminId={}", adminId);
+        adminMaintenanceBusiness.cleanDatabaseAndSetupAdmin(adminId);
+        logger.info("[AdminController] Limpeza concluída com sucesso para adminId={}", adminId);
+        return ResponseEntity.ok("Limpeza concluída para adminId=" + adminId);
     }
 
-    @PostMapping("/clean-users")
-    public ResponseEntity<String> cleanUsers() {
-        try {
-            boolean success = adminBusiness.cleanDatabaseAndSetupAdmin();
-            if (success) {
-                return ResponseEntity.ok("Banco limpo com sucesso! Mantido apenas albertovilar1@gmail.com com CPF 05202259450");
-            } else {
-                return ResponseEntity.internalServerError().body("Erro ao limpar banco de dados");
-            }
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            logger.error("[ADMIN] Erro ao limpar banco: {}", e.getMessage());
-            return ResponseEntity.internalServerError().body("Erro: " + e.getMessage());
-        }
+    // Dispara a rotina de limpeza automática usando o admin padrão (por email)
+    @PostMapping("/clean-admin-auto")
+    public ResponseEntity<String> cleanDatabaseAndSetupAdminAuto() {
+        logger.info("[AdminController] Iniciando limpeza automática do banco (admin por email)");
+        adminBusiness.cleanDatabaseAndSetupAdmin();
+        logger.info("[AdminController] Limpeza automática concluída com sucesso");
+        return ResponseEntity.ok("Limpeza automática concluída");
     }
 }

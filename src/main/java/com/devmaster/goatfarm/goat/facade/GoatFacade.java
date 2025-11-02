@@ -5,8 +5,8 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
 import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,14 +20,14 @@ public class GoatFacade {
 
     private final GoatBusiness goatBusiness;
     private final OwnershipService ownershipService;
-    private final GoatFarmRepository goatFarmRepository;
+    private final GoatFarmDAO goatFarmDAO;
     private final GoatMapper goatMapper;
 
     @Autowired
-    public GoatFacade(GoatBusiness goatBusiness, OwnershipService ownershipService, GoatFarmRepository goatFarmRepository, GoatMapper goatMapper) {
+    public GoatFacade(GoatBusiness goatBusiness, OwnershipService ownershipService, GoatFarmDAO goatFarmDAO, GoatMapper goatMapper) {
         this.goatBusiness = goatBusiness;
         this.ownershipService = ownershipService;
-        this.goatFarmRepository = goatFarmRepository;
+        this.goatFarmDAO = goatFarmDAO;
         this.goatMapper = goatMapper;
     }
 
@@ -41,8 +41,7 @@ public class GoatFacade {
      */
     @Transactional
     public GoatResponseVO createGoat(GoatRequestVO requestVO, Long userId, Long farmId) {
-        GoatFarm farm = goatFarmRepository.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
+        GoatFarm farm = goatFarmDAO.findFarmEntityById(farmId);
         ownershipService.verifyFarmOwnership(farm);
         return goatBusiness.createGoat(requestVO);
     }

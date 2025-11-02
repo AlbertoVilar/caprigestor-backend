@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
+import com.devmaster.goatfarm.authority.facade.dto.UserFacadeResponseDTO;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import org.mapstruct.Mapper;
@@ -18,6 +19,9 @@ import java.util.stream.Collectors;
 public interface UserMapper {
     // Conversão direta, pois ambos já são List<String>
     UserResponseDTO toResponseDTO(UserResponseVO vo);
+
+    // NOVO: Converte o DTO da Facade para o DTO da API
+    UserResponseDTO toResponseDTO(UserFacadeResponseDTO facadeDTO);
 
     UserRequestVO toRequestVO(UserRequestDTO dto);
 

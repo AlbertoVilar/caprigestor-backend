@@ -15,7 +15,6 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
-import com.devmaster.goatfarm.config.security.OwnershipService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -39,8 +38,6 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
-    @Autowired
-    private OwnershipService ownershipService;
 
     @Autowired
     private GoatFarmMapper farmMapper;

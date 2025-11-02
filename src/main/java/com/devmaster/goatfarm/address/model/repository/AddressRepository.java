@@ -2,26 +2,24 @@ package com.devmaster.goatfarm.address.model.repository;
 
 import com.devmaster.goatfarm.address.model.entity.Address;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
-@Repository
 public interface AddressRepository extends JpaRepository<Address, Long> {
 
-    @Query("SELECT a FROM Address a WHERE " +
-            "LOWER(a.street) = LOWER(:street) AND " +
-            "LOWER(a.neighborhood) = LOWER(:neighborhood) AND " +
-            "LOWER(a.city) = LOWER(:city) AND " +
-            "LOWER(a.state) = LOWER(:state) AND " +
-            "a.zipCode = :zipCode")
-    Optional<Address> searchExactAddress(
-            @Param("street") String street,
-            @Param("neighborhood") String neighborhood,
-            @Param("city") String city,
-            @Param("state") String state,
-            @Param("zipCode") String zipCode
-    );
+    @Query("SELECT a FROM Address a WHERE a.street = :street AND a.neighborhood = :neighborhood AND a.city = :city AND a.state = :state AND a.zipCode = :zipCode")
+    Optional<Address> searchExactAddress(@Param("street") String street,
+                                       @Param("neighborhood") String neighborhood,
+                                       @Param("city") String city,
+                                       @Param("state") String state,
+                                       @Param("zipCode") String zipCode);
+
+    @Modifying
+    @Transactional
+    @Query(nativeQuery = true, value = "DELETE FROM endereco WHERE id IN (SELECT c.address_id FROM capril c WHERE c.user_id != :adminId AND c.address_id IS NOT NULL)")
+    void deleteAddressesFromOtherUsers(@Param("adminId") Long adminId);
 }

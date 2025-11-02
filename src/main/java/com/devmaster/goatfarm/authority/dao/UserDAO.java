@@ -55,7 +55,6 @@ public class UserDAO {
 
     @Transactional(readOnly = true)
     public User findUserByUsername(String username) {
-        // Usar o método com @EntityGraph para carregar as roles
         User user = repository.findByEmail(username)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com email: " + username));
         
@@ -67,23 +66,30 @@ public class UserDAO {
     }
 
     @Transactional(readOnly = true)
+    public Optional<User> findUserByEmail(String email) {
+        return repository.findByEmail(email);
+    }
+
+    @Transactional(readOnly = true)
     public UserResponseVO findByEmail(String email) {
-        User user = repository.findByEmail(email)
-                .orElse(null);
-        
-        if (user == null) {
-            return null;
-        }
-        
-        return userMapper.toResponseVO(user);
+        Optional<User> userOptional = repository.findByEmail(email);
+        return userOptional.map(userMapper::toResponseVO).orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<User> findUserByCpf(String cpf) {
+        return repository.findByCpf(cpf);
+    }
+
+    @Transactional
+    public User save(User user) {
+        return repository.save(user);
     }
 
     @Transactional
     public UserResponseVO saveUser(UserRequestVO vo, String encryptedPassword, Set<Role> resolvedRoles) {
-        // Operação CRUD mecânica: converter VO para entidade
         User user = userMapper.toEntity(vo);
         
-        // Aplicar senha criptografada e roles resolvidas pelo Business
         user.setPassword(encryptedPassword);
         user.getRoles().clear();
         user.getRoles().addAll(resolvedRoles);
@@ -97,7 +103,11 @@ public class UserDAO {
         }
     }
 
-
+    @Transactional(readOnly = true)
+    public User findUserEntityById(Long userId) {
+        return repository.findById(userId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
+    }
 
     @Transactional(readOnly = true)
     public UserResponseVO findById(Long userId) {
@@ -108,21 +118,17 @@ public class UserDAO {
 
     @Transactional
     public UserResponseVO updateUser(Long userId, UserRequestVO vo, String encryptedPassword, Set<Role> resolvedRoles) {
-        // Operação CRUD mecânica: buscar usuário existente
         User userToUpdate = repository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário com ID " + userId + " não encontrado."));
 
-        // Atualizar dados básicos
         userToUpdate.setName(vo.getName());
         userToUpdate.setEmail(vo.getEmail());
         userToUpdate.setCpf(vo.getCpf());
         
-        // Atualizar senha se fornecida pelo Business
         if (encryptedPassword != null) {
             userToUpdate.setPassword(encryptedPassword);
         }
 
-        // Atualizar roles se fornecidas pelo Business
         if (resolvedRoles != null) {
             userToUpdate.getRoles().clear();
             userToUpdate.getRoles().addAll(resolvedRoles);
@@ -132,4 +138,13 @@ public class UserDAO {
         return userMapper.toResponseVO(updatedUser);
     }
 
+    @Transactional
+    public void deleteRolesFromOtherUsers(Long adminId) {
+        repository.deleteRolesFromOtherUsers(adminId);
+    }
+
+    @Transactional
+    public void deleteOtherUsers(Long adminId) {
+        repository.deleteOtherUsers(adminId);
+    }
 }

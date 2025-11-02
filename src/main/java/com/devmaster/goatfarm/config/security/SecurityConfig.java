@@ -56,10 +56,7 @@ public class SecurityConfig {
         this.jwtDebugFilter = jwtDebugFilter;
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    // PasswordEncoder movido para PasswordConfig para quebrar ciclo de dependência
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
