@@ -204,129 +204,259 @@ Campos retornados pelo endpoint de eventos (`EventResponseDTO`): `id`, `goatId`,
 
 ## 4. Contrato da API (Endpoints)
 
-### AuthController (/api/auth)
+### Para a Equipe Frontend:
 
-#### POST /api/auth/login
-**Descrição**: Autentica usuário e retorna tokens JWT
-**Permissões**: Público
-**DTO de Requisição**:
-```json
-{
-  "email": "usuario@email.com",
-  "password": "senha123"
-}
-```
-**DTO de Resposta**:
-```json
-{
-  "accessToken": "eyJhbGciOiJSUzI1NiJ9...",
-  "refreshToken": "eyJhbGciOiJSUzI1NiJ9...",
-  "tokenType": "Bearer",
-  "expiresIn": 86400,
-  "user": {
-    "id": 1,
-    "name": "Nome do Usuário",
-    "email": "usuario@email.com",
-    "roles": ["ROLE_ADMIN"]
-  }
-}
-```
+Este documento detalha as alterações nos endpoints da API após a refatoração arquitetural e o aninhamento de recursos sob o agregado `GoatFarm`. Por favor, revise cuidadosamente para atualizar suas chamadas de API.
 
-#### POST /api/auth/register-farm
-**Descrição**: Registra nova fazenda com usuário
-**Permissões**: Público
-**DTO de Requisição**: `GoatFarmFullRequestDTO`
-**DTO de Resposta**: `GoatFarmFullResponseDTO`
+**Princípio Geral:** Recursos que pertencem a uma fazenda (`GoatFarm`) agora são acessados através de URLs aninhadas, usando o `farmId` como contexto. Recursos que pertencem a uma cabra (`Goat`) são aninhados sob `GoatFarm` e `Goat`.
 
-### UserController (/api/users)
+---
 
-#### GET /api/users
-**Descrição**: Lista todos os usuários
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Resposta**: `List<UserResponseDTO>`
+#### **1. Módulo `Authority`**
 
-#### GET /api/users/{id}
-**Descrição**: Busca usuário por ID
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Resposta**: `UserResponseDTO`
+**1.1. `AuthController`**
+*   **Base URL:** `/api/auth`
+*   **Endpoints:**
+    *   `POST /api/auth/login`
+        *   **Descrição:** Autentica um usuário e retorna tokens JWT.
+        *   **Request Body:** `LoginRequestDTO` (email, password)
+        *   **Response:** `LoginResponseDTO` (accessToken, refreshToken, tokenType, expiresIn, user)
+    *   `POST /api/auth/register`
+        *   **Descrição:** Registra um novo usuário com a role padrão `ROLE_OPERATOR`.
+        *   **Request Body:** `RegisterRequestDTO` (name, email, cpf, password, confirmPassword)
+        *   **Response:** `UserResponseDTO`
+    *   `POST /api/auth/refresh`
+        *   **Descrição:** Renova o token de acesso usando um refresh token.
+        *   **Request Body:** `RefreshTokenRequestDTO` (refreshToken)
+        *   **Response:** `LoginResponseDTO` (newAccessToken, newRefreshToken, tokenType, expiresIn)
+    *   `GET /api/auth/me`
+        *   **Descrição:** Retorna os dados do usuário atualmente autenticado.
+        *   **Response:** `UserResponseDTO`
+    *   `POST /api/auth/register-farm`
+        *   **Descrição:** Registra uma nova fazenda junto com seu usuário proprietário.
+        *   **Request Body:** `GoatFarmFullRequestDTO` (contém dados da fazenda, usuário, endereço e telefones)
+        *   **Response:** `GoatFarmFullResponseDTO`
 
-#### POST /api/users
-**Descrição**: Cria novo usuário
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Requisição**: `UserRequestDTO`
-**DTO de Resposta**: `UserResponseDTO`
+**1.2. `UserController`**
+*   **Base URL:** `/api/users`
+*   **Endpoints:**
+    *   `GET /api/users/me`
+        *   **Descrição:** Retorna os dados do usuário atualmente autenticado.
+        *   **Response:** `UserResponseDTO`
+    *   `GET /api/users/{id}`
+        *   **Descrição:** Busca um usuário pelo ID.
+        *   **Path Variable:** `id` (Long)
+        *   **Response:** `UserResponseDTO`
+    *   `POST /api/users`
+        *   **Descrição:** Cria um novo usuário.
+        *   **Request Body:** `UserRequestDTO`
+        *   **Response:** `UserResponseDTO`
+    *   `PUT /api/users/{id}`
+        *   **Descrição:** Atualiza um usuário existente.
+        *   **Path Variable:** `id` (Long)
+        *   **Request Body:** `UserRequestDTO`
+        *   **Response:** `UserResponseDTO`
+    *   `GET /api/users/debug/{email}`
+        *   **Descrição:** Endpoint temporário para debug de roles de usuário.
+        *   **Path Variable:** `email` (String)
+        *   **Response:** `Map<String, Object>` (informações de debug)
 
-#### PUT /api/users/{id}
-**Descrição**: Atualiza usuário existente
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Requisição**: `UserRequestDTO`
-**DTO de Resposta**: `UserResponseDTO`
+**1.3. `AdminController`**
+*   **Base URL:** `/api/admin/maintenance`
+*   **Endpoints:**
+    *   `POST /api/admin/maintenance/clean-admin`
+        *   **Descrição:** Limpa o banco de dados, mantendo apenas o usuário administrador especificado.
+        *   **Query Parameter:** `adminId` (Long)
+        *   **Response:** `String` (mensagem de sucesso)
+    *   `POST /api/admin/maintenance/clean-admin-auto`
+        *   **Descrição:** Limpeza automática do banco de dados, configurando um admin padrão.
+        *   **Response:** `String` (mensagem de sucesso)
 
-#### DELETE /api/users/{id}
-**Descrição**: Remove usuário
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
+---
 
-### GoatFarmController (/api/goatfarms)
+#### **2. Módulo `Farm`**
 
-#### GET /api/goatfarms
-**Descrição**: Lista paginada de fazendas (leitura pública)
-**Permissões**: Público
-**DTO de Resposta**: `Page<GoatFarmFullResponseDTO>`
+**2.1. `GoatFarmController`**
+*   **Base URL:** `/api/goatfarms`
+*   **Endpoints:**
+    *   `POST /api/goatfarms/full`
+        *   **Descrição:** Cria uma fazenda completa (fazenda, usuário, endereço, telefones).
+        *   **Request Body:** `GoatFarmFullRequestDTO`
+        *   **Response:** `GoatFarmFullResponseDTO`
+    *   `POST /api/goatfarms`
+        *   **Descrição:** Cria uma nova fazenda.
+        *   **Request Body:** `GoatFarmRequestDTO`
+        *   **Response:** `GoatFarmResponseDTO`
+    *   `PUT /api/goatfarms/{id}`
+        *   **Descrição:** Atualiza uma fazenda existente.
+        *   **Path Variable:** `id` (Long)
+        *   **Request Body:** `GoatFarmUpdateRequestDTO`
+        *   **Response:** `GoatFarmFullResponseDTO`
+    *   `GET /api/goatfarms/{id}`
+        *   **Descrição:** Busca uma fazenda pelo ID.
+        *   **Path Variable:** `id` (Long)
+        *   **Response:** `GoatFarmFullResponseDTO`
+    *   `GET /api/goatfarms/name`
+        *   **Descrição:** Busca fazendas por nome (paginado).
+        *   **Query Parameter:** `name` (String, opcional)
+        *   **Response:** `Page<GoatFarmFullResponseDTO>`
+    *   `GET /api/goatfarms`
+        *   **Descrição:** Lista todas as fazendas (paginado).
+        *   **Response:** `Page<GoatFarmFullResponseDTO>`
+    *   `DELETE /api/goatfarms/{id}`
+        *   **Descrição:** Remove uma fazenda pelo ID.
+        *   **Path Variable:** `id` (Long)
+        *   **Response:** `204 No Content`
 
-#### GET /api/goatfarms/name
-**Descrição**: Busca paginada por nome
-**Permissões**: Público
-**Parâmetros**: `name` (query), `page`, `size`
-**DTO de Resposta**: `Page<GoatFarmFullResponseDTO>`
+---
 
-#### GET /api/goatfarms/{id}
-**Descrição**: Busca fazenda por ID
-**Permissões**: Público
-**DTO de Resposta**: `GoatFarmFullResponseDTO`
+#### **3. Módulo `Address`**
 
-#### POST /api/goatfarms
-**Descrição**: Cria nova fazenda
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Requisição**: `GoatFarmRequestDTO`
-**DTO de Resposta**: `GoatFarmResponseDTO`
+**3.1. `AddressController`**
+*   **Base URL:** `/api/goatfarms/{farmId}/addresses`
+*   **Endpoints:**
+    *   `POST /api/goatfarms/{farmId}/addresses`
+        *   **Descrição:** Cria um novo endereço para uma fazenda específica.
+        *   **Path Variable:** `farmId` (Long)
+        *   **Request Body:** `AddressRequestDTO`
+        *   **Response:** `AddressResponseDTO`
+    *   `PUT /api/goatfarms/{farmId}/addresses/{addressId}`
+        *   **Descrição:** Atualiza um endereço existente de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `addressId` (Long)
+        *   **Request Body:** `AddressRequestDTO`
+        *   **Response:** `AddressResponseDTO`
+    *   `GET /api/goatfarms/{farmId}/addresses/{addressId}`
+        *   **Descrição:** Busca um endereço pelo ID dentro de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `addressId` (Long)
+        *   **Response:** `AddressResponseDTO`
+    *   `DELETE /api/goatfarms/{farmId}/addresses/{addressId}`
+        *   **Descrição:** Remove um endereço pelo ID de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `addressId` (Long)
+        *   **Response:** `String` (mensagem de sucesso)
+    *   `GET /api/goatfarms/{farmId}/addresses/all` (Note: `farmId` na URL não é usado para filtrar, lista todos os endereços do sistema. Considerar refatorar para `/api/addresses/all` se a intenção é global, ou filtrar por `farmId` se a intenção é específica da fazenda.)
+        *   **Descrição:** Lista todos os endereços registrados no sistema.
+        *   **Response:** `List<AddressResponseDTO>`
 
-#### PUT /api/goatfarms/{id}
-**Descrição**: Atualiza fazenda completa
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Requisição**: `GoatFarmFullRequestDTO`
-**DTO de Resposta**: `GoatFarmFullResponseDTO`
+---
 
-#### DELETE /api/goatfarms/{id}
-**Descrição**: Remove fazenda
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
+#### **4. Módulo `Phone`**
 
-### GoatController (/api/goats)
+**4.1. `PhoneController`**
+*   **Base URL:** `/api/goatfarms/{farmId}/phones`
+*   **Endpoints:**
+    *   `POST /api/goatfarms/{farmId}/phones`
+        *   **Descrição:** Cadastra um novo telefone para uma fazenda específica.
+        *   **Path Variable:** `farmId` (Long)
+        *   **Request Body:** `PhoneRequestDTO`
+        *   **Response:** `PhoneResponseDTO`
+    *   `GET /api/goatfarms/{farmId}/phones/{phoneId}`
+        *   **Descrição:** Busca um telefone pelo ID dentro de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `phoneId` (Long)
+        *   **Response:** `PhoneResponseDTO`
+    *   `GET /api/goatfarms/{farmId}/phones`
+        *   **Descrição:** Lista todos os telefones de uma fazenda específica.
+        *   **Path Variable:** `farmId` (Long)
+        *   **Response:** `List<PhoneResponseDTO>`
+    *   `PUT /api/goatfarms/{farmId}/phones/{phoneId}`
+        *   **Descrição:** Atualiza um telefone existente em uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `phoneId` (Long)
+        *   **Request Body:** `PhoneRequestDTO`
+        *   **Response:** `PhoneResponseDTO`
+    *   `DELETE /api/goatfarms/{farmId}/phones/{phoneId}`
+        *   **Descrição:** Remove um telefone existente de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `phoneId` (Long)
+        *   **Response:** `204 No Content`
 
-#### GET /api/goats
-**Descrição**: Lista paginada de animais (leitura pública)
-**Permissões**: Público
-**DTO de Resposta**: `Page<GoatResponseDTO>`
+---
 
-#### GET /api/goats/{registrationNumber}
-**Descrição**: Busca animal por número de registro
-**Permissões**: Público
-**DTO de Resposta**: `GoatResponseDTO`
+#### **5. Módulo `Goat`**
 
-#### POST /api/goats
-**Descrição**: Cadastra novo animal
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Requisição**: `GoatRequestDTO`
-**DTO de Resposta**: `GoatResponseDTO`
+**5.1. `GoatController`**
+*   **Base URL:** `/api/goatfarms/{farmId}/goats`
+*   **Endpoints:**
+    *   `POST /api/goatfarms/{farmId}/goats`
+        *   **Descrição:** Cadastra uma nova cabra em uma fazenda específica.
+        *   **Path Variable:** `farmId` (Long)
+        *   **Request Body:** `GoatRequestDTO`
+        *   **Response:** `GoatResponseDTO`
+    *   `PUT /api/goatfarms/{farmId}/goats/{goatId}`
+        *   **Descrição:** Atualiza os dados de uma cabra existente em uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Request Body:** `GoatRequestDTO`
+        *   **Response:** `GoatResponseDTO`
+    *   `DELETE /api/goatfarms/{farmId}/goats/{goatId}`
+        *   **Descrição:** Remove uma cabra de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Response:** `204 No Content`
+    *   `GET /api/goatfarms/{farmId}/goats/{goatId}`
+        *   **Descrição:** Busca uma cabra pelo ID dentro de uma fazenda específica.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Response:** `GoatResponseDTO`
+    *   `GET /api/goatfarms/{farmId}/goats`
+        *   **Descrição:** Lista todas as cabras de uma fazenda específica (paginado).
+        *   **Path Variable:** `farmId` (Long)
+        *   **Response:** `Page<GoatResponseDTO>`
+    *   `GET /api/goatfarms/{farmId}/goats/search`
+        *   **Descrição:** Busca cabras por nome dentro de uma fazenda específica (paginado).
+        *   **Path Variable:** `farmId` (Long)
+        *   **Query Parameter:** `name` (String)
+        *   **Response:** `Page<GoatResponseDTO>`
 
-#### PUT /api/goats/{registrationNumber}
-**Descrição**: Atualiza animal existente
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
-**DTO de Requisição**: `GoatRequestDTO`
-**DTO de Resposta**: `GoatResponseDTO`
+---
 
-#### DELETE /api/goats/{registrationNumber}
-**Descrição**: Remove animal
-**Permissões**: `@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_OPERATOR')")`
+#### **6. Módulo `Event`**
+
+**6.1. `EventController`**
+*   **Base URL:** `/api/goatfarms/{farmId}/goats/{goatId}/events`
+*   **Endpoints:**
+    *   `POST /api/goatfarms/{farmId}/goats/{goatId}/events`
+        *   **Descrição:** Cria um novo evento para uma cabra específica em uma fazenda.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Request Body:** `EventRequestDTO`
+        *   **Response:** `EventResponseDTO`
+    *   `PUT /api/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+        *   **Descrição:** Atualiza um evento existente de uma cabra em uma fazenda.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String), `eventId` (Long)
+        *   **Request Body:** `EventRequestDTO`
+        *   **Response:** `EventResponseDTO`
+    *   `GET /api/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+        *   **Descrição:** Busca um evento pelo ID de uma cabra em uma fazenda.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String), `eventId` (Long)
+        *   **Response:** `EventResponseDTO`
+    *   `GET /api/goatfarms/{farmId}/goats/{goatId}/events`
+        *   **Descrição:** Lista todos os eventos de uma cabra em uma fazenda (paginado).
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Response:** `Page<EventResponseDTO>`
+    *   `GET /api/goatfarms/{farmId}/goats/{goatId}/events/filter`
+        *   **Descrição:** Busca eventos de uma cabra com filtros opcionais em uma fazenda.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Query Parameters:** `eventType` (EventType, opcional), `startDate` (LocalDate, opcional), `endDate` (LocalDate, opcional)
+        *   **Response:** `Page<EventResponseDTO>`
+    *   `DELETE /api/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+        *   **Descrição:** Remove um evento de uma cabra em uma fazenda.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String), `eventId` (Long)
+        *   **Response:** `204 No Content`
+
+---
+
+#### **7. Módulo `Genealogy`**
+
+**7.1. `GenealogyController`**
+*   **Base URL:** `/api/goatfarms/{farmId}/goats/{goatId}/genealogies`
+*   **Endpoints:**
+    *   `GET /api/goatfarms/{farmId}/goats/{goatId}/genealogies`
+        *   **Descrição:** Busca a genealogia de uma cabra específica em uma fazenda.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Response:** `GenealogyResponseDTO`
+    *   `POST /api/goatfarms/{farmId}/goats/{goatId}/genealogies`
+        *   **Descrição:** Cria a genealogia para uma cabra específica em uma fazenda (gerada automaticamente a partir dos dados da cabra).
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Response:** `GenealogyResponseDTO`
+    *   `POST /api/goatfarms/{farmId}/goats/{goatId}/genealogies/with-data`
+        *   **Descrição:** Cria a genealogia para uma cabra específica em uma fazenda, fornecendo dados detalhados.
+        *   **Path Variables:** `farmId` (Long), `goatId` (String)
+        *   **Request Body:** `GenealogyRequestDTO`
+        *   **Response:** `GenealogyResponseDTO`
 
 ## 5. Segurança
 
@@ -512,7 +642,7 @@ CREATE TABLE goat (
 
 **V1__Create_Security_Tables.sql**
 - Criação das tabelas de segurança (`authority`, `role`, `users`)
-- Tabelas de relacionamento (`tb_role_authority`, `tb_user_role`)
+- Tabelas de relacionamento (`tb_user_role`, `tb_role_authority`)
 
 **V2__Insert_Default_Authorities_And_Roles.sql**
 - Inserção de authorities padrão
