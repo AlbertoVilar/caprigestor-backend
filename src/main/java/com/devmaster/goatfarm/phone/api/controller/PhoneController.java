@@ -14,40 +14,47 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/phones")
+@RequestMapping("/api/goatfarms/{farmId}/phones")
 public class PhoneController {
 
     @Autowired
     private PhoneFacade phoneFacade;
 
-    @Operation(summary = "Cadastra um novo telefone")
+    @Operation(summary = "Cadastra um novo telefone para uma fazenda")
     @PostMapping
-    public ResponseEntity<PhoneResponseDTO> createPhone(@RequestBody @Valid PhoneRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(phoneFacade.createPhone(requestDTO));
+    public ResponseEntity<PhoneResponseDTO> createPhone(@PathVariable Long farmId, @RequestBody @Valid PhoneRequestDTO requestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(phoneFacade.createPhone(farmId, requestDTO));
     }
 
-    @Operation(summary = "Busca um telefone pelo ID")
-    @GetMapping("/{id}")
-    public ResponseEntity<PhoneResponseDTO> getPhoneById(@Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long id) {
-        return ResponseEntity.ok(phoneFacade.findPhoneById(id));
+    @Operation(summary = "Busca um telefone pelo ID dentro de uma fazenda")
+    @GetMapping("/{phoneId}")
+    public ResponseEntity<PhoneResponseDTO> getPhoneById(
+            @PathVariable Long farmId,
+            @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long phoneId) {
+        return ResponseEntity.ok(phoneFacade.findPhoneById(farmId, phoneId));
     }
 
-    @Operation(summary = "Lista todos os telefones cadastrados")
+    @Operation(summary = "Lista todos os telefones de uma fazenda")
     @GetMapping
-    public ResponseEntity<List<PhoneResponseDTO>> getAllPhones() {
-        return ResponseEntity.ok(phoneFacade.findAllPhones());
+    public ResponseEntity<List<PhoneResponseDTO>> findAllPhonesByFarm(@PathVariable Long farmId) {
+        return ResponseEntity.ok(phoneFacade.findAllPhonesByFarm(farmId));
     }
 
-    @Operation(summary = "Atualiza um telefone existente")
-    @PutMapping("/{id}")
-    public ResponseEntity<PhoneResponseDTO> updatePhone(@Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long id, @RequestBody @Valid PhoneRequestDTO requestDTO) {
-        return ResponseEntity.ok(phoneFacade.updatePhone(id, requestDTO));
+    @Operation(summary = "Atualiza um telefone existente em uma fazenda")
+    @PutMapping("/{phoneId}")
+    public ResponseEntity<PhoneResponseDTO> updatePhone(
+            @PathVariable Long farmId,
+            @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long phoneId,
+            @RequestBody @Valid PhoneRequestDTO requestDTO) {
+        return ResponseEntity.ok(phoneFacade.updatePhone(farmId, phoneId, requestDTO));
     }
 
-    @Operation(summary = "Remove um telefone existente")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePhone(@Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long id) {
-        phoneFacade.deletePhone(id);
+    @Operation(summary = "Remove um telefone existente de uma fazenda")
+    @DeleteMapping("/{phoneId}")
+    public ResponseEntity<Void> deletePhone(
+            @PathVariable Long farmId,
+            @Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long phoneId) {
+        phoneFacade.deletePhone(farmId, phoneId);
         return ResponseEntity.noContent().build();
     }
 }

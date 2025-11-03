@@ -3,7 +3,6 @@ package com.devmaster.goatfarm.phone.facade;
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
-import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,28 +19,25 @@ public class PhoneFacade {
     @Autowired
     private PhoneMapper phoneMapper;
 
-    public PhoneResponseDTO createPhone(PhoneRequestDTO requestDTO) {
-        PhoneResponseVO responseVO = phoneBusiness.createPhone(phoneMapper.toRequestVO(requestDTO), requestDTO.getGoatFarmId());
-        return phoneMapper.toResponseDTO(responseVO);
+    public PhoneResponseDTO createPhone(Long farmId, PhoneRequestDTO requestDTO) {
+        return phoneMapper.toResponseDTO(phoneBusiness.createPhone(farmId, phoneMapper.toRequestVO(requestDTO)));
     }
 
-    public PhoneResponseDTO updatePhone(Long id, PhoneRequestDTO requestDTO) {
-        PhoneResponseVO responseVO = phoneBusiness.updatePhone(id, phoneMapper.toRequestVO(requestDTO));
-        return phoneMapper.toResponseDTO(responseVO);
+    public PhoneResponseDTO updatePhone(Long farmId, Long phoneId, PhoneRequestDTO requestDTO) {
+        return phoneMapper.toResponseDTO(phoneBusiness.updatePhone(farmId, phoneId, phoneMapper.toRequestVO(requestDTO)));
     }
 
-    public PhoneResponseDTO findPhoneById(Long id) {
-        PhoneResponseVO responseVO = phoneBusiness.findPhoneById(id);
-        return phoneMapper.toResponseDTO(responseVO);
+    public PhoneResponseDTO findPhoneById(Long farmId, Long phoneId) {
+        return phoneMapper.toResponseDTO(phoneBusiness.findPhoneById(farmId, phoneId));
     }
 
-    public List<PhoneResponseDTO> findAllPhones() {
-        return phoneBusiness.findAllPhones().stream()
+    public List<PhoneResponseDTO> findAllPhonesByFarm(Long farmId) {
+        return phoneBusiness.findAllPhonesByFarm(farmId).stream()
                 .map(phoneMapper::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public void deletePhone(Long id) {
-        phoneBusiness.deletePhone(id);
+    public void deletePhone(Long farmId, Long phoneId) {
+        phoneBusiness.deletePhone(farmId, phoneId);
     }
 }
