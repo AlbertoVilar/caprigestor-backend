@@ -1,13 +1,12 @@
 package com.devmaster.goatfarm.events.api.controller;
 
+import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.mapper.EventMapper;
 import com.devmaster.goatfarm.events.enuns.EventType;
-import com.devmaster.goatfarm.events.facade.EventFacade;
-import com.devmaster.goatfarm.events.facade.dto.EventFacadeResponseDTO;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -32,7 +31,7 @@ import java.util.List;
 public class GoatEventController {
 
     @Autowired
-    private EventFacade eventFacade;
+    private EventManagementUseCase eventManagementUseCase;
 
     @Autowired
     private EventMapper eventMapper;
@@ -68,7 +67,7 @@ public class GoatEventController {
             enumEventType = EventType.valueOf(eventType.trim().toUpperCase());
         }
 
-        Page<EventResponseVO> responseVOPage = eventFacade.findEventsByGoatWithFilters(
+        Page<EventResponseVO> responseVOPage = eventManagementUseCase.findEventsWithFilters(
                 registrationNumber, enumEventType, startDate, endDate, pageable);
 
         return ResponseEntity.ok(responseVOPage.map(responseVO -> 
@@ -98,8 +97,7 @@ public class GoatEventController {
             @RequestBody @Valid EventRequestDTO requestDTO
     ) {
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
-        EventFacadeResponseDTO facadeDTO = eventFacade.createEvent(requestVO, registrationNumber);
-        EventResponseVO responseVO = new EventResponseVO(facadeDTO.getId(), facadeDTO.getGoatRegistrationNumber(), facadeDTO.getGoatName(), facadeDTO.getEventType(), facadeDTO.getEventDate(), facadeDTO.getDescription(), null, null, null);
+        EventResponseVO responseVO = eventManagementUseCase.createEvent(requestVO, registrationNumber);
         EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
@@ -139,8 +137,7 @@ public class GoatEventController {
             throw new IllegalArgumentException("ID do evento deve ser um número válido: " + id);
         }
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
-        EventFacadeResponseDTO facadeDTO = eventFacade.updateEvent(eventId, requestVO, registrationNumber);
-        EventResponseVO responseVO = new EventResponseVO(facadeDTO.getId(), facadeDTO.getGoatRegistrationNumber(), facadeDTO.getGoatName(), facadeDTO.getEventType(), facadeDTO.getEventDate(), facadeDTO.getDescription(), null, null, null);
+        EventResponseVO responseVO = eventManagementUseCase.updateEvent(eventId, requestVO, registrationNumber);
         EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
 
         return ResponseEntity.ok(responseDTO);
@@ -173,7 +170,7 @@ public class GoatEventController {
             throw new IllegalArgumentException("ID do evento deve ser um número válido: " + id);
         }
         
-        eventFacade.deleteEventById(eventId);
+        eventManagementUseCase.deleteEvent(eventId);
         return ResponseEntity.noContent().build();
     }
 }
