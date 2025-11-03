@@ -43,7 +43,7 @@ public class GoatBusiness {
     public GoatResponseVO createGoat(GoatRequestVO requestVO) {
         if (requestVO.getRegistrationNumber() != null &&
                 goatDAO.existsById(requestVO.getRegistrationNumber())) {
-            throw new DuplicateEntityException("Número de registro já existe.");
+            throw new DuplicateEntityException("NÃºmero de registro jÃ¡ existe.");
         }
 
         GoatFarm farm = findGoatFarmById(requestVO.getFarmId());
@@ -53,7 +53,7 @@ public class GoatBusiness {
         Goat goat = goatMapper.toEntity(requestVO);
         Long reqUserId = requestVO.getUserId();
         if (reqUserId == null) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException("É obrigatório informar o usuário (userId) para cadastrar a cabra.");
+            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException("Ã‰ obrigatÃ³rio informar o usuÃ¡rio (userId) para cadastrar a cabra.");
         }
         User user = userBusiness.getEntityById(reqUserId);
         goat.setUser(user);
@@ -72,7 +72,7 @@ public class GoatBusiness {
     @Transactional
     public GoatResponseVO updateGoat(String registrationNumber, GoatRequestVO requestVO) {
         if (requestVO.getRegistrationNumber() != null && !registrationNumber.equalsIgnoreCase(requestVO.getRegistrationNumber())) {
-            throw new DuplicateEntityException("Número de registro do path difere do body.");
+            throw new DuplicateEntityException("NÃºmero de registro do path difere do body.");
         }
 
         GoatFarm farm = findGoatFarmById(requestVO.getFarmId());
@@ -85,7 +85,7 @@ public class GoatBusiness {
     @Transactional(readOnly = true)
     public GoatResponseVO findGoatByRegistrationNumber(String registrationNumber) {
         Goat goat = goatDAO.findByRegistrationNumber(registrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra nÃ£o encontrada."));
         return goatMapper.toResponseVO(goat);
     }
 
@@ -139,11 +139,10 @@ public class GoatBusiness {
         return goatDAO.findByRegistrationNumber(registrationNumber);
     }
 
-    // Porta de serviço para outros domínios obterem entidade da Cabra
-    @Transactional(readOnly = true)
+        @Transactional(readOnly = true)
     public Goat getEntityByRegistrationNumber(String registrationNumber) {
         return goatDAO.findByRegistrationNumber(registrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + registrationNumber));
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra nÃ£o encontrada: " + registrationNumber));
     }
 
     @Transactional
@@ -151,4 +150,5 @@ public class GoatBusiness {
         goatDAO.deleteGoatsFromOtherUsers(adminId);
     }
 }
+
 

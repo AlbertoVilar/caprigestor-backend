@@ -31,8 +31,7 @@ public class GoatResponseVO {
     private String motherName;
     private String motherRegistrationNumber;
 
-    private String userName;  // <-- Campo para o nome do usuário
-    private Long farmId;
+    private String userName;      private Long farmId;
 
     private String farmName;
 
@@ -63,8 +62,7 @@ public class GoatResponseVO {
         this.farmName = farmName;
     }
 
-    // Getters e setters manuais
-    public String getRegistrationNumber() { return registrationNumber; }
+        public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
     
     public String getName() { return name; }
@@ -116,3 +114,4 @@ public class GoatResponseVO {
     public void setFarmName(String farmName) { this.farmName = farmName; }
 
 }
+

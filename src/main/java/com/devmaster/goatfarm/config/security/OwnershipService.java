@@ -20,8 +20,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
- * Service para verificação de ownership (propriedade) de recursos.
- * Centraliza a lógica de verificação se um usuário tem permissão para acessar/modificar recursos.
+ * Service para verificaÃ§Ã£o de ownership (propriedade) de recursos.
+ * Centraliza a lÃ³gica de verificaÃ§Ã£o se um usuÃ¡rio tem permissÃ£o para acessar/modificar recursos.
  */
 @Service
 public class OwnershipService {
@@ -41,22 +41,22 @@ public class OwnershipService {
     private EventRepository eventRepository;
 
     /**
-     * Obtém o usuário atualmente autenticado
+     * ObtÃ©m o usuÃ¡rio atualmente autenticado
      * @return User autenticado
-     * @throws UnauthorizedException se não há usuário autenticado
+     * @throws UnauthorizedException se nÃ£o hÃ¡ usuÃ¡rio autenticado
      */
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String email = authentication.getName();
             return userRepository.findByEmail(email)
-                    .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
+                    .orElseThrow(() -> new UnauthorizedException("UsuÃ¡rio autenticado nÃ£o encontrado: " + email));
         }
-        throw new UnauthorizedException("Usuário não autenticado");
+        throw new UnauthorizedException("UsuÃ¡rio nÃ£o autenticado");
     }
 
     /**
-     * Obtém o usuário atualmente autenticado ou null se não estiver autenticado
+     * ObtÃ©m o usuÃ¡rio atualmente autenticado ou null se nÃ£o estiver autenticado
      * @return User autenticado ou null
      */
     public User getCurrentUserOrNull() {
@@ -68,8 +68,8 @@ public class OwnershipService {
     }
 
     /**
-     * Verifica se o usuário atual é ADMIN
-     * @return true se for ADMIN, false caso contrário
+     * Verifica se o usuÃ¡rio atual Ã© ADMIN
+     * @return true se for ADMIN, false caso contrÃ¡rio
      */
     public boolean isCurrentUserAdmin() {
         try {
@@ -82,16 +82,16 @@ public class OwnershipService {
     }
 
     /**
-     * Verifica se o usuário atual é ADMIN ou OPERATOR
-     * @return true se for ADMIN ou OPERATOR, false caso contrário
+     * Verifica se o usuÃ¡rio atual Ã© ADMIN ou OPERATOR
+     * @return true se for ADMIN ou OPERATOR, false caso contrÃ¡rio
      */
     public boolean isCurrentUserAdminOrOperator() {
         return isCurrentUserAdmin() || isCurrentUserOperator();
     }
 
     /**
-     * Verifica se o usuário atual é OPERATOR (dono de fazenda)
-     * @return true se for OPERATOR, false caso contrário
+     * Verifica se o usuÃ¡rio atual Ã© OPERATOR (dono de fazenda)
+     * @return true se for OPERATOR, false caso contrÃ¡rio
      */
     public boolean isCurrentUserOperator() {
         try {
@@ -104,141 +104,128 @@ public class OwnershipService {
     }
 
     /**
-     * Verifica se o usuário atual tem permissão para acessar uma fazenda
-     * ADMIN tem acesso a tudo, OPERATOR só à própria fazenda
+     * Verifica se o usuÃ¡rio atual tem permissÃ£o para acessar uma fazenda
+     * ADMIN tem acesso a tudo, OPERATOR sÃ³ Ã  prÃ³pria fazenda
      * @param farm Fazenda a ser verificada
-     * @throws ResourceNotFoundException se não tem permissão
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyFarmOwnership(GoatFarm farm) {
         User currentUser = getCurrentUser();
-        logger.debug("🔍 OWNERSHIP: Verificando acesso para usuário: {}", currentUser.getEmail());
-        logger.debug("🔍 OWNERSHIP: Roles do usuário: {}", currentUser.getRoles().stream().map(r -> r.getAuthority()).toList());
+        logger.debug("ðŸ” OWNERSHIP: Verificando acesso para usuÃ¡rio: {}", currentUser.getEmail());
+        logger.debug("ðŸ” OWNERSHIP: Roles do usuÃ¡rio: {}", currentUser.getRoles().stream().map(r -> r.getAuthority()).toList());
         
-        // ADMIN tem acesso a tudo
-        if (isCurrentUserAdmin()) {
-            logger.debug("✅ OWNERSHIP: Usuário é ADMIN - acesso liberado");
+                if (isCurrentUserAdmin()) {
+            logger.debug("âœ… OWNERSHIP: UsuÃ¡rio Ã© ADMIN - acesso liberado");
             return;
         }
 
-        // Verificar se o usuário é proprietário da fazenda
-        if (farm == null) {
-            logger.warn("❌ OWNERSHIP: Fazenda é null");
-            throw new ResourceNotFoundException("Fazenda não encontrada");
+                if (farm == null) {
+            logger.warn("âŒ OWNERSHIP: Fazenda Ã© null");
+            throw new ResourceNotFoundException("Fazenda nÃ£o encontrada");
         }
 
-        logger.debug("🔍 OWNERSHIP: Fazenda ID: {}, Proprietário ID: {}", farm.getId(), (farm.getUser() != null ? farm.getUser().getId() : "null"));
-        logger.debug("🔍 OWNERSHIP: Usuário atual ID: {}", currentUser.getId());
+        logger.debug("ðŸ” OWNERSHIP: Fazenda ID: {}, ProprietÃ¡rio ID: {}", farm.getId(), (farm.getUser() != null ? farm.getUser().getId() : "null"));
+        logger.debug("ðŸ” OWNERSHIP: UsuÃ¡rio atual ID: {}", currentUser.getId());
         
         if (farm.getUser() == null || !farm.getUser().getId().equals(currentUser.getId())) {
-            throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar esta fazenda");
+            throw new ResourceNotFoundException("Acesso negado: VocÃª nÃ£o tem permissÃ£o para acessar esta fazenda");
         }
     }
 
     /**
-     * Verifica se o usuário atual tem permissão para acessar uma fazenda (versão para VO)
-     * ADMIN tem acesso a tudo, OPERATOR só à própria fazenda
+     * Verifica se o usuÃ¡rio atual tem permissÃ£o para acessar uma fazenda (versÃ£o para VO)
+     * ADMIN tem acesso a tudo, OPERATOR sÃ³ Ã  prÃ³pria fazenda
      * @param farmVO Fazenda VO a ser verificada
-     * @throws ResourceNotFoundException se não tem permissão
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyFarmOwnership(com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO farmVO) {
         User currentUser = getCurrentUser();
         
-        // ADMIN tem acesso a tudo
-        if (isCurrentUserAdmin()) {
+                if (isCurrentUserAdmin()) {
             return;
         }
 
-        // Verificar se o usuário é proprietário da fazenda
-        if (farmVO == null) {
-            throw new ResourceNotFoundException("Fazenda não encontrada");
+                if (farmVO == null) {
+            throw new ResourceNotFoundException("Fazenda nÃ£o encontrada");
         }
 
         if (farmVO.getUserId() == null || !farmVO.getUserId().equals(currentUser.getId())) {
-            throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar esta fazenda");
+            throw new ResourceNotFoundException("Acesso negado: VocÃª nÃ£o tem permissÃ£o para acessar esta fazenda");
         }
     }
 
     /**
-     * Verifica se o usuário atual tem permissão para acessar uma cabra
-     * ADMIN tem acesso a tudo, OPERATOR só às cabras da própria fazenda
+     * Verifica se o usuÃ¡rio atual tem permissÃ£o para acessar uma cabra
+     * ADMIN tem acesso a tudo, OPERATOR sÃ³ Ã s cabras da prÃ³pria fazenda
      * @param goat Cabra a ser verificada
-     * @throws ResourceNotFoundException se não tem permissão
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyGoatOwnership(Goat goat) {
         User currentUser = getCurrentUser();
         
-        // ADMIN tem acesso a tudo
-        if (isCurrentUserAdmin()) {
+                if (isCurrentUserAdmin()) {
             return;
         }
 
-        // Verificar se a cabra está associada a uma fazenda
-        if (goat == null) {
-            throw new ResourceNotFoundException("Cabra não encontrada");
+                if (goat == null) {
+            throw new ResourceNotFoundException("Cabra nÃ£o encontrada");
         }
 
         if (goat.getFarm() == null) {
-            throw new ResourceNotFoundException("Cabra não está associada a nenhuma fazenda");
+            throw new ResourceNotFoundException("Cabra nÃ£o estÃ¡ associada a nenhuma fazenda");
         }
 
-        // Verificar se o usuário é proprietário da fazenda da cabra
-        if (!goat.getFarm().getUser().getId().equals(currentUser.getId())) {
-            throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar cabras desta fazenda");
+                if (!goat.getFarm().getUser().getId().equals(currentUser.getId())) {
+            throw new ResourceNotFoundException("Acesso negado: VocÃª nÃ£o tem permissÃ£o para acessar cabras desta fazenda");
         }
     }
 
     /**
-     * Verifica se o usuário atual tem permissão para acessar dados de um usuário específico
-     * ADMIN e OPERATOR têm acesso a tudo, outros usuários só aos próprios dados
-     * @param userId ID do usuário a ser verificado
-     * @throws ResourceNotFoundException se não tem permissão
+     * Verifica se o usuÃ¡rio atual tem permissÃ£o para acessar dados de um usuÃ¡rio especÃ­fico
+     * ADMIN e OPERATOR tÃªm acesso a tudo, outros usuÃ¡rios sÃ³ aos prÃ³prios dados
+     * @param userId ID do usuÃ¡rio a ser verificado
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyUserAccess(Long userId) {
         User currentUser = getCurrentUser();
         
-        // ADMIN e OPERATOR têm acesso a tudo
-        if (isCurrentUserAdminOrOperator()) {
+                if (isCurrentUserAdminOrOperator()) {
             return;
         }
 
-        // Usuário só pode acessar os próprios dados
-        if (!currentUser.getId().equals(userId)) {
-            throw new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar dados de outro usuário");
+                if (!currentUser.getId().equals(userId)) {
+            throw new ResourceNotFoundException("Acesso negado: VocÃª nÃ£o tem permissÃ£o para acessar dados de outro usuÃ¡rio");
         }
     }
 
     /**
-     * Verifica se o usuário atual pode criar recursos em uma fazenda específica
+     * Verifica se o usuÃ¡rio atual pode criar recursos em uma fazenda especÃ­fica
      * @param farmId ID da fazenda
-     * @param farm Entidade da fazenda (opcional, se já carregada)
-     * @throws ResourceNotFoundException se não tem permissão
+     * @param farm Entidade da fazenda (opcional, se jÃ¡ carregada)
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyCanCreateInFarm(Long farmId, GoatFarm farm) {
         User currentUser = getCurrentUser();
         
-        // ADMIN e OPERATOR podem criar em qualquer fazenda
-        if (isCurrentUserAdminOrOperator()) {
+                if (isCurrentUserAdminOrOperator()) {
             return;
         }
 
-        // Se a fazenda foi fornecida, usar ela
-        if (farm != null) {
+                if (farm != null) {
             verifyFarmOwnership(farm);
             return;
         }
 
-        // Buscar fazenda pelo ID e verificar ownership
-        GoatFarm foundFarm = goatFarmRepository.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
+                GoatFarm foundFarm = goatFarmRepository.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda nÃ£o encontrada com ID: " + farmId));
         verifyFarmOwnership(foundFarm);
     }
     
-    // ========== MÉTODOS DE VERIFICAÇÃO POR ID ==========
-    
+        
     /**
      * Verifica ownership de fazenda por ID
      * @param farmId ID da fazenda
-     * @throws ResourceNotFoundException se não tem permissão
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyFarmOwnershipById(Long farmId) {
         if (isCurrentUserAdminOrOperator()) {
@@ -246,14 +233,14 @@ public class OwnershipService {
         }
         
         GoatFarm farm = goatFarmRepository.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda nÃ£o encontrada com ID: " + farmId));
         verifyFarmOwnership(farm);
     }
     
     /**
-     * Verifica ownership de cabra por número de registro
-     * @param registrationNumber Número de registro da cabra
-     * @throws ResourceNotFoundException se não tem permissão
+     * Verifica ownership de cabra por nÃºmero de registro
+     * @param registrationNumber NÃºmero de registro da cabra
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyOwnershipByGoatId(String registrationNumber) {
         if (isCurrentUserAdminOrOperator()) {
@@ -261,14 +248,14 @@ public class OwnershipService {
         }
         
         Goat goat = goatRepository.findById(registrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada com registro: " + registrationNumber));
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra nÃ£o encontrada com registro: " + registrationNumber));
         verifyGoatOwnership(goat);
     }
     
     /**
      * Verifica ownership de evento por ID
      * @param eventId ID do evento
-     * @throws ResourceNotFoundException se não tem permissão
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyOwnershipByEventId(Long eventId) {
         if (isCurrentUserAdminOrOperator()) {
@@ -276,20 +263,20 @@ public class OwnershipService {
         }
         
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado com ID: " + eventId));
+                .orElseThrow(() -> new ResourceNotFoundException("Evento nÃ£o encontrado com ID: " + eventId));
         
         if (event.getGoat() == null || event.getGoat().getFarm() == null) {
-            throw new ResourceNotFoundException("Evento não está associado a uma fazenda válida");
+            throw new ResourceNotFoundException("Evento nÃ£o estÃ¡ associado a uma fazenda vÃ¡lida");
         }
         
         verifyFarmOwnership(event.getGoat().getFarm());
     }
     
     /**
-     * Verifica se o usuário atual tem permissão para acessar um endereço
-     * Endereços são acessíveis apenas se estão associados a fazendas do usuário
-     * @param address Endereço a ser verificado
-     * @throws ResourceNotFoundException se não tem permissão
+     * Verifica se o usuÃ¡rio atual tem permissÃ£o para acessar um endereÃ§o
+     * EndereÃ§os sÃ£o acessÃ­veis apenas se estÃ£o associados a fazendas do usuÃ¡rio
+     * @param address EndereÃ§o a ser verificado
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyAddressOwnership(Address address) {
         if (isCurrentUserAdminOrOperator()) {
@@ -297,23 +284,22 @@ public class OwnershipService {
         }
         
         if (address == null) {
-            throw new ResourceNotFoundException("Endereço não encontrado");
+            throw new ResourceNotFoundException("EndereÃ§o nÃ£o encontrado");
         }
         
-        // Buscar fazenda que usa este endereço
-        GoatFarm farm = goatFarmRepository.findAll().stream()
+                GoatFarm farm = goatFarmRepository.findAll().stream()
                 .filter(f -> f.getAddress() != null && f.getAddress().getId().equals(address.getId()))
                 .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço não está associado a nenhuma fazenda"));
+                .orElseThrow(() -> new ResourceNotFoundException("EndereÃ§o nÃ£o estÃ¡ associado a nenhuma fazenda"));
         
         verifyFarmOwnership(farm);
     }
     
     /**
-     * Verifica se o usuário atual tem permissão para acessar um telefone
-     * Telefones são acessíveis apenas se estão associados a fazendas do usuário
+     * Verifica se o usuÃ¡rio atual tem permissÃ£o para acessar um telefone
+     * Telefones sÃ£o acessÃ­veis apenas se estÃ£o associados a fazendas do usuÃ¡rio
      * @param phone Telefone a ser verificado
-     * @throws ResourceNotFoundException se não tem permissão
+     * @throws ResourceNotFoundException se nÃ£o tem permissÃ£o
      */
     public void verifyPhoneOwnership(Phone phone) {
         if (isCurrentUserAdminOrOperator()) {
@@ -321,22 +307,21 @@ public class OwnershipService {
         }
         
         if (phone == null) {
-            throw new ResourceNotFoundException("Telefone não encontrado");
+            throw new ResourceNotFoundException("Telefone nÃ£o encontrado");
         }
         
         if (phone.getGoatFarm() == null) {
-            throw new ResourceNotFoundException("Telefone não está associado a nenhuma fazenda");
+            throw new ResourceNotFoundException("Telefone nÃ£o estÃ¡ associado a nenhuma fazenda");
         }
         
         verifyFarmOwnership(phone.getGoatFarm());
     }
     
-    // ========== MÉTODOS AUXILIARES ==========
-    
+        
     /**
-     * Verifica se o usuário atual é proprietário de uma fazenda específica
+     * Verifica se o usuÃ¡rio atual Ã© proprietÃ¡rio de uma fazenda especÃ­fica
      * @param farmId ID da fazenda
-     * @return true se for proprietário, false caso contrário
+     * @return true se for proprietÃ¡rio, false caso contrÃ¡rio
      */
     public boolean isOwnerOfFarm(Long farmId) {
         try {
@@ -348,17 +333,17 @@ public class OwnershipService {
     }
     
     /**
-     * Obtém o ID do usuário atual
-     * @return ID do usuário autenticado
+     * ObtÃ©m o ID do usuÃ¡rio atual
+     * @return ID do usuÃ¡rio autenticado
      */
     public Long getCurrentUserId() {
         return getCurrentUser().getId();
     }
     
     /**
-     * Verifica se o usuário atual tem uma role específica
+     * Verifica se o usuÃ¡rio atual tem uma role especÃ­fica
      * @param roleName Nome da role (ex: "ROLE_ADMIN")
-     * @return true se tem a role, false caso contrário
+     * @return true se tem a role, false caso contrÃ¡rio
      */
     public boolean hasRole(String roleName) {
         try {

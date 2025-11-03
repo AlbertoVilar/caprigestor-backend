@@ -20,11 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
-
-/**
- * Adaptador de entrada web para eventos
- * Implementa a API REST para gerenciamento de eventos usando casos de uso
- */
 @RestController
 @RequestMapping("/api/hex/goats/{registrationNumber}/events")
 @Tag(name = "Eventos de Cabras (Hex)", description = "API hexagonal para gerenciamento de eventos de cabras (rota isolada)")
@@ -46,7 +41,7 @@ public class EventWebAdapter {
         
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
         EventResponseVO responseVO = eventManagementUseCase.createEvent(requestVO, registrationNumber);
-        EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
+        EventResponseDTO responseDTO = eventMapper.toResponseDTO(responseVO);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
@@ -60,7 +55,7 @@ public class EventWebAdapter {
         
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
         EventResponseVO responseVO = eventManagementUseCase.updateEvent(eventId, requestVO, registrationNumber);
-        EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
+        EventResponseDTO responseDTO = eventMapper.toResponseDTO(responseVO);
         
         return ResponseEntity.ok(responseDTO);
     }
@@ -87,7 +82,7 @@ public class EventWebAdapter {
         
         Page<EventResponseVO> responseVOs = eventManagementUseCase.findEventsWithFilters(
                 registrationNumber, eventType, startDate, endDate, pageable);
-        Page<EventResponseDTO> responseDTOs = responseVOs.map(eventMapper::responseDTO);
+        Page<EventResponseDTO> responseDTOs = responseVOs.map(eventMapper::toResponseDTO);
         
         return ResponseEntity.ok(responseDTOs);
     }

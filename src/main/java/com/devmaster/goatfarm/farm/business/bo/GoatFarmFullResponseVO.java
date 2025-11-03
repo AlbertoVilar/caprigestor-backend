@@ -19,25 +19,21 @@ public class GoatFarmFullResponseVO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Usuário
-    private Long userId;
+        private Long userId;
     private String userName;
     private String userEmail;
     private String userCpf;
 
-    // Endereço
-    private Long addressId;
+        private Long addressId;
     private String street;
     private String district;
     private String city;
     private String state;
     private String zipCode;
 
-    // Telefones
-    private List<PhoneResponseVO> phones;
+        private List<PhoneResponseVO> phones;
 
-    // Getters e Setters manuais para garantir compilação
-    public Long getId() { return id; }
+        public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
     public String getName() { return name; }
@@ -85,3 +81,4 @@ public class GoatFarmFullResponseVO {
     public List<PhoneResponseVO> getPhones() { return phones; }
     public void setPhones(List<PhoneResponseVO> phones) { this.phones = phones; }
 }
+

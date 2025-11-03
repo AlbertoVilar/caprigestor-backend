@@ -14,8 +14,7 @@ public class LoginResponseDTO {
     private String accessToken;
     private String refreshToken;
     private String tokenType;
-    private Long expiresIn; // em segundos
-    private UserResponseDTO user;
+    private Long expiresIn;     private UserResponseDTO user;
 
     public String getAccessToken() { return accessToken; }
     public void setAccessToken(String accessToken) { this.accessToken = accessToken; }

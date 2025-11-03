@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Adaptador de persistência para cabras
- * Implementa a porta de saída GoatPersistencePort usando Spring Data JPA
+ * Adaptador de persistÃªncia para cabras
+ * Implementa a porta de saÃ­da GoatPersistencePort usando Spring Data JPA
  */
 @Component
 public class GoatPersistenceAdapter implements GoatPersistencePort {
@@ -28,9 +28,7 @@ public class GoatPersistenceAdapter implements GoatPersistencePort {
 
     @Override
     public Optional<Goat> findById(Long id) {
-        // Note: GoatRepository usa String como ID (registrationNumber)
-        // Precisamos adaptar se necessário
-        return goatRepository.findById(String.valueOf(id));
+                        return goatRepository.findById(String.valueOf(id));
     }
 
     @Override
@@ -40,9 +38,7 @@ public class GoatPersistenceAdapter implements GoatPersistencePort {
 
     @Override
     public List<Goat> findByGoatFarmId(Long goatFarmId) {
-        // Esta operação precisa ser implementada no GoatRepository se não existir
-        // Por enquanto, retornamos uma lista vazia
-        return goatRepository.findAll().stream()
+                        return goatRepository.findAll().stream()
                 .filter(goat -> goat.getFarm() != null && goat.getFarm().getId().equals(goatFarmId))
                 .toList();
     }

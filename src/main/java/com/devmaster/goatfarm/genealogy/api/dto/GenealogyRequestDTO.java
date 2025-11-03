@@ -13,8 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class GenealogyRequestDTO {
 
-    // Animal data
-    private String goatName;
+        private String goatName;
     private String goatRegistration;
     private String breeder;
     private String farmOwner;
@@ -27,26 +26,22 @@ public class GenealogyRequestDTO {
     private String toe;
     private String birthDate;
 
-    // Parents
-    private String fatherName;
+        private String fatherName;
     private String fatherRegistration;
     private String motherName;
     private String motherRegistration;
 
-    // Paternal grandparents
-    private String paternalGrandfatherName;
+        private String paternalGrandfatherName;
     private String paternalGrandfatherRegistration;
     private String paternalGrandmotherName;
     private String paternalGrandmotherRegistration;
 
-    // Maternal grandparents
-    private String maternalGrandfatherName;
+        private String maternalGrandfatherName;
     private String maternalGrandfatherRegistration;
     private String maternalGrandmotherName;
     private String maternalGrandmotherRegistration;
 
-    // Paternal great-grandparents
-    private String paternalGreatGrandfather1Name;
+        private String paternalGreatGrandfather1Name;
     private String paternalGreatGrandfather1Registration;
     private String paternalGreatGrandmother1Name;
     private String paternalGreatGrandmother1Registration;
@@ -55,8 +50,7 @@ public class GenealogyRequestDTO {
     private String paternalGreatGrandmother2Name;
     private String paternalGreatGrandmother2Registration;
 
-    // Maternal great-grandparents
-    private String maternalGreatGrandfather1Name;
+        private String maternalGreatGrandfather1Name;
     private String maternalGreatGrandfather1Registration;
     private String maternalGreatGrandmother1Name;
     private String maternalGreatGrandmother1Registration;
@@ -111,3 +105,4 @@ public class GenealogyRequestDTO {
     public String getMaternalGreatGrandmother2Name() { return maternalGreatGrandmother2Name; }
     public String getMaternalGreatGrandmother2Registration() { return maternalGreatGrandmother2Registration; }
 }
+

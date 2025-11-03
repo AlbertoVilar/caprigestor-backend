@@ -24,21 +24,19 @@ public class AdminController {
         this.adminMaintenanceBusiness = adminMaintenanceBusiness;
     }
 
-    // Dispara a rotina de limpeza mantendo apenas dados do admin informado
-    @PostMapping("/clean-admin")
+        @PostMapping("/clean-admin")
     public ResponseEntity<String> cleanDatabaseAndSetupAdmin(@RequestParam("adminId") Long adminId) {
         logger.info("[AdminController] Iniciando limpeza de banco mantendo adminId={}", adminId);
         adminMaintenanceBusiness.cleanDatabaseAndSetupAdmin(adminId);
-        logger.info("[AdminController] Limpeza concluída com sucesso para adminId={}", adminId);
-        return ResponseEntity.ok("Limpeza concluída para adminId=" + adminId);
+        logger.info("[AdminController] Limpeza concluÃ­da com sucesso para adminId={}", adminId);
+        return ResponseEntity.ok("Limpeza concluÃ­da para adminId=" + adminId);
     }
 
-    // Dispara a rotina de limpeza automática usando o admin padrão (por email)
-    @PostMapping("/clean-admin-auto")
+        @PostMapping("/clean-admin-auto")
     public ResponseEntity<String> cleanDatabaseAndSetupAdminAuto() {
-        logger.info("[AdminController] Iniciando limpeza automática do banco (admin por email)");
+        logger.info("[AdminController] Iniciando limpeza automÃ¡tica do banco (admin por email)");
         adminBusiness.cleanDatabaseAndSetupAdmin();
-        logger.info("[AdminController] Limpeza automática concluída com sucesso");
-        return ResponseEntity.ok("Limpeza automática concluída");
+        logger.info("[AdminController] Limpeza automÃ¡tica concluÃ­da com sucesso");
+        return ResponseEntity.ok("Limpeza automÃ¡tica concluÃ­da");
     }
 }

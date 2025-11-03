@@ -33,10 +33,10 @@ public class GoatFacade {
 
     /**
      * Cria uma nova cabra no sistema.
-     * Verifica a posse da fazenda antes de delegar para a camada de negócio.
-     * @param requestVO Objeto de requisição com os dados da cabra.
-     * @param userId ID do usuário.
-     * @param farmId ID da fazenda onde a cabra será registrada.
+     * Verifica a posse da fazenda antes de delegar para a camada de negÃ³cio.
+     * @param requestVO Objeto de requisiÃ§Ã£o com os dados da cabra.
+     * @param userId ID do usuÃ¡rio.
+     * @param farmId ID da fazenda onde a cabra serÃ¡ registrada.
      * @return GoatResponseVO com os dados da cabra criada.
      */
     @Transactional
@@ -48,8 +48,8 @@ public class GoatFacade {
 
     /**
      * Atualiza os dados de uma cabra existente.
-     * Verifica a posse da cabra antes de delegar para a camada de negócio.
-     * @param registrationNumber Número de registro da cabra a ser atualizada.
+     * Verifica a posse da cabra antes de delegar para a camada de negÃ³cio.
+     * @param registrationNumber NÃºmero de registro da cabra a ser atualizada.
      * @param requestVO Objeto com os novos dados da cabra.
      * @return GoatResponseVO com os dados da cabra atualizada.
      */
@@ -60,25 +60,21 @@ public class GoatFacade {
     }
 
     /**
-     * Remove uma cabra do sistema pelo seu número de registro.
-     * Verifica a posse da cabra antes de delegar para a camada de negócio.
-     * @param registrationNumber Número de registro da cabra a ser removida.
+     * Remove uma cabra do sistema pelo seu nÃºmero de registro.
+     * Verifica a posse da cabra antes de delegar para a camada de negÃ³cio.
+     * @param registrationNumber NÃºmero de registro da cabra a ser removida.
      */
     @Transactional
     public void deleteGoat(String registrationNumber) {
-        // Verifica a posse (ownership) da cabra antes de permitir a remoção
-        ownershipService.verifyOwnershipByGoatId(registrationNumber);
+                ownershipService.verifyOwnershipByGoatId(registrationNumber);
         goatBusiness.deleteGoat(registrationNumber);
     }
 
 
-    // =================================================================
-    // MÉTODOS DE BUSCA (sem alterações)
-    // =================================================================
-
+            
     /**
-     * Busca uma cabra específica pelo seu número de registro.
-     * @param registrationNumber Número de registro da cabra.
+     * Busca uma cabra especÃ­fica pelo seu nÃºmero de registro.
+     * @param registrationNumber NÃºmero de registro da cabra.
      * @return GoatResponseVO com os dados da cabra encontrada.
      */
     public GoatResponseVO findGoatByRegistrationNumber(String registrationNumber) {
@@ -87,8 +83,8 @@ public class GoatFacade {
 
     /**
      * Retorna uma lista paginada de todas as cabras cadastradas.
-     * @param pageable Objeto Pageable para controle de paginação.
-     * @return Uma página de GoatResponseVOs.
+     * @param pageable Objeto Pageable para controle de paginaÃ§Ã£o.
+     * @return Uma pÃ¡gina de GoatResponseVOs.
      */
     public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
         return goatBusiness.findAllGoats(pageable);
@@ -97,30 +93,30 @@ public class GoatFacade {
     /**
      * Realiza uma busca paginada de cabras por nome (sem filtro de fazenda).
      * @param name Nome ou parte do nome da cabra a ser buscada.
-     * @param pageable Objeto Pageable para controle de paginação.
-     * @return Uma página de GoatResponseVOs.
+     * @param pageable Objeto Pageable para controle de paginaÃ§Ã£o.
+     * @return Uma pÃ¡gina de GoatResponseVOs.
      */
     public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
         return goatBusiness.searchGoatByName(name, pageable);
     }
 
     /**
-     * Realiza uma busca paginada de cabras por nome dentro de uma fazenda específica.
-     * @param farmId ID da fazenda onde a busca será realizada.
+     * Realiza uma busca paginada de cabras por nome dentro de uma fazenda especÃ­fica.
+     * @param farmId ID da fazenda onde a busca serÃ¡ realizada.
      * @param name Nome ou parte do nome da cabra a ser buscada.
-     * @param pageable Objeto Pageable para controle de paginação.
-     * @return Uma página de GoatResponseVOs.
+     * @param pageable Objeto Pageable para controle de paginaÃ§Ã£o.
+     * @return Uma pÃ¡gina de GoatResponseVOs.
      */
     public Page<GoatResponseVO> findGoatsByNameAndFarmId(Long farmId, String name, Pageable pageable) {
         return goatBusiness.findGoatsByNameAndFarmId(farmId, name, pageable);
     }
 
     /**
-     * Realiza uma busca paginada de cabras por ID da fazenda, com filtro opcional por número de registro.
+     * Realiza uma busca paginada de cabras por ID da fazenda, com filtro opcional por nÃºmero de registro.
      * @param farmId ID da fazenda.
-     * @param registrationNumber Número de registro da cabra (opcional).
-     * @param pageable Objeto Pageable para controle de paginação.
-     * @return Uma página de GoatResponseVOs.
+     * @param registrationNumber NÃºmero de registro da cabra (opcional).
+     * @param pageable Objeto Pageable para controle de paginaÃ§Ã£o.
+     * @return Uma pÃ¡gina de GoatResponseVOs.
      */
     public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId,
                                                                        String registrationNumber,

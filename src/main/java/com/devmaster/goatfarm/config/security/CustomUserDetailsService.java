@@ -1,7 +1,6 @@
 package com.devmaster.goatfarm.config.security;
 
-import com.devmaster.goatfarm.authority.dao.UserDAO; // Importa o UserDAO
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.dao.UserDAO; import com.devmaster.goatfarm.authority.model.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -14,15 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomUserDetailsService implements UserDetailsService {
 
     @Autowired
-    private UserDAO userDAO; // Usa o UserDAO
-
+    private UserDAO userDAO; 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Chama o método do DAO, que já retorna a entidade User
-        User user = userDAO.findUserByUsername(username);
+                User user = userDAO.findUserByUsername(username);
         if (user == null) {
-            throw new UsernameNotFoundException("Usuário não encontrado: " + username);
+            throw new UsernameNotFoundException("UsuÃ¡rio nÃ£o encontrado: " + username);
         }
         return user;
     }
 }
+

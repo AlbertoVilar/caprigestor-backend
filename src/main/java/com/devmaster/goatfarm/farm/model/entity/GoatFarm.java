@@ -29,23 +29,19 @@ public class GoatFarm {
     @Column(name = "TOD", nullable = false)
     private String tod;
 
-    // ✅ Relacionamento com User (proprietário da fazenda)
-    @ManyToOne(fetch = FetchType.LAZY)
+        @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     @JsonBackReference
     private User user;
 
-    // ✅ Relacionamento com Address (uma fazenda tem um endereço único)
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+        @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "address_id", referencedColumnName = "id")
     private Address address;
 
-    // ✅ Lista de telefones da fazenda com cascade e remoção automática
-    @OneToMany(mappedBy = "goatFarm", cascade = CascadeType.ALL, orphanRemoval = true)
+        @OneToMany(mappedBy = "goatFarm", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Phone> phones = new ArrayList<>();
 
-    // ✅ Lista de cabras pertencentes ao capril
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+        @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "capril_id")
     private List<Goat> goats = new ArrayList<>();
 
@@ -67,8 +63,7 @@ public class GoatFarm {
         this.address = address;
     }
 
-    // Getters e Setters
-
+    
     public Long getId() {
         return id;
     }
@@ -144,3 +139,4 @@ public class GoatFarm {
         this.updatedAt = updatedAt;
     }
 }
+

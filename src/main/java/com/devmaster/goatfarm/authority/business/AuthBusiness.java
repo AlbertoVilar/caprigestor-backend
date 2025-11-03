@@ -43,31 +43,27 @@ public class AuthBusiness {
     }
 
     public LoginResponseDTO authenticateUser(LoginRequestDTO loginRequest) {
-        logger.info("🔍 LOGIN: Tentativa de login para: {}", loginRequest.getEmail());
+        logger.info("ðŸ” LOGIN: Tentativa de login para: {}", loginRequest.getEmail());
         
         try {
-            // Lógica de negócio: autenticar credenciais
-            Authentication authentication = authenticationManager.authenticate(
+                        Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                     loginRequest.getEmail(),
                     loginRequest.getPassword()
                 )
             );
             
-            logger.info("🔍 LOGIN: Autenticação bem-sucedida para: {}", loginRequest.getEmail());
+            logger.info("ðŸ” LOGIN: AutenticaÃ§Ã£o bem-sucedida para: {}", loginRequest.getEmail());
 
-            // Lógica de negócio: obter usuário autenticado
-            User user = (User) authentication.getPrincipal();
-            logger.debug("🔍 LOGIN: Usuário obtido: {}, Roles: {}", user.getEmail(), user.getRoles().size());
+                        User user = (User) authentication.getPrincipal();
+            logger.debug("ðŸ” LOGIN: UsuÃ¡rio obtido: {}, Roles: {}", user.getEmail(), user.getRoles().size());
 
-            // Lógica de negócio: gerar tokens JWT
-            logger.debug("🔍 LOGIN: Gerando tokens JWT...");
+                        logger.debug("ðŸ” LOGIN: Gerando tokens JWT...");
             String accessToken = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
-            logger.debug("🔍 LOGIN: Tokens gerados com sucesso");
+            logger.debug("ðŸ” LOGIN: Tokens gerados com sucesso");
 
-            // Lógica de negócio: criar resposta com dados do usuário
-            List<String> roles = user.getRoles().stream()
+                        List<String> roles = user.getRoles().stream()
                 .map(Role::getAuthority)
                 .toList();
             
@@ -82,78 +78,70 @@ public class AuthBusiness {
             response.setAccessToken(accessToken);
             response.setRefreshToken(refreshToken);
             response.setTokenType("Bearer");
-            response.setExpiresIn(3600L); // 1 hora
-            response.setUser(userResponse);
+            response.setExpiresIn(3600L);             response.setUser(userResponse);
             return response;
 
         } catch (BadCredentialsException e) {
-            logger.warn("🔍 LOGIN ERROR: Credenciais inválidas para: {}", loginRequest.getEmail());
-            throw new InvalidArgumentException("Email ou senha inválidos");
+            logger.warn("ðŸ” LOGIN ERROR: Credenciais invÃ¡lidas para: {}", loginRequest.getEmail());
+            throw new InvalidArgumentException("Email ou senha invÃ¡lidos");
         }
     }
 
     public LoginResponseDTO refreshToken(RefreshTokenRequestDTO refreshRequest) {
-        logger.info("🔄 REFRESH: Tentativa de refresh token");
+        logger.info("ðŸ”„ REFRESH: Tentativa de refresh token");
         
         try {
-            // Lógica de negócio: validar e decodificar o refresh token
-            logger.debug("🔄 REFRESH: Decodificando refresh token...");
+                        logger.debug("ðŸ”„ REFRESH: Decodificando refresh token...");
             var jwt = jwtDecoder.decode(refreshRequest.getRefreshToken());
             String email = jwt.getSubject();
-            logger.debug("🔄 REFRESH: Email extraído do token: {}", email);
+            logger.debug("ðŸ”„ REFRESH: Email extraÃ­do do token: {}", email);
             
-            // Lógica de negócio: verificar se é um refresh token
-            String scope = jwt.getClaimAsString("scope");
+                        String scope = jwt.getClaimAsString("scope");
             if (!"REFRESH".equals(scope)) {
-                logger.warn("🔄 REFRESH ERROR: Token não é um refresh token. Scope: {}", scope);
-                throw new RuntimeException("Token inválido - não é um refresh token");
+                logger.warn("ðŸ”„ REFRESH ERROR: Token nÃ£o Ã© um refresh token. Scope: {}", scope);
+                throw new RuntimeException("Token invÃ¡lido - nÃ£o Ã© um refresh token");
             }
-            logger.debug("🔄 REFRESH: Token validado como refresh token");
+            logger.debug("ðŸ”„ REFRESH: Token validado como refresh token");
 
-            // Lógica de negócio: buscar usuário
-            logger.debug("🔄 REFRESH: Buscando usuário por email: {}", email);
+                        logger.debug("ðŸ”„ REFRESH: Buscando usuÃ¡rio por email: {}", email);
             var userVO = userFacade.findByEmail(email);
             if (userVO == null) {
-                logger.warn("🔄 REFRESH ERROR: Usuário não encontrado: {}", email);
-                throw new RuntimeException("Usuário não encontrado");
+                logger.warn("ðŸ”„ REFRESH ERROR: UsuÃ¡rio nÃ£o encontrado: {}", email);
+                throw new RuntimeException("UsuÃ¡rio nÃ£o encontrado");
             }
-            logger.debug("🔄 REFRESH: Usuário encontrado: {}", userVO.getName());
+            logger.debug("ðŸ”„ REFRESH: UsuÃ¡rio encontrado: {}", userVO.getName());
 
-            // Lógica de negócio: converter para User entity
-            User user = new User();
+                        User user = new User();
             user.setId(userVO.getId());
             user.setName(userVO.getName());
             user.setEmail(userVO.getEmail());
             
-            // Lógica de negócio: adicionar roles
-            logger.debug("🔄 REFRESH: Adicionando roles ao usuário...");
+                        logger.debug("ðŸ”„ REFRESH: Adicionando roles ao usuÃ¡rio...");
             for (String roleName : userVO.getRoles()) {
                 Role role = roleDAO.findByAuthority(roleName)
                     .orElseThrow(() -> {
-                        logger.error("🔄 REFRESH ERROR: Role não encontrada: {}", roleName);
-                        return new RuntimeException("Role não encontrada: " + roleName);
+                        logger.error("ðŸ”„ REFRESH ERROR: Role nÃ£o encontrada: {}", roleName);
+                        return new RuntimeException("Role nÃ£o encontrada: " + roleName);
                     });
                 user.addRole(role);
             }
-            logger.debug("🔄 REFRESH: {} roles adicionadas", userVO.getRoles().size());
+            logger.debug("ðŸ”„ REFRESH: {} roles adicionadas", userVO.getRoles().size());
 
-            // Lógica de negócio: gerar novos tokens
-            logger.debug("🔄 REFRESH: Gerando novos tokens...");
+                        logger.debug("ðŸ”„ REFRESH: Gerando novos tokens...");
             String newAccessToken = jwtService.generateToken(user);
             String newRefreshToken = jwtService.generateRefreshToken(user);
-            logger.info("🔄 REFRESH: Tokens renovados com sucesso para: {}", email);
+            logger.info("ðŸ”„ REFRESH: Tokens renovados com sucesso para: {}", email);
 
             LoginResponseDTO response = new LoginResponseDTO();
             response.setAccessToken(newAccessToken);
             response.setRefreshToken(newRefreshToken);
             response.setTokenType("Bearer");
             response.setExpiresIn(3600L);
-            response.setUser(null); // Não retornamos dados do usuário no refresh
-            return response;
+            response.setUser(null);             return response;
 
         } catch (Exception e) {
-            logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
-            throw new RuntimeException("Token inválido ou expirado");
+            logger.error("ðŸ”„ REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
+            throw new RuntimeException("Token invÃ¡lido ou expirado");
         }
     }
 }

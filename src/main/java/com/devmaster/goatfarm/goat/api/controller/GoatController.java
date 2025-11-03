@@ -45,12 +45,12 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping("/goats")
     @Operation(summary = "Cadastra uma nova cabra no sistema",
-            description = "Cria um novo registro de cabra, associando-a a um usuário e fazenda existentes.")
+            description = "Cria um novo registro de cabra, associando-a a um usuÃ¡rio e fazenda existentes.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Cabra cadastrada com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos ou número de registro já existe."),
+            @ApiResponse(responseCode = "400", description = "Dados invÃ¡lidos ou nÃºmero de registro jÃ¡ existe."),
             @ApiResponse(responseCode = "403", description = "Acesso negado."),
-            @ApiResponse(responseCode = "404", description = "Usuário ou fazenda não encontrados.")
+            @ApiResponse(responseCode = "404", description = "UsuÃ¡rio ou fazenda nÃ£o encontrados.")
     })
     public ResponseEntity<GoatResponseDTO> createGoat(
             @Parameter(description = "Dados da cabra para cadastro", required = true)
@@ -69,15 +69,15 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/goats/{registrationNumber}")
     @Operation(summary = "Atualiza os dados de uma cabra existente",
-            description = "Modifica os dados de uma cabra específica pelo seu número de registro.")
+            description = "Modifica os dados de uma cabra especÃ­fica pelo seu nÃºmero de registro.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Cabra atualizada com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos."),
+            @ApiResponse(responseCode = "400", description = "Dados invÃ¡lidos."),
             @ApiResponse(responseCode = "403", description = "Acesso negado."),
-            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada.")
     })
     public ResponseEntity<GoatResponseDTO> updateGoat(
-            @Parameter(description = "Número de registro da cabra", example = "2114517012", required = true)
+            @Parameter(description = "NÃºmero de registro da cabra", example = "2114517012", required = true)
             @PathVariable String registrationNumber,
             @Parameter(description = "Novos dados da cabra", required = true)
             @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
@@ -88,30 +88,27 @@ public class GoatController {
     }
 
     /**
-     * Remove uma cabra pelo número de registro.
+     * Remove uma cabra pelo nÃºmero de registro.
      */
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @DeleteMapping("/goats/{registrationNumber}")
     @Operation(summary = "Remove uma cabra do sistema",
-            description = "Exclui uma cabra do sistema pelo seu número de registro.")
+            description = "Exclui uma cabra do sistema pelo seu nÃºmero de registro.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Cabra removida com sucesso."),
             @ApiResponse(responseCode = "403", description = "Acesso negado."),
-            @ApiResponse(responseCode = "404", description = "Cabra não encontrada."),
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada."),
             @ApiResponse(responseCode = "409", description = "Conflito: Cabra referenciada por outro animal.")
     })
     public ResponseEntity<Void> deleteGoat(
-            @Parameter(description = "Número de registro da cabra a ser removida", example = "2114517012", required = true)
+            @Parameter(description = "NÃºmero de registro da cabra a ser removida", example = "2114517012", required = true)
             @PathVariable String registrationNumber) {
 
         goatFacade.deleteGoat(registrationNumber);
         return ResponseEntity.noContent().build();
     }
 
-    // =================================================================
-    // MÉTODOS DE BUSCA (sem alterações)
-    // =================================================================
-
+            
     /**
      * Busca paginada de todas as cabras.
      */
@@ -150,7 +147,7 @@ public class GoatController {
     public ResponseEntity<Map<String, Object>> findGoatsByFarmId(
             @Parameter(description = "ID do capril", example = "1", required = true)
             @PathVariable Long farmId,
-            @Parameter(description = "Número de registro da cabra")
+            @Parameter(description = "NÃºmero de registro da cabra")
             @RequestParam(value = "registrationNumber", required = false) String registrationNumber,
             @Parameter(description = "Nome ou parte do nome da cabra")
             @RequestParam(value = "name", required = false) String name,
@@ -168,10 +165,10 @@ public class GoatController {
     }
 
     /**
-     * Busca uma cabra pelo seu número de registro.
+     * Busca uma cabra pelo seu nÃºmero de registro.
      */
     @GetMapping({"/goats/registration/{registrationNumber}", "/goats/{registrationNumber}"})
-    @Operation(summary = "Busca uma cabra pelo número de registro")
+    @Operation(summary = "Busca uma cabra pelo nÃºmero de registro")
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(@PathVariable String registrationNumber) {
         GoatResponseVO goatVO = goatFacade.findGoatByRegistrationNumber(registrationNumber);
         return ResponseEntity.ok(goatMapper.toResponseDTO(goatVO));

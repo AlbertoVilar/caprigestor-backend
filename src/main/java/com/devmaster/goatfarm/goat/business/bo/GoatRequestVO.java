@@ -37,8 +37,7 @@ public class GoatRequestVO {
     public GoatRequestVO() {
     }
 
-    // Getters e setters manuais
-    public String getRegistrationNumber() { return registrationNumber; }
+        public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
     
     public String getName() { return name; }
@@ -81,3 +80,4 @@ public class GoatRequestVO {
     public void setUserId(Long userId) { this.userId = userId; }
 
 }
+

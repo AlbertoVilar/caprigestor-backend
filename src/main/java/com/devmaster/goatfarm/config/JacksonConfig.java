@@ -18,16 +18,9 @@ public class JacksonConfig {
     @Primary
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-        
-        // Registrar módulo para suporte a Java 8 Time API
         mapper.registerModule(new JavaTimeModule());
-        
-        // Desabilitar falha em beans vazios
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        
-        // Desabilitar escrita de datas como timestamps
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-        
         return mapper;
     }
 }

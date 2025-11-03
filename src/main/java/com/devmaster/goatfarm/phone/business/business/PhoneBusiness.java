@@ -42,14 +42,14 @@ public class PhoneBusiness {
     @Transactional
     public PhoneResponseVO createPhone(PhoneRequestVO requestVO, Long farmId) {
         if (requestVO == null) {
-            throw new IllegalArgumentException("Os dados do telefone para criação não podem ser nulos.");
+            throw new IllegalArgumentException("Os dados do telefone para criaÃ§Ã£o nÃ£o podem ser nulos.");
         }
 
         validatePhoneData(requestVO);
 
         boolean exists = phoneDAO.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
         if (exists) {
-            throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
+            throw new DatabaseException("JÃ¡ existe um telefone com DDD (" + requestVO.getDdd() + ") e nÃºmero " + requestVO.getNumber());
         }
 
         Phone phone = phoneMapper.toEntity(requestVO);
@@ -71,7 +71,7 @@ public class PhoneBusiness {
 
         Optional<Phone> existing = phoneDAO.findByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
         if (existing.isPresent() && !existing.get().getId().equals(id)) {
-            throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
+            throw new DatabaseException("JÃ¡ existe um telefone com DDD (" + requestVO.getDdd() + ") e nÃºmero " + requestVO.getNumber());
         }
 
         phoneMapper.toEntity(phoneToUpdate, requestVO);
@@ -95,7 +95,7 @@ public class PhoneBusiness {
             phoneDAO.deleteById(id);
             return "Telefone com ID " + id + " foi deletado com sucesso.";
         } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Não é possível deletar o telefone com ID " + id + " pois ele está vinculado a outra entidade.");
+            throw new DatabaseException("NÃ£o Ã© possÃ­vel deletar o telefone com ID " + id + " pois ele estÃ¡ vinculado a outra entidade.");
         }
     }
 
@@ -124,8 +124,7 @@ public class PhoneBusiness {
                 });
     }
 
-    // Utilitários de leitura/validação expostos para coordenadores de aplicação
-    @Transactional(readOnly = true)
+        @Transactional(readOnly = true)
     public boolean existsByDddAndNumber(String ddd, String number) {
         return phoneDAO.existsByDddAndNumber(ddd, number);
     }
@@ -135,6 +134,11 @@ public class PhoneBusiness {
         return phoneDAO.findAllEntitiesById(ids);
     }
 
+    @Transactional(readOnly = true)
+    public Phone getPhoneEntityById(Long id) {
+        return phoneDAO.findById(id);
+    }
+
     @Transactional
     public void deletePhonesFromOtherUsers(Long adminId) {
         phoneDAO.deletePhonesFromOtherUsers(adminId);
@@ -142,17 +146,17 @@ public class PhoneBusiness {
 
     private void validatePhoneData(PhoneRequestVO requestVO) {
         if (requestVO.getNumber() == null || requestVO.getNumber().trim().isEmpty()) {
-            throw new IllegalArgumentException("Número do telefone é obrigatório");
+            throw new IllegalArgumentException("NÃºmero do telefone Ã© obrigatÃ³rio");
         }
         if (requestVO.getDdd() == null || requestVO.getDdd().trim().isEmpty()) {
-            throw new IllegalArgumentException("DDD é obrigatório");
+            throw new IllegalArgumentException("DDD Ã© obrigatÃ³rio");
         }
         if (!requestVO.getDdd().matches("\\d{2}")) {
-            throw new IllegalArgumentException("DDD deve conter exatamente 2 dígitos");
+            throw new IllegalArgumentException("DDD deve conter exatamente 2 dÃ­gitos");
         }
         String number = requestVO.getNumber().replaceAll("[^0-9]", "");
         if (!number.matches("\\d{8,9}")) {
-            throw new IllegalArgumentException("Número deve conter 8 ou 9 dígitos");
+            throw new IllegalArgumentException("NÃºmero deve conter 8 ou 9 dÃ­gitos");
         }
     }
 }

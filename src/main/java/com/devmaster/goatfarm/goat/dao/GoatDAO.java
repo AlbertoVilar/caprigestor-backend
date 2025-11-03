@@ -105,10 +105,9 @@ public class GoatDAO {
                 Goat.class
         );
         query.setParameter("registrationNumber", registrationNumber);
-        Goat goat = query.getResultStream().findFirst().orElseThrow(() -> new IllegalArgumentException("Cabra não encontrada para atualização"));
+        Goat goat = query.getResultStream().findFirst().orElseThrow(() -> new IllegalArgumentException("Cabra nÃ£o encontrada para atualizaÃ§Ã£o"));
 
-        // Atualiza campos conforme requestVO
-        if (requestVO.getName() != null) goat.setName(requestVO.getName());
+                if (requestVO.getName() != null) goat.setName(requestVO.getName());
         if (requestVO.getRegistrationNumber() != null) goat.setRegistrationNumber(requestVO.getRegistrationNumber());
         if (farm != null) goat.setFarm(farm);
         if (father != null) goat.setFather(father);

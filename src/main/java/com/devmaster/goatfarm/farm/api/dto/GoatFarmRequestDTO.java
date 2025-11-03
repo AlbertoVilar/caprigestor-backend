@@ -12,24 +12,23 @@ import java.util.List;
 public class GoatFarmRequestDTO {
     private Long id;
 
-    @NotNull(message = "O nome da fazenda é obrigatório.")
+    @NotNull(message = "O nome da fazenda Ã© obrigatÃ³rio.")
     private String name;
 
     @Size(min = 5, max = 5, message = "O TOD da fazenda deve conter exatamente 5 caracteres.")
     private String tod;
 
-    @NotNull(message = "O endereço da fazenda é obrigatório.")
+    @NotNull(message = "O endereÃ§o da fazenda Ã© obrigatÃ³rio.")
     private Long addressId;
 
-    @NotNull(message = "O usuário da fazenda é obrigatório.")
+    @NotNull(message = "O usuÃ¡rio da fazenda Ã© obrigatÃ³rio.")
     private Long userId;
 
-    @NotNull(message = "É obrigatório informar ao menos um telefone.")
+    @NotNull(message = "Ã‰ obrigatÃ³rio informar ao menos um telefone.")
     @Size(min = 1, message = "A fazenda deve conter ao menos um telefone.")
     private List<Long> phoneIds;
 
-    // Getters e Setters manuais para garantir compilação
-    public Long getId() { return id; }
+        public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
     public String getName() { return name; }
@@ -58,3 +57,4 @@ public class GoatFarmRequestDTO {
         this.phoneIds = phoneIds;
     }
 }
+

@@ -23,23 +23,19 @@ public interface GenealogyMapper {
     @Mapping(source = "tod", target = "goatTOD")
     @Mapping(source = "toe", target = "goatTOE")
     @Mapping(source = "birthDate", target = "goatBirthDate")
-    // Parents mapping
-    @Mapping(source = "fatherName", target = "fatherName")
+        @Mapping(source = "fatherName", target = "fatherName")
     @Mapping(source = "fatherRegistration", target = "fatherRegistration")
     @Mapping(source = "motherName", target = "motherName")
     @Mapping(source = "motherRegistration", target = "motherRegistration")
-    // Paternal grandparents mapping
-    @Mapping(source = "paternalGrandfatherName", target = "paternalGrandfatherName")
+        @Mapping(source = "paternalGrandfatherName", target = "paternalGrandfatherName")
     @Mapping(source = "paternalGrandfatherRegistration", target = "paternalGrandfatherRegistration")
     @Mapping(source = "paternalGrandmotherName", target = "paternalGrandmotherName")
     @Mapping(source = "paternalGrandmotherRegistration", target = "paternalGrandmotherRegistration")
-    // Maternal grandparents mapping
-    @Mapping(source = "maternalGrandfatherName", target = "maternalGrandfatherName")
+        @Mapping(source = "maternalGrandfatherName", target = "maternalGrandfatherName")
     @Mapping(source = "maternalGrandfatherRegistration", target = "maternalGrandfatherRegistration")
     @Mapping(source = "maternalGrandmotherName", target = "maternalGrandmotherName")
     @Mapping(source = "maternalGrandmotherRegistration", target = "maternalGrandmotherRegistration")
-    // Paternal great-grandparents mapping
-    @Mapping(source = "paternalGreatGrandfather1Name", target = "paternalGreatGrandfather1Name")
+        @Mapping(source = "paternalGreatGrandfather1Name", target = "paternalGreatGrandfather1Name")
     @Mapping(source = "paternalGreatGrandfather1Registration", target = "paternalGreatGrandfather1Registration")
     @Mapping(source = "paternalGreatGrandmother1Name", target = "paternalGreatGrandmother1Name")
     @Mapping(source = "paternalGreatGrandmother1Registration", target = "paternalGreatGrandmother1Registration")
@@ -47,8 +43,7 @@ public interface GenealogyMapper {
     @Mapping(source = "paternalGreatGrandfather2Registration", target = "paternalGreatGrandfather2Registration")
     @Mapping(source = "paternalGreatGrandmother2Name", target = "paternalGreatGrandmother2Name")
     @Mapping(source = "paternalGreatGrandmother2Registration", target = "paternalGreatGrandmother2Registration")
-    // Maternal great-grandparents mapping
-    @Mapping(source = "maternalGreatGrandfather1Name", target = "maternalGreatGrandfather1Name")
+        @Mapping(source = "maternalGreatGrandfather1Name", target = "maternalGreatGrandfather1Name")
     @Mapping(source = "maternalGreatGrandfather1Registration", target = "maternalGreatGrandfather1Registration")
     @Mapping(source = "maternalGreatGrandmother1Name", target = "maternalGreatGrandmother1Name")
     @Mapping(source = "maternalGreatGrandmother1Registration", target = "maternalGreatGrandmother1Registration")
@@ -68,23 +63,19 @@ public interface GenealogyMapper {
     @Mapping(source = "goatTOD", target = "tod")
     @Mapping(source = "goatTOE", target = "toe")
     @Mapping(source = "goatBirthDate", target = "birthDate")
-    // Parents mapping
-    @Mapping(source = "fatherName", target = "fatherName")
+        @Mapping(source = "fatherName", target = "fatherName")
     @Mapping(source = "fatherRegistration", target = "fatherRegistration")
     @Mapping(source = "motherName", target = "motherName")
     @Mapping(source = "motherRegistration", target = "motherRegistration")
-    // Paternal grandparents mapping
-    @Mapping(source = "paternalGrandfatherName", target = "paternalGrandfatherName")
+        @Mapping(source = "paternalGrandfatherName", target = "paternalGrandfatherName")
     @Mapping(source = "paternalGrandfatherRegistration", target = "paternalGrandfatherRegistration")
     @Mapping(source = "paternalGrandmotherName", target = "paternalGrandmotherName")
     @Mapping(source = "paternalGrandmotherRegistration", target = "paternalGrandmotherRegistration")
-    // Maternal grandparents mapping
-    @Mapping(source = "maternalGrandfatherName", target = "maternalGrandfatherName")
+        @Mapping(source = "maternalGrandfatherName", target = "maternalGrandfatherName")
     @Mapping(source = "maternalGrandfatherRegistration", target = "maternalGrandfatherRegistration")
     @Mapping(source = "maternalGrandmotherName", target = "maternalGrandmotherName")
     @Mapping(source = "maternalGrandmotherRegistration", target = "maternalGrandmotherRegistration")
-    // Paternal great-grandparents mapping
-    @Mapping(source = "paternalGreatGrandfather1Name", target = "paternalGreatGrandfather1Name")
+        @Mapping(source = "paternalGreatGrandfather1Name", target = "paternalGreatGrandfather1Name")
     @Mapping(source = "paternalGreatGrandfather1Registration", target = "paternalGreatGrandfather1Registration")
     @Mapping(source = "paternalGreatGrandmother1Name", target = "paternalGreatGrandmother1Name")
     @Mapping(source = "paternalGreatGrandmother1Registration", target = "paternalGreatGrandmother1Registration")
@@ -92,8 +83,7 @@ public interface GenealogyMapper {
     @Mapping(source = "paternalGreatGrandfather2Registration", target = "paternalGreatGrandfather2Registration")
     @Mapping(source = "paternalGreatGrandmother2Name", target = "paternalGreatGrandmother2Name")
     @Mapping(source = "paternalGreatGrandmother2Registration", target = "paternalGreatGrandmother2Registration")
-    // Maternal great-grandparents mapping
-    @Mapping(source = "maternalGreatGrandfather1Name", target = "maternalGreatGrandfather1Name")
+        @Mapping(source = "maternalGreatGrandfather1Name", target = "maternalGreatGrandfather1Name")
     @Mapping(source = "maternalGreatGrandfather1Registration", target = "maternalGreatGrandfather1Registration")
     @Mapping(source = "maternalGreatGrandmother1Name", target = "maternalGreatGrandmother1Name")
     @Mapping(source = "maternalGreatGrandmother1Registration", target = "maternalGreatGrandmother1Registration")
@@ -105,3 +95,4 @@ public interface GenealogyMapper {
 
     GenealogyResponseDTO toResponseDTO(GenealogyResponseVO vo);
 }
+

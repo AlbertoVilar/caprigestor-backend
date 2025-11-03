@@ -19,26 +19,22 @@ public class GenealogyFacadeResponseDTO {
     private String toe;
     private String birthDate;
 
-    // Pais
-    private String fatherName;
+        private String fatherName;
     private String fatherRegistration;
     private String motherName;
     private String motherRegistration;
 
-    // Avós paternos
-    private String paternalGrandfatherName;
+        private String paternalGrandfatherName;
     private String paternalGrandfatherRegistration;
     private String paternalGrandmotherName;
     private String paternalGrandmotherRegistration;
 
-    // Avós maternos
-    private String maternalGrandfatherName;
+        private String maternalGrandfatherName;
     private String maternalGrandfatherRegistration;
     private String maternalGrandmotherName;
     private String maternalGrandmotherRegistration;
 
-    // Bisavós paternos
-    private String paternalGreatGrandfather1Name;
+        private String paternalGreatGrandfather1Name;
     private String paternalGreatGrandfather1Registration;
     private String paternalGreatGrandmother1Name;
     private String paternalGreatGrandmother1Registration;
@@ -47,8 +43,7 @@ public class GenealogyFacadeResponseDTO {
     private String paternalGreatGrandmother2Name;
     private String paternalGreatGrandmother2Registration;
 
-    // Bisavós maternos
-    private String maternalGreatGrandfather1Name;
+        private String maternalGreatGrandfather1Name;
     private String maternalGreatGrandfather1Registration;
     private String maternalGreatGrandmother1Name;
     private String maternalGreatGrandmother1Registration;
@@ -60,8 +55,7 @@ public class GenealogyFacadeResponseDTO {
     public GenealogyFacadeResponseDTO() {
     }
 
-    // Getters e Setters
-    public String getGoatName() {
+        public String getGoatName() {
         return goatName;
     }
 
@@ -253,8 +247,7 @@ public class GenealogyFacadeResponseDTO {
         this.maternalGrandmotherRegistration = maternalGrandmotherRegistration;
     }
 
-    // Getters e Setters para Bisavós Paternos
-    public String getPaternalGreatGrandfather1Name() {
+        public String getPaternalGreatGrandfather1Name() {
         return paternalGreatGrandfather1Name;
     }
 
@@ -318,8 +311,7 @@ public class GenealogyFacadeResponseDTO {
         this.paternalGreatGrandmother2Registration = paternalGreatGrandmother2Registration;
     }
 
-    // Getters e Setters para Bisavós Maternos
-    public String getMaternalGreatGrandfather1Name() {
+        public String getMaternalGreatGrandfather1Name() {
         return maternalGreatGrandfather1Name;
     }
 

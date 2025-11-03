@@ -18,13 +18,12 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Controller dedicado exclusivamente para endpoints de busca/consulta de cabras.
- * Separado do GoatController principal para manter organização e clareza.
- * Endpoints públicos para consulta sem necessidade de autenticação.
+ * Separado do GoatController principal para manter organizaÃ§Ã£o e clareza.
+ * Endpoints pÃºblicos para consulta sem necessidade de autenticaÃ§Ã£o.
  */
 @RestController
 @RequestMapping("/api")
-@Tag(name = "Goat Search API", description = "Endpoints públicos para busca e consulta de cabras")
-@CrossOrigin(origins = {"http://localhost:5500", "http://localhost:5173", "http://localhost:8080"})
+@Tag(name = "Goat Search API", description = "Endpoints pÃºblicos para busca e consulta de cabras")
 public class GoatSearchController {
 
     private final GoatFacade goatFacade;
@@ -38,10 +37,10 @@ public class GoatSearchController {
 
     /**
      * Busca paginada de todas as cabras cadastradas.
-     * Endpoint público para consulta geral.
+     * Endpoint pÃºblico para consulta geral.
      */
     @Operation(summary = "Busca paginada de todas as cabras",
-            description = "Endpoint público que retorna uma lista paginada de todas as cabras cadastradas no sistema.")
+            description = "Endpoint pÃºblico que retorna uma lista paginada de todas as cabras cadastradas no sistema.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso.")
     })
@@ -55,10 +54,10 @@ public class GoatSearchController {
 
     /**
      * Busca paginada por cabras usando parte do nome.
-     * Endpoint público para consulta por nome.
+     * Endpoint pÃºblico para consulta por nome.
      */
     @Operation(summary = "Busca paginada por cabras usando parte do nome",
-            description = "Endpoint público que retorna cabras que contêm o nome especificado.")
+            description = "Endpoint pÃºblico que retorna cabras que contÃªm o nome especificado.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso."),
             @ApiResponse(responseCode = "404", description = "Nenhuma cabra encontrada com o nome especificado.")
@@ -74,18 +73,18 @@ public class GoatSearchController {
     }
 
     /**
-     * Busca uma cabra pelo seu número de registro exato.
-     * Endpoint público para consulta específica.
+     * Busca uma cabra pelo seu nÃºmero de registro exato.
+     * Endpoint pÃºblico para consulta especÃ­fica.
      */
-    @Operation(summary = "Busca uma cabra pelo número de registro",
-            description = "Endpoint público que retorna os detalhes de uma cabra específica usando seu número de registro.")
+    @Operation(summary = "Busca uma cabra pelo nÃºmero de registro",
+            description = "Endpoint pÃºblico que retorna os detalhes de uma cabra especÃ­fica usando seu nÃºmero de registro.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cabra encontrada com sucesso."),
-            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada.")
     })
     @GetMapping("/goats/registration/{registrationNumber}")
     public ResponseEntity<GoatResponseDTO> findByRegistrationNumber(
-            @Parameter(description = "Número de registro da cabra", example = "2114517012", required = true)
+            @Parameter(description = "NÃºmero de registro da cabra", example = "2114517012", required = true)
             @PathVariable String registrationNumber) {
         GoatResponseVO goatVO = goatFacade.findGoatByRegistrationNumber(registrationNumber);
         GoatResponseDTO responseDTO = goatMapper.toResponseDTO(goatVO);

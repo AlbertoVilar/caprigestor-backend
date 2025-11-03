@@ -42,11 +42,11 @@ public class UserBusiness {
         validateUserData(vo);
 
         if (userDAO.findUserByEmail(vo.getEmail().trim()).isPresent()) {
-            throw new DuplicateEntityException("Já existe um usuário cadastrado com o email: " + vo.getEmail());
+            throw new DuplicateEntityException("JÃ¡ existe um usuÃ¡rio cadastrado com o email: " + vo.getEmail());
         }
 
         if (userDAO.findUserByCpf(vo.getCpf().trim()).isPresent()) {
-            throw new DuplicateEntityException("Já existe um usuário cadastrado com o CPF: " + vo.getCpf());
+            throw new DuplicateEntityException("JÃ¡ existe um usuÃ¡rio cadastrado com o CPF: " + vo.getCpf());
         }
 
         String encryptedPassword = passwordEncoder.encode(vo.getPassword());
@@ -63,7 +63,7 @@ public class UserBusiness {
 
         if (!existingUser.getEmail().equals(vo.getEmail().trim())) {
             if (userDAO.findUserByEmail(vo.getEmail().trim()).isPresent()) {
-                throw new DuplicateEntityException("Já existe outro usuário cadastrado com o email: " + vo.getEmail());
+                throw new DuplicateEntityException("JÃ¡ existe outro usuÃ¡rio cadastrado com o email: " + vo.getEmail());
             }
         }
 
@@ -81,18 +81,20 @@ public class UserBusiness {
     }
 
     public UserResponseVO findByEmail(String email) {
-        // Este método parece redundante, pois o DAO já retorna um VO. 
-        // Mantendo por ora para não quebrar outros contratos, mas poderia ser um ponto de melhoria.
-        return userDAO.findByEmail(email) != null ? userDAO.findByEmail(email) : null;
+                        return userDAO.findByEmail(email) != null ? userDAO.findByEmail(email) : null;
     }
 
     public UserResponseVO findById(Long userId) {
         return userDAO.findById(userId);
     }
 
-    // Porta de serviço para retornar entidade (sem VO) quando necessário em serviços de aplicação
     @Transactional(readOnly = true)
     public User getEntityById(Long id) {
+        return userDAO.findUserEntityById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserEntityById(Long id) {
         return userDAO.findUserEntityById(id);
     }
 
@@ -108,37 +110,37 @@ public class UserBusiness {
 
     private void validateRequiredFields(UserRequestVO vo) {
         if (vo.getName() == null || vo.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Nome é obrigatório e não pode estar em branco");
+            throw new IllegalArgumentException("Nome Ã© obrigatÃ³rio e nÃ£o pode estar em branco");
         }
         
         if (vo.getEmail() == null || vo.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Email é obrigatório e não pode estar em branco");
+            throw new IllegalArgumentException("Email Ã© obrigatÃ³rio e nÃ£o pode estar em branco");
         }
         
         if (vo.getCpf() == null || vo.getCpf().trim().isEmpty()) {
-            throw new IllegalArgumentException("CPF é obrigatório e não pode estar em branco");
+            throw new IllegalArgumentException("CPF Ã© obrigatÃ³rio e nÃ£o pode estar em branco");
         }
         
         if (vo.getPassword() == null || vo.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("Senha é obrigatória e não pode estar em branco");
+            throw new IllegalArgumentException("Senha Ã© obrigatÃ³ria e nÃ£o pode estar em branco");
         }
     }
     
     private void validateUserData(UserRequestVO vo) {
         if (vo.getPassword() != null && vo.getConfirmPassword() != null) {
             if (!vo.getPassword().equals(vo.getConfirmPassword())) {
-                throw new IllegalArgumentException("As senhas não coincidem");
+                throw new IllegalArgumentException("As senhas nÃ£o coincidem");
             }
         }
         
         if (vo.getCpf() != null && !vo.getCpf().matches("^\\d{11}$")) {
-            throw new IllegalArgumentException("CPF deve conter exatamente 11 dígitos numéricos");
+            throw new IllegalArgumentException("CPF deve conter exatamente 11 dÃ­gitos numÃ©ricos");
         }
         
         if (vo.getRoles() != null) {
             for (String role : vo.getRoles()) {
                 if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR")) {
-                    throw new IllegalArgumentException("Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
+                    throw new IllegalArgumentException("Role invÃ¡lida: " + role + ". Roles vÃ¡lidas: ROLE_ADMIN, ROLE_OPERATOR");
                 }
             }
         }
@@ -151,14 +153,14 @@ public class UserBusiness {
             vo.getRoles().forEach(roleName -> {
                 Optional<Role> optionalRole = roleDAO.findByAuthority(roleName);
                 if (optionalRole.isEmpty()) {
-                    throw new RuntimeException("Role não encontrada: " + roleName);
+                    throw new RuntimeException("Role nÃ£o encontrada: " + roleName);
                 }
                 tempUser.addRole(optionalRole.get());
             });
         } else {
             Optional<Role> defaultRole = roleDAO.findByAuthority("ROLE_OPERATOR");
             if (defaultRole.isEmpty()) {
-                throw new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema");
+                throw new RuntimeException("Role padrÃ£o ROLE_OPERATOR nÃ£o encontrada no sistema");
             }
             tempUser.addRole(defaultRole.get());
         }
@@ -183,14 +185,14 @@ public class UserBusiness {
             for (String roleName : vo.getRoles()) {
                 Optional<Role> optionalRole = roleDAO.findByAuthority(roleName);
                 if (optionalRole.isEmpty()) {
-                    throw new RuntimeException("Role não encontrada: " + roleName);
+                    throw new RuntimeException("Role nÃ£o encontrada: " + roleName);
                 }
                 user.addRole(optionalRole.get());
             }
         } else {
             Optional<Role> defaultRole = roleDAO.findByAuthority("ROLE_OPERATOR");
             if (defaultRole.isEmpty()) {
-                throw new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema");
+                throw new RuntimeException("Role padrÃ£o ROLE_OPERATOR nÃ£o encontrada no sistema");
             }
             user.addRole(defaultRole.get());
         }

@@ -10,44 +10,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-
-@CrossOrigin(origins = {"http://127.0.0.1:5500", "http://localhost:5500", "http://localhost:5173"})
-@RestController
-@RequestMapping("/api/genealogies")
+import org.springframework.security.access.prepost.PreAuthorize;@RequestMapping("/api/genealogies")
 public class GenealogyController {
 
-    private final GenealogyFacade genealogyFacade;
-    // CORREÇÃO: GenealogyDTOConverter é uma classe utilitária com métodos estáticos, não precisa ser injetada
-
-    @Autowired
-    private GenealogyMapper genealogyMapper;
-
-    @Autowired
+    private final GenealogyFacade genealogyFacade;@Autowired
+    private GenealogyMapper genealogyMapper;@Autowired
     public GenealogyController(GenealogyFacade genealogyFacade) {
         this.genealogyFacade = genealogyFacade;
-    }
-
-    @GetMapping("/{registrationNumber}")
+    }@GetMapping("/{registrationNumber}")
     public ResponseEntity<GenealogyResponseDTO> getGenealogy(@PathVariable String registrationNumber) {
         GenealogyFacadeResponseDTO facadeDTO = genealogyFacade.findGenealogy(registrationNumber);
-        // Converter FacadeDTO para ResponseVO para manter compatibilidade
-        GenealogyResponseVO responseVO = convertFacadeDTOToResponseVO(facadeDTO);
+                GenealogyResponseVO responseVO = convertFacadeDTOToResponseVO(facadeDTO);
         GenealogyResponseDTO responseDTO = genealogyMapper.toResponseDTO(responseVO);
         return ResponseEntity.ok(responseDTO);
-    }
-
-    @PostMapping("/{registrationNumber}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
+    }@PostMapping("/{registrationNumber}")@PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     public ResponseEntity<GenealogyResponseDTO> createGenealogy(@PathVariable String registrationNumber) {
         GenealogyFacadeResponseDTO facadeDTO = genealogyFacade.createGenealogy(registrationNumber);
         GenealogyResponseVO createdResponseVO = convertFacadeDTOToResponseVO(facadeDTO);
         GenealogyResponseDTO createdResponseDTO = genealogyMapper.toResponseDTO(createdResponseVO);
         return new ResponseEntity<>(createdResponseDTO, HttpStatus.CREATED);
-    }
-
-    @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
+    }@PostMapping@PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     public ResponseEntity<GenealogyResponseDTO> createGenealogyWithData(@RequestBody GenealogyRequestDTO requestDTO) {
         GenealogyFacadeResponseDTO facadeDTO = genealogyFacade.createGenealogyWithData(requestDTO);
         GenealogyResponseVO createdResponseVO = convertFacadeDTOToResponseVO(facadeDTO);
@@ -64,34 +46,29 @@ public class GenealogyController {
         responseVO.setToe(facadeDTO.getToe());
         responseVO.setBirthDate(facadeDTO.getBirthDate());
         
-        // Campos que estavam faltando
-        responseVO.setBreeder(facadeDTO.getBreeder());
+                responseVO.setBreeder(facadeDTO.getBreeder());
         responseVO.setFarmOwner(facadeDTO.getFarmOwner());
         responseVO.setColor(facadeDTO.getColor());
         responseVO.setStatus(facadeDTO.getStatus());
         responseVO.setCategory(facadeDTO.getCategory());
         responseVO.setTod(facadeDTO.getTod());
         
-        // Pais
-        responseVO.setFatherName(facadeDTO.getFatherName());
+                responseVO.setFatherName(facadeDTO.getFatherName());
         responseVO.setFatherRegistration(facadeDTO.getFatherRegistration());
         responseVO.setMotherName(facadeDTO.getMotherName());
         responseVO.setMotherRegistration(facadeDTO.getMotherRegistration());
         
-        // Avós paternos
-        responseVO.setPaternalGrandfatherName(facadeDTO.getPaternalGrandfatherName());
+                responseVO.setPaternalGrandfatherName(facadeDTO.getPaternalGrandfatherName());
         responseVO.setPaternalGrandfatherRegistration(facadeDTO.getPaternalGrandfatherRegistration());
         responseVO.setPaternalGrandmotherName(facadeDTO.getPaternalGrandmotherName());
         responseVO.setPaternalGrandmotherRegistration(facadeDTO.getPaternalGrandmotherRegistration());
         
-        // Avós maternos
-        responseVO.setMaternalGrandfatherName(facadeDTO.getMaternalGrandfatherName());
+                responseVO.setMaternalGrandfatherName(facadeDTO.getMaternalGrandfatherName());
         responseVO.setMaternalGrandfatherRegistration(facadeDTO.getMaternalGrandfatherRegistration());
         responseVO.setMaternalGrandmotherName(facadeDTO.getMaternalGrandmotherName());
         responseVO.setMaternalGrandmotherRegistration(facadeDTO.getMaternalGrandmotherRegistration());
         
-        // Bisavós paternos
-        responseVO.setPaternalGreatGrandfather1Name(facadeDTO.getPaternalGreatGrandfather1Name());
+                responseVO.setPaternalGreatGrandfather1Name(facadeDTO.getPaternalGreatGrandfather1Name());
         responseVO.setPaternalGreatGrandfather1Registration(facadeDTO.getPaternalGreatGrandfather1Registration());
         responseVO.setPaternalGreatGrandmother1Name(facadeDTO.getPaternalGreatGrandmother1Name());
         responseVO.setPaternalGreatGrandmother1Registration(facadeDTO.getPaternalGreatGrandmother1Registration());
@@ -100,8 +77,7 @@ public class GenealogyController {
         responseVO.setPaternalGreatGrandmother2Name(facadeDTO.getPaternalGreatGrandmother2Name());
         responseVO.setPaternalGreatGrandmother2Registration(facadeDTO.getPaternalGreatGrandmother2Registration());
         
-        // Bisavós maternos
-        responseVO.setMaternalGreatGrandfather1Name(facadeDTO.getMaternalGreatGrandfather1Name());
+                responseVO.setMaternalGreatGrandfather1Name(facadeDTO.getMaternalGreatGrandfather1Name());
         responseVO.setMaternalGreatGrandfather1Registration(facadeDTO.getMaternalGreatGrandfather1Registration());
         responseVO.setMaternalGreatGrandmother1Name(facadeDTO.getMaternalGreatGrandmother1Name());
         responseVO.setMaternalGreatGrandmother1Registration(facadeDTO.getMaternalGreatGrandmother1Registration());

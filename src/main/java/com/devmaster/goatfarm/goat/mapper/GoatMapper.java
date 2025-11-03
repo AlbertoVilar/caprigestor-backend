@@ -13,8 +13,7 @@ import org.mapstruct.factory.Mappers;
 public interface GoatMapper {
     GoatMapper INSTANCE = Mappers.getMapper(GoatMapper.class);
 
-    // DTO <-> Entity
-    Goat toEntity(GoatRequestDTO dto);
+        Goat toEntity(GoatRequestDTO dto);
     
     @Mapping(source = "farm.name", target = "farmName")
     @Mapping(source = "farm.id", target = "farmId")
@@ -25,12 +24,10 @@ public interface GoatMapper {
     @Mapping(source = "mother.registrationNumber", target = "motherRegistrationNumber")
     GoatResponseDTO toResponseDTO(Goat entity);
 
-    // DTO <-> VO
-    GoatRequestVO toRequestVO(GoatRequestDTO dto);
+        GoatRequestVO toRequestVO(GoatRequestDTO dto);
     GoatResponseDTO toResponseDTO(GoatResponseVO vo);
     
-    // ✅ CORREÇÃO CRÍTICA: Mapeamento de Entity para ResponseVO com objetos aninhados
-    @Mapping(source = "farm.name", target = "farmName")
+        @Mapping(source = "farm.name", target = "farmName")
     @Mapping(source = "farm.id", target = "farmId")
     @Mapping(source = "user.name", target = "userName")
     @Mapping(source = "father.name", target = "fatherName")
@@ -41,3 +38,4 @@ public interface GoatMapper {
     
     Goat toEntity(GoatRequestVO vo);
 }
+

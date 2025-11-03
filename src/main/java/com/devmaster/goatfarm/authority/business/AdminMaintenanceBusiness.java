@@ -28,15 +28,13 @@ public class AdminMaintenanceBusiness {
 
     @Transactional
     public void cleanDatabaseAndSetupAdmin(Long adminIdToKeep) {
-        // A ordem é crucial para respeitar as restrições de chave estrangeira (FK)
-        // 1. Deletar entidades que dependem de outras
-        eventBusiness.deleteEventsFromOtherUsers(adminIdToKeep);
+                        eventBusiness.deleteEventsFromOtherUsers(adminIdToKeep);
         goatBusiness.deleteGoatsFromOtherUsers(adminIdToKeep);
-        // GoatFarm deve ser removido antes de Phones para evitar violação de FK em tabelas de junção
-        goatFarmBusiness.deleteGoatFarmsFromOtherUsers(adminIdToKeep);
+                goatFarmBusiness.deleteGoatFarmsFromOtherUsers(adminIdToKeep);
         phoneBusiness.deletePhonesFromOtherUsers(adminIdToKeep);
         addressBusiness.deleteAddressesFromOtherUsers(adminIdToKeep);
         userBusiness.deleteRolesFromOtherUsers(adminIdToKeep);
         userBusiness.deleteOtherUsers(adminIdToKeep);
     }
 }
+

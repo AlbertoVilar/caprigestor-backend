@@ -27,7 +27,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/goats/{registrationNumber}/events")
-@Tag(name = "Eventos de Cabras", description = "Gerenciamento de eventos relacionados às cabras")
+@Tag(name = "Eventos de Cabras", description = "Gerenciamento de eventos relacionados Ã s cabras")
 public class GoatEventController {
 
     @Autowired
@@ -38,17 +38,17 @@ public class GoatEventController {
 
     @Operation(
             summary = "Busca eventos da cabra por registro e filtros opcionais",
-            description = "Permite buscar eventos de uma cabra específica com filtros por tipo de evento e intervalo de datas."
+            description = "Permite buscar eventos de uma cabra especÃ­fica com filtros por tipo de evento e intervalo de datas."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Eventos encontrados com sucesso"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
-            @ApiResponse(responseCode = "404", description = "Cabra não encontrada")
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuÃ¡rio nÃ£o Ã© proprietÃ¡rio da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada")
     })
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<Page<EventResponseDTO>> getGoatEvents(
-            @Parameter(description = "Número de registro da cabra", example = "2114517012")
+            @Parameter(description = "NÃºmero de registro da cabra", example = "2114517012")
             @PathVariable String registrationNumber,
 
             @Parameter(description = "Tipo do evento", example = "SAUDE")
@@ -71,7 +71,7 @@ public class GoatEventController {
                 registrationNumber, enumEventType, startDate, endDate, pageable);
 
         return ResponseEntity.ok(responseVOPage.map(responseVO -> 
-            eventMapper.responseDTO(responseVO)
+            eventMapper.toResponseDTO(responseVO)
         ));
     }
 
@@ -79,18 +79,18 @@ public class GoatEventController {
     @Operation(
             summary = "Adiciona um novo evento para uma cabra",
             description = "Cria e associa um evento como: COBERTURA, PARTO, MORTE, SAUDE, VACINACAO, TRANSFERENCIA, " +
-                    "MUDANCA_PROPRIETARIO, PESAGEM ou OUTRO a uma cabra identificada pelo número de registro."
+                    "MUDANCA_PROPRIETARIO, PESAGEM ou OUTRO a uma cabra identificada pelo nÃºmero de registro."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Evento criado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
-            @ApiResponse(responseCode = "404", description = "Cabra não encontrada")
+            @ApiResponse(responseCode = "400", description = "Dados invÃ¡lidos fornecidos"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuÃ¡rio nÃ£o Ã© proprietÃ¡rio da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada")
     })
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<EventResponseDTO> createEvent(
-            @Parameter(description = "Número de registro da cabra", example = "2114517012")
+            @Parameter(description = "NÃºmero de registro da cabra", example = "2114517012")
             @PathVariable("registrationNumber") String registrationNumber,
 
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Dados do evento a ser criado")
@@ -98,25 +98,25 @@ public class GoatEventController {
     ) {
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
         EventResponseVO responseVO = eventManagementUseCase.createEvent(requestVO, registrationNumber);
-        EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
+        EventResponseDTO responseDTO = eventMapper.toResponseDTO(responseVO);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
     @Operation(
             summary = "Atualiza um evento relacionado a uma cabra",
-            description = "Permite atualizar ou corrigir os dados de um evento, sem alterar informações do animal vinculado."
+            description = "Permite atualizar ou corrigir os dados de um evento, sem alterar informaÃ§Ãµes do animal vinculado."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Evento atualizado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
-            @ApiResponse(responseCode = "404", description = "Evento ou cabra não encontrada")
+            @ApiResponse(responseCode = "400", description = "Dados invÃ¡lidos fornecidos"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuÃ¡rio nÃ£o Ã© proprietÃ¡rio da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Evento ou cabra nÃ£o encontrada")
     })
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<EventResponseDTO> updateGoatEvent(
-            @Parameter(description = "Número de registro da cabra", example = "2114517012")
+            @Parameter(description = "NÃºmero de registro da cabra", example = "2114517012")
             @PathVariable("registrationNumber") String registrationNumber,
 
             @Parameter(description = "ID do evento a ser atualizado", example = "3")
@@ -125,20 +125,19 @@ public class GoatEventController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Novos dados para o evento")
             @RequestBody @Valid EventRequestDTO requestDTO
     ) {
-        // Validação para evitar conversão de "null" string
-        if ("null".equals(id) || id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID do evento não pode ser null ou vazio");
+                if ("null".equals(id) || id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("ID do evento nÃ£o pode ser null ou vazio");
         }
         
         Long eventId;
         try {
             eventId = Long.parseLong(id);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("ID do evento deve ser um número válido: " + id);
+            throw new IllegalArgumentException("ID do evento deve ser um nÃºmero vÃ¡lido: " + id);
         }
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
         EventResponseVO responseVO = eventManagementUseCase.updateEvent(eventId, requestVO, registrationNumber);
-        EventResponseDTO responseDTO = eventMapper.responseDTO(responseVO);
+        EventResponseDTO responseDTO = eventMapper.toResponseDTO(responseVO);
 
         return ResponseEntity.ok(responseDTO);
     }
@@ -149,8 +148,8 @@ public class GoatEventController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Evento removido com sucesso"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado - usuário não é proprietário da fazenda"),
-            @ApiResponse(responseCode = "404", description = "Evento não encontrado")
+            @ApiResponse(responseCode = "403", description = "Acesso negado - usuÃ¡rio nÃ£o Ã© proprietÃ¡rio da fazenda"),
+            @ApiResponse(responseCode = "404", description = "Evento nÃ£o encontrado")
     })
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
@@ -158,19 +157,19 @@ public class GoatEventController {
             @Parameter(description = "ID do evento a ser removido", example = "3")
             @PathVariable String id
     ) {
-        // Validação para evitar conversão de "null" string
-        if ("null".equals(id) || id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("ID do evento não pode ser null ou vazio");
+                if ("null".equals(id) || id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("ID do evento nÃ£o pode ser null ou vazio");
         }
         
         Long eventId;
         try {
             eventId = Long.parseLong(id);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("ID do evento deve ser um número válido: " + id);
+            throw new IllegalArgumentException("ID do evento deve ser um nÃºmero vÃ¡lido: " + id);
         }
         
         eventManagementUseCase.deleteEvent(eventId);
         return ResponseEntity.noContent().build();
     }
 }
+

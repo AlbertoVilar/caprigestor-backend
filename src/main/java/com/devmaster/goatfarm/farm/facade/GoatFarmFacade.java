@@ -27,10 +27,10 @@ public class GoatFarmFacade {
     private OwnershipService ownershipService;
 
     /**
-     * Cria uma fazenda completa com proprietário, endereço e telefones.
+     * Cria uma fazenda completa com proprietÃ¡rio, endereÃ§o e telefones.
      * @param farmVO Dados da fazenda
-     * @param userVO Dados do proprietário
-     * @param addressVO Dados do endereço
+     * @param userVO Dados do proprietÃ¡rio
+     * @param addressVO Dados do endereÃ§o
      * @param phoneVOs Lista de telefones
      * @return GoatFarmFullResponseVO com os dados da fazenda criada
      */
@@ -54,11 +54,11 @@ public class GoatFarmFacade {
 
     /**
      * Atualiza uma fazenda existente.
-     * Verifica ownership antes de delegar para a camada de negócio.
+     * Verifica ownership antes de delegar para a camada de negÃ³cio.
      * @param id ID da fazenda
      * @param requestVO Novos dados da fazenda
-     * @param userVO Novos dados do proprietário
-     * @param addressVO Novos dados do endereço
+     * @param userVO Novos dados do proprietÃ¡rio
+     * @param addressVO Novos dados do endereÃ§o
      * @param phoneVOs Nova lista de telefones
      * @return GoatFarmFullResponseVO com os dados atualizados
      */
@@ -68,8 +68,7 @@ public class GoatFarmFacade {
                                                  UserRequestVO userVO,
                                                  AddressRequestVO addressVO,
                                                  List<PhoneRequestVO> phoneVOs) {
-        // Verifica ownership da fazenda antes de atualizar
-        ownershipService.verifyFarmOwnershipById(id);
+                ownershipService.verifyFarmOwnershipById(id);
         return farmBusiness.updateGoatFarm(id, requestVO, userVO, addressVO, phoneVOs);
     }
 
@@ -77,19 +76,18 @@ public class GoatFarmFacade {
 
     /**
      * Busca uma fazenda pelo ID.
-     * Endpoint público - não requer autenticação.
+     * Endpoint pÃºblico - nÃ£o requer autenticaÃ§Ã£o.
      * @param id ID da fazenda
      * @return GoatFarmFullResponseVO com os dados da fazenda
      */
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        // Endpoint público - busca direta sem verificação de ownership
-        return farmBusiness.findGoatFarmById(id);
+                return farmBusiness.findGoatFarmById(id);
     }
 
     /**
-     * Busca fazendas por nome com paginação.
+     * Busca fazendas por nome com paginaÃ§Ã£o.
      * @param name Nome ou parte do nome da fazenda
-     * @param pageable Configuração de paginação
+     * @param pageable ConfiguraÃ§Ã£o de paginaÃ§Ã£o
      * @return Page de GoatFarmFullResponseVO
      */
     public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
@@ -97,8 +95,8 @@ public class GoatFarmFacade {
     }
 
     /**
-     * Lista todas as fazendas com paginação.
-     * @param pageable Configuração de paginação
+     * Lista todas as fazendas com paginaÃ§Ã£o.
+     * @param pageable ConfiguraÃ§Ã£o de paginaÃ§Ã£o
      * @return Page de GoatFarmFullResponseVO
      */
     public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
@@ -107,15 +105,15 @@ public class GoatFarmFacade {
 
     /**
      * Remove uma fazenda pelo ID.
-     * Verifica ownership antes de delegar para a camada de negócio.
+     * Verifica ownership antes de delegar para a camada de negÃ³cio.
      * @param id ID da fazenda a ser removida
-     * @return String com mensagem de confirmação
+     * @return String com mensagem de confirmaÃ§Ã£o
      */
     @Transactional
     public String deleteGoatFarm(Long id) {
-        // Verifica ownership da fazenda antes de remover
-        ownershipService.verifyFarmOwnershipById(id);
+                ownershipService.verifyFarmOwnershipById(id);
         return farmBusiness.deleteGoatFarm(id);
     }
 
 }
+

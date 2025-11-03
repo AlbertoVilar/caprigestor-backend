@@ -5,8 +5,7 @@ public class PhoneRequestVO {
     private Long id;
     private String ddd;
     private String number;
-    private Long goatFarmId; // ✅ ID do Capril associado
-
+    private Long goatFarmId; 
     public PhoneRequestVO() {
     }
 
@@ -49,3 +48,4 @@ public class PhoneRequestVO {
         this.goatFarmId = goatFarmId;
     }
 }
+

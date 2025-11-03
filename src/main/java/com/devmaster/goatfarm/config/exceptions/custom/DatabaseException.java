@@ -6,8 +6,7 @@ public class DatabaseException extends RuntimeException {
         super(msg);
     }
 
-    // ADICIONE ESTE CONSTRUTOR
-    public DatabaseException(String msg, Throwable cause) {
+        public DatabaseException(String msg, Throwable cause) {
         super(msg, cause);
     }
 }

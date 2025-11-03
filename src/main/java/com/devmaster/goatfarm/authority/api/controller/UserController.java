@@ -30,11 +30,11 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
-        logger.info("Iniciando busca por usuário com ID: {}", id);
+        logger.info("Iniciando busca por usuÃ¡rio com ID: {}", id);
         try {
             return ResponseEntity.ok(userFacade.findById(id));
         } catch (Exception e) {
-            logger.error("ERRO COMPLETO ao buscar usuário com ID {}: {}", id, e.getMessage());
+            logger.error("ERRO COMPLETO ao buscar usuÃ¡rio com ID {}: {}", id, e.getMessage());
             logger.error("Stack trace completo:", e);
             throw e;
         }
@@ -48,7 +48,7 @@ public class UserController {
             Map<String, String> validationErrors = new HashMap<>();
             validationErrors.put("validation", e.getMessage());
             throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
-                "Dados inválidos", validationErrors);
+                "Dados invÃ¡lidos", validationErrors);
         } catch (Exception e) {
             throw e;
         }
@@ -56,23 +56,22 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody @Valid UserRequestDTO dto) {
-        logger.info("Iniciando atualização do usuário com ID: {}", id);
+        logger.info("Iniciando atualizaÃ§Ã£o do usuÃ¡rio com ID: {}", id);
         try {
             return ResponseEntity.ok(userFacade.updateUser(id, dto));
         } catch (IllegalArgumentException e) {
             Map<String, String> validationErrors = new HashMap<>();
             validationErrors.put("validation", e.getMessage());
             throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
-                "Dados inválidos", validationErrors);
+                "Dados invÃ¡lidos", validationErrors);
         } catch (Exception e) {
-            logger.error("ERRO ao atualizar usuário com ID {}: {}", id, e.getMessage());
+            logger.error("ERRO ao atualizar usuÃ¡rio com ID {}: {}", id, e.getMessage());
             logger.error("Stack trace completo:", e);
             throw e;
         }
     }
 
-    // Temporary endpoint for debug - check user roles
-    @GetMapping("/debug/{email}")
+        @GetMapping("/debug/{email}")
     public ResponseEntity<Map<String, Object>> debugUserRoles(@PathVariable String email) {
         try {
             UserResponseDTO user = userFacade.findByEmail(email);
@@ -90,3 +89,4 @@ public class UserController {
         }
     }
 }
+

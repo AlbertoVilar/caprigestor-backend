@@ -17,11 +17,11 @@ public class GoatFarmUpdateRequestVO {
     private GoatFarmRequestDTO farm;
 
 
-    // Funcionalidade de proprietário migrada para entidade User
-
+    
 
     private AddressRequestDTO address;
 
 
     private List<PhoneRequestDTO> phones;
 }
+

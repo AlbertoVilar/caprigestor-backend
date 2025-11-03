@@ -180,6 +180,28 @@ Cada entidade possui seu mapper específico seguindo o mesmo padrão:
 - Mapeamento de listas
 - Tratamento de relacionamentos
 
+### EventMapper
+Responsável pelos mapeamentos entre `Event` (Entity), `EventResponseVO` (Business) e `EventResponseDTO` (API).
+
+- Conversões principais:
+  - `Event` → `EventResponseVO` mapeia:
+    - `id` → `eventId`
+    - `goat.registrationNumber` → `goatId`
+    - `goat.name` → `goatName`
+  - `EventResponseVO` → `EventResponseDTO` mapeia:
+    - `eventId` → `id`
+
+- Métodos expostos:
+  - `toRequestVO(EventRequestDTO)`
+  - `toEntity(EventRequestVO)`
+  - `toResponseVO(Event)`
+  - `toResponseDTO(EventResponseVO)`
+  - `toResponseVOList(List<Event>)`
+  - `toResponseDTOList(List<EventResponseVO>)`
+  - `updateEvent(@MappingTarget Event, EventRequestVO)`
+
+Campos retornados pelo endpoint de eventos (`EventResponseDTO`): `id`, `goatId`, `goatName`, `eventType`, `date`, `description`, `location`, `veterinarian`, `outcome`.
+
 ## 4. Contrato da API (Endpoints)
 
 ### AuthController (/api/auth)
