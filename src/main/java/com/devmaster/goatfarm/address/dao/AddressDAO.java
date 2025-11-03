@@ -58,6 +58,11 @@ public class AddressDAO {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Address> findByIdAndFarmId(Long id, Long farmId) {
+        return adressRepository.findByIdAndGoatFarmId(id, farmId);
+    }
+
+    @Transactional(readOnly = true)
     public List<Address> findAllAddresses() {
         return adressRepository.findAll();
     }

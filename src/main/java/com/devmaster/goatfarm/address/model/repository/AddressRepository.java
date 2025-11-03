@@ -22,4 +22,7 @@ public interface AddressRepository extends JpaRepository<Address, Long> {
     @Transactional
     @Query(nativeQuery = true, value = "DELETE FROM endereco WHERE id IN (SELECT c.address_id FROM capril c WHERE c.user_id != :adminId AND c.address_id IS NOT NULL)")
     void deleteAddressesFromOtherUsers(@Param("adminId") Long adminId);
+
+    // NOVO: Busca por ID do endereço e ID da fazenda
+    Optional<Address> findByIdAndGoatFarmId(Long id, Long goatFarmId);
 }
