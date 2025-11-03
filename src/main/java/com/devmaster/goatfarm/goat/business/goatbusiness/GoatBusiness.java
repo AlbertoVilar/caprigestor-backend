@@ -2,14 +2,15 @@ package com.devmaster.goatfarm.goat.business.goatbusiness;
 
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
+import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.dao.GoatDAO;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
+import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,42 +25,42 @@ import java.util.Optional;
 public class GoatBusiness {
 
     private final GoatDAO goatDAO;
-    private final GoatFarmBusiness goatFarmBusiness;
-    private final UserBusiness userBusiness;
+    private final GoatFarmDAO goatFarmDAO;
+    private final UserDAO userDAO;
     private final GenealogyBusiness genealogyBusiness;
+    private final OwnershipService ownershipService;
     private final GoatMapper goatMapper;
 
     @Autowired
-    public GoatBusiness(GoatDAO goatDAO, GoatFarmBusiness goatFarmBusiness, UserBusiness userBusiness,
-                        GenealogyBusiness genealogyBusiness, GoatMapper goatMapper) {
+    public GoatBusiness(GoatDAO goatDAO, GoatFarmDAO goatFarmDAO, UserDAO userDAO,
+                        GenealogyBusiness genealogyBusiness, OwnershipService ownershipService, GoatMapper goatMapper) {
         this.goatDAO = goatDAO;
-        this.goatFarmBusiness = goatFarmBusiness;
-        this.userBusiness = userBusiness;
+        this.goatFarmDAO = goatFarmDAO;
+        this.userDAO = userDAO;
         this.genealogyBusiness = genealogyBusiness;
+        this.ownershipService = ownershipService;
         this.goatMapper = goatMapper;
     }
 
     @Transactional
-    public GoatResponseVO createGoat(GoatRequestVO requestVO) {
-        if (requestVO.getRegistrationNumber() != null &&
-                goatDAO.existsById(requestVO.getRegistrationNumber())) {
-            throw new DuplicateEntityException("NÃºmero de registro jÃ¡ existe.");
+    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
+
+        if (requestVO.getRegistrationNumber() != null && goatDAO.existsById(requestVO.getRegistrationNumber())) {
+            throw new DuplicateEntityException("Número de registro já existe.");
         }
 
-        GoatFarm farm = findGoatFarmById(requestVO.getFarmId());
+        GoatFarm farm = goatFarmDAO.findFarmEntityById(farmId);
         Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
         Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
 
         Goat goat = goatMapper.toEntity(requestVO);
-        Long reqUserId = requestVO.getUserId();
-        if (reqUserId == null) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException("Ã‰ obrigatÃ³rio informar o usuÃ¡rio (userId) para cadastrar a cabra.");
-        }
-        User user = userBusiness.getEntityById(reqUserId);
+        User user = ownershipService.getCurrentUser();
         goat.setUser(user);
-        if (farm != null) goat.setFarm(farm);
-        if (father != null) goat.setFather(father);
-        if (mother != null) goat.setMother(mother);
+        goat.setFarm(farm);
+        goat.setFather(father);
+        goat.setMother(mother);
+        
         Goat savedGoat = goatDAO.save(goat);
 
         if (savedGoat.getRegistrationNumber() != null) {
@@ -70,85 +71,51 @@ public class GoatBusiness {
     }
 
     @Transactional
-    public GoatResponseVO updateGoat(String registrationNumber, GoatRequestVO requestVO) {
-        if (requestVO.getRegistrationNumber() != null && !registrationNumber.equalsIgnoreCase(requestVO.getRegistrationNumber())) {
-            throw new DuplicateEntityException("NÃºmero de registro do path difere do body.");
-        }
+    public GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
 
-        GoatFarm farm = findGoatFarmById(requestVO.getFarmId());
+        Goat goatToUpdate = goatDAO.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+
         Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
         Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
 
-        return goatDAO.updateGoat(registrationNumber, requestVO, farm, father, mother);
+        goatMapper.updateEntity(goatToUpdate, requestVO, father, mother);
+        
+        Goat updatedGoat = goatDAO.save(goatToUpdate);
+        return goatMapper.toResponseVO(updatedGoat);
+    }
+
+    @Transactional
+    public void deleteGoat(Long farmId, String goatId) {
+        ownershipService.verifyFarmOwnership(farmId);
+        Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        goatDAO.delete(goat);
     }
 
     @Transactional(readOnly = true)
-    public GoatResponseVO findGoatByRegistrationNumber(String registrationNumber) {
-        Goat goat = goatDAO.findByRegistrationNumber(registrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra nÃ£o encontrada."));
+    public GoatResponseVO findGoatById(Long farmId, String goatId) {
+        ownershipService.verifyFarmOwnership(farmId);
+        Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
         return goatMapper.toResponseVO(goat);
     }
 
     @Transactional(readOnly = true)
-    public Page<GoatResponseVO> searchGoatByNameAndFarmId(String goatName, Long farmId, Pageable pageable) {
-        Page<Goat> goats = goatDAO.searchGoatByNameAndFarmId(goatName, farmId, pageable);
-        return goats.map(goatMapper::toResponseVO);
+    public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable) {
+        ownershipService.verifyFarmOwnership(farmId);
+        return goatDAO.findAllByFarmId(farmId, pageable).map(goatMapper::toResponseVO);
     }
 
     @Transactional(readOnly = true)
-    public Page<GoatResponseVO> findByFarmIdAndOptionalRegistrationNumber(Long farmId, String registrationNumber, Pageable pageable) {
-        Page<Goat> goats = goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
-        return goats.map(goatMapper::toResponseVO);
-    }
-
-    public void deleteGoat(String registrationNumber) {
-        goatDAO.deleteGoat(registrationNumber);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<GoatResponseVO> findAllGoats(Pageable pageable) {
-        Page<Goat> goats = goatDAO.findAll(pageable);
-        return goats.map(goatMapper::toResponseVO);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<GoatResponseVO> searchGoatByName(String name, Pageable pageable) {
-        Page<Goat> goats = goatDAO.searchGoatByName(name, pageable);
-        return goats.map(goatMapper::toResponseVO);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<GoatResponseVO> findGoatsByNameAndFarmId(Long farmId, String name, Pageable pageable) {
-        Page<Goat> goats = goatDAO.findByNameAndFarmId(farmId, name, pageable);
-        return goats.map(goatMapper::toResponseVO);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<GoatResponseVO> findGoatsByFarmIdAndRegistrationNumber(Long farmId, String registrationNumber, Pageable pageable) {
-        Page<Goat> goats = goatDAO.findByFarmIdAndOptionalRegistrationNumber(farmId, registrationNumber, pageable);
-        return goats.map(goatMapper::toResponseVO);
-    }
-
-    private GoatFarm findGoatFarmById(Long id) {
-        if (id == null) return null;
-        return goatFarmBusiness.getFarmEntityById(id);
+    public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable) {
+        ownershipService.verifyFarmOwnership(farmId);
+        return goatDAO.findByNameAndFarmId(farmId, name, pageable).map(goatMapper::toResponseVO);
     }
 
     private Optional<Goat> findOptionalGoat(String registrationNumber) {
         if (registrationNumber == null) return Optional.empty();
         return goatDAO.findByRegistrationNumber(registrationNumber);
     }
-
-        @Transactional(readOnly = true)
-    public Goat getEntityByRegistrationNumber(String registrationNumber) {
-        return goatDAO.findByRegistrationNumber(registrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra nÃ£o encontrada: " + registrationNumber));
-    }
-
-    @Transactional
-    public void deleteGoatsFromOtherUsers(Long adminId) {
-        goatDAO.deleteGoatsFromOtherUsers(adminId);
-    }
 }
-
-

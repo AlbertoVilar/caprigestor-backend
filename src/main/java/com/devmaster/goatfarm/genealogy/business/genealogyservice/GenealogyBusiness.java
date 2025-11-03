@@ -43,7 +43,7 @@ public class GenealogyBusiness {
         Goat goat = goatDAO.findByRegistrationNumber(goatRegistrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatRegistrationNumber));
 
-        final Genealogy entity = buildGenealogyFromGoat(goat);
+        final Genealogy entity = genealogyMapper.toEntity(goat);
         genealogyDAO.save(entity);
         return genealogyMapper.toResponseVO(entity);
     }
@@ -60,90 +60,5 @@ public class GenealogyBusiness {
             throw new DatabaseException("Erro ao persistir genealogia: " + e.getMessage());
         }
         return genealogyMapper.toResponseVO(entity);
-    }
-
-    private Genealogy buildGenealogyFromGoat(Goat goat) {
-        Genealogy genealogy = new Genealogy();
-        try {
-            genealogy.setGoatName(goat.getName());
-            genealogy.setGoatRegistration(goat.getRegistrationNumber());
-            genealogy.setGoatBreed(goat.getBreed() != null ? goat.getBreed().toString() : null);
-            genealogy.setGoatCoatColor(goat.getColor());
-            genealogy.setGoatStatus(goat.getStatus() != null ? goat.getStatus().toString() : null);
-            genealogy.setGoatSex(goat.getGender() != null ? goat.getGender().toString() : null);
-            genealogy.setGoatCategory(goat.getCategory() != null ? goat.getCategory().toString() : null);
-            genealogy.setGoatTOD(goat.getTod());
-            genealogy.setGoatTOE(goat.getToe());
-            genealogy.setGoatBirthDate(goat.getBirthDate() != null ? goat.getBirthDate().toString() : null);
-
-            if (goat.getUser() != null) {
-                genealogy.setGoatCreator(goat.getUser().getName());
-            }
-            if (goat.getFarm() != null && goat.getFarm().getUser() != null) {
-                genealogy.setGoatOwner(goat.getFarm().getUser().getName());
-            }
-
-            if (goat.getFather() != null) {
-                genealogy.setFatherName(goat.getFather().getName());
-                genealogy.setFatherRegistration(goat.getFather().getRegistrationNumber());
-                if (goat.getFather().getFather() != null) {
-                    genealogy.setPaternalGrandfatherName(goat.getFather().getFather().getName());
-                    genealogy.setPaternalGrandfatherRegistration(goat.getFather().getFather().getRegistrationNumber());
-                    if (goat.getFather().getFather().getFather() != null) {
-                        genealogy.setPaternalGreatGrandfather1Name(goat.getFather().getFather().getFather().getName());
-                        genealogy.setPaternalGreatGrandfather1Registration(goat.getFather().getFather().getFather().getRegistrationNumber());
-                    }
-                    if (goat.getFather().getFather().getMother() != null) {
-                        genealogy.setPaternalGreatGrandmother1Name(goat.getFather().getFather().getMother().getName());
-                        genealogy.setPaternalGreatGrandmother1Registration(goat.getFather().getFather().getMother().getRegistrationNumber());
-                    }
-                }
-                if (goat.getFather().getMother() != null) {
-                    genealogy.setPaternalGrandmotherName(goat.getFather().getMother().getName());
-                    genealogy.setPaternalGrandmotherRegistration(goat.getFather().getMother().getRegistrationNumber());
-                    if (goat.getFather().getMother().getFather() != null) {
-                        genealogy.setPaternalGreatGrandfather2Name(goat.getFather().getMother().getFather().getName());
-                        genealogy.setPaternalGreatGrandfather2Registration(goat.getFather().getMother().getFather().getRegistrationNumber());
-                    }
-                    if (goat.getFather().getMother().getMother() != null) {
-                        genealogy.setPaternalGreatGrandmother2Name(goat.getFather().getMother().getMother().getName());
-                        genealogy.setPaternalGreatGrandmother2Registration(goat.getFather().getMother().getMother().getRegistrationNumber());
-                    }
-                }
-            }
-
-            if (goat.getMother() != null) {
-                genealogy.setMotherName(goat.getMother().getName());
-                genealogy.setMotherRegistration(goat.getMother().getRegistrationNumber());
-                if (goat.getMother().getFather() != null) {
-                    genealogy.setMaternalGrandfatherName(goat.getMother().getFather().getName());
-                    genealogy.setMaternalGrandfatherRegistration(goat.getMother().getFather().getRegistrationNumber());
-                    if (goat.getMother().getFather().getFather() != null) {
-                        genealogy.setMaternalGreatGrandfather1Name(goat.getMother().getFather().getFather().getName());
-                        genealogy.setMaternalGreatGrandfather1Registration(goat.getMother().getFather().getFather().getRegistrationNumber());
-                    }
-                    if (goat.getMother().getFather().getMother() != null) {
-                        genealogy.setMaternalGreatGrandmother1Name(goat.getMother().getFather().getMother().getName());
-                        genealogy.setMaternalGreatGrandmother1Registration(goat.getMother().getFather().getMother().getRegistrationNumber());
-                    }
-                }
-                if (goat.getMother().getMother() != null) {
-                    genealogy.setMaternalGrandmotherName(goat.getMother().getMother().getName());
-                    genealogy.setMaternalGrandmotherRegistration(goat.getMother().getMother().getRegistrationNumber());
-                    if (goat.getMother().getMother().getFather() != null) {
-                        genealogy.setMaternalGreatGrandfather2Name(goat.getMother().getMother().getFather().getName());
-                        genealogy.setMaternalGreatGrandfather2Registration(goat.getMother().getMother().getFather().getRegistrationNumber());
-                    }
-                    if (goat.getMother().getMother().getMother() != null) {
-                        genealogy.setMaternalGreatGrandmother2Name(goat.getMother().getMother().getMother().getName());
-                        genealogy.setMaternalGreatGrandmother2Registration(goat.getMother().getMother().getMother().getRegistrationNumber());
-                    }
-                }
-            }
-
-            return genealogy;
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao construir genealogia: " + e.getMessage(), e);
-        }
     }
 }

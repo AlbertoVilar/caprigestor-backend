@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.authority.business;
 
 import com.devmaster.goatfarm.authority.dao.RoleDAO;
 import com.devmaster.goatfarm.authority.dao.UserDAO;
+import com.devmaster.goatfarm.authority.mapper.RoleMapper;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import org.slf4j.Logger;
@@ -22,6 +23,9 @@ public class AdminBusiness {
 
     @Autowired
     private RoleDAO roleDAO;
+
+    @Autowired
+    private RoleMapper roleMapper;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -83,8 +87,7 @@ public class AdminBusiness {
     private Role ensureRoleExists(String authority) {
         return roleDAO.findByAuthority(authority)
                 .orElseGet(() -> {
-                    Role role = new Role();
-                    role.setAuthority(authority);
+                    Role role = roleMapper.toEntity(authority);
                     Role saved = roleDAO.save(role);
                     logger.info("Role {} criada", authority);
                     return saved;

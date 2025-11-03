@@ -1,46 +1,47 @@
 package com.devmaster.goatfarm.phone.facade;
 
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
-import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
+import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
+import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
-import com.devmaster.goatfarm.phone.facade.dto.PhoneFacadeResponseDTO;
-import com.devmaster.goatfarm.phone.facade.mapper.PhoneFacadeMapper;
+import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
+import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PhoneFacade {
 
     @Autowired
     private PhoneBusiness phoneBusiness;
-    
+
     @Autowired
-    private PhoneFacadeMapper facadeMapper;
+    private PhoneMapper phoneMapper;
 
-    public PhoneFacadeResponseDTO createPhone(PhoneRequestVO requestVO, Long goatFarmId) {
-        PhoneResponseVO responseVO = phoneBusiness.createPhone(requestVO, goatFarmId);
-        return facadeMapper.toFacadeDTO(responseVO);
+    public PhoneResponseDTO createPhone(PhoneRequestDTO requestDTO) {
+        PhoneResponseVO responseVO = phoneBusiness.createPhone(phoneMapper.toRequestVO(requestDTO), requestDTO.getGoatFarmId());
+        return phoneMapper.toResponseDTO(responseVO);
     }
 
-    public PhoneFacadeResponseDTO updatePhone(Long id, PhoneRequestVO requestVO) {
-        PhoneResponseVO responseVO = phoneBusiness.updatePhone(id, requestVO);
-        return facadeMapper.toFacadeDTO(responseVO);
+    public PhoneResponseDTO updatePhone(Long id, PhoneRequestDTO requestDTO) {
+        PhoneResponseVO responseVO = phoneBusiness.updatePhone(id, phoneMapper.toRequestVO(requestDTO));
+        return phoneMapper.toResponseDTO(responseVO);
     }
 
-    public PhoneFacadeResponseDTO findPhoneById(Long id) {
+    public PhoneResponseDTO findPhoneById(Long id) {
         PhoneResponseVO responseVO = phoneBusiness.findPhoneById(id);
-        return facadeMapper.toFacadeDTO(responseVO);
+        return phoneMapper.toResponseDTO(responseVO);
     }
 
-    public List<PhoneFacadeResponseDTO> findAllPhones() {
-        List<PhoneResponseVO> responseVOs = phoneBusiness.findAllPhones();
-        return facadeMapper.toFacadeDTOList(responseVOs);
+    public List<PhoneResponseDTO> findAllPhones() {
+        return phoneBusiness.findAllPhones().stream()
+                .map(phoneMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    public String deletePhone(Long id) {
-        return phoneBusiness.deletePhone(id);
+    public void deletePhone(Long id) {
+        phoneBusiness.deletePhone(id);
     }
 }

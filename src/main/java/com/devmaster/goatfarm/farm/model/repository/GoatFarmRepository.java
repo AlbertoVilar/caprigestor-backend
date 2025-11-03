@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
 
     boolean existsByName(String name);
@@ -22,4 +24,8 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
     @Transactional
     @Query(nativeQuery = true, value = "DELETE FROM capril WHERE user_id != :adminId")
     void deleteGoatFarmsFromOtherUsers(@Param("adminId") Long adminId);
+
+    Optional<GoatFarm> findByIdAndUserId(Long id, Long userId);
+
+    Optional<GoatFarm> findByAddressId(Long addressId);
 }
