@@ -10,8 +10,6 @@ import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.dao.GoatDAO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.address.model.entity.Address;
-import com.devmaster.goatfarm.phone.model.entity.Phone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,35 +60,18 @@ public class OwnershipService {
                 .orElseThrow(() -> new ResourceNotFoundException("Acesso negado: Você não tem permissão para acessar a fazenda com ID: " + farmId));
     }
 
-    public void verifyGoatOwnership(String goatId) {
-        if (isCurrentUserAdmin()) {
-            return;
-        }
-        Goat goat = goatDAO.findByRegistrationNumber(goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatId));
-        verifyFarmOwnership(goat.getFarm().getId());
+    public void verifyGoatOwnership(Long farmId, String goatId) {
+        verifyFarmOwnership(farmId);
+        goatDAO.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra " + goatId + " não encontrada na fazenda " + farmId));
     }
 
-    public void verifyEventOwnership(Long eventId) {
-        if (isCurrentUserAdmin()) {
-            return;
-        }
+    public void verifyEventOwnership(Long farmId, String goatId, Long eventId) {
+        verifyGoatOwnership(farmId, goatId);
         Event event = eventDAO.findEventById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + eventId));
-        verifyGoatOwnership(event.getGoat().getRegistrationNumber());
-    }
-
-    public void verifyAddressOwnership(Long addressId) {
-        if (isCurrentUserAdmin()) {
-            return;
+        if (!event.getGoat().getRegistrationNumber().equals(goatId)) {
+            throw new ResourceNotFoundException("Este evento não pertence à cabra especificada.");
         }
-        GoatFarm farm = goatFarmDAO.findByAddressId(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço não está associado a nenhuma fazenda sua."));
-        verifyFarmOwnership(farm.getId());
-    }
-
-    public void verifyPhoneOwnership(Long phoneId) {
-        // Supondo que Phone tenha uma relação com GoatFarm
-        // Esta lógica precisaria de um método em PhoneDAO para encontrar a fazenda de um telefone
     }
 }

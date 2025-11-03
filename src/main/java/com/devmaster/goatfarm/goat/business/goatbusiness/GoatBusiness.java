@@ -88,7 +88,7 @@ public class GoatBusiness {
 
     @Transactional
     public void deleteGoat(Long farmId, String goatId) {
-        ownershipService.verifyFarmOwnership(farmId);
+        ownershipService.verifyGoatOwnership(farmId, goatId);
         Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
         goatDAO.delete(goat);
@@ -96,7 +96,7 @@ public class GoatBusiness {
 
     @Transactional(readOnly = true)
     public GoatResponseVO findGoatById(Long farmId, String goatId) {
-        ownershipService.verifyFarmOwnership(farmId);
+        ownershipService.verifyGoatOwnership(farmId, goatId);
         Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
         return goatMapper.toResponseVO(goat);

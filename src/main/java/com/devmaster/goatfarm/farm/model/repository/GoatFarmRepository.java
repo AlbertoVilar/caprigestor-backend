@@ -25,6 +25,7 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
     @Query(nativeQuery = true, value = "DELETE FROM capril WHERE user_id != :adminId")
     void deleteGoatFarmsFromOtherUsers(@Param("adminId") Long adminId);
 
+    // NOVO: Busca otimizada para verificação de posse
     Optional<GoatFarm> findByIdAndUserId(Long id, Long userId);
 
     Optional<GoatFarm> findByAddressId(Long addressId);
