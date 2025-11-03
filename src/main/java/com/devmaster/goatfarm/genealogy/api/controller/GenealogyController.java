@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/genealogies")
+@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/genealogies")
 public class GenealogyController {
 
     private final GenealogyFacade genealogyFacade;
@@ -20,20 +20,20 @@ public class GenealogyController {
         this.genealogyFacade = genealogyFacade;
     }
 
-    @GetMapping("/{registrationNumber}")
-    public ResponseEntity<GenealogyResponseDTO> getGenealogy(@PathVariable String registrationNumber) {
-        return ResponseEntity.ok(genealogyFacade.findGenealogy(registrationNumber));
-    }
-
-    @PostMapping("/{registrationNumber}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
-    public ResponseEntity<GenealogyResponseDTO> createGenealogy(@PathVariable String registrationNumber) {
-        return new ResponseEntity<>(genealogyFacade.createGenealogy(registrationNumber), HttpStatus.CREATED);
+    @GetMapping
+    public ResponseEntity<GenealogyResponseDTO> getGenealogy(@PathVariable Long farmId, @PathVariable String goatId) {
+        return ResponseEntity.ok(genealogyFacade.findGenealogy(farmId, goatId));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
-    public ResponseEntity<GenealogyResponseDTO> createGenealogyWithData(@RequestBody GenealogyRequestDTO requestDTO) {
-        return new ResponseEntity<>(genealogyFacade.createGenealogyWithData(requestDTO), HttpStatus.CREATED);
+    public ResponseEntity<GenealogyResponseDTO> createGenealogy(@PathVariable Long farmId, @PathVariable String goatId) {
+        return new ResponseEntity<>(genealogyFacade.createGenealogy(farmId, goatId), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/with-data")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
+    public ResponseEntity<GenealogyResponseDTO> createGenealogyWithData(@PathVariable Long farmId, @PathVariable String goatId, @RequestBody GenealogyRequestDTO requestDTO) {
+        return new ResponseEntity<>(genealogyFacade.createGenealogyWithData(farmId, goatId, requestDTO), HttpStatus.CREATED);
     }
 }

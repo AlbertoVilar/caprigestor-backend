@@ -12,16 +12,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-    @Query("SELECT e FROM Event e WHERE e.goat.registrationNumber = :goatNumRegistration")
-    List<Event> findEventsByGoatNumRegistro(@Param("goatNumRegistration") String goatNumRegistration);
+    List<Event> findEventsByGoatNumRegistro(String goatNumRegistration);
 
     @Query("SELECT e FROM Event e WHERE e.goat.registrationNumber = :registrationNumber " +
             "AND (:eventType IS NULL OR e.eventType = :eventType) " +
-            "AND (:startDate IS NULL OR e.date >= :startDate) " +
-            "AND (:endDate IS NULL OR e.date <= :endDate)")
+            "AND (:startDate IS NULL OR e.eventDate >= :startDate) " +
+            "AND (:endDate IS NULL OR e.eventDate <= :endDate)")
     Page<Event> findEventsByGoatWithFilters(@Param("registrationNumber") String registrationNumber,
                                             @Param("eventType") EventType eventType,
                                             @Param("startDate") LocalDate startDate,
@@ -30,6 +30,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Modifying
     @Transactional
-    @Query(nativeQuery = true, value = "DELETE FROM eventos WHERE goat_registration_number IN (SELECT g.num_registro FROM cabras g JOIN capril c ON g.capril_id = c.id WHERE c.user_id != :adminId)")
+    @Query(nativeQuery = true, value = "DELETE FROM eventos WHERE goat_id IN (SELECT g.num_registro FROM cabras g JOIN capril c ON g.capril_id = c.id WHERE c.user_id != :adminId)")
     void deleteEventsFromOtherUsers(@Param("adminId") Long adminId);
+
+    // NOVO: Busca por ID do evento, número de registro da cabra e ID da fazenda
+    Optional<Event> findByIdAndGoatRegistrationNumberAndGoatFarmId(Long id, String goatRegistrationNumber, Long goatFarmId);
+
+    // NOVO: Busca todos os eventos de uma cabra específica em uma fazenda
+    Page<Event> findAllByGoatRegistrationNumberAndGoatFarmId(String goatRegistrationNumber, Long goatFarmId, Pageable pageable);
 }

@@ -1,89 +1,49 @@
 package com.devmaster.goatfarm.events.facade;
 
-import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
-import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
+import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
+import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.eventbusiness.EventBusiness;
 import com.devmaster.goatfarm.events.enuns.EventType;
-import com.devmaster.goatfarm.events.facade.dto.EventFacadeResponseDTO;
-import com.devmaster.goatfarm.events.facade.mapper.EventFacadeMapper;
+import com.devmaster.goatfarm.events.mapper.EventMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class EventFacade {
 
     @Autowired
     private EventBusiness eventBusiness;
-    
+
     @Autowired
-    private EventFacadeMapper facadeMapper;
+    private EventMapper eventMapper;
 
-    /**
-     * Cria um novo evento para uma cabra.
-     * @param requestVO Dados do evento
-     * @param goatRegistrationNumber Número de registro da cabra
-     * @return EventResponseVO com os dados do evento criado
-     */
-    @Transactional
-    public EventFacadeResponseDTO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        EventResponseVO responseVO = eventBusiness.createEvent(requestVO, goatRegistrationNumber);
-        return facadeMapper.toFacadeDTO(responseVO);
+    public EventResponseDTO createEvent(Long farmId, String goatId, EventRequestDTO requestDTO) {
+        return eventMapper.toResponseDTO(eventBusiness.createEvent(farmId, goatId, eventMapper.toRequestVO(requestDTO)));
     }
 
-    /**
-     * Atualiza um evento existente.
-     * @param id ID do evento
-     * @param requestVO Novos dados do evento
-     * @param goatRegistrationNumber Número de registro da cabra
-     * @return EventResponseVO com os dados atualizados
-     */
-    @Transactional
-    public EventFacadeResponseDTO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
-        EventResponseVO responseVO = eventBusiness.updateEvent(id, requestVO, goatRegistrationNumber);
-        return facadeMapper.toFacadeDTO(responseVO);
+    public EventResponseDTO updateEvent(Long farmId, String goatId, Long eventId, EventRequestDTO requestDTO) {
+        return eventMapper.toResponseDTO(eventBusiness.updateEvent(farmId, goatId, eventId, eventMapper.toRequestVO(requestDTO)));
     }
 
-    /**
-     * Busca todos os eventos de uma cabra.
-     * @param goatNumRegistration Número de registro da cabra
-     * @return Lista de EventResponseVO
-     */
-    public List<EventFacadeResponseDTO> findEventByGoat(String goatNumRegistration) {
-        List<EventResponseVO> responseVOs = eventBusiness.findEventByGoat(goatNumRegistration);
-        return facadeMapper.toFacadeDTOList(responseVOs);
+    public EventResponseDTO findEventById(Long farmId, String goatId, Long eventId) {
+        return eventMapper.toResponseDTO(eventBusiness.findEventById(farmId, goatId, eventId));
     }
 
-    /**
-     * Busca eventos de uma cabra com filtros opcionais.
-     * @param registrationNumber Número de registro da cabra
-     * @param eventType Tipo do evento (opcional)
-     * @param startDate Data inicial (opcional)
-     * @param endDate Data final (opcional)
-     * @param pageable Configuração de paginação
-     * @return Page de EventResponseVO
-     */
-    public Page<EventResponseVO> findEventsByGoatWithFilters(String registrationNumber,
-                                                             EventType eventType,
-                                                             LocalDate startDate,
-                                                             LocalDate endDate,
-                                                             Pageable pageable) {
-        return eventBusiness.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
+    public Page<EventResponseDTO> findAllEventsByGoatAndFarm(Long farmId, String goatId, Pageable pageable) {
+        return eventBusiness.findAllEventsByGoatAndFarm(farmId, goatId, pageable).map(eventMapper::toResponseDTO);
     }
 
-    /**
-     * Remove um evento pelo ID.
-     * @param id ID do evento a ser removido
-     */
-    @Transactional
-    public void deleteEventById(Long id) {
-        eventBusiness.deleteEventById(id);
+    public Page<EventResponseDTO> findEventsByGoatWithFilters(Long farmId, String goatId, EventType eventType, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        return eventBusiness.findEventsByGoatWithFilters(farmId, goatId, eventType, startDate, endDate, pageable).map(eventMapper::toResponseDTO);
+    }
+
+    public void deleteEvent(Long farmId, String goatId, Long eventId) {
+        eventBusiness.deleteEvent(farmId, goatId, eventId);
     }
 }
-
-
