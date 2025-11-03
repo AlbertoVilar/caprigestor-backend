@@ -58,14 +58,11 @@ public class AddressDAO {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Address> findByIdAndFarmId(Long id, Long farmId) {
-        return adressRepository.findByIdAndGoatFarmId(id, farmId);
+    public Optional<Address> findByIdAndFarmId(Long addressId, Long farmId) {
+        return adressRepository.findByIdAndFarmId(addressId, farmId);
     }
 
-    @Transactional(readOnly = true)
-    public List<Address> findAllAddresses() {
-        return adressRepository.findAll();
-    }
+
 
     @Transactional
     public String deleteAddress(Long id) {

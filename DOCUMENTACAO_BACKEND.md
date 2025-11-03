@@ -333,9 +333,8 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
         *   **Descrição:** Remove um endereço pelo ID de uma fazenda específica.
         *   **Path Variables:** `farmId` (Long), `addressId` (Long)
         *   **Response:** `String` (mensagem de sucesso)
-    *   `GET /api/goatfarms/{farmId}/addresses/all` (Note: `farmId` na URL não é usado para filtrar, lista todos os endereços do sistema. Considerar refatorar para `/api/addresses/all` se a intenção é global, ou filtrar por `farmId` se a intenção é específica da fazenda.)
-        *   **Descrição:** Lista todos os endereços registrados no sistema.
-        *   **Response:** `List<AddressResponseDTO>`
+    
+    Observação: Não há endpoint global para listar todos os endereços. Todas as operações devem ser agregadas por `farmId`.
 
 ---
 
@@ -476,13 +475,15 @@ O sistema utiliza **múltiplos filtros de segurança** com diferentes ordens:
 ```java
 @Bean
 @Order(1)
-public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) {
-    return http
-        .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+public SecurityFilterChain publicEndpointsFilterChain(HttpSecurity http) throws Exception {
+    http
+        .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
         .csrf(csrf -> csrf.disable())
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .build();
+        .headers(headers -> headers.frameOptions().disable())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+    return http.build();
 }
 ```
 
@@ -490,24 +491,37 @@ public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) {
 ```java
 @Bean
 @Order(2)
-public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
-    return http
+public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+    http
         .securityMatcher("/api/**")
         .authorizeHttpRequests(authorize -> authorize
-            // Leitura pública
-            .requestMatchers(HttpMethod.GET, "/api/goats/**", "/api/genealogies/**", "/api/farms/**", "/api/goatfarms/**").permitAll()
-            // Operações administrativas
-            .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-            .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-            // Operações de modificação
-            .requestMatchers(HttpMethod.POST, HttpMethod.PUT, HttpMethod.DELETE).hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+            // Consultas de cabras dentro da fazenda (públicas)
+            .requestMatchers(HttpMethod.GET,
+                    "/api/goatfarms/*/goats",
+                    "/api/goatfarms/*/goats/*",
+                    "/api/goatfarms/*/goats/search").permitAll()
+            // Genealogias públicas (apenas leitura)
+            .requestMatchers(HttpMethod.GET,
+                    "/api/goatfarms/*/goats/*/genealogies").permitAll()
+            // Qualquer outra requisição exige autenticação
             .anyRequest().authenticated()
         )
-        .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
-        .addFilterBefore(jwtDebugFilter, UsernamePasswordAuthenticationFilter.class)
-        .build();
+        .csrf(csrf -> csrf.disable())
+        .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
+            .jwtAuthenticationConverter(jwtAuthenticationConverter())
+        ))
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .cors(Customizer.withDefaults());
+
+    return http.build();
 }
 ```
+
+### Política de Agregação por Fazenda
+
+- Todos os endpoints que manipulam dados de domínio (`Goat`, `Address`, `Phone`, `Event`, `Genealogy`) são agregados por `farmId`.
+- Não existem endpoints globais que listem dados de todas as fazendas.
+- A leitura pública é restrita a consultas GET agregadas por fazenda para `Goat` e `Genealogy`.
 
 ### Roles e Permissões
 

@@ -105,6 +105,17 @@ Após subir, a API estará acessível em `http://localhost:8080` (ajuste conform
 - Endpoints protegidos exigem cabeçalho `Authorization: Bearer <token>`.
 - Políticas de acesso definidas nas configurações de segurança do Spring.
 
+### Endpoints Públicos (apenas leitura)
+
+- `GET /api/goatfarms/{farmId}/goats` — lista cabras da fazenda
+- `GET /api/goatfarms/{farmId}/goats/{goatId}` — detalhes da cabra
+- `GET /api/goatfarms/{farmId}/goats/search` — busca por nome na fazenda
+- `GET /api/goatfarms/{farmId}/goats/{goatId}/genealogies` — genealogia da cabra
+
+Observações:
+- Não existem endpoints globais para listar dados entre fazendas.
+- Todas as operações são agregadas por `farmId`.
+
 ## 8. Swagger
 
 - UI: `http://localhost:8080/swagger-ui/index.html`
@@ -117,6 +128,25 @@ Frontend associado: `https://github.com/albertovilar/caprigestor-frontend`
 ## 10. Status do projeto
 
 MVP em desenvolvimento, já funcional.
+
+### Dicas de execução em DEV
+
+Caso os testes de unidade/integrados estejam falhando enquanto você valida endpoints e segurança, execute com testes ignorados:
+
+```bash
+# Windows (PowerShell)
+./mvnw.cmd -DskipTests spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Linux/Mac
+./mvnw -DskipTests spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+Para validar acesso público a genealogias sem token:
+
+```
+GET http://localhost:8080/api/goatfarms/1/goats/XYZ/genealogies
+# Esperado: 404 se não existir, mas NÃO 401 (sem token)
+```
 
 ---
 

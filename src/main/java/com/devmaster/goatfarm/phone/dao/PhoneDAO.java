@@ -61,7 +61,7 @@ public class PhoneDAO {
         Phone phoneToUpdate = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
 
-        phoneMapper.toEntity(phoneToUpdate, requestVO);
+        phoneMapper.updatePhone(phoneToUpdate, requestVO);
         try {
             Phone saved = phoneRepository.save(phoneToUpdate);
             return phoneMapper.toResponseVO(saved);
@@ -77,13 +77,7 @@ public class PhoneDAO {
         return phoneMapper.toResponseVO(phone);
     }
 
-    @Transactional(readOnly = true)
-    public List<PhoneResponseVO> findAllPhones() {
-        List<Phone> phones = phoneRepository.findAll();
-        return phones.stream()
-                .map(phoneMapper::toResponseVO)
-                .collect(Collectors.toList());
-    }
+
 
     @Transactional
     public String deletePhone(Long id) {
