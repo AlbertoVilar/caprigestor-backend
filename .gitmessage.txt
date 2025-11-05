@@ -1,0 +1,35 @@
+# Conventional Commits template
+#
+# Use the format:
+#   <type>(<scope>): <subject>
+#
+# Types:
+#   feat, fix, refactor, perf, test, docs, chore, build, ci, style, revert
+#
+# Common scopes for this repo:
+#   events, farm, goats, enums, mapper, db, api, auth, phone, address
+#
+# Subject rules:
+# - Imperative, present tense (e.g., "add", "fix", "update")
+# - Lower-case, no trailing period
+# - Keep concise; aim for ≤ 72 characters
+#
+# Body (optional):
+# - Explain what and why, not how
+# - Wrap at 72 characters per line
+# - Include context, decisions, and impacts
+#
+# Footer (optional):
+# - BREAKING CHANGE: <description>
+# - Closes #<issue>, Refs #<issue>
+#
+# Examples:
+#   feat(events): add filter by event type and date range
+#   fix(events): handle ISO date parsing to avoid 500 errors
+#   refactor(mapper): streamline GoatFarm mapper and VO structure
+#   chore(repo): add commit template and update documentation
+#   docs(api): document event filtering endpoint with examples
+#   test(events): add tests for repository date range filtering
+#
+# If multiple scopes apply, prefer the most specific.
+# For cross-cutting changes, use a broader scope like `repo`.
