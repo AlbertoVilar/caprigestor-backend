@@ -24,6 +24,11 @@ public class GenealogyDAO {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Genealogy> findByGoatRegistrationAndGoatFarmId(String goatRegistrationNumber, Long farmId) {
+        return repository.findByGoatRegistrationAndGoatFarmId(goatRegistrationNumber, farmId);
+    }
+
+    @Transactional(readOnly = true)
     public boolean existsByGoatRegistration(String goatRegistration) {
         return repository.existsByGoatRegistration(goatRegistration);
     }

@@ -23,11 +23,9 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {PhoneMapper.class, AddressMapper.class, UserMapper.class})
 public interface GoatFarmMapper {
 
-    // DTO -> Entity
-    GoatFarm toEntity(GoatFarmRequestDTO dto);
+        GoatFarm toEntity(GoatFarmRequestDTO dto);
 
-    // VO -> Entity (para criar/atualizar a partir do VO)
-    @Mapping(target = "id", source = "id")
+        @Mapping(target = "id", source = "id")
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "address", ignore = true)
     @Mapping(target = "goats", ignore = true)
@@ -41,24 +39,18 @@ public interface GoatFarmMapper {
     @Mapping(target = "phones", ignore = true)
     void updateEntity(@MappingTarget GoatFarm target, GoatFarmRequestVO vo);
 
-    // Entity -> DTO
-    GoatFarmResponseDTO toResponseDTO(GoatFarm entity);
+        GoatFarmResponseDTO toResponseDTO(GoatFarm entity);
 
-    // VO -> DTO
-    GoatFarmResponseDTO toResponseDTO(GoatFarmResponseVO vo);
+        GoatFarmResponseDTO toResponseDTO(GoatFarmResponseVO vo);
 
-    // Full VO -> Full DTO
-    GoatFarmFullResponseDTO toFullDTO(GoatFarmFullResponseVO vo);
+        GoatFarmFullResponseDTO toFullDTO(GoatFarmFullResponseVO vo);
 
-    // DTO -> VO
-    GoatFarmRequestVO toRequestVO(GoatFarmRequestDTO dto);
+        GoatFarmRequestVO toRequestVO(GoatFarmRequestDTO dto);
     GoatFarmFullRequestVO toFullRequestVO(GoatFarmFullRequestDTO dto);
 
-    // Entity -> VO
-    GoatFarmResponseVO toResponseVO(GoatFarm entity);
+        GoatFarmResponseVO toResponseVO(GoatFarm entity);
 
-    // Entity -> Full VO (mapeia campos aninhados)
-    @Mapping(source = "id", target = "id")
+        @Mapping(source = "id", target = "id")
     @Mapping(source = "name", target = "name")
     @Mapping(source = "tod", target = "tod")
     @Mapping(source = "createdAt", target = "createdAt")

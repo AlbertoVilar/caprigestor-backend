@@ -15,8 +15,10 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
 
     Optional<Goat> findByRegistrationNumber(String registrationNumber);
 
-    @Query("SELECT g FROM Goat g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
-    Page<Goat> searchGoatByName(@Param("name") String name, Pageable pageable);
+    @Query("SELECT g FROM Goat g WHERE g.id = :id AND g.farm.id = :farmId")
+    Optional<Goat> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
+
+    Page<Goat> findAllByFarmId(Long farmId, Pageable pageable);
 
     @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Goat> findByNameAndFarmId(@Param("farmId") Long farmId, @Param("name") String name, Pageable pageable);

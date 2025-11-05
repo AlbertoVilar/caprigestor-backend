@@ -7,7 +7,7 @@ import org.mapstruct.Mapping;
 
 /**
  * Mapper para converter entre GenealogyResponseVO e GenealogyFacadeResponseDTO
- * Encapsula a conversão de dados internos (VO) para dados expostos pelo Facade (DTO)
+ * Encapsula a conversÃ£o de dados internos (VO) para dados expostos pelo Facade (DTO)
  */
 @Mapper(componentModel = "spring")
 public interface GenealogyFacadeMapper {
@@ -15,7 +15,7 @@ public interface GenealogyFacadeMapper {
     /**
      * Converte GenealogyResponseVO para GenealogyFacadeResponseDTO
      * @param vo VO interno do business
-     * @return DTO para exposição pelo Facade
+     * @return DTO para exposiÃ§Ã£o pelo Facade
      */
     @Mapping(source = "goatName", target = "goatName")
     @Mapping(source = "goatRegistration", target = "goatRegistration")
@@ -29,23 +29,19 @@ public interface GenealogyFacadeMapper {
     @Mapping(source = "tod", target = "tod")
     @Mapping(source = "toe", target = "toe")
     @Mapping(source = "birthDate", target = "birthDate")
-    // Parents mapping
-    @Mapping(source = "fatherName", target = "fatherName")
+        @Mapping(source = "fatherName", target = "fatherName")
     @Mapping(source = "fatherRegistration", target = "fatherRegistration")
     @Mapping(source = "motherName", target = "motherName")
     @Mapping(source = "motherRegistration", target = "motherRegistration")
-    // Paternal grandparents mapping
-    @Mapping(source = "paternalGrandfatherName", target = "paternalGrandfatherName")
+        @Mapping(source = "paternalGrandfatherName", target = "paternalGrandfatherName")
     @Mapping(source = "paternalGrandfatherRegistration", target = "paternalGrandfatherRegistration")
     @Mapping(source = "paternalGrandmotherName", target = "paternalGrandmotherName")
     @Mapping(source = "paternalGrandmotherRegistration", target = "paternalGrandmotherRegistration")
-    // Maternal grandparents mapping
-    @Mapping(source = "maternalGrandfatherName", target = "maternalGrandfatherName")
+        @Mapping(source = "maternalGrandfatherName", target = "maternalGrandfatherName")
     @Mapping(source = "maternalGrandfatherRegistration", target = "maternalGrandfatherRegistration")
     @Mapping(source = "maternalGrandmotherName", target = "maternalGrandmotherName")
     @Mapping(source = "maternalGrandmotherRegistration", target = "maternalGrandmotherRegistration")
-    // Paternal great-grandparents mapping
-    @Mapping(source = "paternalGreatGrandfather1Name", target = "paternalGreatGrandfather1Name")
+        @Mapping(source = "paternalGreatGrandfather1Name", target = "paternalGreatGrandfather1Name")
     @Mapping(source = "paternalGreatGrandfather1Registration", target = "paternalGreatGrandfather1Registration")
     @Mapping(source = "paternalGreatGrandmother1Name", target = "paternalGreatGrandmother1Name")
     @Mapping(source = "paternalGreatGrandmother1Registration", target = "paternalGreatGrandmother1Registration")
@@ -53,8 +49,7 @@ public interface GenealogyFacadeMapper {
     @Mapping(source = "paternalGreatGrandfather2Registration", target = "paternalGreatGrandfather2Registration")
     @Mapping(source = "paternalGreatGrandmother2Name", target = "paternalGreatGrandmother2Name")
     @Mapping(source = "paternalGreatGrandmother2Registration", target = "paternalGreatGrandmother2Registration")
-    // Maternal great-grandparents mapping
-    @Mapping(source = "maternalGreatGrandfather1Name", target = "maternalGreatGrandfather1Name")
+        @Mapping(source = "maternalGreatGrandfather1Name", target = "maternalGreatGrandfather1Name")
     @Mapping(source = "maternalGreatGrandfather1Registration", target = "maternalGreatGrandfather1Registration")
     @Mapping(source = "maternalGreatGrandmother1Name", target = "maternalGreatGrandmother1Name")
     @Mapping(source = "maternalGreatGrandmother1Registration", target = "maternalGreatGrandmother1Registration")

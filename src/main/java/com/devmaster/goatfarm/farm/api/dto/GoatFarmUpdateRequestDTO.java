@@ -14,24 +14,23 @@ import java.util.List;
 @Setter
 public class GoatFarmUpdateRequestDTO {
 
-    @NotNull(message = "Os dados da fazenda são obrigatórios.")
+    @NotNull(message = "Os dados da fazenda sÃ£o obrigatÃ³rios.")
     @Valid
     private GoatFarmRequestDTO farm;
 
-    @NotNull(message = "Dados do usuário são obrigatórios")
+    @NotNull(message = "Dados do usuÃ¡rio sÃ£o obrigatÃ³rios")
     @Valid
     private UserRequestDTO user;
 
-    @NotNull(message = "Os dados do endereço são obrigatórios.")
+    @NotNull(message = "Os dados do endereÃ§o sÃ£o obrigatÃ³rios.")
     @Valid
     private AddressRequestDTO address;
 
-    @NotNull(message = "A lista de telefones é obrigatória.")
+    @NotNull(message = "A lista de telefones Ã© obrigatÃ³ria.")
     @Valid
     private List<PhoneRequestDTO> phones;
 
-    // Getters e Setters manuais para garantir compilação
-    public GoatFarmRequestDTO getFarm() { return farm; }
+        public GoatFarmRequestDTO getFarm() { return farm; }
     public void setFarm(GoatFarmRequestDTO farm) { this.farm = farm; }
     
     public UserRequestDTO getUser() { return user; }
@@ -43,3 +42,4 @@ public class GoatFarmUpdateRequestDTO {
     public List<PhoneRequestDTO> getPhones() { return phones; }
     public void setPhones(List<PhoneRequestDTO> phones) { this.phones = phones; }
 }
+

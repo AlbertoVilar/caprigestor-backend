@@ -2,9 +2,11 @@ package com.devmaster.goatfarm.address.business;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.dao.AddressDAO;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,7 +27,11 @@ public class AddressBusiness {
     @Autowired
     private AddressMapper addressMapper;
 
-    public AddressResponseVO createAddress(AddressRequestVO requestVO) {
+    @Autowired
+    private OwnershipService ownershipService;
+
+    public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         Map<String, String> validationErrors = validateAddressData(requestVO);
         if (!validationErrors.isEmpty()) {
             throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
@@ -34,44 +41,40 @@ public class AddressBusiness {
         return addressMapper.toResponseVO(saved);
     }
 
-    public AddressResponseVO updateAddress(Long id, AddressRequestVO requestVO) {
+    public AddressResponseVO updateAddress(Long farmId, Long addressId, AddressRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         Map<String, String> validationErrors = validateAddressData(requestVO);
         if (!validationErrors.isEmpty()) {
             throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
         }
-        Address current = addressDAO.findAddressById(id);
+        Address current = addressDAO.findByIdAndFarmId(addressId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
         addressMapper.toEntity(current, requestVO);
-        Address updated = addressDAO.updateAddress(id, current);
+        Address updated = addressDAO.updateAddress(addressId, current);
         return addressMapper.toResponseVO(updated);
     }
 
-    public AddressResponseVO findAddressById(Long id) {
-        Address entity = addressDAO.findAddressById(id);
+    public AddressResponseVO findAddressById(Long farmId, Long addressId) {
+        ownershipService.verifyFarmOwnership(farmId);
+        Address entity = addressDAO.findByIdAndFarmId(addressId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
         return addressMapper.toResponseVO(entity);
     }
 
-    // Porta de serviço para retornar entidade (sem VO) quando necessário em serviços de aplicação
     @Transactional(readOnly = true)
-    public Address getEntityById(Long id) {
-        return addressDAO.findAddressById(id);
+    public Address getAddressEntityById(Long farmId, Long addressId) {
+        ownershipService.verifyFarmOwnership(farmId);
+        return addressDAO.findByIdAndFarmId(addressId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
     }
 
-    public List<AddressResponseVO> findAllAddresses() {
-        return addressDAO.findAllAddresses().stream()
-                .map(addressMapper::toResponseVO)
-                .collect(Collectors.toList());
+    public String deleteAddress(Long farmId, Long addressId) {
+        ownershipService.verifyFarmOwnership(farmId);
+        Address entity = addressDAO.findByIdAndFarmId(addressId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        return addressDAO.deleteAddress(addressId);
     }
 
-    public String deleteAddress(Long id) {
-        return addressDAO.deleteAddress(id);
-    }
-
-    @Transactional
-    public void deleteAddressesFromOtherUsers(Long adminId) {
-        addressDAO.deleteAddressesFromOtherUsers(adminId);
-    }
-
-    // Método utilitário para uso interno em outros módulos: retorna Entidade
     public Address findOrCreateAddressEntity(AddressRequestVO requestVO) {
         Map<String, String> validationErrors = validateAddressData(requestVO);
         if (!validationErrors.isEmpty()) {

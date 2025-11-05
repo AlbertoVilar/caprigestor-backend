@@ -1,15 +1,15 @@
 package com.devmaster.goatfarm.events.business.eventbusiness;
 
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.mapper.EventMapper;
 import com.devmaster.goatfarm.events.model.entity.Event;
-import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
+import com.devmaster.goatfarm.goat.dao.GoatDAO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,13 +22,13 @@ import java.util.List;
 public class EventBusiness {
 
     private final EventDao eventDao;
-    private final GoatBusiness goatBusiness;
+    private final GoatDAO goatDAO;
     private final OwnershipService ownershipService;
     private final EventMapper eventMapper;
 
-    public EventBusiness(EventDao eventDao, GoatBusiness goatBusiness, OwnershipService ownershipService, EventMapper eventMapper) {
+    public EventBusiness(EventDao eventDao, GoatDAO goatDAO, OwnershipService ownershipService, EventMapper eventMapper) {
         this.eventDao = eventDao;
-        this.goatBusiness = goatBusiness;
+        this.goatDAO = goatDAO;
         this.ownershipService = ownershipService;
         this.eventMapper = eventMapper;
     }
@@ -39,10 +39,11 @@ public class EventBusiness {
     }
 
     @Transactional
-    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        Goat goat = goatBusiness.getEntityByRegistrationNumber(goatRegistrationNumber);
+    public EventResponseVO createEvent(Long farmId, String goatId, EventRequestVO requestVO) {
+        ownershipService.verifyGoatOwnership(farmId, goatId);
 
-        verifyFarmOwnership(goat);
+        Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada na fazenda especificada."));
 
         Event event = eventMapper.toEntity(requestVO);
         event.setGoat(goat);
@@ -51,17 +52,11 @@ public class EventBusiness {
     }
 
     @Transactional
-    public EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
-        Goat goat = goatBusiness.getEntityByRegistrationNumber(goatRegistrationNumber);
+    public EventResponseVO updateEvent(Long farmId, String goatId, Long eventId, EventRequestVO requestVO) {
+        ownershipService.verifyGoatOwnership(farmId, goatId);
 
-        Event event = eventDao.findEventById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
-
-        if (!event.getGoat().getRegistrationNumber().equals(goatRegistrationNumber)) {
-            throw new ResourceNotFoundException("Este evento não pertence à cabra de registro: " + goatRegistrationNumber);
-        }
-
-        verifyFarmOwnership(goat);
+        Event event = eventDao.findByIdAndGoatRegistrationNumberAndGoatFarmId(eventId, goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado para a cabra e fazenda especificadas."));
 
         eventMapper.updateEvent(event, requestVO);
         Event updatedEvent = eventDao.saveEvent(event);
@@ -69,46 +64,30 @@ public class EventBusiness {
     }
 
     @Transactional(readOnly = true)
-    public List<EventResponseVO> findEventByGoat(String goatNumRegistration) {
-        Goat goat = goatBusiness.getEntityByRegistrationNumber(goatNumRegistration);
-
-        verifyFarmOwnership(goat);
-
-        List<Event> events = eventDao.findEventsByGoatNumRegistro(goatNumRegistration);
-        if (events.isEmpty()) {
-            throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com número de registro: " + goatNumRegistration);
-        }
-        return events.stream().map(eventMapper::toResponseVO).toList();
+    public EventResponseVO findEventById(Long farmId, String goatId, Long eventId) {
+        ownershipService.verifyGoatOwnership(farmId, goatId);
+        Event event = eventDao.findByIdAndGoatRegistrationNumberAndGoatFarmId(eventId, goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado para a cabra e fazenda especificadas."));
+        return eventMapper.toResponseVO(event);
     }
 
     @Transactional(readOnly = true)
-    public Page<EventResponseVO> findEventsByGoatWithFilters(String registrationNumber,
-                                                             EventType eventType,
-                                                             LocalDate startDate,
-                                                             LocalDate endDate,
-                                                             Pageable pageable) {
-        Goat goat = goatBusiness.getEntityByRegistrationNumber(registrationNumber);
+    public Page<EventResponseVO> findAllEventsByGoatAndFarm(Long farmId, String goatId, Pageable pageable) {
+        ownershipService.verifyGoatOwnership(farmId, goatId);
+        return eventDao.findAllByGoatRegistrationNumberAndGoatFarmId(goatId, farmId, pageable).map(eventMapper::toResponseVO);
+    }
 
-        verifyFarmOwnership(goat);
-
-        Page<Event> page = eventDao.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
-        if (page.isEmpty()) {
-            throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com os filtros fornecidos.");
-        }
-        return page.map(eventMapper::toResponseVO);
+    @Transactional(readOnly = true)
+    public Page<EventResponseVO> findEventsByGoatWithFilters(Long farmId, String goatId, EventType eventType, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        ownershipService.verifyGoatOwnership(farmId, goatId);
+        return eventDao.findEventsByGoatWithFilters(goatId, eventType, startDate, endDate, pageable).map(eventMapper::toResponseVO);
     }
 
     @Transactional
-    public void deleteEventById(Long id) {
-        Event event = eventDao.findEventById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
-
-        verifyFarmOwnership(event.getGoat());
-
-        eventDao.deleteEventById(id);
-    }
-
-    private void verifyFarmOwnership(Goat goat) {
-        ownershipService.verifyGoatOwnership(goat);
+    public void deleteEvent(Long farmId, String goatId, Long eventId) {
+        ownershipService.verifyGoatOwnership(farmId, goatId);
+        Event event = eventDao.findByIdAndGoatRegistrationNumberAndGoatFarmId(eventId, goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado para a cabra e fazenda especificadas."));
+        eventDao.deleteEventById(eventId);
     }
 }

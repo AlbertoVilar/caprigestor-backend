@@ -21,8 +21,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -48,33 +46,22 @@ public class SecurityConfig {
     private RSAPrivateKey rsaPrivateKey;
 
     private final UserDetailsService userDetailsService;
-    private final JwtDebugFilter jwtDebugFilter;
 
-    // Injeção via construtor é uma prática recomendada
-    public SecurityConfig(UserDetailsService userDetailsService, JwtDebugFilter jwtDebugFilter) {
+    public SecurityConfig(UserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
-        this.jwtDebugFilter = jwtDebugFilter;
     }
-
-    // PasswordEncoder movido para PasswordConfig para quebrar ciclo de dependência
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
-    /**
-     * Filtro de segurança para ENDPOINTS PÚBLICOS.
-     * Ordem 1: processado primeiro. Não tem validação de JWT.
-     */
     @Bean
     @Order(1)
-    public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain publicEndpointsFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/goatfarms/full")
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().permitAll()
-            )
+            .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions().disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -82,66 +69,30 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Filtro de segurança para TODOS os outros endpoints da API.
-     * Ordem 2: processado depois dos públicos. Exige e valida JWT.
-     */
     @Bean
     @Order(2)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            // CORREÇÃO: Captura TODOS os endpoints /api/** que não foram pegos pelo filtro de ordem 1
             .securityMatcher("/api/**")
             .authorizeHttpRequests(authorize -> authorize
-                // Regras específicas PRIMEIRO (mais específicas têm prioridade)
-                .requestMatchers(HttpMethod.POST, "/api/auth/register-farm").permitAll()
-                
-                // Regras de permissão para leitura pública (não exigem token)
-                .requestMatchers(HttpMethod.GET, "/api/goats/**", "/api/genealogies/**", "/api/farms/**", "/api/goatfarms/**").permitAll()
-                
-                // Regras de autorização por ROLE (exigem token)
-                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                
-                // Operações de modificação exigem autenticação (POST, PUT, DELETE)
-                .requestMatchers(HttpMethod.POST, "/api/farms/**", "/api/goats/**", "/api/genealogies/**", "/api/phones/**", "/api/addresses/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/goatfarms").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/goatfarms/{id}").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.POST, "/api/goatfarms/goats").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.PUT, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogies/**", "/api/phones/**", "/api/addresses/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/farms/**", "/api/goatfarms/**", "/api/goats/**", "/api/genealogies/**", "/api/phones/**", "/api/addresses/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
-                
-                // Qualquer outra requisição /api/** que não corresponda às regras acima precisa de autenticação
+                // Consultas de cabras dentro da fazenda (públicas)
+                .requestMatchers(HttpMethod.GET, 
+                        "/api/goatfarms/*/goats", 
+                        "/api/goatfarms/*/goats/*", 
+                        "/api/goatfarms/*/goats/search").permitAll()
+                // Genealogias públicas (apenas leitura)
+                .requestMatchers(HttpMethod.GET,
+                        "/api/goatfarms/*/goats/*/genealogies").permitAll()
+                // Qualquer outra requisição exige autenticação
                 .anyRequest().authenticated()
             )
-            .csrf(csrf -> csrf.disable()) // Desabilita CSRF para APIs
+            .csrf(csrf -> csrf.disable())
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
             ))
-            .addFilterBefore(jwtDebugFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .cors(Customizer.withDefaults()); // Aplica a configuração de CORS do seu CorsConfig
-
-        return http.build();
-    }
-
-    // Métodos duplicados removidos - já definidos acima
-
-    /**
-     * Filtro de segurança para outros endpoints (frontend, etc.).
-     * Ordem 3: processado por último.
-     */
-    @Bean
-    @Order(3)
-    public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .securityMatcher("/", "/*.html", "/*.css", "/*.js", "/static/**", "/test/**") // Adiciona securityMatcher específico
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().permitAll() // Permite tudo que corresponder ao securityMatcher
-            )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults());
+
         return http.build();
     }
 
@@ -153,35 +104,23 @@ public class SecurityConfig {
     @Bean
     public JwtEncoder jwtEncoder() {
         try {
-            logger.debug("🔍 SECURITY: Inicializando JwtEncoder...");
-            logger.debug("🔍 SECURITY: Chave pública carregada: {}", (this.rsaPublicKey != null));
-            logger.debug("🔍 SECURITY: Chave privada carregada: {}", (this.rsaPrivateKey != null));
-            
             JWK jwk = new RSAKey.Builder(this.rsaPublicKey).privateKey(this.rsaPrivateKey).build();
             JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(jwk));
-            
-            logger.debug("🔍 SECURITY: JwtEncoder criado com sucesso");
             return new NimbusJwtEncoder(jwks);
         } catch (Exception e) {
-            logger.error("🔍 SECURITY ERROR: Erro ao criar JwtEncoder - {}: {}", e.getClass().getSimpleName(), e.getMessage());
-            e.printStackTrace();
-            throw e;
+            logger.error("Error creating JwtEncoder: {}", e.getMessage(), e);
+            throw new RuntimeException("Error creating JwtEncoder", e);
         }
     }
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthorityPrefix(""); // Remover prefixo pois o scope já contém ROLE_
-        authoritiesConverter.setAuthoritiesClaimName("scope");
-
-        JwtAuthenticationConverter authenticationConverter = new JwtAuthenticationConverter();
-        authenticationConverter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        authoritiesConverter.setAuthorityPrefix("");
         
-        // Adicionar logs de debug
-        authenticationConverter.setPrincipalClaimName("sub");
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
         
-        return authenticationConverter;
+        return converter;
     }
-
 }

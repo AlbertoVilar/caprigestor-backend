@@ -21,8 +21,7 @@ public class Genealogy {
     @Column(name = "id")
     private Long id;
 
-    // Dados do animal
-    @Column(name = "nome_animal")
+        @Column(name = "nome_animal")
     private String goatName;
 
     @Column(name = "registro_animal")
@@ -58,8 +57,7 @@ public class Genealogy {
     @Column(name = "data_nascimento")
     private String goatBirthDate;
 
-    // Pais
-    @Column(name = "pai_nome")
+        @Column(name = "pai_nome")
     private String fatherName;
 
     @Column(name = "pai_registro")
@@ -71,8 +69,7 @@ public class Genealogy {
     @Column(name = "mae_registro")
     private String motherRegistration;
 
-    // Avós paternos
-    @Column(name = "avo_paterno_nome")
+        @Column(name = "avo_paterno_nome")
     private String paternalGrandfatherName;
 
     @Column(name = "avo_paterno_registro")
@@ -84,8 +81,7 @@ public class Genealogy {
     @Column(name = "avo_paterna_registro")
     private String paternalGrandmotherRegistration;
 
-    // Avós maternos
-    @Column(name = "avo_materno_nome")
+        @Column(name = "avo_materno_nome")
     private String maternalGrandfatherName;
 
     @Column(name = "avo_materno_registro")
@@ -97,8 +93,7 @@ public class Genealogy {
     @Column(name = "avo_materna_registro")
     private String maternalGrandmotherRegistration;
 
-    // Bisavós paternos
-    @Column(name = "bisavo_paterno_1_nome")
+        @Column(name = "bisavo_paterno_1_nome")
     private String paternalGreatGrandfather1Name;
 
     @Column(name = "bisavo_paterno_1_registro")
@@ -122,8 +117,7 @@ public class Genealogy {
     @Column(name = "bisavo_paterna_2_registro")
     private String paternalGreatGrandmother2Registration;
 
-    // Bisavós maternos
-    @Column(name = "bisavo_materno_1_nome")
+        @Column(name = "bisavo_materno_1_nome")
     private String maternalGreatGrandfather1Name;
 
     @Column(name = "bisavo_materno_1_registro")
@@ -192,3 +186,4 @@ public class Genealogy {
     public void setMaternalGrandmotherName(String maternalGrandmotherName) { this.maternalGrandmotherName = maternalGrandmotherName; }
     public void setMaternalGrandmotherRegistration(String maternalGrandmotherRegistration) { this.maternalGrandmotherRegistration = maternalGrandmotherRegistration; }
 }
+

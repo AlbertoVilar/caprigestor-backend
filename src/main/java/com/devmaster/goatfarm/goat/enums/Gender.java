@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum Gender {
     MALE("Macho"),
-    FEMALE("Fêmea");
+    FEMALE("FÃªmea");
     
     private final String portugueseValue;
     
@@ -15,8 +15,7 @@ public enum Gender {
     
     @JsonValue
     public String getValue() {
-        // Serialize enums by their name (e.g., FEMALE) to match test expectations
-        return name();
+                return name();
     }
     
     @JsonCreator
@@ -32,22 +31,21 @@ public enum Gender {
             }
         }
         
-        // Aceitar valores específicos em português que podem estar no banco
-        if ("MACHO".equalsIgnoreCase(value)) {
+                if ("MACHO".equalsIgnoreCase(value)) {
             return MALE;
         }
-        if ("FÊMEA".equalsIgnoreCase(value) || "FEMEA".equalsIgnoreCase(value)) {
+        if ("FÃŠMEA".equalsIgnoreCase(value) || "FEMEA".equalsIgnoreCase(value)) {
             return FEMALE;
         }
         
-        // Aceitar valores em inglês que podem estar no banco de dados
-        if ("MALE".equalsIgnoreCase(value)) {
+                if ("MALE".equalsIgnoreCase(value)) {
             return MALE;
         }
         if ("FEMALE".equalsIgnoreCase(value)) {
             return FEMALE;
         }
         
-        throw new IllegalArgumentException("Valor inválido para Gender: " + value);
+        throw new IllegalArgumentException("Valor invÃ¡lido para Gender: " + value);
     }
 }
+

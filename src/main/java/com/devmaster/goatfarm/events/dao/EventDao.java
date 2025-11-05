@@ -27,6 +27,11 @@ public class EventDao {
         return eventRepository.findById(id);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Event> findByIdAndGoatRegistrationNumberAndGoatFarmId(Long id, String goatRegistrationNumber, Long goatFarmId) {
+        return eventRepository.findByIdAndGoatRegistrationNumberAndGoatFarmId(id, goatRegistrationNumber, goatFarmId);
+    }
+
     public List<Event> findEventsByGoatNumRegistro(String goatNumRegistration) {
         return eventRepository.findEventsByGoatNumRegistro(goatNumRegistration);
     }
@@ -37,6 +42,11 @@ public class EventDao {
                                                    LocalDate endDate,
                                                    Pageable pageable) {
         return eventRepository.findEventsByGoatWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Event> findAllByGoatRegistrationNumberAndGoatFarmId(String goatRegistrationNumber, Long goatFarmId, Pageable pageable) {
+        return eventRepository.findAllByGoatRegistrationNumberAndGoatFarmId(goatRegistrationNumber, goatFarmId, pageable);
     }
 
     public void deleteEventById(Long id) {

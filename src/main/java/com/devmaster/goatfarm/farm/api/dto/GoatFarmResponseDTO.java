@@ -18,8 +18,7 @@ public class GoatFarmResponseDTO {
     private LocalDateTime updatedAt;
 
     public GoatFarmResponseDTO() {
-        // Construtor padrão
-    }
+            }
 
     public GoatFarmResponseDTO(Long id,
                                String name,
@@ -75,3 +74,4 @@ public class GoatFarmResponseDTO {
         this.updatedAt = updatedAt;
     }
 }
+

@@ -2,160 +2,59 @@ package com.devmaster.goatfarm.phone.api.controller;
 
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
-import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.facade.PhoneFacade;
-import com.devmaster.goatfarm.phone.facade.dto.PhoneFacadeResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/phones")
+@RequestMapping("/api/goatfarms/{farmId}/phones")
 public class PhoneController {
 
     @Autowired
     private PhoneFacade phoneFacade;
 
-    @Autowired
-    private PhoneMapper phoneMapper;
-
-    @Operation(summary = "Cadastra um novo telefone")
-
+    @Operation(summary = "Cadastra um novo telefone para uma fazenda")
     @PostMapping
-    public ResponseEntity<?> createPhone(
-            @RequestBody(description = "Dados do telefone a ser cadastrado")
-            @org.springframework.web.bind.annotation.RequestBody @Valid PhoneRequestDTO requestDTO) {
-
-        try {
-            PhoneRequestVO requestVO = phoneMapper.toRequestVO(requestDTO);
-            Long goatFarmId = requestDTO.getGoatFarmId();
-
-            PhoneFacadeResponseDTO facadeDTO = phoneFacade.createPhone(requestVO, goatFarmId);
-            PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
-            PhoneResponseDTO responseDTO = phoneMapper.toResponseDTO(responseVO);
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
-            
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Dados de telefone inválidos");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.DatabaseException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Telefone já existe");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Recurso não encontrado");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro interno do servidor");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro inesperado");
-            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+    public ResponseEntity<PhoneResponseDTO> createPhone(@PathVariable Long farmId, @RequestBody @Valid PhoneRequestDTO requestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(phoneFacade.createPhone(farmId, requestDTO));
     }
 
-    @Operation(summary = "Busca um telefone pelo ID")
-
-    @GetMapping("/{id}")
+    @Operation(summary = "Busca um telefone pelo ID dentro de uma fazenda")
+    @GetMapping("/{phoneId}")
     public ResponseEntity<PhoneResponseDTO> getPhoneById(
-            @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long id) {
-
-        PhoneFacadeResponseDTO facadeDTO = phoneFacade.findPhoneById(id);
-        if (facadeDTO != null) {
-            PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
-            return ResponseEntity.ok(phoneMapper.toResponseDTO(responseVO));
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+            @PathVariable Long farmId,
+            @Parameter(description = "ID do telefone a ser buscado", example = "1") @PathVariable Long phoneId) {
+        return ResponseEntity.ok(phoneFacade.findPhoneById(farmId, phoneId));
     }
 
-    @Operation(summary = "Lista todos os telefones cadastrados")
-
+    @Operation(summary = "Lista todos os telefones de uma fazenda")
     @GetMapping
-    public ResponseEntity<?> getAllPhones() {
-        List<PhoneFacadeResponseDTO> facadeDTOs = phoneFacade.findAllPhones();
-        if (facadeDTOs == null || facadeDTOs.isEmpty()) {
-            Map<String, Object> body = new HashMap<>();
-            body.put("message", "Nenhum telefone cadastrado");
-            body.put("count", 0);
-            return ResponseEntity.ok(body);
-        }
-        List<PhoneResponseDTO> response = facadeDTOs.stream()
-                .map(facadeDTO -> {
-                    PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
-                    return phoneMapper.toResponseDTO(responseVO);
-                })
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+    public ResponseEntity<List<PhoneResponseDTO>> findAllPhonesByFarm(@PathVariable Long farmId) {
+        return ResponseEntity.ok(phoneFacade.findAllPhonesByFarm(farmId));
     }
 
-    @Operation(summary = "Atualiza um telefone existente")
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updatePhone(
-            @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long id,
-            @RequestBody(description = "Novos dados do telefone")
-            @org.springframework.web.bind.annotation.RequestBody @Valid PhoneRequestDTO requestDTO) {
-
-        try {
-            PhoneRequestVO requestVO = phoneMapper.toRequestVO(requestDTO);
-            PhoneFacadeResponseDTO facadeDTO = phoneFacade.updatePhone(id, requestVO);
-            PhoneResponseVO responseVO = new PhoneResponseVO(facadeDTO.getId(), facadeDTO.getDdd(), facadeDTO.getNumber());
-            return ResponseEntity.ok(phoneMapper.toResponseDTO(responseVO));
-            
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Dados de telefone inválidos");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Telefone não encontrado");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-        } catch (RuntimeException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro interno do servidor");
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("message", "Erro inesperado");
-            errorResponse.put("error", "Ocorreu um erro inesperado. Tente novamente.");
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+    @Operation(summary = "Atualiza um telefone existente em uma fazenda")
+    @PutMapping("/{phoneId}")
+    public ResponseEntity<PhoneResponseDTO> updatePhone(
+            @PathVariable Long farmId,
+            @Parameter(description = "ID do telefone a ser atualizado", example = "1") @PathVariable Long phoneId,
+            @RequestBody @Valid PhoneRequestDTO requestDTO) {
+        return ResponseEntity.ok(phoneFacade.updatePhone(farmId, phoneId, requestDTO));
     }
 
-    @Operation(summary = "Remove um telefone existente")
-
-    @DeleteMapping("/{id}")
+    @Operation(summary = "Remove um telefone existente de uma fazenda")
+    @DeleteMapping("/{phoneId}")
     public ResponseEntity<Void> deletePhone(
-            @Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long id) {
-
-        phoneFacade.deletePhone(id);
+            @PathVariable Long farmId,
+            @Parameter(description = "ID do telefone a ser removido", example = "1") @PathVariable Long phoneId) {
+        phoneFacade.deletePhone(farmId, phoneId);
         return ResponseEntity.noContent().build();
     }
 }

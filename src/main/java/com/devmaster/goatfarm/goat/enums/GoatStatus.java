@@ -17,8 +17,7 @@ public enum GoatStatus {
     
     @JsonValue
     public String getValue() {
-        // Serialize enums by their name (e.g., ATIVO) to match test expectations
-        return name();
+                return name();
     }
     
     @JsonCreator
@@ -27,8 +26,7 @@ public enum GoatStatus {
             return null;
         }
         
-        // Mapeamento de valores em inglês para português
-        String normalizedValue = normalizeEnglishValues(value);
+                String normalizedValue = normalizeEnglishValues(value);
         
         for (GoatStatus status : GoatStatus.values()) {
             if (status.portugueseValue.equalsIgnoreCase(normalizedValue) || 
@@ -36,27 +34,23 @@ public enum GoatStatus {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Valor inválido para GoatStatus: " + value);
+        throw new IllegalArgumentException("Valor invÃ¡lido para GoatStatus: " + value);
     }
     
     /**
-     * Normaliza valores em inglês para seus equivalentes em português/enum
+     * Normaliza valores em inglÃªs para seus equivalentes em portuguÃªs/enum
      */
     private static String normalizeEnglishValues(String value) {
         if (value == null) return null;
         
-        // Mapeamento de valores em inglês para valores aceitos pelo enum
-        switch (value.toUpperCase()) {
+                switch (value.toUpperCase()) {
             case "ACTIVE":
                 return "ATIVO";
             case "INACTIVE":
-                return "INACTIVE"; // Já está correto
-            case "DECEASED":
-                return "DECEASED"; // Já está correto
-            case "SOLD":
-                return "SOLD"; // Já está correto
-            default:
-                return value; // Retorna o valor original se não houver mapeamento
-        }
+                return "INACTIVE";             case "DECEASED":
+                return "DECEASED";             case "SOLD":
+                return "SOLD";             default:
+                return value;         }
     }
 }
+

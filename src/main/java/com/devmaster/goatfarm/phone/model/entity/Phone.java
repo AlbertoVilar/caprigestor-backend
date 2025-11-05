@@ -9,8 +9,7 @@ import lombok.EqualsAndHashCode;
 @Table(
         name = "telefone",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"ddd", "numero"}) // Garante unicidade
-        }
+                @UniqueConstraint(columnNames = {"ddd", "numero"})         }
 )
 public class Phone {
 
@@ -70,3 +69,4 @@ public class Phone {
         this.goatFarm = goatFarm;
     }
 }
+

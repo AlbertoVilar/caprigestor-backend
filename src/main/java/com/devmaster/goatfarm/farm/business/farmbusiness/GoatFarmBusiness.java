@@ -3,7 +3,6 @@ package com.devmaster.goatfarm.farm.business.farmbusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
@@ -12,26 +11,24 @@ import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.address.business.AddressBusiness;
-import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
-
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 @Service
 public class GoatFarmBusiness {
@@ -41,6 +38,7 @@ public class GoatFarmBusiness {
     private final UserBusiness userBusiness;
     private final PhoneBusiness phoneBusiness;
     private final GoatFarmMapper goatFarmMapper;
+    private final PhoneMapper phoneMapper;
 
     @Autowired
     public GoatFarmBusiness(
@@ -48,16 +46,17 @@ public class GoatFarmBusiness {
             AddressBusiness addressBusiness,
             UserBusiness userBusiness,
             PhoneBusiness phoneBusiness,
-            GoatFarmMapper goatFarmMapper
+            GoatFarmMapper goatFarmMapper,
+            PhoneMapper phoneMapper
     ) {
         this.goatFarmDAO = goatFarmDAO;
         this.addressBusiness = addressBusiness;
         this.userBusiness = userBusiness;
         this.phoneBusiness = phoneBusiness;
         this.goatFarmMapper = goatFarmMapper;
+        this.phoneMapper = phoneMapper;
     }
 
-    // ✅ Criação completa (fazenda + proprietário + endereço + telefones)
     @Transactional
     public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmVO,
                                                      UserRequestVO userVO,
@@ -83,16 +82,13 @@ public class GoatFarmBusiness {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
         }
 
-        // Cria/recupera usuário e endereço
         User user = userBusiness.findOrCreateUser(userVO);
         Address address = addressBusiness.findOrCreateAddressEntity(addressVO);
 
-        // Constrói a entidade de fazenda
         GoatFarm goatFarm = goatFarmMapper.toEntity(farmVO);
         goatFarm.setUser(user);
         goatFarm.setAddress(address);
 
-        // Validação e construção dos telefones
         List<Phone> associatedPhones = new ArrayList<>();
         Set<String> processedNumbers = new HashSet<>();
         for (PhoneRequestVO phoneVO : phoneVOs) {
@@ -102,9 +98,7 @@ public class GoatFarmBusiness {
             if (phoneBusiness.existsByDddAndNumber(phoneVO.getDdd(), phoneVO.getNumber())) {
                 throw new DuplicateEntityException("Já existe um telefone com DDD (" + phoneVO.getDdd() + ") e número " + phoneVO.getNumber());
             }
-            Phone phone = new Phone();
-            phone.setDdd(phoneVO.getDdd());
-            phone.setNumber(phoneVO.getNumber());
+            Phone phone = phoneMapper.toEntity(phoneVO);
             phone.setGoatFarm(goatFarm);
             associatedPhones.add(phone);
         }
@@ -115,47 +109,6 @@ public class GoatFarmBusiness {
             return goatFarmMapper.toFullResponseVO(savedFarm);
         } catch (DataIntegrityViolationException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Erro de integridade de dados ao salvar a fazenda: " + e.getMessage(), e);
-        }
-    }
-
-    // Criação por IDs existentes
-    @Transactional
-    public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
-        validateFarmData(requestVO);
-        if (requestVO.getPhoneIds() == null || requestVO.getPhoneIds().isEmpty()) {
-            throw new IllegalArgumentException("É obrigatório informar ao menos um telefone para a fazenda.");
-        }
-        if (goatFarmDAO.existsByName(requestVO.getName())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + requestVO.getName() + "'.");
-        }
-        if (requestVO.getTod() != null && goatFarmDAO.existsByTod(requestVO.getTod())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o código '" + requestVO.getTod() + "'.");
-        }
-
-        User user = userBusiness.getEntityById(requestVO.getUserId());
-        Address address = addressBusiness.getEntityById(requestVO.getAddressId());
-
-        List<Phone> phones = phoneBusiness.findAllEntitiesById(requestVO.getPhoneIds());
-        if (phones.size() != requestVO.getPhoneIds().size()) {
-            throw new ResourceNotFoundException("Um ou mais telefones informados não foram encontrados.");
-        }
-        for (Phone phone : phones) {
-            if (phone.getGoatFarm() != null) {
-                throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException(
-                        "Telefone DDD (" + phone.getDdd() + ") número " + phone.getNumber() +
-                        " já está associado à fazenda: " + phone.getGoatFarm().getName());
-            }
-        }
-
-        GoatFarm goatFarm = goatFarmMapper.toEntity(requestVO);
-        goatFarm.setUser(user);
-        goatFarm.setAddress(address);
-        goatFarm.setPhones(phones);
-        try {
-            goatFarm = goatFarmDAO.save(goatFarm);
-            return goatFarmMapper.toResponseVO(goatFarm);
-        } catch (DataIntegrityViolationException e) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Ocorreu um erro ao salvar a fazenda: " + e.getMessage());
         }
     }
 
@@ -175,7 +128,6 @@ public class GoatFarmBusiness {
             throw new DuplicateEntityException("Já existe outra fazenda com o código '" + farmVO.getTod() + "'.");
         }
 
-        // Atualiza User e Address via Business
         userBusiness.updateUser(farmVO.getUserId(), userVO);
         addressBusiness.updateAddress(farmVO.getAddressId(), addressVO);
 
@@ -192,7 +144,6 @@ public class GoatFarmBusiness {
             throw new ResourceNotFoundException("Um ou mais telefones informados não foram encontrados.");
         }
 
-        // Atualiza coleção de telefones
         goatFarmToUpdate.getPhones().removeIf(p -> !phoneIds.contains(p.getId()));
         Set<Long> currentPhoneIds = goatFarmToUpdate.getPhones().stream()
                 .map(Phone::getId)
@@ -212,54 +163,29 @@ public class GoatFarmBusiness {
         }
     }
 
-    // Busca por ID
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
         return goatFarmDAO.findGoatFarmById(id);
     }
 
-    // Busca por nome
     public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
         return goatFarmDAO.searchGoatFarmByName(name, pageable);
     }
 
-    // Porta de serviço para outros domínios obterem a entidade da fazenda
     @Transactional(readOnly = true)
     public com.devmaster.goatfarm.farm.model.entity.GoatFarm getFarmEntityById(Long id) {
         return goatFarmDAO.findFarmEntityById(id);
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void deleteGoatFarmsFromOtherUsers(Long adminId) {
         goatFarmDAO.deleteGoatFarmsFromOtherUsers(adminId);
     }
 
-    // Listar todas as fazendas
     public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
         return goatFarmDAO.findAllGoatFarm(pageable);
     }
 
-    // Deleção
     public String deleteGoatFarm(Long id) {
         return goatFarmDAO.deleteGoatFarm(id);
-    }
-
-    /**
-     * Valida os dados de uma fazenda antes da criação/atualização.
-     */
-    private void validateFarmData(GoatFarmRequestVO requestVO) {
-        java.util.Map<String, String> validationErrors = new java.util.HashMap<>();
-        if (requestVO == null) {
-            throw new IllegalArgumentException("Os dados da fazenda para criação não podem ser nulos.");
-        }
-        if (requestVO.getName() != null) {
-            String nome = requestVO.getName().trim();
-            if (nome.length() < 3 || nome.length() > 100) {
-                validationErrors.put("name", "Nome da fazenda deve ter entre 3 e 100 caracteres");
-            }
-        }
-        if (!validationErrors.isEmpty()) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
-                    "Dados da fazenda inválidos", validationErrors);
-        }
     }
 }

@@ -17,20 +17,16 @@ import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
-    // Conversão direta, pois ambos já são List<String>
-    UserResponseDTO toResponseDTO(UserResponseVO vo);
+        UserResponseDTO toResponseDTO(UserResponseVO vo);
 
-    // NOVO: Converte o DTO da Facade para o DTO da API
-    UserResponseDTO toResponseDTO(UserFacadeResponseDTO facadeDTO);
+        UserResponseDTO toResponseDTO(UserFacadeResponseDTO facadeDTO);
 
     UserRequestVO toRequestVO(UserRequestDTO dto);
 
-    // Aqui sim, converter Set<Role> para List<String>
-    @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringList")
+        @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringList")
     UserResponseVO toResponseVO(User user);
 
-    // Novo: construir entidade a partir do VO de requisição (senha e roles serão tratados na Business/DAO)
-    @Mapping(target = "id", ignore = true)
+        @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "roles", ignore = true)
     @Mapping(target = "goatFarms", ignore = true)
@@ -41,3 +37,4 @@ public interface UserMapper {
         return roles == null ? null : roles.stream().map(Role::getAuthority).collect(Collectors.toList());
     }
 }
+

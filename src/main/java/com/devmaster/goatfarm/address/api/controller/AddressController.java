@@ -2,10 +2,7 @@ package com.devmaster.goatfarm.address.api.controller;
 
 import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
-import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
-import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.address.facade.AddressFacade;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
@@ -17,69 +14,49 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/addresses")
+@RequestMapping("/api/goatfarms/{farmId}/addresses")
 public class AddressController {
 
     @Autowired
     private AddressFacade addressFacade;
 
-    @Autowired
-    private AddressMapper addressMapper;
-
-    @Operation(summary = "Create a new address", description = "New address data")
-
+    @Operation(summary = "Create a new address for a farm", description = "New address data")
     @PostMapping
-    public ResponseEntity<?> createAddress(
+    public ResponseEntity<AddressResponseDTO> createAddress(@PathVariable Long farmId, @RequestBody @Valid AddressRequestDTO requestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(addressFacade.createAddress(farmId, requestDTO));
+    }
+
+    @Operation(summary = "Update an existing address for a farm", description = "Updated address data")
+    @PutMapping("/{addressId}")
+    public ResponseEntity<AddressResponseDTO> updateAddress(
+            @PathVariable Long farmId,
+            @PathVariable("addressId") Long addressId,
             @RequestBody @Valid AddressRequestDTO requestDTO) {
-
-        AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
-        AddressResponseVO responseVO = addressFacade.createAddress(requestVO);
-        AddressResponseDTO responseDTO = addressMapper.toDTO(responseVO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
+        return ResponseEntity.ok(addressFacade.updateAddress(farmId, addressId, requestDTO));
     }
 
-    @Operation(summary = "Update an existing address", description = "Updated address data")
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateAddress(
-            @PathVariable("id") Long id,
-            @RequestBody @Valid AddressRequestDTO requestDTO) {
-
-        AddressRequestVO requestVO = addressMapper.toVO(requestDTO);
-        AddressResponseVO responseVO = addressFacade.updateAddress(id, requestVO);
-        AddressResponseDTO responseDTO = addressMapper.toDTO(responseVO);
-        return ResponseEntity.ok(responseDTO);
+    @Operation(summary = "Find an address by ID for a farm")
+    @GetMapping("/{addressId}")
+    public ResponseEntity<AddressResponseDTO> findAddressById(
+            @PathVariable Long farmId,
+            @Parameter(description = "ID of the address to be searched", example = "1") @PathVariable Long addressId) {
+        return ResponseEntity.ok(addressFacade.findAddressById(farmId, addressId));
     }
 
-    @Operation(summary = "Find an address by ID")
-
-    @GetMapping("/{id}")
-    public AddressResponseDTO findAddressById(
-            @Parameter(description = "ID of the address to be searched", example = "1") @PathVariable Long id) {
-
-        AddressResponseVO responseVO = addressFacade.findAddressById(id);
-        return addressMapper.toDTO(responseVO);
+    @Operation(summary = "Remove an address by ID for a farm")
+    @DeleteMapping("/{addressId}")
+    public ResponseEntity<String> deleteAddress(
+            @PathVariable Long farmId,
+            @Parameter(description = "ID of the address to be removed", example = "1") @PathVariable Long addressId) {
+        return ResponseEntity.ok(addressFacade.deleteAddress(farmId, addressId));
     }
 
-    @Operation(summary = "List all registered addresses")
-
-    @GetMapping
-    public List<AddressResponseDTO> findAllAddresses() {
-        return addressFacade.findAllAddresses()
-                .stream()
-                .map(addressMapper::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Operation(summary = "Remove an address by ID")
-
-    @DeleteMapping("/{id}")
-    public String deleteAddress(
-            @Parameter(description = "ID of the address to be removed", example = "1") @PathVariable Long id) {
-
-        return addressFacade.deleteAddress(id);
+    // Este endpoint pode precisar ser revisto se a intenção é listar apenas endereços de uma fazenda específica
+    @Operation(summary = "List all registered addresses (consider if this should be farm-specific)")
+    @GetMapping("/all") // Mudei o path para evitar conflito com o GET /api/goatfarms/{farmId}/addresses
+    public ResponseEntity<List<AddressResponseDTO>> findAllAddresses() {
+        return ResponseEntity.ok(addressFacade.findAllAddresses());
     }
 }

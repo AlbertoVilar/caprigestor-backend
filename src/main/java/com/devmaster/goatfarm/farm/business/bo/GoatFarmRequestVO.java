@@ -13,26 +13,7 @@ public class GoatFarmRequestVO {
     private String tod;
     private Long addressId;
     private Long userId;
-    private List<Long> phoneIds; // ✅ Campo necessário
-
-    // Getters e Setters manuais para garantir compilação
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    
-    public String getTod() { return tod; }
-    public void setTod(String tod) { this.tod = tod; }
-    
-    public Long getAddressId() { return addressId; }
-    public void setAddressId(Long addressId) { this.addressId = addressId; }
-    
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    
-    public List<Long> getPhoneIds() { return phoneIds; }
-    public void setPhoneIds(List<Long> phoneIds) { this.phoneIds = phoneIds; }
+    private List<Long> phoneIds;
 
     public GoatFarmRequestVO() {}
 
@@ -45,3 +26,4 @@ public class GoatFarmRequestVO {
         this.phoneIds = phoneIds;
     }
 }
+

@@ -37,8 +37,13 @@ public class PhoneDAO {
     }
 
     @Transactional(readOnly = true)
-    public List<Phone> findAll() {
-        return phoneRepository.findAll();
+    public Optional<Phone> findByIdAndFarmId(Long id, Long farmId) {
+        return phoneRepository.findByIdAndGoatFarmId(id, farmId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Phone> findAllByFarmId(Long farmId) {
+        return phoneRepository.findAllByGoatFarmId(farmId);
     }
 
     @Transactional
@@ -56,7 +61,7 @@ public class PhoneDAO {
         Phone phoneToUpdate = phoneRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
 
-        phoneMapper.toEntity(phoneToUpdate, requestVO);
+        phoneMapper.updatePhone(phoneToUpdate, requestVO);
         try {
             Phone saved = phoneRepository.save(phoneToUpdate);
             return phoneMapper.toResponseVO(saved);
@@ -72,28 +77,7 @@ public class PhoneDAO {
         return phoneMapper.toResponseVO(phone);
     }
 
-    @Transactional(readOnly = true)
-    public Phone findById(Long id) {
-        return phoneRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
-    }
 
-    @Transactional
-    public void deleteById(Long id) {
-        try {
-            phoneRepository.deleteById(id);
-        } catch (DataIntegrityViolationException e) {
-            throw new DatabaseException("Não é possível deletar o telefone com ID " + id + " pois ele está vinculado a outra entidade.");
-        }
-    }
-
-    @Transactional(readOnly = true)
-    public List<PhoneResponseVO> findAllPhones() {
-        List<Phone> phones = phoneRepository.findAll();
-        return phones.stream()
-                .map(phoneMapper::toResponseVO)
-                .collect(Collectors.toList());
-    }
 
     @Transactional
     public String deletePhone(Long id) {

@@ -7,7 +7,7 @@ public enum GoatBreed {
     ALPINE("Alpina"),
     ANGLO_NUBIANA("Anglo Nubiana"),
     BOER("Boer"),
-    MESTIÇA("Mestiça"),
+    MESTICA("Mestica"),
     MURCIANA_GRANADINA("Murciana Granadina"),
     ALPINA("Alpina Francesa"),
     SAANEN("Saanen"),
@@ -21,8 +21,7 @@ public enum GoatBreed {
     
     @JsonValue
     public String getValue() {
-        // Serialize enums by their name (e.g., SAANEN) to match test expectations
-        return name();
+                return name();
     }
     
     @JsonCreator
@@ -37,6 +36,6 @@ public enum GoatBreed {
                 return breed;
             }
         }
-        throw new IllegalArgumentException("Valor inválido para GoatBreed: " + value);
+        throw new IllegalArgumentException("Valor invÃ¡lido para GoatBreed: " + value);
     }
 }
