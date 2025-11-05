@@ -50,6 +50,12 @@ public class AddressBusiness {
         return addressMapper.toResponseVO(entity);
     }
 
+    // Porta de serviço para retornar entidade (sem VO) quando necessário em serviços de aplicação
+    @Transactional(readOnly = true)
+    public Address getEntityById(Long id) {
+        return addressDAO.findAddressById(id);
+    }
+
     public List<AddressResponseVO> findAllAddresses() {
         return addressDAO.findAllAddresses().stream()
                 .map(addressMapper::toResponseVO)
@@ -58,6 +64,11 @@ public class AddressBusiness {
 
     public String deleteAddress(Long id) {
         return addressDAO.deleteAddress(id);
+    }
+
+    @Transactional
+    public void deleteAddressesFromOtherUsers(Long adminId) {
+        addressDAO.deleteAddressesFromOtherUsers(adminId);
     }
 
     // Método utilitário para uso interno em outros módulos: retorna Entidade

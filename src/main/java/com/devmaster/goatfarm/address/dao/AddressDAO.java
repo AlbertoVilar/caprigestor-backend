@@ -19,7 +19,6 @@ public class AddressDAO {
     @Autowired
     private AddressRepository adressRepository;
 
-    // Injeção do mapper conforme solicitado, ainda que o DAO trabalhe apenas com entidades
     @Autowired
     private AddressMapper addressMapper;
 
@@ -39,8 +38,6 @@ public class AddressDAO {
     public Address updateAddress(Long id, Address address) {
         Address addressToUpdate = adressRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + id + " não encontrado."));
-        // Como a lógica de mapeamento é centralizada no Business/Mapper, o DAO apenas persiste.
-        // Presume-se que 'address' já contenha os dados atualizados ou que o Business tenha aplicado o merge no entity.
         addressToUpdate.setStreet(address.getStreet());
         addressToUpdate.setNeighborhood(address.getNeighborhood());
         addressToUpdate.setCity(address.getCity());
@@ -85,5 +82,10 @@ public class AddressDAO {
                                                 String state,
                                                 String zipCode) {
         return adressRepository.searchExactAddress(street, neighborhood, city, state, zipCode);
+    }
+
+    @Transactional
+    public void deleteAddressesFromOtherUsers(Long adminId) {
+        adressRepository.deleteAddressesFromOtherUsers(adminId);
     }
 }

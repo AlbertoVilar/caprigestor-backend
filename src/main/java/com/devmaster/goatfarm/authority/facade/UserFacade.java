@@ -1,11 +1,12 @@
 package com.devmaster.goatfarm.authority.facade;
 
-import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
+import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
+import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.facade.dto.UserFacadeResponseDTO;
 import com.devmaster.goatfarm.authority.facade.mapper.UserFacadeMapper;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,34 +14,41 @@ public class UserFacade {
 
     private final UserBusiness business;
     private final UserFacadeMapper facadeMapper;
+    private final UserMapper userMapper;
 
-    public UserFacade(UserBusiness business, UserFacadeMapper facadeMapper) {
+    public UserFacade(UserBusiness business, UserFacadeMapper facadeMapper, UserMapper userMapper) {
         this.business = business;
         this.facadeMapper = facadeMapper;
+        this.userMapper = userMapper;
     }
 
-    // 🔍 Usado para buscar diretamente a entidade User pelo username
-    public User findByUsername(String username) {
-        return business.findByUsername(username);
-    }
-
-    public UserFacadeResponseDTO getMe() {
+    public UserResponseDTO getMe() {
         UserResponseVO responseVO = business.getMe();
-        return facadeMapper.toFacadeDTO(responseVO);
+        UserFacadeResponseDTO facadeDTO = facadeMapper.toFacadeDTO(responseVO);
+        return userMapper.toResponseDTO(facadeDTO);
     }
 
-    public UserFacadeResponseDTO saveUser(UserRequestVO requestVO) {
-        UserResponseVO responseVO = business.saveUser(requestVO);
-        return facadeMapper.toFacadeDTO(responseVO);
+    public UserResponseDTO saveUser(UserRequestDTO requestDTO) {
+        UserResponseVO responseVO = business.saveUser(userMapper.toRequestVO(requestDTO));
+        UserFacadeResponseDTO facadeDTO = facadeMapper.toFacadeDTO(responseVO);
+        return userMapper.toResponseDTO(facadeDTO);
     }
 
-    public UserFacadeResponseDTO findByEmail(String email) {
+    public UserResponseDTO updateUser(Long id, UserRequestDTO requestDTO) {
+        UserResponseVO responseVO = business.updateUser(id, userMapper.toRequestVO(requestDTO));
+        UserFacadeResponseDTO facadeDTO = facadeMapper.toFacadeDTO(responseVO);
+        return userMapper.toResponseDTO(facadeDTO);
+    }
+
+    public UserResponseDTO findByEmail(String email) {
         UserResponseVO responseVO = business.findByEmail(email);
-        return facadeMapper.toFacadeDTO(responseVO);
+        UserFacadeResponseDTO facadeDTO = facadeMapper.toFacadeDTO(responseVO);
+        return userMapper.toResponseDTO(facadeDTO);
     }
 
-    public UserFacadeResponseDTO findById(Long userId) {
+    public UserResponseDTO findById(Long userId) {
         UserResponseVO responseVO = business.findById(userId);
-        return facadeMapper.toFacadeDTO(responseVO);
+        UserFacadeResponseDTO facadeDTO = facadeMapper.toFacadeDTO(responseVO);
+        return userMapper.toResponseDTO(facadeDTO);
     }
 }

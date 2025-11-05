@@ -40,6 +40,12 @@ public class GoatFarmDAO {
     }
 
     @Transactional(readOnly = true)
+    public GoatFarm findFarmEntityById(Long id) {
+        return goatFarmRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id));
+    }
+
+    @Transactional(readOnly = true)
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
         GoatFarm farm = goatFarmRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Fazenda não encontrada: " + id));
@@ -58,7 +64,6 @@ public class GoatFarmDAO {
         return farms.map(goatFarmMapper::toFullResponseVO);
     }
 
-    // Deleção de fazenda por ID
     @Transactional
     public String deleteGoatFarm(Long id) {
         if (!goatFarmRepository.existsById(id)) {
@@ -70,5 +75,25 @@ public class GoatFarmDAO {
         } catch (DataIntegrityViolationException e) {
             throw new DatabaseException("Não é possível deletar a fazenda com ID " + id + " porque ela possui relacionamentos com outras entidades.");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByName(String name) {
+        return goatFarmRepository.existsByName(name);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByTod(String tod) {
+        return goatFarmRepository.existsByTod(tod);
+    }
+
+    @Transactional
+    public GoatFarm save(GoatFarm goatFarm) {
+        return goatFarmRepository.save(goatFarm);
+    }
+
+    @Transactional
+    public void deleteGoatFarmsFromOtherUsers(Long adminId) {
+        goatFarmRepository.deleteGoatFarmsFromOtherUsers(adminId);
     }
 }

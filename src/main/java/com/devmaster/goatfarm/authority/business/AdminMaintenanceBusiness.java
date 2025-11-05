@@ -1,0 +1,42 @@
+package com.devmaster.goatfarm.authority.business;
+
+import com.devmaster.goatfarm.address.business.AddressBusiness;
+import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
+import com.devmaster.goatfarm.events.business.eventbusiness.EventBusiness;
+import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
+import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
+import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class AdminMaintenanceBusiness {
+
+    @Autowired
+    private EventBusiness eventBusiness;
+    @Autowired
+    private GoatBusiness goatBusiness;
+    @Autowired
+    private PhoneBusiness phoneBusiness;
+    @Autowired
+    private GoatFarmBusiness goatFarmBusiness;
+    @Autowired
+    private AddressBusiness addressBusiness;
+    @Autowired
+    private UserBusiness userBusiness;
+
+    @Transactional
+    public void cleanDatabaseAndSetupAdmin(Long adminIdToKeep) {
+        // A ordem é crucial para respeitar as restrições de chave estrangeira (FK)
+        // 1. Deletar entidades que dependem de outras
+        eventBusiness.deleteEventsFromOtherUsers(adminIdToKeep);
+        goatBusiness.deleteGoatsFromOtherUsers(adminIdToKeep);
+        // GoatFarm deve ser removido antes de Phones para evitar violação de FK em tabelas de junção
+        goatFarmBusiness.deleteGoatFarmsFromOtherUsers(adminIdToKeep);
+        phoneBusiness.deletePhonesFromOtherUsers(adminIdToKeep);
+        addressBusiness.deleteAddressesFromOtherUsers(adminIdToKeep);
+        userBusiness.deleteRolesFromOtherUsers(adminIdToKeep);
+        userBusiness.deleteOtherUsers(adminIdToKeep);
+    }
+}

@@ -4,11 +4,11 @@ import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.genealogy.dao.GenealogyDAO;
 import com.devmaster.goatfarm.genealogy.mapper.GenealogyMapper;
 import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
-import com.devmaster.goatfarm.genealogy.model.repository.GenealogyRepository;
+import com.devmaster.goatfarm.goat.dao.GoatDAO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,17 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class GenealogyBusiness {
 
     @Autowired
-    private GenealogyRepository genealogyRepository;
+    private GenealogyDAO genealogyDAO;
 
     @Autowired
-    private GoatRepository goatRepository;
+    private GoatDAO goatDAO;
 
     @Autowired
     private GenealogyMapper genealogyMapper;
 
     @Transactional(readOnly = true)
     public GenealogyResponseVO findGenealogy(String goatRegistrationNumber) {
-        return genealogyRepository
+        return genealogyDAO
                 .findByGoatRegistration(goatRegistrationNumber)
                 .map(genealogyMapper::toResponseVO)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -36,26 +36,26 @@ public class GenealogyBusiness {
 
     @Transactional
     public GenealogyResponseVO createGenealogy(String goatRegistrationNumber) {
-        if (genealogyRepository.existsByGoatRegistration(goatRegistrationNumber)) {
+        if (genealogyDAO.existsByGoatRegistration(goatRegistrationNumber)) {
             throw new DatabaseException("Genealogia já existe para o animal: " + goatRegistrationNumber);
         }
 
-        Goat goat = goatRepository.findByRegistrationNumber(goatRegistrationNumber)
+        Goat goat = goatDAO.findByRegistrationNumber(goatRegistrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatRegistrationNumber));
 
         final Genealogy entity = buildGenealogyFromGoat(goat);
-        genealogyRepository.save(entity);
+        genealogyDAO.save(entity);
         return genealogyMapper.toResponseVO(entity);
     }
 
     @Transactional
     public GenealogyResponseVO createGenealogyWithData(GenealogyRequestDTO requestDTO) {
-        if (genealogyRepository.existsByGoatRegistration(requestDTO.getGoatRegistration())) {
+        if (genealogyDAO.existsByGoatRegistration(requestDTO.getGoatRegistration())) {
             throw new DatabaseException("Genealogia já existe para o animal: " + requestDTO.getGoatRegistration());
         }
         Genealogy entity = genealogyMapper.toEntity(requestDTO);
         try {
-            entity = genealogyRepository.save(entity);
+            entity = genealogyDAO.save(entity);
         } catch (Exception e) {
             throw new DatabaseException("Erro ao persistir genealogia: " + e.getMessage());
         }

@@ -8,7 +8,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.facade.UserFacade;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.dao.RoleDAO;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.JwtService;
 import org.slf4j.Logger;
@@ -30,15 +30,15 @@ public class AuthBusiness {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserFacade userFacade;
-    private final RoleRepository roleRepository;
+    private final RoleDAO roleDAO;
     private final JwtDecoder jwtDecoder;
 
     public AuthBusiness(AuthenticationManager authenticationManager, JwtService jwtService,
-                       UserFacade userFacade, RoleRepository roleRepository, JwtDecoder jwtDecoder) {
+                       UserFacade userFacade, RoleDAO roleDAO, JwtDecoder jwtDecoder) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userFacade = userFacade;
-        this.roleRepository = roleRepository;
+        this.roleDAO = roleDAO;
         this.jwtDecoder = jwtDecoder;
     }
 
@@ -128,7 +128,7 @@ public class AuthBusiness {
             // Lógica de negócio: adicionar roles
             logger.debug("🔄 REFRESH: Adicionando roles ao usuário...");
             for (String roleName : userVO.getRoles()) {
-                Role role = roleRepository.findByAuthority(roleName)
+                Role role = roleDAO.findByAuthority(roleName)
                     .orElseThrow(() -> {
                         logger.error("🔄 REFRESH ERROR: Role não encontrada: {}", roleName);
                         return new RuntimeException("Role não encontrada: " + roleName);

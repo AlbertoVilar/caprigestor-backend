@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +25,21 @@ public class PhoneDAO {
 
     @Autowired
     private PhoneMapper phoneMapper;
+
+    @Transactional
+    public Phone save(Phone phone) {
+        return phoneRepository.save(phone);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Phone> findByDddAndNumber(String ddd, String number) {
+        return phoneRepository.findByDddAndNumber(ddd, number);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Phone> findAll() {
+        return phoneRepository.findAll();
+    }
 
     @Transactional
     public PhoneResponseVO createPhone(PhoneRequestVO requestVO, GoatFarm capril) {
@@ -57,6 +73,21 @@ public class PhoneDAO {
     }
 
     @Transactional(readOnly = true)
+    public Phone findById(Long id) {
+        return phoneRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + id + " não encontrado."));
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        try {
+            phoneRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            throw new DatabaseException("Não é possível deletar o telefone com ID " + id + " pois ele está vinculado a outra entidade.");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public List<PhoneResponseVO> findAllPhones() {
         List<Phone> phones = phoneRepository.findAll();
         return phones.stream()
@@ -72,5 +103,20 @@ public class PhoneDAO {
         } catch (DataIntegrityViolationException e) {
             throw new DatabaseException("Não é possível deletar o telefone com ID " + id + " pois ele está vinculado a outra entidade.");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsByDddAndNumber(String ddd, String number) {
+        return phoneRepository.existsByDddAndNumber(ddd, number);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Phone> findAllEntitiesById(List<Long> ids) {
+        return phoneRepository.findAllById(ids);
+    }
+
+    @Transactional
+    public void deletePhonesFromOtherUsers(Long adminId) {
+        phoneRepository.deletePhonesFromOtherUsers(adminId);
     }
 }
