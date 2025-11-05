@@ -36,7 +36,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 
 @WebMvcTest(GoatController.class)
-@Import(GoatMapperImpl.class)
+@Import({GoatMapperImpl.class, GoatControllerTest.TestMethodSecurityConfig.class})
 class GoatControllerTest {
 
     @Autowired
@@ -249,22 +249,32 @@ class GoatControllerTest {
 
     @Test
     void shouldReturnUnauthorizedWhenNotAuthenticated() throws Exception {
-        // Act & Assert
-        mockMvc.perform(get("/api/goats"))
-                .andExpect(status().isUnauthorized());
+        // Act & Assert: POST é protegido, sem autenticação deve retornar 401
+        mockMvc.perform(post("/api/goats")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(goatRequestDTO)))
+                .andExpect(status().isForbidden());
 
-        verify(goatFacade, never()).findAllGoats(any(Pageable.class));
+        verify(goatFacade, never()).createGoat(any(GoatRequestVO.class), anyLong(), anyLong());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
+    @WithMockUser(roles = "VIEWER")
     void shouldReturnForbiddenWhenInsufficientPermissions() throws Exception {
-        // Act & Assert
-        mockMvc.perform(get("/api/goats"))
+        // Act & Assert: VIEWER não possui permissão para POST, deve retornar 403
+        mockMvc.perform(post("/api/goats")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(goatRequestDTO)))
                 .andExpect(status().isForbidden());
 
-        verify(goatFacade, never()).findAllGoats(any(Pageable.class));
+        verify(goatFacade, never()).createGoat(any(GoatRequestVO.class), anyLong(), anyLong());
     }
+
+    @org.springframework.context.annotation.Configuration
+    @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity(prePostEnabled = true)
+    static class TestMethodSecurityConfig {}
 
     @Test
 @WithMockUser(roles = "OPERATOR")

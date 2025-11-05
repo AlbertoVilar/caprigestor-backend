@@ -85,6 +85,7 @@ Você pode rodar na IDE ou via Docker Compose.
 - Docker Compose:
   - Arquivo: `docker/docker-compose.yml`.
   - Sobe serviços (ex.: PostgreSQL) e integra com a aplicação.
+  - Variáveis sensíveis são parametrizadas via `docker/.env`.
   - Comandos:
     ```bash
     # Windows (PowerShell)
@@ -93,6 +94,17 @@ Você pode rodar na IDE ou via Docker Compose.
     # Para parar
     docker compose down
     ```
+
+  - Configuração de `.env`:
+    - Copie `docker/.env.example` para `docker/.env` e ajuste valores:
+      ```env
+      POSTGRES_DB=caprigestor_dev
+      POSTGRES_USER=admin
+      POSTGRES_PASSWORD=changeme123
+      PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD=changeme123
+      ```
+    - O Compose carrega automaticamente `docker/.env` quando executado a partir da pasta raiz.
 
 Após subir, a API estará acessível em `http://localhost:8080` (ajuste conforme perfil/porta).
 

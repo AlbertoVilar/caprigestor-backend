@@ -41,7 +41,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @org.springframework.transaction.annotation.Transactional
     void deleteGoatFarmsByUserEmailNot(String email);
 
-    @Query(nativeQuery = true, value = "DELETE FROM eventos WHERE goat_id IN (SELECT g.num_registro FROM cabras g JOIN capril c ON g.capril_id = c.id WHERE c.user_id != :adminId)")
+    @Query(nativeQuery = true, value = "DELETE FROM eventos WHERE goat_registration_number IN (SELECT g.num_registro FROM cabras g JOIN capril c ON g.capril_id = c.id WHERE c.user_id != :adminId)")
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteEventsFromOtherUsers(Long adminId);
