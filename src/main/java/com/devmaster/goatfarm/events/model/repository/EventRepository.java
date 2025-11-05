@@ -20,8 +20,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query("SELECT e FROM Event e WHERE e.goat.registrationNumber = :registrationNumber " +
             "AND (:eventType IS NULL OR e.eventType = :eventType) " +
-            "AND (:startDate IS NULL OR e.date >= :startDate) " +
-            "AND (:endDate IS NULL OR e.date <= :endDate)")
+            "AND (e.date >= COALESCE(:startDate, e.date)) " +
+            "AND (e.date <= COALESCE(:endDate, e.date))")
     Page<Event> findEventsByGoatWithFilters(@Param("registrationNumber") String registrationNumber,
                                             @Param("eventType") EventType eventType,
                                             @Param("startDate") LocalDate startDate,
