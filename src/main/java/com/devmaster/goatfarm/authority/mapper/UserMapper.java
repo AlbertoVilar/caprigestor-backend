@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.authority.mapper;
 
 import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
+import com.devmaster.goatfarm.authority.api.dto.UserUpdateRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
@@ -23,6 +24,9 @@ public interface UserMapper {
 
     UserRequestVO toRequestVO(UserRequestDTO dto);
 
+    // Mapeamento para atualização de perfil sem roles
+    UserRequestVO toRequestVO(UserUpdateRequestDTO dto);
+
         @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringList")
     UserResponseVO toResponseVO(User user);
 
@@ -37,4 +41,3 @@ public interface UserMapper {
         return roles == null ? null : roles.stream().map(Role::getAuthority).collect(Collectors.toList());
     }
 }
-

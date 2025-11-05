@@ -53,10 +53,5 @@ public class AddressController {
         return ResponseEntity.ok(addressFacade.deleteAddress(farmId, addressId));
     }
 
-    // Este endpoint pode precisar ser revisto se a intenção é listar apenas endereços de uma fazenda específica
-    @Operation(summary = "List all registered addresses (consider if this should be farm-specific)")
-    @GetMapping("/all") // Mudei o path para evitar conflito com o GET /api/goatfarms/{farmId}/addresses
-    public ResponseEntity<List<AddressResponseDTO>> findAllAddresses() {
-        return ResponseEntity.ok(addressFacade.findAllAddresses());
-    }
+
 }

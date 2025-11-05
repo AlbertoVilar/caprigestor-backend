@@ -6,11 +6,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
-
 @Getter
 @Setter
-public class GoatFarmRequestDTO {
+public class GoatFarmUpdateFarmDTO {
 
     @NotBlank(message = "Nome da fazenda é obrigatório")
     @Size(min = 3, max = 100, message = "Nome da fazenda deve ter entre 3 e 100 caracteres")
@@ -19,14 +17,6 @@ public class GoatFarmRequestDTO {
     @Size(min = 5, max = 5, message = "TOD deve ter 5 caracteres")
     private String tod;
 
-    @NotNull(message = "ID do usuário precisa ser passado")
-    private Long userId;
-
-    @NotNull(message = "ID do endereço precisa ser passado")
-    private Long addressId;
-
-    @NotNull(message = "Pelo menos um telefone precisa ser passado")
-    private List<Long> phoneIds;
-
+    @NotNull(message = "A versão do registro é obrigatória para atualização")
     private Integer version;
 }

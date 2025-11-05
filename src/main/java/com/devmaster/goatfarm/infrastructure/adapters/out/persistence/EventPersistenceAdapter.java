@@ -37,7 +37,7 @@ public class EventPersistenceAdapter implements EventPersistencePort {
 
     @Override
     public List<Event> findByGoatRegistrationNumber(String goatRegistrationNumber) {
-        return eventRepository.findEventsByGoatNumRegistro(goatRegistrationNumber);
+        return eventRepository.findEventsByGoatRegistrationNumber(goatRegistrationNumber);
     }
 
     @Override

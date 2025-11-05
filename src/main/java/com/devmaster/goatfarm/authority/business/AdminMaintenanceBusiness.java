@@ -28,13 +28,12 @@ public class AdminMaintenanceBusiness {
 
     @Transactional
     public void cleanDatabaseAndSetupAdmin(Long adminIdToKeep) {
-                        eventBusiness.deleteEventsFromOtherUsers(adminIdToKeep);
-        goatBusiness.deleteGoatsFromOtherUsers(adminIdToKeep);
-                goatFarmBusiness.deleteGoatFarmsFromOtherUsers(adminIdToKeep);
-        phoneBusiness.deletePhonesFromOtherUsers(adminIdToKeep);
-        addressBusiness.deleteAddressesFromOtherUsers(adminIdToKeep);
+        eventBusiness.deleteEventsFromOtherUsers(adminIdToKeep);
+        // goatBusiness.deleteGoatsFromOtherUsers(adminIdToKeep); // TODO: Implementar método
+        goatFarmBusiness.deleteGoatFarmsFromOtherUsers(adminIdToKeep);
+        // phoneBusiness.deletePhonesFromOtherUsers(adminIdToKeep); // TODO: Implementar método
+        // addressBusiness.deleteAddressesFromOtherUsers(adminIdToKeep); // TODO: Implementar método
         userBusiness.deleteRolesFromOtherUsers(adminIdToKeep);
         userBusiness.deleteOtherUsers(adminIdToKeep);
     }
 }
-

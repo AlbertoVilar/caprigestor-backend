@@ -1,71 +1,55 @@
 package com.devmaster.goatfarm.farm.mapper;
 
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateFarmDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
-import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
-import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
-import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
-import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import com.devmaster.goatfarm.phone.model.entity.Phone;
-import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
-import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
-import java.util.List;
-
-@Mapper(componentModel = "spring", uses = {PhoneMapper.class, AddressMapper.class, UserMapper.class})
+@Mapper(componentModel = "spring")
 public interface GoatFarmMapper {
 
-        GoatFarm toEntity(GoatFarmRequestDTO dto);
+    GoatFarmFullResponseDTO toFullDTO(GoatFarmFullResponseVO vo);
 
-        @Mapping(target = "id", source = "id")
+    GoatFarmResponseDTO toResponseDTO(GoatFarmResponseVO vo);
+
+    GoatFarmRequestVO toRequestVO(GoatFarmRequestDTO dto);
+
+    GoatFarmRequestVO toRequestVO(GoatFarmUpdateFarmDTO dto);
+
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "address", ignore = true)
-    @Mapping(target = "goats", ignore = true)
     @Mapping(target = "phones", ignore = true)
+    @Mapping(target = "goats", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     GoatFarm toEntity(GoatFarmRequestVO vo);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "address", ignore = true)
-    @Mapping(target = "goats", ignore = true)
     @Mapping(target = "phones", ignore = true)
-    void updateEntity(@MappingTarget GoatFarm target, GoatFarmRequestVO vo);
+    @Mapping(target = "goats", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    void updateEntity(@MappingTarget GoatFarm entity, GoatFarmRequestVO vo);
 
-        GoatFarmResponseDTO toResponseDTO(GoatFarm entity);
-
-        GoatFarmResponseDTO toResponseDTO(GoatFarmResponseVO vo);
-
-        GoatFarmFullResponseDTO toFullDTO(GoatFarmFullResponseVO vo);
-
-        GoatFarmRequestVO toRequestVO(GoatFarmRequestDTO dto);
-    GoatFarmFullRequestVO toFullRequestVO(GoatFarmFullRequestDTO dto);
-
-        GoatFarmResponseVO toResponseVO(GoatFarm entity);
-
-        @Mapping(source = "id", target = "id")
-    @Mapping(source = "name", target = "name")
-    @Mapping(source = "tod", target = "tod")
-    @Mapping(source = "createdAt", target = "createdAt")
-    @Mapping(source = "updatedAt", target = "updatedAt")
-    @Mapping(source = "user.id", target = "userId")
-    @Mapping(source = "user.name", target = "userName")
-    @Mapping(source = "user.email", target = "userEmail")
-    @Mapping(source = "user.cpf", target = "userCpf")
-    @Mapping(source = "address.id", target = "addressId")
-    @Mapping(source = "address.street", target = "street")
-    @Mapping(source = "address.neighborhood", target = "district")
-    @Mapping(source = "address.city", target = "city")
-    @Mapping(source = "address.state", target = "state")
-    @Mapping(source = "address.zipCode", target = "zipCode")
-    @Mapping(source = "phones", target = "phones")
     GoatFarmFullResponseVO toFullResponseVO(GoatFarm entity);
 
+    GoatFarmResponseVO toResponseVO(GoatFarm entity);
+
+    // Auxiliar para conversão de timestamps
+    default LocalDateTime map(Instant value) {
+        return value == null ? null : LocalDateTime.ofInstant(value, ZoneId.systemDefault());
+    }
 }

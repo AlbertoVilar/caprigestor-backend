@@ -12,8 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -71,6 +69,13 @@ public class UserBusiness {
             }
         }
 
+        // Verifica duplicidade de CPF apenas quando o CPF está sendo alterado
+        if (!existingUser.getCpf().equals(vo.getCpf().trim())) {
+            if (userDAO.findUserByCpf(vo.getCpf().trim()).isPresent()) {
+                throw new DuplicateEntityException("Já existe outro usuário cadastrado com o CPF: " + vo.getCpf());
+            }
+        }
+
         String encryptedPassword = null;
         if (vo.getPassword() != null && !vo.getPassword().trim().isEmpty()) {
             encryptedPassword = passwordEncoder.encode(vo.getPassword());
@@ -82,6 +87,33 @@ public class UserBusiness {
         }
 
         return userDAO.updateUser(userId, vo, encryptedPassword, resolvedRoles);
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, String newPassword) {
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Senha não pode ser vazia");
+        }
+        String encryptedPassword = passwordEncoder.encode(newPassword);
+        userDAO.updateUserPassword(userId, encryptedPassword);
+    }
+
+    @Transactional
+    public UserResponseVO updateRoles(Long userId, java.util.List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            throw new IllegalArgumentException("Lista de roles não pode ser vazia");
+        }
+        for (String role : roles) {
+            if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR")) {
+                throw new IllegalArgumentException("Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
+            }
+        }
+        java.util.Set<Role> resolvedRoles = roles.stream()
+                .map(roleName -> roleDAO.findByAuthority(roleName)
+                        .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
+                .collect(java.util.stream.Collectors.toSet());
+
+        return userDAO.updateUserRoles(userId, resolvedRoles);
     }
 
     public UserResponseVO findByEmail(String email) {
@@ -163,7 +195,8 @@ public class UserBusiness {
         return userDAO.findUserByEmail(vo.getEmail())
                 .orElseGet(() -> {
                     User user = userMapper.toEntity(vo);
-                    user.setRoles(resolveUserRoles(vo));
+                    Set<Role> roles = resolveUserRoles(vo);
+                    roles.forEach(user::addRole);
                     user.setPassword(passwordEncoder.encode(vo.getPassword()));
                     return userDAO.save(user);
                 });

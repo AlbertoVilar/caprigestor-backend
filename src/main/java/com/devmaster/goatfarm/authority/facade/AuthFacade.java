@@ -78,13 +78,7 @@ public class AuthFacade {
     }
 
     public GoatFarmFullResponseDTO registerFarm(GoatFarmFullRequestDTO farmRequest) {
-        GoatFarmFullResponseVO farmResponse = farmFacade.createFullGoatFarm(
-            farmMapper.toRequestVO(farmRequest.getFarm()),
-            userMapper.toRequestVO(farmRequest.getUser()),
-            addressMapper.toVO(farmRequest.getAddress()),
-            farmRequest.getPhones().stream().map(phoneMapper::toRequestVO).toList()
-        );
-
-        return farmMapper.toFullDTO(farmResponse);
+        GoatFarmFullResponseDTO farmResponse = farmFacade.createFullGoatFarm(farmRequest);
+        return farmResponse;
     }
 }

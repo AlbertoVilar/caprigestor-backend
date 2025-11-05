@@ -31,7 +31,6 @@ public class GenealogyBusiness {
 
     @Transactional(readOnly = true)
     public GenealogyResponseVO findGenealogy(Long farmId, String goatId) {
-        ownershipService.verifyGoatOwnership(farmId, goatId);
         return genealogyDAO
                 .findByGoatRegistrationAndGoatFarmId(goatId, farmId)
                 .map(genealogyMapper::toResponseVO)

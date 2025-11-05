@@ -47,6 +47,12 @@ public class UserDAO {
         throw new UnauthorizedException("Usuário não autenticado");
     }
 
+    // Exposição pública do usuário autenticado como entidade
+    @Transactional(readOnly = true)
+    public User getAuthenticatedEntity() {
+        return authenticated();
+    }
+
     @Transactional(readOnly = true)
     public UserResponseVO getMe() {
         User user = authenticated();
@@ -119,7 +125,7 @@ public class UserDAO {
     @Transactional
     public UserResponseVO updateUser(Long userId, UserRequestVO vo, String encryptedPassword, Set<Role> resolvedRoles) {
         User userToUpdate = repository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário com ID " + userId + " não encontrado."));
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
 
         userToUpdate.setName(vo.getName());
         userToUpdate.setEmail(vo.getEmail());
@@ -130,12 +136,53 @@ public class UserDAO {
         }
 
         if (resolvedRoles != null) {
+            // Somente ADMIN pode alterar roles
+            User current = authenticated();
+            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            if (!isAdmin) {
+                throw new UnauthorizedException("Apenas administradores podem alterar roles de usuários.");
+            }
             userToUpdate.getRoles().clear();
             userToUpdate.getRoles().addAll(resolvedRoles);
         }
 
-        User updatedUser = repository.save(userToUpdate);
-        return userMapper.toResponseVO(updatedUser);
+        try {
+            User updatedUser = repository.save(userToUpdate);
+            return userMapper.toResponseVO(updatedUser);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException(
+                "Erro ao atualizar usuário: Violação de integridade dos dados", e);
+        }
+    }
+
+    @Transactional
+    public void updateUserPassword(Long userId, String encryptedPassword) {
+        User current = authenticated();
+        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+        if (!isAdmin && (current.getId() == null || !current.getId().equals(userId))) {
+            throw new UnauthorizedException("Apenas administradores ou o próprio usuário podem atualizar a senha.");
+        }
+
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
+        user.setPassword(encryptedPassword);
+        repository.save(user);
+    }
+
+    @Transactional
+    public UserResponseVO updateUserRoles(Long userId, Set<Role> resolvedRoles) {
+        User current = authenticated();
+        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+        if (!isAdmin) {
+            throw new UnauthorizedException("Apenas administradores podem alterar roles de usuários.");
+        }
+
+        User user = repository.findById(userId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
+        user.getRoles().clear();
+        user.getRoles().addAll(resolvedRoles);
+        User saved = repository.save(user);
+        return userMapper.toResponseVO(saved);
     }
 
     @Transactional

@@ -15,6 +15,8 @@ public interface EventMapper {
 
     EventRequestVO toRequestVO(EventRequestDTO dto);
     
+    // Ajuste de nomes: eventId (VO) -> id (DTO)
+    @Mapping(source = "eventId", target = "id")
     EventResponseDTO toResponseDTO(EventResponseVO vo);
     
     List<EventResponseDTO> toResponseDTOList(List<EventResponseVO> voList);
@@ -24,5 +26,12 @@ public interface EventMapper {
 
     void updateEvent(@MappingTarget Event target, EventRequestVO vo);
 
+    // Ajustes de nomes e relações aninhadas:
+    // - id (Entity) -> eventId (VO)
+    // - goat.registrationNumber (Entity) -> goatId (VO)
+    // - goat.name (Entity) -> goatName (VO)
+    @Mapping(source = "id", target = "eventId")
+    @Mapping(source = "goat.registrationNumber", target = "goatId")
+    @Mapping(source = "goat.name", target = "goatName")
     EventResponseVO toResponseVO(Event entity);
 }

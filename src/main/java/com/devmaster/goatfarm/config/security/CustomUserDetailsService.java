@@ -16,9 +16,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     private UserDAO userDAO; 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-                User user = userDAO.findUserByUsername(username);
+        User user = userDAO.findUserByUsername(username);
         if (user == null) {
-            throw new UsernameNotFoundException("UsuÃ¡rio nÃ£o encontrado: " + username);
+            // Evita problemas de encoding em ambientes que não tratam UTF-8
+            throw new UsernameNotFoundException("Usuario nao encontrado: " + username);
         }
         return user;
     }

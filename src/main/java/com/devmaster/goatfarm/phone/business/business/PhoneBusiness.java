@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.dao.PhoneDAO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
+import com.devmaster.goatfarm.phone.model.entity.Phone;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.annotation.Lazy;
@@ -79,7 +80,7 @@ public class PhoneBusiness {
             throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
         }
 
-        phoneMapper.toEntity(phoneToUpdate, requestVO);
+        phoneMapper.updatePhone(phoneToUpdate, requestVO);
 
         try {
             Phone saved = phoneDAO.save(phoneToUpdate);
@@ -127,5 +128,13 @@ public class PhoneBusiness {
         if (!number.matches("\\d{8,9}")) {
             throw new IllegalArgumentException("Número deve conter 8 ou 9 dígitos");
         }
+    }
+
+    public boolean existsByDddAndNumber(String ddd, String number) {
+        return phoneDAO.existsByDddAndNumber(ddd, number);
+    }
+
+    public List<Phone> findAllEntitiesById(List<Long> ids) {
+        return phoneDAO.findAllEntitiesById(ids);
     }
 }

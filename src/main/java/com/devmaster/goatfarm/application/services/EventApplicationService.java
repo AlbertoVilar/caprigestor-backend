@@ -125,6 +125,6 @@ public class EventApplicationService implements EventManagementUseCase {
     }
 
     private void verifyFarmOwnership(Goat goat) {
-        ownershipService.verifyGoatOwnership(goat);
+        ownershipService.verifyGoatOwnership(goat.getFarm().getId(), goat.getRegistrationNumber());
     }
 }

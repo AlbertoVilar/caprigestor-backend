@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.genealogy.mapper;
 
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
+import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
@@ -10,8 +11,33 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface GenealogyMapper {
 
+    @Mapping(target = "goatName", source = "goatName")
+    @Mapping(target = "goatRegistration", source = "goatRegistration")
+    @Mapping(target = "breed", source = "goatBreed")
+    @Mapping(target = "color", source = "goatCoatColor")
+    @Mapping(target = "status", source = "goatStatus")
+    @Mapping(target = "gender", source = "goatSex")
+    @Mapping(target = "category", source = "goatCategory")
+    @Mapping(target = "tod", source = "goatTOD")
+    @Mapping(target = "toe", source = "goatTOE")
+    @Mapping(target = "birthDate", source = "goatBirthDate")
+    @Mapping(target = "breeder", source = "goatCreator")
+    @Mapping(target = "farmOwner", source = "goatOwner")
     GenealogyResponseVO toResponseVO(Genealogy entity);
 
+    GenealogyResponseDTO toResponseDTO(GenealogyResponseVO vo);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "goatBirthDate", ignore = true)
+    @Mapping(target = "goatBreed", ignore = true)
+    @Mapping(target = "goatCategory", ignore = true)
+    @Mapping(target = "goatCoatColor", ignore = true)
+    @Mapping(target = "goatCreator", ignore = true)
+    @Mapping(target = "goatOwner", ignore = true)
+    @Mapping(target = "goatSex", ignore = true)
+    @Mapping(target = "goatStatus", ignore = true)
+    @Mapping(target = "goatTOD", ignore = true)
+    @Mapping(target = "goatTOE", ignore = true)
     Genealogy toEntity(GenealogyRequestDTO dto);
 
     @Mapping(target = "id", ignore = true)
@@ -46,7 +72,7 @@ public interface GenealogyMapper {
     @Mapping(target = "maternalGrandfatherName", source = "mother.father.name")
     @Mapping(target = "maternalGrandfatherRegistration", source = "mother.father.registrationNumber")
     @Mapping(target = "maternalGreatGrandfather1Name", source = "mother.father.father.name")
-    @Mapping(target = a = "maternalGreatGrandfather1Registration", source = "mother.father.father.registrationNumber")
+    @Mapping(target = "maternalGreatGrandfather1Registration", source = "mother.father.father.registrationNumber")
     @Mapping(target = "maternalGreatGrandmother1Name", source = "mother.father.mother.name")
     @Mapping(target = "maternalGreatGrandmother1Registration", source = "mother.father.mother.registrationNumber")
     @Mapping(target = "maternalGrandmotherName", source = "mother.mother.name")

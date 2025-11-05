@@ -14,6 +14,7 @@ public class GoatFarmRequestVO {
     private Long addressId;
     private Long userId;
     private List<Long> phoneIds;
+    private Integer version;
 
     public GoatFarmRequestVO() {}
 

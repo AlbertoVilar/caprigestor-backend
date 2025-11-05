@@ -34,3 +34,6 @@ build/
 
 ### React Frontend ###
 target/capril-vilar-react/
+
+### Static Content ###
+/src/main/resources/static/

@@ -292,6 +292,16 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
         *   **Path Variable:** `id` (Long)
         *   **Request Body:** `GoatFarmUpdateRequestDTO`
         *   **Response:** `GoatFarmFullResponseDTO`
+        *   **Detalhes do Payload:**
+            - `farm: GoatFarmUpdateFarmDTO`
+              - Campos: `name`, `tod`, `version` (obrigatório)
+              - Observação: use a `version` atual obtida via `GET /api/goatfarms/{id}` para evitar conflito.
+            - `user: UserUpdateRequestDTO` — atualização de dados do proprietário sem exigir `roles`/senha.
+            - `address: AddressRequestDTO`
+            - `phones: PhoneRequestDTO[]` — obrigatório informar ao menos um telefone.
+        *   **Concorrência Otimista:**
+            - O backend compara `farm.version` com a versão atual armazenada. Se divergir, retorna `409 Conflict`.
+            - Não envie IDs (`userId`, `addressId`, `phoneIds`); o backend resolve as relações.
     *   `GET /api/goatfarms/{id}`
         *   **Descrição:** Busca uma fazenda pelo ID.
         *   **Path Variable:** `id` (Long)
@@ -520,8 +530,15 @@ public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exce
 ### Política de Agregação por Fazenda
 
 - Todos os endpoints que manipulam dados de domínio (`Goat`, `Address`, `Phone`, `Event`, `Genealogy`) são agregados por `farmId`.
-- Não existem endpoints globais que listem dados de todas as fazendas.
-- A leitura pública é restrita a consultas GET agregadas por fazenda para `Goat` e `Genealogy`.
+- Não existem endpoints globais que listem dados de entidades entre fazendas.
+- Leitura pública (apenas GET):
+  - `GET /api/goatfarms` — lista fazendas (público)
+  - `GET /api/goatfarms/{farmId}` — detalhes da fazenda (público)
+  - `GET /api/goatfarms/name` — busca por nome (público)
+  - `GET /api/goatfarms/{farmId}/goats` — lista cabras da fazenda (público)
+  - `GET /api/goatfarms/{farmId}/goats/{goatId}` — detalhes da cabra (público)
+  - `GET /api/goatfarms/{farmId}/goats/search` — busca por nome na fazenda (público)
+  - `GET /api/goatfarms/{farmId}/goats/{goatId}/genealogies` — genealogia (público)
 
 ### Roles e Permissões
 
