@@ -34,3 +34,11 @@ build/
 
 ### React Frontend ###
 target/capril-vilar-react/
+
+### Logs ###
+*.log
+logs/
+
+### Env files ###
+.env
+docker/.env
