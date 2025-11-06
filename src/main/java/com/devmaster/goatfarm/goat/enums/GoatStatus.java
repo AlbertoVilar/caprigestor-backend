@@ -1,55 +1,38 @@
 package com.devmaster.goatfarm.goat.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import java.text.Normalizer;
 
 public enum GoatStatus {
     ATIVO("Ativo"),
-    INACTIVE("Inativo"),
-    DECEASED("Falecido"),
-    SOLD("Vendido");
-    
+    INATIVO("Inativo"),
+    FALECIDO("Falecido"),
+    VENDIDO("Vendido");
+
     private final String portugueseValue;
-    
+
     GoatStatus(String portugueseValue) {
         this.portugueseValue = portugueseValue;
     }
-    
-    @JsonValue
-    public String getValue() {
-                return name();
-    }
-    
+
     @JsonCreator
     public static GoatStatus fromValue(String value) {
         if (value == null) {
             return null;
         }
-        
-                String normalizedValue = normalizeEnglishValues(value);
-        
+        String normalizedInput = normalize(value);
         for (GoatStatus status : GoatStatus.values()) {
-            if (status.portugueseValue.equalsIgnoreCase(normalizedValue) || 
-                status.name().equalsIgnoreCase(normalizedValue)) {
+            if (normalize(status.portugueseValue).equalsIgnoreCase(normalizedInput)
+                    || status.name().equalsIgnoreCase(value)) {
                 return status;
             }
         }
-        throw new IllegalArgumentException("Valor invÃ¡lido para GoatStatus: " + value);
+        throw new IllegalArgumentException("Valor inválido para GoatStatus: " + value);
     }
-    
-    /**
-     * Normaliza valores em inglÃªs para seus equivalentes em portuguÃªs/enum
-     */
-    private static String normalizeEnglishValues(String value) {
-        if (value == null) return null;
-        
-                switch (value.toUpperCase()) {
-            case "ACTIVE":
-                return "ATIVO";
-            case "INACTIVE":
-                return "INACTIVE";             case "DECEASED":
-                return "DECEASED";             case "SOLD":
-                return "SOLD";             default:
-                return value;         }
+
+    private static String normalize(String input) {
+        return Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "") // remove acentos
+                .trim();
     }
 }
