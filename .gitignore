@@ -42,3 +42,5 @@ logs/
 ### Env files ###
 .env
 docker/.env
+### Static Content ###
+/src/main/resources/static/

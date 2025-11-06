@@ -119,6 +119,9 @@ Após subir, a API estará acessível em `http://localhost:8080` (ajuste conform
 
 ### Endpoints Públicos (apenas leitura)
 
+- `GET /api/goatfarms` — lista fazendas
+- `GET /api/goatfarms/{farmId}` — detalhes da fazenda
+- `GET /api/goatfarms/name` — busca por nome
 - `GET /api/goatfarms/{farmId}/goats` — lista cabras da fazenda
 - `GET /api/goatfarms/{farmId}/goats/{goatId}` — detalhes da cabra
 - `GET /api/goatfarms/{farmId}/goats/search` — busca por nome na fazenda

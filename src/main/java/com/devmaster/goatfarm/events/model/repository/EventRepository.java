@@ -16,12 +16,12 @@ import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-    List<Event> findEventsByGoatNumRegistro(String goatNumRegistration);
+    List<Event> findEventsByGoatRegistrationNumber(String registrationNumber);
 
     @Query("SELECT e FROM Event e WHERE e.goat.registrationNumber = :registrationNumber " +
             "AND (:eventType IS NULL OR e.eventType = :eventType) " +
-            "AND (:startDate IS NULL OR e.eventDate >= :startDate) " +
-            "AND (:endDate IS NULL OR e.eventDate <= :endDate)")
+            "AND (e.date >= COALESCE(:startDate, e.date)) " +
+            "AND (e.date <= COALESCE(:endDate, e.date))")
     Page<Event> findEventsByGoatWithFilters(@Param("registrationNumber") String registrationNumber,
                                             @Param("eventType") EventType eventType,
                                             @Param("startDate") LocalDate startDate,
@@ -33,9 +33,15 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query(nativeQuery = true, value = "DELETE FROM eventos WHERE goat_id IN (SELECT g.num_registro FROM cabras g JOIN capril c ON g.capril_id = c.id WHERE c.user_id != :adminId)")
     void deleteEventsFromOtherUsers(@Param("adminId") Long adminId);
 
-    // NOVO: Busca por ID do evento, número de registro da cabra e ID da fazenda
-    Optional<Event> findByIdAndGoatRegistrationNumberAndGoatFarmId(Long id, String goatRegistrationNumber, Long goatFarmId);
+    // Busca por ID do evento, número de registro da cabra e ID da fazenda usando query customizada
+    @Query("SELECT e FROM Event e WHERE e.id = :eventId AND e.goat.registrationNumber = :registrationNumber AND e.goat.farm.id = :farmId")
+    Optional<Event> findByIdAndGoatRegistrationNumberAndFarmId(@Param("eventId") Long eventId, 
+                                                               @Param("registrationNumber") String registrationNumber, 
+                                                               @Param("farmId") Long farmId);
 
-    // NOVO: Busca todos os eventos de uma cabra específica em uma fazenda
-    Page<Event> findAllByGoatRegistrationNumberAndGoatFarmId(String goatRegistrationNumber, Long goatFarmId, Pageable pageable);
+    // Busca todos os eventos de uma cabra específica em uma fazenda usando query customizada
+    @Query("SELECT e FROM Event e WHERE e.goat.registrationNumber = :registrationNumber AND e.goat.farm.id = :farmId")
+    Page<Event> findAllByGoatRegistrationNumberAndFarmId(@Param("registrationNumber") String registrationNumber, 
+                                                         @Param("farmId") Long farmId, 
+                                                         Pageable pageable);
 }

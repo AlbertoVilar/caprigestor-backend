@@ -75,6 +75,11 @@ public class SecurityConfig {
         http
             .securityMatcher("/api/**")
             .authorizeHttpRequests(authorize -> authorize
+                // Fazendas (público - leitura)
+                .requestMatchers(HttpMethod.GET,
+                        "/api/goatfarms",
+                        "/api/goatfarms/*",
+                        "/api/goatfarms/name").permitAll()
                 // Consultas de cabras dentro da fazenda (públicas)
                 .requestMatchers(HttpMethod.GET, 
                         "/api/goatfarms/*/goats", 

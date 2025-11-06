@@ -6,8 +6,6 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
 import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
@@ -32,24 +30,22 @@ public class GoatFarmFacade {
     private PhoneMapper phoneMapper;
 
     public GoatFarmFullResponseDTO createFullGoatFarm(GoatFarmFullRequestDTO requestDTO) {
-        GoatFarmFullResponseVO responseVO = farmBusiness.createFullGoatFarm(
+        return farmMapper.toFullDTO(farmBusiness.createFullGoatFarm(
                 farmMapper.toRequestVO(requestDTO.getFarm()),
                 userMapper.toRequestVO(requestDTO.getUser()),
                 addressMapper.toVO(requestDTO.getAddress()),
                 requestDTO.getPhones().stream()
                         .map(phoneMapper::toRequestVO)
                         .collect(java.util.stream.Collectors.toList())
-        );
-        return farmMapper.toFullDTO(responseVO);
+        ));
     }
 
     public GoatFarmResponseDTO createGoatFarm(GoatFarmRequestDTO requestDTO) {
-        GoatFarmResponseVO responseVO = farmBusiness.createGoatFarm(farmMapper.toRequestVO(requestDTO));
-        return farmMapper.toResponseDTO(responseVO);
+        return farmMapper.toResponseDTO(farmBusiness.createGoatFarm(farmMapper.toRequestVO(requestDTO)));
     }
 
     public GoatFarmFullResponseDTO updateGoatFarm(Long id, GoatFarmUpdateRequestDTO requestDTO) {
-        GoatFarmFullResponseVO responseVO = farmBusiness.updateGoatFarm(
+        return farmMapper.toFullDTO(farmBusiness.updateGoatFarm(
                 id,
                 farmMapper.toRequestVO(requestDTO.getFarm()),
                 userMapper.toRequestVO(requestDTO.getUser()),
@@ -57,13 +53,11 @@ public class GoatFarmFacade {
                 requestDTO.getPhones().stream()
                         .map(phoneMapper::toRequestVO)
                         .collect(java.util.stream.Collectors.toList())
-        );
-        return farmMapper.toFullDTO(responseVO);
+        ));
     }
 
     public GoatFarmFullResponseDTO findGoatFarmById(Long id) {
-        GoatFarmFullResponseVO responseVO = farmBusiness.findGoatFarmById(id);
-        return farmMapper.toFullDTO(responseVO);
+        return farmMapper.toFullDTO(farmBusiness.findGoatFarmById(id));
     }
 
     public Page<GoatFarmFullResponseDTO> searchGoatFarmByName(String name, Pageable pageable) {

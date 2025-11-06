@@ -64,7 +64,7 @@ public class GoatBusiness {
         Goat savedGoat = goatDAO.save(goat);
 
         if (savedGoat.getRegistrationNumber() != null) {
-            genealogyBusiness.createGenealogy(savedGoat.getRegistrationNumber());
+            genealogyBusiness.createGenealogy(farmId, savedGoat.getRegistrationNumber());
         }
 
         return goatMapper.toResponseVO(savedGoat);
@@ -96,7 +96,6 @@ public class GoatBusiness {
 
     @Transactional(readOnly = true)
     public GoatResponseVO findGoatById(Long farmId, String goatId) {
-        ownershipService.verifyGoatOwnership(farmId, goatId);
         Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
         return goatMapper.toResponseVO(goat);
@@ -104,13 +103,11 @@ public class GoatBusiness {
 
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable) {
-        ownershipService.verifyFarmOwnership(farmId);
         return goatDAO.findAllByFarmId(farmId, pageable).map(goatMapper::toResponseVO);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable) {
-        ownershipService.verifyFarmOwnership(farmId);
         return goatDAO.findByNameAndFarmId(farmId, name, pageable).map(goatMapper::toResponseVO);
     }
 
@@ -119,3 +116,4 @@ public class GoatBusiness {
         return goatDAO.findByRegistrationNumber(registrationNumber);
     }
 }
+

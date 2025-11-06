@@ -99,4 +99,3 @@ public class GoatRequestDTO {
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
 }
-

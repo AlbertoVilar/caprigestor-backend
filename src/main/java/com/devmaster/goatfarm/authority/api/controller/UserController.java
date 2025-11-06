@@ -11,6 +11,10 @@ import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.authority.api.dto.UserPasswordUpdateDTO;
+import com.devmaster.goatfarm.authority.api.dto.UserRolesUpdateDTO;
+import com.devmaster.goatfarm.authority.facade.UserFacade;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,6 +25,29 @@ public class UserController {
 
     public UserController(UserFacade userFacade) {
         this.userFacade = userFacade;
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or #id == principal.id")
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<?> updatePassword(@PathVariable Long id, @RequestBody @Valid UserPasswordUpdateDTO dto) {
+        try {
+            if (!dto.getPassword().equals(dto.getConfirmPassword())) {
+                throw new IllegalArgumentException("As senhas não coincidem");
+            }
+            userFacade.updatePassword(id, dto.getPassword());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            Map<String, String> validationErrors = new HashMap<>();
+            validationErrors.put("validation", e.getMessage());
+            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
+                "Dados inválidos", validationErrors);
+        }
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PatchMapping("/{id}/roles")
+    public ResponseEntity<UserResponseDTO> updateRoles(@PathVariable Long id, @RequestBody @Valid UserRolesUpdateDTO dto) {
+        return ResponseEntity.ok(userFacade.updateRoles(id, dto.getRoles()));
     }
 
     @GetMapping("/me")
@@ -89,4 +116,3 @@ public class UserController {
         }
     }
 }
-

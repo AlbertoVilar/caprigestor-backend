@@ -186,4 +186,3 @@ public class Genealogy {
     public void setMaternalGrandmotherName(String maternalGrandmotherName) { this.maternalGrandmotherName = maternalGrandmotherName; }
     public void setMaternalGrandmotherRegistration(String maternalGrandmotherRegistration) { this.maternalGrandmotherRegistration = maternalGrandmotherRegistration; }
 }
-

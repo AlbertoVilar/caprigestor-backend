@@ -1,0 +1,96 @@
+{
+  "info": {
+    "name": "GoatFarm API - Dev",
+    "description": "Coleção para testar a API no perfil dev (PostgreSQL). Inclui login com o usuário admin criado automaticamente e endpoints públicos de leitura.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "farmId", "value": "1" },
+    { "key": "goatId", "value": "BR-0001" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth / Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "auth", "login" ] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"albertovilar1@gmail.com\",\n  \"password\": \"132747\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login OK', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var json = {};",
+              "try { json = pm.response.json(); } catch(e) {}",
+              "if (json && json.accessToken) {",
+              "  pm.collectionVariables.set('token', json.accessToken);",
+              "  pm.collectionVariables.set('refreshToken', json.refreshToken);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth / Me (requer token)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{baseUrl}}/api/auth/me", "host": [ "{{baseUrl}}" ], "path": [ "api", "auth", "me" ] }
+      }
+    },
+    {
+      "name": "GoatFarms / Listar (público)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/goatfarms", "host": [ "{{baseUrl}}" ], "path": [ "api", "goatfarms" ] }
+      }
+    },
+    {
+      "name": "GoatFarms / Detalhe por ID (público)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/goatfarms/{{farmId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "goatfarms", "{{farmId}}" ] }
+      }
+    },
+    {
+      "name": "Goats / Listar por fazenda (público)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/goatfarms/{{farmId}}/goats", "host": [ "{{baseUrl}}" ], "path": [ "api", "goatfarms", "{{farmId}}", "goats" ] }
+      }
+    },
+    {
+      "name": "Goat Genealogies / Detalhe (público)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/goatfarms/{{farmId}}/goats/{{goatId}}/genealogies", "host": [ "{{baseUrl}}" ], "path": [ "api", "goatfarms", "{{farmId}}", "goats", "{{goatId}}", "genealogies" ] }
+      }
+    },
+    {
+      "name": "Docs / Swagger UI",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/swagger-ui/index.html", "host": [ "{{baseUrl}}" ], "path": [ "swagger-ui", "index.html" ] }
+      }
+    },
+    {
+      "name": "Docs / OpenAPI JSON",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/v3/api-docs", "host": [ "{{baseUrl}}" ], "path": [ "v3", "api-docs" ] }
+      }
+    }
+  ]
+}
