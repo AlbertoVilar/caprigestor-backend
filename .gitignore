@@ -44,3 +44,6 @@ logs/
 docker/.env
 ### Static Content ###
 /src/main/resources/static/
+
+# Local docs (rascunho, não versionar)
+docs/PLANO_GESTAO_NEGOCIO.md
