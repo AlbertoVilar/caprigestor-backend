@@ -30,18 +30,11 @@ public class UserController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or #id == principal.id")
     @PatchMapping("/{id}/password")
     public ResponseEntity<?> updatePassword(@PathVariable Long id, @RequestBody @Valid UserPasswordUpdateDTO dto) {
-        try {
-            if (!dto.getPassword().equals(dto.getConfirmPassword())) {
-                throw new IllegalArgumentException("As senhas não coincidem");
-            }
-            userFacade.updatePassword(id, dto.getPassword());
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            Map<String, String> validationErrors = new HashMap<>();
-            validationErrors.put("validation", e.getMessage());
-            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
-                "Dados inválidos", validationErrors);
+        if (!dto.getPassword().equals(dto.getConfirmPassword())) {
+            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException("As senhas não coincidem");
         }
+        userFacade.updatePassword(id, dto.getPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -69,50 +62,23 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponseDTO> createUser(@RequestBody @Valid UserRequestDTO dto) {
-        try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(userFacade.saveUser(dto));
-        } catch (IllegalArgumentException e) {
-            Map<String, String> validationErrors = new HashMap<>();
-            validationErrors.put("validation", e.getMessage());
-            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
-                "Dados invÃ¡lidos", validationErrors);
-        } catch (Exception e) {
-            throw e;
-        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(userFacade.saveUser(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody @Valid UserRequestDTO dto) {
-        logger.info("Iniciando atualizaÃ§Ã£o do usuÃ¡rio com ID: {}", id);
-        try {
-            return ResponseEntity.ok(userFacade.updateUser(id, dto));
-        } catch (IllegalArgumentException e) {
-            Map<String, String> validationErrors = new HashMap<>();
-            validationErrors.put("validation", e.getMessage());
-            throw new com.devmaster.goatfarm.config.exceptions.custom.ValidationException(
-                "Dados invÃ¡lidos", validationErrors);
-        } catch (Exception e) {
-            logger.error("ERRO ao atualizar usuÃ¡rio com ID {}: {}", id, e.getMessage());
-            logger.error("Stack trace completo:", e);
-            throw e;
-        }
+        logger.info("Iniciando atualização do usuário com ID: {}", id);
+        return ResponseEntity.ok(userFacade.updateUser(id, dto));
     }
 
         @GetMapping("/debug/{email}")
     public ResponseEntity<Map<String, Object>> debugUserRoles(@PathVariable String email) {
-        try {
-            UserResponseDTO user = userFacade.findByEmail(email);
-            Map<String, Object> debugInfo = new HashMap<>();
-            debugInfo.put("email", user.getEmail());
-            debugInfo.put("name", user.getName());
-            debugInfo.put("rolesCount", user.getRoles().size());
-            debugInfo.put("roles", user.getRoles());
-            return ResponseEntity.ok(debugInfo);
-        } catch (Exception e) {
-            Map<String, Object> errorInfo = new HashMap<>();
-            errorInfo.put("error", e.getMessage());
-            errorInfo.put("email", email);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorInfo);
-        }
+        UserResponseDTO user = userFacade.findByEmail(email);
+        Map<String, Object> debugInfo = new HashMap<>();
+        debugInfo.put("email", user.getEmail());
+        debugInfo.put("name", user.getName());
+        debugInfo.put("rolesCount", user.getRoles().size());
+        debugInfo.put("roles", user.getRoles());
+        return ResponseEntity.ok(debugInfo);
     }
 }

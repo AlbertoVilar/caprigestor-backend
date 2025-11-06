@@ -6,14 +6,18 @@ import com.devmaster.goatfarm.address.dao.AddressDAO;
 import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.HashMap;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,10 +36,7 @@ public class AddressBusiness {
 
     public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-        Map<String, String> validationErrors = validateAddressData(requestVO);
-        if (!validationErrors.isEmpty()) {
-            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
-        }
+        validateAddressData(requestVO);
         Address entity = addressMapper.toEntity(requestVO);
         Address saved = addressDAO.createAddress(entity);
         return addressMapper.toResponseVO(saved);
@@ -43,10 +44,7 @@ public class AddressBusiness {
 
     public AddressResponseVO updateAddress(Long farmId, Long addressId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-        Map<String, String> validationErrors = validateAddressData(requestVO);
-        if (!validationErrors.isEmpty()) {
-            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
-        }
+        validateAddressData(requestVO);
         Address current = addressDAO.findByIdAndFarmId(addressId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
         addressMapper.toEntity(current, requestVO);
@@ -56,83 +54,87 @@ public class AddressBusiness {
 
     public AddressResponseVO findAddressById(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Address entity = addressDAO.findByIdAndFarmId(addressId, farmId)
+        Address found = addressDAO.findByIdAndFarmId(addressId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
-        return addressMapper.toResponseVO(entity);
-    }
-
-    @Transactional(readOnly = true)
-    public Address getAddressEntityById(Long farmId, Long addressId) {
-        ownershipService.verifyFarmOwnership(farmId);
-        return addressDAO.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        return addressMapper.toResponseVO(found);
     }
 
     public String deleteAddress(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Address entity = addressDAO.findByIdAndFarmId(addressId, farmId)
+        // Garante que o endereço pertence à fazenda antes de deletar
+        addressDAO.findByIdAndFarmId(addressId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
         return addressDAO.deleteAddress(addressId);
     }
 
-    public Address findOrCreateAddressEntity(AddressRequestVO requestVO) {
-        Map<String, String> validationErrors = validateAddressData(requestVO);
-        if (!validationErrors.isEmpty()) {
-            throw new IllegalArgumentException("Dados de endereço inválidos: " + validationErrors);
-        }
-        return addressDAO.searchExactAddress(
-                        requestVO.getStreet(),
-                        requestVO.getNeighborhood(),
-                        requestVO.getCity(),
-                        requestVO.getState(),
-                        requestVO.getZipCode()
-                )
-                .orElseGet(() -> addressDAO.createAddress(addressMapper.toEntity(requestVO)));
-    }
 
-    private Map<String, String> validateAddressData(AddressRequestVO requestVO) {
-        Map<String, String> validationErrors = new HashMap<>();
+    private void validateAddressData(AddressRequestVO requestVO) {
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", request.getRequestURI());
+
         if (requestVO.getZipCode() != null) {
             String cep = requestVO.getZipCode().replaceAll("[^0-9]", "");
             if (!cep.matches("^\\d{8}$")) {
-                validationErrors.put("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
+                validationError.addError("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
             }
         }
         if (requestVO.getState() != null) {
             if (!isValidBrazilianState(requestVO.getState())) {
-                validationErrors.put("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
+                validationError.addError("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
             }
         }
         if (requestVO.getCountry() != null &&
                 !requestVO.getCountry().trim().equalsIgnoreCase("Brasil") &&
                 !requestVO.getCountry().trim().equalsIgnoreCase("Brazil")) {
-            validationErrors.put("country", "Por enquanto, apenas endereços do Brasil são aceitos");
+            validationError.addError("country", "Por enquanto, apenas endereços do Brasil são aceitos");
         }
-        return validationErrors;
+
+        if (!validationError.getErrors().isEmpty()) {
+            throw new ValidationException(validationError);
+        }
+    }
+
+    public Address findOrCreateAddressEntity(AddressRequestVO requestVO) {
+        validateAddressData(requestVO);
+        Optional<Address> existing = addressDAO.searchExactAddress(
+                requestVO.getStreet(),
+                requestVO.getNeighborhood(),
+                requestVO.getCity(),
+                requestVO.getState(),
+                requestVO.getZipCode()
+        );
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        Address entity = addressMapper.toEntity(requestVO);
+        return addressDAO.createAddress(entity);
     }
 
     private boolean isValidBrazilianState(String state) {
-        String[] siglasValidas = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
-                "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
-                "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"};
-        String[] nomesValidos = {"Acre", "Alagoas", "Amapá", "Amazonas", "Bahia", "Ceará",
-                "Distrito Federal", "Espírito Santo", "Goiás", "Maranhão",
-                "Mato Grosso", "Mato Grosso do Sul", "Minas Gerais", "Pará",
-                "Paraíba", "Paraná", "Pernambuco", "Piauí", "Rio de Janeiro",
-                "Rio Grande do Norte", "Rio Grande do Sul", "Rondônia",
-                "Roraima", "Santa Catarina", "São Paulo", "Sergipe", "Tocantins"};
+        if (state == null) return false;
+        String raw = state.trim();
+        if (raw.isEmpty()) return false;
 
-        String estadoInput = state.trim();
-        for (String sigla : siglasValidas) {
-            if (sigla.equalsIgnoreCase(estadoInput)) {
-                return true;
-            }
-        }
-        for (String nome : nomesValidos) {
-            if (nome.equalsIgnoreCase(estadoInput)) {
-                return true;
-            }
-        }
-        return false;
+        // Normaliza para comparar nomes sem acentos
+        String normalized = java.text.Normalizer.normalize(raw, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        String upper = raw.toUpperCase();
+        String normalizedUpper = normalized.toUpperCase();
+
+        // Siglas oficiais dos estados brasileiros
+        java.util.Set<String> ufCodes = java.util.Set.of(
+                "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
+                "MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+        );
+
+        // Nomes completos (sem acentos para comparação normalizada)
+        java.util.Set<String> stateNamesNormalized = java.util.Set.of(
+                "ACRE","ALAGOAS","AMAPA","AMAZONAS","BAHIA","CEARA","DISTRITO FEDERAL","ESPIRITO SANTO","GOIAS",
+                "MARANHAO","MATO GROSSO","MATO GROSSO DO SUL","MINAS GERAIS","PARA","PARAIBA","PARANA","PERNAMBUCO",
+                "PIAUI","RIO DE JANEIRO","RIO GRANDE DO NORTE","RIO GRANDE DO SUL","RONDONIA","RORAIMA","SANTA CATARINA",
+                "SAO PAULO","SERGIPE","TOCANTINS"
+        );
+
+        return ufCodes.contains(upper) || stateNamesNormalized.contains(normalizedUpper);
     }
 }
