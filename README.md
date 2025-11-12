@@ -654,7 +654,7 @@ docker compose down -v
 
 ## 📄 Licença
 
-Este projeto ainda não possui licença definida. Até eu escolher uma licença (por exemplo, MIT), todos os direitos permanecem reservados. Quando definir, adicionarei o arquivo `LICENSE` na raiz e atualizarei esta seção.
+Este projeto ainda não possui licença definida. Até eu escolher uma licença (por exemplo, MIT), todos os direitos permanecem reservados.
 
 ---
 
