@@ -29,6 +29,7 @@
 - [Tecnologias](#tecnologias-utilizadas)
 - [Arquitetura](#arquitetura-e-módulos)
 - [Diagrama do Domínio](#diagrama-do-domínio-mermaid)
+- [Diagrama de Classes](#diagrama-de-classes-mermaid)
 - [Pré-requisitos](#pré-requisitos)
 - [Instalação](#instalação)
 - [Configuração](#configuração)
@@ -185,6 +186,7 @@ erDiagram
   ADDRESS {
     int id PK
     string street
+    string number
     string neighborhood
     string city
     string state
@@ -194,6 +196,7 @@ erDiagram
 
   PHONE {
     int id PK
+    string ddd
     string number
     string type
     int farm_id FK
@@ -219,6 +222,171 @@ erDiagram
     string goat_registration_number FK
     int farm_id FK
   }
+```
+
+---
+
+## 🧩 Diagrama de Classes (Mermaid)
+
+```mermaid
+classDiagram 
+     %% ========== MÓDULO FARM ========== 
+     class GoatFarm { 
+         +Long id 
+         +String name 
+         +Long ownerId 
+         +Long addressId 
+         +Instant createdAt 
+         +Instant updatedAt 
+     } 
+ 
+     class Address { 
+         +Long id 
+         +String street 
+         +String number 
+         +String neighborhood 
+         +String city 
+         +String state 
+         +String zipcode 
+         +String country 
+     } 
+ 
+     class Phone { 
+         +Long id 
+         +String number 
+         +PhoneType type 
+         +Long ownerId 
+     } 
+ 
+     class PhoneType { 
+         <<enumeration>> 
+         MOBILE 
+         LANDLINE 
+     } 
+ 
+     class Stable { 
+         +Long id 
+         +String name 
+         +Long farmId 
+     } 
+ 
+     %% ========== MÓDULO AUTHORITY ========== 
+     class User { 
+         +Long id 
+         +String username 
+         +String email 
+         -String password 
+         +boolean enabled 
+     } 
+ 
+     class Role { 
+         <<enumeration>> 
+         ADMIN 
+         OPERATOR 
+     } 
+ 
+     class UserRole { 
+         +Long userId 
+         +Role role 
+     } 
+ 
+     class FarmPermissions { 
+         <<DTO>> 
+         +Long farmId 
+         +List~String~ permissions 
+     } 
+ 
+     %% ========== MÓDULO GOAT ========== 
+     class Goat { 
+         +Long id 
+         +Long farmId 
+         +String tag 
+         +String name 
+         +Gender gender 
+         +GoatStatus status 
+         +LocalDate birthDate 
+         +Long fatherId 
+         +Long motherId 
+         +String notes 
+     } 
+ 
+     class Gender { 
+         <<enumeration>> 
+         MALE 
+         FEMALE 
+     } 
+ 
+     class GoatStatus { 
+         <<enumeration>> 
+         PO 
+         PA 
+         PC 
+     } 
+ 
+     %% ========== MÓDULO EVENTS ========== 
+     class Event { 
+         +Long id 
+         +Long farmId 
+         +Long goatId 
+         +EventType type 
+         +LocalDate eventDate 
+         +String payload 
+     } 
+ 
+     class EventType { 
+         <<enumeration>> 
+         BIRTH 
+         COVERAGE 
+         PARTURITION 
+         VACCINATION 
+         WEIGHT 
+         TREATMENT 
+     } 
+ 
+     %% ========== SHARED ========== 
+     class Person { 
+         +Long id 
+         +String fullName 
+         +String documentId 
+         +String email 
+     } 
+ 
+     %% ========== RELACIONAMENTOS ========== 
+     
+     %% Farm relationships 
+     GoatFarm "1" --> "1" Address : possui 
+     GoatFarm "1" --> "0..*" Phone : tem 
+     GoatFarm "1" --> "0..*" Stable : contém 
+     GoatFarm "1" --> "0..*" Goat : gerencia 
+     
+     %% Authority relationships 
+     User "1" --> "0..*" GoatFarm : possui 
+     User "1" --> "0..*" UserRole : tem 
+     UserRole "*" --> "1" Role : referencia 
+     FarmPermissions ..> GoatFarm : consulta 
+     
+     %% Goat relationships 
+     Goat "0..1" --> "0..1" Goat : pai (fatherId) 
+     Goat "0..1" --> "0..1" Goat : mãe (motherId) 
+     Goat --> Gender : tem 
+     Goat --> GoatStatus : possui 
+     
+     %% Events relationships 
+     Goat "1" --> "0..*" Event : registra 
+     Event --> EventType : tipo 
+     GoatFarm "1" --> "0..*" Event : monitora 
+     
+     %% Shared relationships 
+     Person "1" --> "0..*" Phone : possui 
+     GoatFarm ..> Person : owner (alternativa) 
+     
+     %% Phone type 
+     Phone --> PhoneType : tipo 
+ 
+     %% Notas importantes 
+     note for Goat "Invariantes:\n- farmId deve ser igual ao da GoatFarm\n- fatherId deve referenciar Goat com gender=MALE\n- motherId deve referenciar Goat com gender=FEMALE\n- pai e mãe devem ser da mesma fazenda" 
+     
+     note for Event "Invariantes:\n- farmId deve corresponder à fazenda do Goat\n- goatId deve referenciar Goat válido\n- payload varia conforme EventType"
 ```
 
 ---

@@ -1,0 +1,80 @@
+%% Mermaid - Diagrama ER do Domínio GoatFarm (compatível GitHub)
+
+erDiagram
+  USER ||--o{ USER_ROLE : has
+  USER_ROLE }o--|| ROLE : belongs_to
+  USER ||--o{ GOAT_FARM : owns
+  GOAT_FARM ||--|| ADDRESS : has
+  GOAT_FARM ||--o{ PHONE : has
+  GOAT_FARM ||--o{ GOAT : hosts
+  GOAT ||--o{ EVENT : has
+  GOAT ||--o| GOAT : father
+  GOAT ||--o| GOAT : mother
+
+  USER {
+    int id PK
+    string username
+    string email
+    string password
+    boolean enabled
+  }
+
+  ROLE {
+    int id PK
+    string name
+    string description
+  }
+
+  USER_ROLE {
+    int id PK
+    int user_id FK
+    int role_id FK
+  }
+
+  GOAT_FARM {
+    int id PK
+    string name
+    int owner_user_id FK
+    int address_id FK
+    datetime created_at
+    datetime updated_at
+  }
+
+  ADDRESS {
+    int id PK
+    string street
+    string number
+    string neighborhood
+    string city
+    string state
+    string zip_code
+    string country
+  }
+
+  PHONE {
+    int id PK
+    string ddd
+    string number
+    int farm_id FK
+  }
+
+  GOAT {
+    string registration_number PK
+    string name
+    string gender
+    date birth_date
+    string color
+    string status
+    int farm_id FK
+    string father_id
+    string mother_id
+  }
+
+  EVENT {
+    int id PK
+    string event_type
+    date event_date
+    string observation
+    string goat_registration_number FK
+    int farm_id FK
+  }
