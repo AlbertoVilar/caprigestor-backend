@@ -40,7 +40,6 @@
 - [API](#api--documentação)
 - [Testes](#testes)
 - [Docker](#docker)
-- [Contribuição](#contribuindo)
 - [Licença](#licença)
 - [Contato](#contato)
 
@@ -228,6 +227,8 @@ erDiagram
 ---
 
 ## 🧩 Diagrama de Classes (Mermaid)
+
+> Arquivo standalone: `docs/diagrams/class.mmd`
 
 ```mermaid
 classDiagram 
@@ -644,25 +645,6 @@ docker compose down -v
 
 ---
 
-## 🤝 Contribuindo
-
-Contribuições são bem-vindas! Para contribuir:
-
-1. 🍴 Fork o projeto
-2. 🌿 Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
-3. ✍️ Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
-4. 📤 Push para a branch (`git push origin feature/MinhaFeature`)
-5. 🔃 Abra um Pull Request
-
-### 📝 Diretrizes
-
-- Siga os padrões de código do projeto
-- Escreva testes para novas funcionalidades
-- Atualize a documentação quando necessário
-- Use mensagens de commit descritivas
-
----
-
 ## 🔗 Links Relacionados
 
 - 🖥️ [Frontend do CapriGestor](https://github.com/albertovilar/caprigestor-frontend)
@@ -672,7 +654,7 @@ Contribuições são bem-vindas! Para contribuir:
 
 ## 📄 Licença
 
-Licença a definir. Assim que uma licença for escolhida (por exemplo, MIT), adicione o arquivo `LICENSE` na raiz e atualize esta seção.
+Este projeto ainda não possui licença definida. Até eu escolher uma licença (por exemplo, MIT), todos os direitos permanecem reservados. Quando definir, adicionarei o arquivo `LICENSE` na raiz e atualizarei esta seção.
 
 ---
 
