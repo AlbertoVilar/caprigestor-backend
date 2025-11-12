@@ -1,55 +1,99 @@
-# CapriGestor — Backend
+<div align="center">
 
-> Status: Em desenvolvimento (MVP) até 02/10/2025.
+<h1>🐐 CapriGestor — Backend</h1>
 
-### Contato
+<p><i>Sistema completo para gestão de caprinos, com arquitetura limpa, segura e escalável.</i></p>
 
-- Nome: José Alberto Vilar Pereira
-- E-mail: [albertovilar1@gmail.com](mailto:albertovilar1@gmail.com)
-- LinkedIn: [linkedin.com/in/alberto-vilar-316725ab](https://www.linkedin.com/in/alberto-vilar-316725ab)
-- GitHub: [github.com/albertovilar](https://github.com/albertovilar)
+<a href="https://www.java.com" target="_blank"><img src="https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk" alt="Java 21"/></a>
+<a href="https://spring.io/projects/spring-boot" target="_blank"><img src="https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?style=for-the-badge&logo=spring" alt="Spring Boot 3.x"/></a>
+<a href="https://www.postgresql.org" target="_blank"><img src="https://img.shields.io/badge/PostgreSQL-16-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL 16"/></a>
+<a href="https://www.docker.com" target="_blank"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker" alt="Docker Ready"/></a>
+<a href="./LICENSE" target="_blank"><img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="MIT License"/></a>
 
-## 1. Descrição
+<p>
+  <a href="./DOCUMENTACAO_BACKEND.md">📋 Documentação Técnica</a> ·
+  <a href="https://github.com/albertovilar/caprigestor-frontend">🖥️ Frontend</a> ·
+  <a href="http://localhost:8080/swagger-ui/index.html">📊 Swagger (local)</a>
+  
+</p>
 
-CapriGestor é um sistema backend para gerenciamento de caprinos (cabras) que suporta cadastro, acompanhamento de eventos e genealogia, além de recursos de fazenda e autoridades/usuários. O backend é desenvolvido em Spring Boot 3, segue princípios de arquitetura hexagonal (ports & adapters) e expõe APIs REST seguras, documentadas via Swagger.
+</div>
 
-## 2. Tecnologias Utilizadas
+---
 
-- Java 21
-- Spring Boot 3
-- JWT
-- OAuth2
-- PostgreSQL
-- Flyway (migrações de banco)
+Status do projeto: Em desenvolvimento (MVP) até 02/10/2025.
 
-## 3. Organização dos pacotes
+---
 
-Resumo por módulo (camadas seguindo hexagonal: `domain`, `application`, `infrastructure`):
+## Sumário
 
-- `goat`: regras de negócio, cadastro, atributos, conversores e acesso a dados de caprinos.
-- `events`: eventos relacionados aos caprinos (nascimentos, coberturas, pesagens, etc.).
-- `genealogy`: relacionamento e linhagem entre caprinos (ascendência/descendência).
-- `farm`: entidades e serviços de fazendas/estábulos/locais associados.
-- `authority`: autenticação, autorização, usuários e papéis.
-- `shared`: utilitários, DTOs comuns, exceções e infra compartilhada.
+- Sobre o Projeto
+- Funcionalidades Principais
+- Arquitetura e Módulos
+- Perfis de Execução
+- Banco de Dados
+- Como Rodar
+- Segurança (JWT + OAuth2)
+- API & Swagger
+- Frontend
+- Dicas para DEV
+- Contato
 
-Observação: os pacotes seguem o padrão de separação por domínio, mantendo baixo acoplamento e alta coesão, com conversores e facades onde aplicável.
+---
 
-## 4. Perfis de execução
+## Sobre o Projeto
 
-- `dev`: desenvolvimento local com configurações e dados de exemplo, logs mais verbosos.
-- `test`: execução de testes, banco em memória/containers e configurações de teste.
-- `prod`: produção, variáveis externas, segurança reforçada e tuning de performance.
+CapriGestor é uma API REST robusta para gerenciamento completo de fazendas de caprinos. Foi construída com **Spring Boot 3**, segue princípios de **arquitetura hexagonal** (ports & adapters) e expõe **APIs seguras** documentadas via **Swagger**.
 
-Ative via propriedade `spring.profiles.active`.
+---
 
-Exemplos:
+## Funcionalidades Principais
+
+- Gestão de Fazendas
+  - Cadastro de fazendas com endereços e telefones
+  - Ownership e controle por proprietário
+  - Listagem e busca paginadas
+- Gestão de Animais
+  - Cadastro detalhado de caprinos
+  - Rastreamento genealógico (pai, mãe, avós)
+  - Visualização de árvore genealógica
+  - Status e categorização (PO, PA, PC)
+- Controle de Acesso
+  - Autenticação JWT stateless
+  - Autorização baseada em roles (`ADMIN`, `OPERATOR`)
+- Eventos e Rastreabilidade
+  - Registro de nascimentos, vacinações, pesagens
+  - Histórico completo por animal
+  - Filtros avançados por tipo e período
+
+---
+
+## Arquitetura e Módulos
+
+Camadas (hexagonal): `domain` · `application` · `infrastructure`
+
+- `goat`: regras de negócio e acesso a dados de caprinos
+- `events`: eventos (nascimentos, coberturas, pesagens, etc.)
+- `genealogy`: relacionamento e linhagem (ascendência/descendência)
+- `farm`: entidades e serviços de fazendas/estábulos/locais
+- `authority`: autenticação, autorização, usuários e papéis
+- `shared`: utilitários, DTOs comuns, exceções e infra compartilhada
+
+Observação: foco em baixo acoplamento e alta coesão, com conversores e facades onde aplicável.
+
+---
+
+## Perfis de Execução
+
+- `dev`: desenvolvimento local com dados de exemplo e logs verbosos
+- `test`: testes automatizados (H2 em memória, configs isoladas)
+- `prod`: produção (variáveis externas, segurança reforçada)
+
+Ative via `spring.profiles.active`.
 
 ```bash
 # Windows (PowerShell)
 ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
-
-# Test
 ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=test
 
 # Linux/Mac
@@ -57,65 +101,65 @@ Exemplos:
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=test
 ```
 
-## 5. Banco de dados
+---
 
-- Migrações: `src/main/resources/db/migration` (controladas pelo Flyway).
-- Seed inicial: `import.sql` (desabilitado por padrão; habilite `spring.sql.init.mode=always` se necessário).
-- Perfis: `test` usa H2 em memória com `MODE=PostgreSQL`, `ddl-auto=validate` e `Flyway` habilitado; `dev` usa PostgreSQL com `ddl-auto=validate` e `Flyway` habilitado.
-- Banco padrão (dev): PostgreSQL. Configure credenciais e URL no `application-dev.properties`.
+## Banco de Dados
 
-As migrações versionadas (ex.: `V9__Create_Event_Table.sql`) garantem a evolução consistente do schema.
+- Migrações: `src/main/resources/db/migration` (Flyway)
+- Seeds: `import.sql` (opcional; habilite `spring.sql.init.mode=always`)
+- `test`: H2 em memória com `MODE=PostgreSQL`, `ddl-auto=validate`, Flyway
+- `dev`: PostgreSQL com `ddl-auto=validate`, Flyway
+- Credenciais e URL: `application-dev.properties`
 
-## 6. Como rodar o projeto
+As migrações versionadas (ex.: `V9__Create_Event_Table.sql`) garantem evolução consistente do schema.
+
+---
+
+## Como Rodar
 
 Você pode rodar na IDE ou via Docker Compose.
 
-- IDE (IntelliJ/Eclipse):
-  - Java 21 instalado.
-  - Importar o projeto Maven.
-  - Selecionar o perfil desejado (`dev`, `test`, `prod`).
-  - Executar a aplicação (classe principal Spring Boot).
+- IDE (IntelliJ/Eclipse)
+  - Java 21 instalado
+  - Importar projeto Maven
+  - Selecionar perfil (`dev`, `test`, `prod`)
+  - Executar classe principal Spring Boot
 
-- Maven CLI:
+- Maven CLI
   ```bash
   # Dev
   ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
   ```
 
-- Docker Compose:
-  - Arquivo: `docker/docker-compose.yml`.
-  - Sobe serviços (ex.: PostgreSQL) e integra com a aplicação.
-  - Variáveis sensíveis são parametrizadas via `docker/.env`.
+- Docker Compose
+  - Arquivo: `docker/docker-compose.yml`
+  - Variáveis: `docker/.env` (base em `docker/.env.example`)
   - Comandos:
     ```bash
     # Windows (PowerShell)
     docker compose up -d
-    
     # Para parar
     docker compose down
     ```
+  - Exemplo de `docker/.env`:
+    ```env
+    POSTGRES_DB=caprigestor_dev
+    POSTGRES_USER=admin
+    POSTGRES_PASSWORD=changeme123
+    PGADMIN_DEFAULT_EMAIL=admin@admin.com
+    PGADMIN_DEFAULT_PASSWORD=changeme123
+    ```
 
-  - Configuração de `.env`:
-    - Copie `docker/.env.example` para `docker/.env` e ajuste valores:
-      ```env
-      POSTGRES_DB=caprigestor_dev
-      POSTGRES_USER=admin
-      POSTGRES_PASSWORD=changeme123
-      PGADMIN_DEFAULT_EMAIL=admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD=changeme123
-      ```
-    - O Compose carrega automaticamente `docker/.env` quando executado a partir da pasta raiz.
+Após subir, a API estará acessível em `http://localhost:8080`.
 
-Após subir, a API estará acessível em `http://localhost:8080` (ajuste conforme perfil/porta).
+---
 
-## 7. Segurança com JWT + OAuth2
+## Segurança (JWT + OAuth2)
 
-- Autenticação via OAuth2/JWT.
-- Autorização baseada em papéis:
-  - `ROLE_ADMIN`
-  - `ROLE_OPERATOR`
-- Endpoints protegidos exigem cabeçalho `Authorization: Bearer <token>`.
-- Políticas de acesso definidas nas configurações de segurança do Spring.
+- Autenticação via OAuth2/JWT
+- Autorização baseada em papéis (`ROLE_ADMIN`, `ROLE_OPERATOR`)
+- Envie `Authorization: Bearer <token>` para endpoints protegidos
+- Políticas de acesso nas configurações de segurança
 
 ### Endpoints Públicos (apenas leitura)
 
@@ -128,25 +172,27 @@ Após subir, a API estará acessível em `http://localhost:8080` (ajuste conform
 - `GET /api/goatfarms/{farmId}/goats/{goatId}/genealogies` — genealogia da cabra
 
 Observações:
-- Não existem endpoints globais para listar dados entre fazendas.
-- Todas as operações são agregadas por `farmId`.
+- Não existem endpoints globais entre fazendas
+- Todas as operações são agregadas por `farmId`
 
-## 8. Swagger
+---
 
-- UI: `http://localhost:8080/swagger-ui/index.html`
-- Permite explorar e testar endpoints REST com schemas e exemplos.
+## API & Swagger
 
-## 9. Link cruzado com o repositório do frontend
+- UI local: `http://localhost:8080/swagger-ui/index.html`
+- Explore e teste endpoints REST com schemas e exemplos
 
-Frontend associado: `https://github.com/albertovilar/caprigestor-frontend`
+---
 
-## 10. Status do projeto
+## Frontend
 
-MVP em desenvolvimento, já funcional.
+Repositório associado: `https://github.com/albertovilar/caprigestor-frontend`
 
-### Dicas de execução em DEV
+---
 
-Caso os testes de unidade/integrados estejam falhando enquanto você valida endpoints e segurança, execute com testes ignorados:
+## Dicas para DEV
+
+Se os testes estiverem falhando enquanto você valida endpoints e segurança, execute ignorando testes:
 
 ```bash
 # Windows (PowerShell)
@@ -156,12 +202,21 @@ Caso os testes de unidade/integrados estejam falhando enquanto você valida endp
 ./mvnw -DskipTests spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Para validar acesso público a genealogias sem token:
+Validar acesso público a genealogias (sem token):
 
 ```
 GET http://localhost:8080/api/goatfarms/1/goats/XYZ/genealogies
 # Esperado: 404 se não existir, mas NÃO 401 (sem token)
 ```
+
+---
+
+## Contato
+
+- Nome: José Alberto Vilar Pereira
+- E-mail: [albertovilar1@gmail.com](mailto:albertovilar1@gmail.com)
+- LinkedIn: [linkedin.com/in/alberto-vilar-316725ab](https://www.linkedin.com/in/alberto-vilar-316725ab)
+- GitHub: [github.com/albertovilar](https://github.com/albertovilar)
 
 ---
 
