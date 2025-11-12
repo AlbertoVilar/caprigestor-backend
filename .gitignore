@@ -48,3 +48,4 @@ docker/.env
 # Local docs (rascunho, não versionar)
 docs/PLANO_GESTAO_NEGOCIO.md
 docs/PLANO_GESTAO_NEGOCIO_RESUMO.md
+docs/ENTIDADES_DIAGRAMA_CLASSES.md
