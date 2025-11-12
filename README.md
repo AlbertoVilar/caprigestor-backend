@@ -142,103 +142,83 @@ domain → application → infrastructure
 > Renderize este bloco com seu plugin Mermaid (ex.: Mormaind). É o mesmo modelo mantido em `docs/diagrams/domain.mmd`.
 
 ```mermaid
-%% Mermaid - Diagrama ER do Domínio GoatFarm
-%% Entidades principais e relacionamentos
-
 erDiagram
+  USER ||--o{ USER_ROLE : has
+  USER_ROLE }o--|| ROLE : belongs_to
   USER ||--o{ GOAT_FARM : owns
-  USER }o--o{ ROLE : has
-  ROLE }o--o{ AUTHORITY : grants
-
   GOAT_FARM ||--|| ADDRESS : has
   GOAT_FARM ||--o{ PHONE : has
   GOAT_FARM ||--o{ GOAT : hosts
-
-  GOAT }o--|| USER : belongs_to
-  GOAT }o--|| GOAT_FARM : belongs_to
   GOAT ||--o{ EVENT : has
   GOAT ||--o| GOAT : father
   GOAT ||--o| GOAT : mother
 
   USER {
-    bigint id PK
-    string name
-    string email UNIQUE
-    string cpf UNIQUE
+    int id PK
+    string username
+    string email
     string password
+    boolean enabled
   }
 
   ROLE {
-    bigint id PK
-    string authority UNIQUE
+    int id PK
+    string name
     string description
   }
 
-  AUTHORITY {
-    bigint id PK
-    string name
-    string description
+  USER_ROLE {
+    int id PK
+    int user_id FK
+    int role_id FK
   }
 
   GOAT_FARM {
-    bigint id PK
+    int id PK
     string name
-    string tod
-    bigint user_id FK
-    bigint address_id FK
+    int owner_user_id FK
+    int address_id FK
     datetime created_at
     datetime updated_at
   }
 
   ADDRESS {
-    bigint id PK
+    int id PK
     string street
     string neighborhood
     string city
     string state
     string zip_code
+    string country
   }
 
   PHONE {
-    bigint id PK
-    string ddd
+    int id PK
     string number
-    bigint goat_farm_id FK
+    string type
+    int farm_id FK
   }
 
   GOAT {
     string registration_number PK
     string name
-    enum breed
-    enum gender
+    string gender
     date birth_date
     string color
-    enum status
-    bigint farm_id FK
-    bigint user_id FK
+    string status
+    int farm_id FK
     string father_id
     string mother_id
   }
 
   EVENT {
-    bigint id PK
-    enum event_type
+    int id PK
+    string event_type
     date event_date
     string observation
     string goat_registration_number FK
-    bigint goat_farm_id (via goat.farm.id)
+    int farm_id FK
   }
-
-%% Notas de mapeamento de tabelas físicas (PostgreSQL)
-%% USER -> users
-%% ROLE -> role
-%% USER-ROLE -> tb_user_role (tabela de junção)
-%% ROLE-AUTHORITY -> tb_role_authority (tabela de junção)
-%% GOAT_FARM -> capril
-%% GOAT -> cabras
-%% EVENT -> eventos
-%% PHONE -> telefone
-%% ADDRESS -> endereco
 ```
 
 ---
