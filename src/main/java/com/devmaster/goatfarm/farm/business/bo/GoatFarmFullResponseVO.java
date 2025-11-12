@@ -30,8 +30,12 @@ public class GoatFarmFullResponseVO {
     private String city;
     private String state;
     private String zipCode;
+    private String country;
 
         private List<PhoneResponseVO> phones;
+
+    // Roles do usuário proprietário da fazenda
+    private java.util.List<String> userRoles;
 
         public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -77,8 +81,14 @@ public class GoatFarmFullResponseVO {
     
     public String getZipCode() { return zipCode; }
     public void setZipCode(String zipCode) { this.zipCode = zipCode; }
+
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
     
     public List<PhoneResponseVO> getPhones() { return phones; }
     public void setPhones(List<PhoneResponseVO> phones) { this.phones = phones; }
+
+    public java.util.List<String> getUserRoles() { return userRoles; }
+    public void setUserRoles(java.util.List<String> userRoles) { this.userRoles = userRoles; }
 }
 

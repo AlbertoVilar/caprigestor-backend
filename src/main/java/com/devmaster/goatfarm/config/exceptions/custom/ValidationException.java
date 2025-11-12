@@ -1,17 +1,15 @@
 package com.devmaster.goatfarm.config.exceptions.custom;
 
-import java.util.Map;
-
 public class ValidationException extends RuntimeException {
 
-    private final Map<String, String> validationErrors;
+    private final ValidationError validationError;
 
-    public ValidationException(String message, Map<String, String> validationErrors) {
-        super(message);
-        this.validationErrors = validationErrors;
+    public ValidationException(ValidationError validationError) {
+        super("Erro de validação");
+        this.validationError = validationError;
     }
 
-    public Map<String, String> getValidationErrors() {
-        return validationErrors;
+    public ValidationError getValidationError() {
+        return validationError;
     }
 }

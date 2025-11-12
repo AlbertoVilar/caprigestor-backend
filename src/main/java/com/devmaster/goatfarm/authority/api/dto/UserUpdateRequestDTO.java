@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.authority.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -27,9 +28,11 @@ public class UserUpdateRequestDTO {
 
     // Senha opcional para troca de senha do próprio usuário
     @Size(min = 6, message = "A senha deve ter pelo menos 6 caracteres")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     // Confirmação opcional; se password vier, deve ser validada em nível de negócio
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String confirmPassword;
 
     public String getName() { return name; }

@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
+import com.devmaster.goatfarm.farm.api.dto.FarmPermissionsDTO;
 import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
 import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
@@ -70,5 +71,12 @@ public class GoatFarmFacade {
 
     public void deleteGoatFarm(Long id) {
         farmBusiness.deleteGoatFarm(id);
+    }
+
+    public FarmPermissionsDTO getFarmPermissions(Long farmId) {
+        var vo = farmBusiness.getFarmPermissions(farmId);
+        FarmPermissionsDTO dto = new FarmPermissionsDTO();
+        dto.setCanCreateGoat(vo.isCanCreateGoat());
+        return dto;
     }
 }

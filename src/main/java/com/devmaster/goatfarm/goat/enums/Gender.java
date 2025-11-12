@@ -1,51 +1,37 @@
 package com.devmaster.goatfarm.goat.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
+import java.text.Normalizer;
 
 public enum Gender {
-    MALE("Macho"),
-    FEMALE("FÃªmea");
-    
+    MACHO("Macho"),
+    FEMEA("Fêmea");
+
     private final String portugueseValue;
-    
+
     Gender(String portugueseValue) {
         this.portugueseValue = portugueseValue;
     }
-    
-    @JsonValue
-    public String getValue() {
-                return name();
-    }
-    
+
     @JsonCreator
     public static Gender fromValue(String value) {
         if (value == null) {
             return null;
         }
-        
+        String normalizedInput = normalize(value);
         for (Gender gender : Gender.values()) {
-            if (gender.portugueseValue.equalsIgnoreCase(value) || 
-                gender.name().equalsIgnoreCase(value)) {
+            if (normalize(gender.portugueseValue).equalsIgnoreCase(normalizedInput)
+                    || gender.name().equalsIgnoreCase(value)) {
                 return gender;
             }
         }
-        
-                if ("MACHO".equalsIgnoreCase(value)) {
-            return MALE;
-        }
-        if ("FÃŠMEA".equalsIgnoreCase(value) || "FEMEA".equalsIgnoreCase(value)) {
-            return FEMALE;
-        }
-        
-                if ("MALE".equalsIgnoreCase(value)) {
-            return MALE;
-        }
-        if ("FEMALE".equalsIgnoreCase(value)) {
-            return FEMALE;
-        }
-        
-        throw new IllegalArgumentException("Valor invÃ¡lido para Gender: " + value);
+        throw new IllegalArgumentException("Valor inválido para Gender: " + value);
+    }
+
+    private static String normalize(String input) {
+        return Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "") // remove acentos
+                .trim();
     }
 }
 

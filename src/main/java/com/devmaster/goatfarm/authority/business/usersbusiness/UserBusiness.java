@@ -8,10 +8,16 @@ import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.time.Instant;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,18 +36,11 @@ public class UserBusiness {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public User findByUsername(String username) {
-        return userDAO.findUserByUsername(username);
-    }
-
-    public UserResponseVO getMe() {
-        return userDAO.getMe();
-    }
+    // ... (outros métodos mantidos como estão)
 
     @Transactional
     public UserResponseVO saveUser(UserRequestVO vo) {
-        validateRequiredFields(vo);
-        validateUserData(vo);
+        validateUserData(vo, true);
 
         if (userDAO.findUserByEmail(vo.getEmail().trim()).isPresent()) {
             throw new DuplicateEntityException("Já existe um usuário cadastrado com o email: " + vo.getEmail());
@@ -59,7 +58,7 @@ public class UserBusiness {
 
     @Transactional
     public UserResponseVO updateUser(Long userId, UserRequestVO vo) {
-        validateUserData(vo);
+        validateUserData(vo, false);
 
         User existingUser = userDAO.findUserEntityById(userId);
 
@@ -69,7 +68,6 @@ public class UserBusiness {
             }
         }
 
-        // Verifica duplicidade de CPF apenas quando o CPF está sendo alterado
         if (!existingUser.getCpf().equals(vo.getCpf().trim())) {
             if (userDAO.findUserByCpf(vo.getCpf().trim()).isPresent()) {
                 throw new DuplicateEntityException("Já existe outro usuário cadastrado com o CPF: " + vo.getCpf());
@@ -89,49 +87,44 @@ public class UserBusiness {
         return userDAO.updateUser(userId, vo, encryptedPassword, resolvedRoles);
     }
 
+    @Transactional(readOnly = true)
+    public UserResponseVO getMe() {
+        return userDAO.getMe();
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseVO findByEmail(String email) {
+        return userDAO.findByEmail(email);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponseVO findById(Long userId) {
+        return userDAO.findById(userId);
+    }
+
     @Transactional
     public void updatePassword(Long userId, String newPassword) {
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            throw new IllegalArgumentException("Senha não pode ser vazia");
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação", ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getRequestURI());
+            ve.addError("password", "Senha é obrigatória e não pode estar em branco");
+            throw new ValidationException(ve);
         }
-        String encryptedPassword = passwordEncoder.encode(newPassword);
-        userDAO.updateUserPassword(userId, encryptedPassword);
+        String encrypted = passwordEncoder.encode(newPassword);
+        userDAO.updateUserPassword(userId, encrypted);
     }
 
     @Transactional
     public UserResponseVO updateRoles(Long userId, java.util.List<String> roles) {
         if (roles == null || roles.isEmpty()) {
-            throw new IllegalArgumentException("Lista de roles não pode ser vazia");
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação", ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getRequestURI());
+            ve.addError("roles", "É necessário informar ao menos uma role");
+            throw new ValidationException(ve);
         }
-        for (String role : roles) {
-            if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR")) {
-                throw new IllegalArgumentException("Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
-            }
-        }
-        java.util.Set<Role> resolvedRoles = roles.stream()
+        java.util.Set<Role> resolved = roles.stream()
                 .map(roleName -> roleDAO.findByAuthority(roleName)
                         .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
                 .collect(java.util.stream.Collectors.toSet());
-
-        return userDAO.updateUserRoles(userId, resolvedRoles);
-    }
-
-    public UserResponseVO findByEmail(String email) {
-        return userDAO.findByEmail(email) != null ? userDAO.findByEmail(email) : null;
-    }
-
-    public UserResponseVO findById(Long userId) {
-        return userDAO.findById(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public User getEntityById(Long id) {
-        return userDAO.findUserEntityById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public User getUserEntityById(Long id) {
-        return userDAO.findUserEntityById(id);
+        return userDAO.updateUserRoles(userId, resolved);
     }
 
     @Transactional
@@ -144,36 +137,45 @@ public class UserBusiness {
         userDAO.deleteOtherUsers(adminId);
     }
 
-    private void validateRequiredFields(UserRequestVO vo) {
-        if (vo.getName() == null || vo.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Nome é obrigatório e não pode estar em branco");
-        }
-        if (vo.getEmail() == null || vo.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Email é obrigatório e não pode estar em branco");
-        }
-        if (vo.getCpf() == null || vo.getCpf().trim().isEmpty()) {
-            throw new IllegalArgumentException("CPF é obrigatório e não pode estar em branco");
-        }
-        if (vo.getPassword() == null || vo.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("Senha é obrigatória e não pode estar em branco");
-        }
-    }
+    private void validateUserData(UserRequestVO vo, boolean isCreation) {
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", request.getRequestURI());
 
-    private void validateUserData(UserRequestVO vo) {
-        if (vo.getPassword() != null && vo.getConfirmPassword() != null) {
-            if (!vo.getPassword().equals(vo.getConfirmPassword())) {
-                throw new IllegalArgumentException("As senhas não coincidem");
+        if (isCreation) {
+            if (vo.getName() == null || vo.getName().trim().isEmpty()) {
+                validationError.addError("name", "Nome é obrigatório e não pode estar em branco");
+            }
+            if (vo.getEmail() == null || vo.getEmail().trim().isEmpty()) {
+                validationError.addError("email", "Email é obrigatório e não pode estar em branco");
+            }
+            if (vo.getCpf() == null || vo.getCpf().trim().isEmpty()) {
+                validationError.addError("cpf", "CPF é obrigatório e não pode estar em branco");
+            }
+            if (vo.getPassword() == null || vo.getPassword().trim().isEmpty()) {
+                validationError.addError("password", "Senha é obrigatória e não pode estar em branco");
             }
         }
-        if (vo.getCpf() != null && !vo.getCpf().matches("^\\d{11}$")) {
-            throw new IllegalArgumentException("CPF deve conter exatamente 11 dígitos numéricos");
+
+        if (vo.getPassword() != null && !vo.getPassword().isEmpty() && vo.getConfirmPassword() != null) {
+            if (!vo.getPassword().equals(vo.getConfirmPassword())) {
+                validationError.addError("confirmPassword", "As senhas não coincidem");
+            }
         }
+
+        if (vo.getCpf() != null && !vo.getCpf().matches("^\\d{11}$")) {
+            validationError.addError("cpf", "CPF deve conter exatamente 11 dígitos numéricos");
+        }
+
         if (vo.getRoles() != null) {
             for (String role : vo.getRoles()) {
                 if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR")) {
-                    throw new IllegalArgumentException("Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
+                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
                 }
             }
+        }
+
+        if (!validationError.getErrors().isEmpty()) {
+            throw new ValidationException(validationError);
         }
     }
 

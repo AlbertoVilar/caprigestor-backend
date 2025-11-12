@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -17,5 +18,7 @@ public class GoatFarmFullResponseDTO {
     private UserResponseDTO user;
     private AddressResponseDTO address;
     private List<PhoneResponseDTO> phones;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private Integer version;
 }

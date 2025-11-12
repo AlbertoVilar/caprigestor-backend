@@ -294,14 +294,27 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
         *   **Response:** `GoatFarmFullResponseDTO`
         *   **Detalhes do Payload:**
             - `farm: GoatFarmUpdateFarmDTO`
-              - Campos: `name`, `tod`, `version` (obrigatório)
-              - Observação: use a `version` atual obtida via `GET /api/goatfarms/{id}` para evitar conflito.
+              - Campos: `name`, `tod`, `version` (opcional)
+              - Observação: o backend utiliza concorrência otimista via `@Version` internamente; não é necessário enviar `version` para atualizar.
             - `user: UserUpdateRequestDTO` — atualização de dados do proprietário sem exigir `roles`/senha.
             - `address: AddressRequestDTO`
             - `phones: PhoneRequestDTO[]` — obrigatório informar ao menos um telefone.
         *   **Concorrência Otimista:**
-            - O backend compara `farm.version` com a versão atual armazenada. Se divergir, retorna `409 Conflict`.
+            - O backend utiliza `@Version` na entidade `GoatFarm`. Em caso de conflito de atualização concorrente, poderá ocorrer `409 Conflict` automaticamente.
             - Não envie IDs (`userId`, `addressId`, `phoneIds`); o backend resolve as relações.
+    *   `GET /api/goatfarms/{farmId}/permissions`
+        *   **Descrição:** Informa permissões de ação do usuário autenticado sobre a fazenda.
+        *   **Path Variable:** `farmId` (Long)
+        *   **Autorização:** `ROLE_ADMIN` ou `ROLE_OPERATOR`
+        *   **Response:** `FarmPermissionsDTO`
+            - Campos: `canCreateGoat` (boolean)
+            - Regras: `true` para `ROLE_ADMIN`; para `ROLE_OPERATOR`, `true` somente se o usuário for proprietário da fazenda (`farm.ownerId == userId`).
+        *   **Exemplo de resposta:**
+            ```json
+            {
+              "canCreateGoat": true
+            }
+            ```
     *   `GET /api/goatfarms/{id}`
         *   **Descrição:** Busca uma fazenda pelo ID.
         *   **Path Variable:** `id` (Long)
@@ -388,6 +401,50 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
         *   **Path Variable:** `farmId` (Long)
         *   **Request Body:** `GoatRequestDTO`
         *   **Response:** `GoatResponseDTO`
+        *   **Autorização:** `ROLE_ADMIN` ou `ROLE_OPERATOR`
+        *   **Observações importantes de integração (Frontend):**
+            - Use sempre a URL com `farmId` no caminho: `POST /api/goatfarms/{farmId}/goats`.
+            - Não envie `farmId` nem `userId` no corpo; o backend aplica contexto e ownership.
+            - Envie `Content-Type: application/json` e `Authorization: Bearer <token>`.
+            - Valide previamente com `GET /api/goatfarms/{farmId}/permissions` e exiba o botão "Cadastrar Animal" apenas se `canCreateGoat` for `true`.
+        *   **Validações do payload (`GoatRequestDTO`):**
+            - `registrationNumber` — obrigatório, tamanho 1–12 caracteres, único por cabra.
+            - `name` — obrigatório, tamanho 3–60 caracteres.
+            - `gender` — obrigatório, enum `MACHO` ou `FEMEA`.
+            - `breed` — obrigatório, enum com suporte a nomes em português e em inglês.
+            - `color` — obrigatório.
+            - `birthDate` — obrigatório, `LocalDate` (datas futuras são aceitas).
+            - `status` — obrigatório, enum `ATIVO`, `INATIVO`, `FALECIDO`, `VENDIDO`.
+            - `tod`/`toe` — opcionais.
+            - `category` — opcional, enum `PO`, `PA`, `PC` (aceita português: "Puro de Origem", "Puro por Avaliação", "Puro por Cruza").
+            - `fatherRegistrationNumber`/`motherRegistrationNumber` — opcionais, tamanho 10–12 caracteres; se informados, devem existir.
+        *   **Enums suportados:**
+            - `Gender`: `MACHO`, `FEMEA` — também aceita português (`"Macho"`, `"Fêmea"`), `ignoreCase` e tolerante a acento.
+            - `GoatStatus`: `ATIVO`, `INATIVO`, `FALECIDO`, `VENDIDO` — também aceita português (`"Ativo"`, `"Inativo"`, `"Falecido"`, `"Vendido"`) com `ignoreCase`.
+            - `Category`: `PO` ("Puro de Origem"), `PA` ("Puro por Avaliação"), `PC` ("Puro por Cruza")
+            - `GoatBreed` (aceita nome do enum ou português): `ALPINE`, `ANGLO_NUBIANA`, `BOER`, `MESTICA`, `MURCIANA_GRANADINA`, `SAANEN`, `TOGGENBURG`
+        *   **Códigos de resposta e erros comuns:**
+            - `201 Created` — criação bem-sucedida.
+            - `400 Bad Request` — validação de payload (campos obrigatórios/enums inválidos).
+            - `403 Forbidden` — usuário sem role necessária ou não proprietário (para `ROLE_OPERATOR`).
+            - `405 Method Not Allowed` — URL incorreta (ex.: uso de `/api/goatfarms/goats` sem `farmId`, ou inclusão indevida de `/{registrationNumber}` no path).
+            - `409 Conflict` — `registrationNumber` duplicado.
+        *   **Exemplo (curl):**
+            ```bash
+            curl -X POST "http://localhost:8080/api/goatfarms/1/goats" \
+              -H "Authorization: Bearer <TOKEN>" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "registrationNumber": "ABC1234567",
+                "name": "Cabra Teste",
+                "gender": "FEMEA",
+                "breed": "SAANEN",
+                "color": "Branca",
+                "birthDate": "2020-01-15",
+                "status": "ATIVO",
+                "category": "PA"
+              }'
+            ```
     *   `PUT /api/goatfarms/{farmId}/goats/{goatId}`
         *   **Descrição:** Atualiza os dados de uma cabra existente em uma fazenda específica.
         *   **Path Variables:** `farmId` (Long), `goatId` (String)

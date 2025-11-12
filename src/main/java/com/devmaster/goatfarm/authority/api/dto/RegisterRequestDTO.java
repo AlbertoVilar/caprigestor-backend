@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.authority.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.ToString;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -31,9 +33,13 @@ public class RegisterRequestDTO {
 
     @NotBlank(message = "A senha é obrigatória")
     @Size(min = 6, message = "A senha deve ter pelo menos 6 caracteres")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String password;
 
     @NotBlank(message = "Confirmação de senha é obrigatória")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String confirmPassword;
 
     public String getCpf() { return cpf; }

@@ -17,6 +17,5 @@ public class GoatFarmUpdateFarmDTO {
     @Size(min = 5, max = 5, message = "TOD deve ter 5 caracteres")
     private String tod;
 
-    @NotNull(message = "A versão do registro é obrigatória para atualização")
     private Integer version;
 }

@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.authority.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.ToString;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,8 @@ public class LoginRequestDTO {
     private String email;
 
     @NotBlank(message = "Senha é obrigatória")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @ToString.Exclude
     private String password;
 
     public String getEmail() { return email; }

@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
+import com.devmaster.goatfarm.farm.api.dto.FarmPermissionsDTO;
 import com.devmaster.goatfarm.farm.facade.GoatFarmFacade;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -67,5 +68,11 @@ public class GoatFarmController {
     public ResponseEntity<Void> deleteGoatFarm(@PathVariable Long id) {
         farmFacade.deleteGoatFarm(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @GetMapping("/{farmId}/permissions")
+    public ResponseEntity<FarmPermissionsDTO> getFarmPermissions(@PathVariable Long farmId) {
+        return ResponseEntity.ok(farmFacade.getFarmPermissions(farmId));
     }
 }
