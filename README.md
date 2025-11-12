@@ -208,6 +208,7 @@ erDiagram
     string gender
     date birth_date
     string color
+    string notes
     string status
     int farm_id FK
     string father_id

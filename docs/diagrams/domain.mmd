@@ -1,4 +1,5 @@
-%% Mermaid - Diagrama ER do Domínio GoatFarm (compatível GitHub)
+%% Mermaid - Diagrama ER do Domínio GoatFarm
+%% Entidades principais e relacionamentos
 
 erDiagram
   USER ||--o{ USER_ROLE : has
@@ -55,6 +56,7 @@ erDiagram
     int id PK
     string ddd
     string number
+    string type
     int farm_id FK
   }
 
@@ -64,6 +66,7 @@ erDiagram
     string gender
     date birth_date
     string color
+    string notes
     string status
     int farm_id FK
     string father_id
@@ -78,3 +81,13 @@ erDiagram
     string goat_registration_number FK
     int farm_id FK
   }
+
+%% Notas de mapeamento de tabelas físicas (PostgreSQL)
+%% USER -> users
+%% ROLE -> role
+%% USER_ROLE -> tb_user_role (tabela de junção)
+%% GOAT_FARM -> capril
+%% GOAT -> cabras
+%% EVENT -> eventos
+%% PHONE -> telefone
+%% ADDRESS -> endereco
