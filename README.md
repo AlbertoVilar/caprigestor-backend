@@ -135,6 +135,18 @@ domain → application → infrastructure
 | **`authority`** | Autenticação, autorização, usuários e papéis |
 | **`shared`** | Utilitários, DTOs comuns, exceções e infra compartilhada |
 
+### 🧠 Filosofia Arquitetural (Hexagonal)
+
+- Princípios: inversão de dependências, isolamento do domínio e Portas & Adaptadores.
+- Convenção pragmática de nomes mapeada para hexagonal:
+  - `Controller` → Adaptador de Entrada (Driving Adapter)
+  - `Facade` → Porta de Entrada (Input Port)
+  - `Business` → Serviço de Aplicação/Domínio
+  - `DAO` → Porta de Saída (Output Port)
+  - `Repository` (implementado pelo DAO) → Adaptador de Saída (Driven Adapter)
+- Testabilidade: regras de negócio testadas sem Spring (ex.: `@ExtendWith(MockitoExtension.class)`), provando baixo acoplamento com infraestrutura.
+- Diagrama: `docs/diagrams/architecture.mmd` traz a visão em camadas, mapeada para os conceitos hexagonais acima.
+
 ---
 
 ## 🧭 Diagrama do Domínio (Mermaid)
