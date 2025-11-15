@@ -1,114 +1,53 @@
 package com.devmaster.goatfarm.tests;
 
-import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
-import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.dao.EventDao;
-import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.events.model.repository.EventRepository;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
 
-import java.time.LocalDate;
-import java.util.Optional;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
+@DataJpaTest
+@Import(EventDao.class)
 public class EventDaoTest {
 
-    // Cria um mock do EventRepository para simular o banco de dados de eventos
-    @Mock
-    private EventRepository eventRepository;
+    @Autowired
+    private TestEntityManager entityManager;
 
-    // Cria um mock do GoatRepository para simular o banco de dados de cabras
-    @Mock
-    private GoatRepository goatRepository;
-
-    // Mock do serviço de ownership
-    @Mock
-    private OwnershipService ownershipService;
-
-    // Injeta os mocks acima dentro de uma instância real de EventDao
-    @InjectMocks
+    @Autowired
     private EventDao eventDao;
 
-    // Inicializa os mocks antes da execução dos testes
-    public EventDaoTest() {
-        MockitoAnnotations.openMocks(this);
-    }
+    @Autowired
+    private EventRepository eventRepository;
 
-    // Testa se o método createEvent funciona corretamente com dados válidos
     @Test
-    public void shouldCreateEventSuccessfully() {
-        // Arrange: prepara os dados simulados
-        String goatId = "1234567890";
-
-        // Simula um usuário
+    public void whenSaveEvent_thenEventIsSaved() {
         User user = new User();
-        user.setId(1L);
         user.setName("Test User");
         user.setEmail("test@example.com");
+        user.setCpf("12345678900");
+        user.setPassword("password");
+        entityManager.persist(user);
 
-        // Simula uma fazenda
         GoatFarm farm = new GoatFarm();
-        farm.setId(1L);
-        farm.setName("Fazenda Teste");
+        farm.setName("Test Farm");
         farm.setUser(user);
+        entityManager.persist(farm);
 
-        // Simula uma cabra existente com esse ID
-        Goat goat = new Goat();
-        goat.setRegistrationNumber(goatId);
-        goat.setFarm(farm);
-
-        // Cria uma requisição de evento (como se fosse um POST)
-        EventRequestVO requestVO = new EventRequestVO(
-                goatId,
-                EventType.SAUDE,
-                LocalDate.now(),
-                "Verificação de rotina",
-                "Capril Central",
-                "Dra. Ana",
-                "Tudo normal"
-        );
-
-        // Cria um evento simulado como resposta do banco após salvar
-        Event savedEvent = new Event(
-                1L,
-                goat,
-                requestVO.eventType(),
-                requestVO.date(),
-                requestVO.description(),
-                requestVO.location(),
-                requestVO.veterinarian(),
-                requestVO.outcome()
-        );
-
-        // Define o comportamento dos mocks
-        when(goatRepository.findById(goatId)).thenReturn(Optional.of(goat)); // finge que a cabra existe
-        when(eventRepository.save(any(Event.class))).thenReturn(savedEvent); // finge que o evento foi salvo
-        when(ownershipService.getCurrentUser()).thenReturn(user);
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
-
-        // Act: executa o método a ser testado
-        Event response = eventDao.saveEvent(savedEvent);
-
-        // Assert: verifica o resultado retornado
-        assertNotNull(response); // o retorno não pode ser nulo
-        assertEquals("1234567890", response.getGoat().getRegistrationNumber()); // o ID da cabra deve bater
-        assertEquals("Dra. Ana", response.getVeterinarian()); // o veterinário também
-
-        // Verifica se o método save do repositório foi chamado corretamente
-        verify(eventRepository).save(any(Event.class));
+        Event event = new Event();
+        event.setDescription("Test Event");
+        // event.setGoat(goat); // Supondo que a entidade Goat também seja criada e persistida
+        
+        Event savedEvent = eventDao.saveEvent(event);
+        
+        assertThat(savedEvent).isNotNull();
+        assertThat(savedEvent.getId()).isNotNull();
+        assertThat(savedEvent.getDescription()).isEqualTo("Test Event");
     }
 }

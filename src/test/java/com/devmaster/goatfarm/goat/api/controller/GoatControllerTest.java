@@ -61,7 +61,7 @@ class GoatControllerTest {
         goatResponseDTO.setRegistrationNumber("001");
         goatResponseDTO.setName("Cabra Teste");
         goatResponseDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
-        goatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMALE);
+        goatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
         goatResponseDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         goatResponseDTO.setColor("Branca");
         goatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -70,7 +70,7 @@ class GoatControllerTest {
         goatResponseVO.setRegistrationNumber("001");
         goatResponseVO.setName("Cabra Teste");
         goatResponseVO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
-        goatResponseVO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMALE);
+        goatResponseVO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
         goatResponseVO.setBirthDate(LocalDate.of(2020, 1, 15));
         goatResponseVO.setColor("Branca");
         goatResponseVO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -79,7 +79,7 @@ class GoatControllerTest {
         goatRequestDTO.setRegistrationNumber("001");
         goatRequestDTO.setName("Cabra Teste");
         goatRequestDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
-        goatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMALE);
+        goatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
         goatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         goatRequestDTO.setColor("Branca");
         goatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -101,7 +101,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].registrationNumber").value("001"))
                 .andExpect(jsonPath("$.content[0].name").value("Cabra Teste"))
                 .andExpect(jsonPath("$.content[0].breed").value("SAANEN"))
-                .andExpect(jsonPath("$.content[0].gender").value("FEMALE"))
+                .andExpect(jsonPath("$.content[0].gender").value("FEMEA"))
                 .andExpect(jsonPath("$.content[0].status").value("ATIVO"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
@@ -120,7 +120,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.registrationNumber").value("001"))
                 .andExpect(jsonPath("$.name").value("Cabra Teste"))
                 .andExpect(jsonPath("$.breed").value("SAANEN"))
-                .andExpect(jsonPath("$.gender").value("FEMALE"));
+                .andExpect(jsonPath("$.gender").value("FEMEA"));
 
         verify(goatFacade).findGoatById(eq(1L), eq("001"));
     }
@@ -147,7 +147,7 @@ class GoatControllerTest {
         newGoatRequestDTO.setRegistrationNumber("002");
         newGoatRequestDTO.setName("Nova Cabra");
         newGoatRequestDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.ANGLO_NUBIANA);
-        newGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.MALE);
+        newGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.MACHO);
         newGoatRequestDTO.setBirthDate(LocalDate.of(2021, 3, 10));
         newGoatRequestDTO.setColor("Marrom");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -156,7 +156,7 @@ class GoatControllerTest {
         createdGoatResponseDTO.setRegistrationNumber("002");
         createdGoatResponseDTO.setName("Nova Cabra");
         createdGoatResponseDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.ANGLO_NUBIANA);
-        createdGoatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.MALE);
+        createdGoatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.MACHO);
         createdGoatResponseDTO.setBirthDate(LocalDate.of(2021, 3, 10));
         createdGoatResponseDTO.setColor("Marrom");
         createdGoatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -172,7 +172,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.registrationNumber").value("002"))
                 .andExpect(jsonPath("$.name").value("Nova Cabra"))
                 .andExpect(jsonPath("$.breed").value("ANGLO_NUBIANA"))
-                .andExpect(jsonPath("$.gender").value("MALE"))
+                .andExpect(jsonPath("$.gender").value("MACHO"))
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
         verify(goatFacade).createGoat(eq(1L), any(GoatRequestDTO.class));
@@ -186,7 +186,7 @@ class GoatControllerTest {
         updateGoatRequestDTO.setRegistrationNumber("001");
         updateGoatRequestDTO.setName("Cabra Atualizada");
         updateGoatRequestDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.BOER);
-        updateGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMALE);
+        updateGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
         updateGoatRequestDTO.setBirthDate(LocalDate.of(2020, 5, 15));
         updateGoatRequestDTO.setColor("Branca");
         updateGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -195,7 +195,7 @@ class GoatControllerTest {
         updatedGoatResponseDTO.setRegistrationNumber("001");
         updatedGoatResponseDTO.setName("Cabra Atualizada");
         updatedGoatResponseDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.BOER);
-        updatedGoatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMALE);
+        updatedGoatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
         updatedGoatResponseDTO.setBirthDate(LocalDate.of(2020, 5, 15));
         updatedGoatResponseDTO.setColor("Branca");
         updatedGoatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
@@ -211,7 +211,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.registrationNumber").value("001"))
                 .andExpect(jsonPath("$.name").value("Cabra Atualizada"))
                 .andExpect(jsonPath("$.breed").value("BOER"))
-                .andExpect(jsonPath("$.gender").value("FEMALE"))
+                .andExpect(jsonPath("$.gender").value("FEMEA"))
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
         verify(goatFacade).updateGoat(eq(1L), eq("001"), any(GoatRequestDTO.class));
