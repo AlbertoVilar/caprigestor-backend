@@ -44,8 +44,7 @@ class UserControllerTest {
 
     private UserResponseDTO userResponseDTO;
     private UserRequestDTO userRequestDTO;
-    private UserResponseVO userResponseVO;
-    private UserRequestVO userRequestVO;
+
     private User user;
 
     @BeforeEach
