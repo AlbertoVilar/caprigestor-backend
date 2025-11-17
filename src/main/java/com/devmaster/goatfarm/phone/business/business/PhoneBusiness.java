@@ -2,11 +2,11 @@ package com.devmaster.goatfarm.phone.business.business;
 
 import com.devmaster.goatfarm.config.exceptions.custom.*;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import com.devmaster.goatfarm.phone.dao.PhoneDAO;
+import com.devmaster.goatfarm.application.ports.out.PhonePersistencePort;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,17 +24,17 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-public class PhoneBusiness {
+public class PhoneBusiness implements com.devmaster.goatfarm.application.ports.in.PhoneManagementUseCase {
 
     @Autowired
-    private PhoneDAO phoneDAO;
+    private PhonePersistencePort phonePort;
     
     @Autowired
     private PhoneMapper phoneMapper;
     
     @Autowired
     @Lazy
-    private GoatFarmDAO goatFarmDAO;
+    private GoatFarmPersistencePort goatFarmPort;
 
     @Autowired
     private OwnershipService ownershipService;
@@ -50,16 +50,17 @@ public class PhoneBusiness {
 
         validatePhoneData(requestVO);
 
-        boolean exists = phoneDAO.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
+        boolean exists = phonePort.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
         if (exists) {
             throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
         }
 
-        GoatFarm farm = goatFarmDAO.findFarmEntityById(farmId);
+        GoatFarm farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada: " + farmId));
         Phone phone = phoneMapper.toEntity(requestVO);
         phone.setGoatFarm(farm);
         
-        Phone saved = phoneDAO.save(phone);
+        Phone saved = phonePort.save(phone);
         return phoneMapper.toResponseVO(saved);
     }
 
@@ -68,10 +69,10 @@ public class PhoneBusiness {
         ownershipService.verifyFarmOwnership(farmId);
         validatePhoneData(requestVO);
 
-        Phone phoneToUpdate = phoneDAO.findByIdAndFarmId(phoneId, farmId)
+        Phone phoneToUpdate = phonePort.findByIdAndFarmId(phoneId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
 
-        Optional<Phone> existing = phoneDAO.findByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
+        Optional<Phone> existing = phonePort.findByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
         if (existing.isPresent() && !existing.get().getId().equals(phoneId)) {
             throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
         }
@@ -79,7 +80,7 @@ public class PhoneBusiness {
         phoneMapper.updatePhone(phoneToUpdate, requestVO);
 
         try {
-            Phone saved = phoneDAO.save(phoneToUpdate);
+            Phone saved = phonePort.save(phoneToUpdate);
             return phoneMapper.toResponseVO(saved);
         } catch (DataIntegrityViolationException e) {
             throw new DatabaseException("Erro ao atualizar o telefone com ID " + phoneId + ": " + e.getMessage());
@@ -89,7 +90,7 @@ public class PhoneBusiness {
     @Transactional(readOnly = true)
     public PhoneResponseVO findPhoneById(Long farmId, Long phoneId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Phone phone = phoneDAO.findByIdAndFarmId(phoneId, farmId)
+        Phone phone = phonePort.findByIdAndFarmId(phoneId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
         return phoneMapper.toResponseVO(phone);
     }
@@ -97,7 +98,7 @@ public class PhoneBusiness {
     @Transactional(readOnly = true)
     public List<PhoneResponseVO> findAllPhonesByFarm(Long farmId) {
         ownershipService.verifyFarmOwnership(farmId);
-        return phoneDAO.findAllByFarmId(farmId).stream()
+        return phonePort.findAllByFarmId(farmId).stream()
                 .map(phoneMapper::toResponseVO)
                 .collect(Collectors.toList());
     }
@@ -105,9 +106,9 @@ public class PhoneBusiness {
     @Transactional
     public void deletePhone(Long farmId, Long phoneId) {
         ownershipService.verifyFarmOwnership(farmId);
-        phoneDAO.findByIdAndFarmId(phoneId, farmId)
+        phonePort.findByIdAndFarmId(phoneId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
-        phoneDAO.deletePhone(phoneId);
+        phonePort.deleteById(phoneId);
     }
 
     private void validatePhoneData(PhoneRequestVO requestVO) {
@@ -146,7 +147,8 @@ public class PhoneBusiness {
             return;
         }
 
-        GoatFarm farm = goatFarmDAO.findFarmEntityById(farmId);
+        GoatFarm farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada: " + farmId));
 
         for (PhoneRequestVO requestVO : requests) {
             if (requestVO == null) {
@@ -155,7 +157,7 @@ public class PhoneBusiness {
 
             validatePhoneData(requestVO);
 
-            boolean exists = phoneDAO.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
+            boolean exists = phonePort.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
             if (exists) {
                 throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
             }
@@ -163,7 +165,7 @@ public class PhoneBusiness {
             Phone phone = phoneMapper.toEntity(requestVO);
             phone.setGoatFarm(farm);
             try {
-                phoneDAO.save(phone);
+                phonePort.save(phone);
             } catch (DataIntegrityViolationException e) {
                 throw new DatabaseException("Erro ao salvar telefone: " + e.getMessage());
             }
