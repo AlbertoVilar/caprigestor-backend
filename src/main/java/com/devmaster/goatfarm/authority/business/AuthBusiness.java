@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.authority.business;
 import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
 import com.devmaster.goatfarm.authority.api.dto.RefreshTokenRequestDTO;
-import com.devmaster.goatfarm.authority.dao.UserDAO;
+import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.mapper.AuthMapper;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -18,21 +18,21 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthBusiness {
+public class AuthBusiness implements com.devmaster.goatfarm.application.ports.in.AuthManagementUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthBusiness.class);
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
-    private final UserDAO userDAO;
+    private final UserPersistencePort userPort;
     private final AuthMapper authMapper;
     private final JwtDecoder jwtDecoder;
 
     public AuthBusiness(AuthenticationManager authenticationManager, JwtService jwtService,
-                        UserDAO userDAO, AuthMapper authMapper, JwtDecoder jwtDecoder) {
+                        UserPersistencePort userPort, AuthMapper authMapper, JwtDecoder jwtDecoder) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-        this.userDAO = userDAO;
+        this.userPort = userPort;
         this.authMapper = authMapper;
         this.jwtDecoder = jwtDecoder;
     }
@@ -72,7 +72,8 @@ public class AuthBusiness {
                 throw new RuntimeException("Token inválido - não é um refresh token");
             }
 
-            User user = userDAO.findUserByUsername(email);
+            User user = userPort.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado para refresh: " + email));
 
             String newAccessToken = jwtService.generateToken(user);
             String newRefreshToken = jwtService.generateRefreshToken(user);
@@ -83,5 +84,10 @@ public class AuthBusiness {
             logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
             throw new RuntimeException("Token inválido ou expirado");
         }
+    }
+
+    @Override
+    public LoginResponseDTO login(com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO loginRequest) {
+        return authenticateUser(loginRequest);
     }
 }

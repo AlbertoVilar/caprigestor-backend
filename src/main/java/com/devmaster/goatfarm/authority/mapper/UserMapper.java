@@ -5,7 +5,6 @@ import com.devmaster.goatfarm.authority.api.dto.UserUpdateRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.facade.dto.UserFacadeResponseDTO;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import org.mapstruct.Mapper;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 public interface UserMapper {
         UserResponseDTO toResponseDTO(UserResponseVO vo);
 
-        UserResponseDTO toResponseDTO(UserFacadeResponseDTO facadeDTO);
 
     UserRequestVO toRequestVO(UserRequestDTO dto);
 

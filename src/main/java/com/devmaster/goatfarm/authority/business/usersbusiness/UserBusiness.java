@@ -2,12 +2,13 @@ package com.devmaster.goatfarm.authority.business.usersbusiness;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.dao.RoleDAO;
-import com.devmaster.goatfarm.authority.dao.UserDAO;
+import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,16 +23,15 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class UserBusiness {
-
-    private final UserDAO userDAO;
-    private final RoleDAO roleDAO;
+public class UserBusiness implements com.devmaster.goatfarm.application.ports.in.UserManagementUseCase {
+    private final UserPersistencePort userPort;
+    private final RolePersistencePort rolePort;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public UserBusiness(UserDAO userDAO, RoleDAO roleDAO, UserMapper userMapper, PasswordEncoder passwordEncoder) {
-        this.userDAO = userDAO;
-        this.roleDAO = roleDAO;
+    public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+        this.userPort = userPort;
+        this.rolePort = rolePort;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -42,34 +42,40 @@ public class UserBusiness {
     public UserResponseVO saveUser(UserRequestVO vo) {
         validateUserData(vo, true);
 
-        if (userDAO.findUserByEmail(vo.getEmail().trim()).isPresent()) {
+        if (userPort.findByEmail(vo.getEmail().trim()).isPresent()) {
             throw new DuplicateEntityException("Já existe um usuário cadastrado com o email: " + vo.getEmail());
         }
 
-        if (userDAO.findUserByCpf(vo.getCpf().trim()).isPresent()) {
+        if (userPort.findByCpf(vo.getCpf().trim()).isPresent()) {
             throw new DuplicateEntityException("Já existe um usuário cadastrado com o CPF: " + vo.getCpf());
         }
 
         String encryptedPassword = passwordEncoder.encode(vo.getPassword());
         Set<Role> resolvedRoles = resolveUserRoles(vo);
 
-        return userDAO.saveUser(vo, encryptedPassword, resolvedRoles);
+        User user = userMapper.toEntity(vo);
+        user.setPassword(encryptedPassword);
+        user.getRoles().clear();
+        user.getRoles().addAll(resolvedRoles);
+        User saved = userPort.save(user);
+        return userMapper.toResponseVO(saved);
     }
 
     @Transactional
     public UserResponseVO updateUser(Long userId, UserRequestVO vo) {
         validateUserData(vo, false);
 
-        User existingUser = userDAO.findUserEntityById(userId);
+        User existingUser = userPort.findById(userId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
 
         if (!existingUser.getEmail().equals(vo.getEmail().trim())) {
-            if (userDAO.findUserByEmail(vo.getEmail().trim()).isPresent()) {
+            if (userPort.findByEmail(vo.getEmail().trim()).isPresent()) {
                 throw new DuplicateEntityException("Já existe outro usuário cadastrado com o email: " + vo.getEmail());
             }
         }
 
         if (!existingUser.getCpf().equals(vo.getCpf().trim())) {
-            if (userDAO.findUserByCpf(vo.getCpf().trim()).isPresent()) {
+            if (userPort.findByCpf(vo.getCpf().trim()).isPresent()) {
                 throw new DuplicateEntityException("Já existe outro usuário cadastrado com o CPF: " + vo.getCpf());
             }
         }
@@ -84,22 +90,46 @@ public class UserBusiness {
             resolvedRoles = resolveUserRoles(vo);
         }
 
-        return userDAO.updateUser(userId, vo, encryptedPassword, resolvedRoles);
+        existingUser.setName(vo.getName());
+        existingUser.setEmail(vo.getEmail());
+        existingUser.setCpf(vo.getCpf());
+
+        if (encryptedPassword != null) {
+            existingUser.setPassword(encryptedPassword);
+        }
+
+        if (resolvedRoles != null) {
+            User current = getAuthenticatedEntity();
+            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            if (!isAdmin) {
+                throw new UnauthorizedException("Apenas administradores podem alterar roles de usuários.");
+            }
+            existingUser.getRoles().clear();
+            existingUser.getRoles().addAll(resolvedRoles);
+        }
+
+        User updated = userPort.save(existingUser);
+        return userMapper.toResponseVO(updated);
     }
 
     @Transactional(readOnly = true)
     public UserResponseVO getMe() {
-        return userDAO.getMe();
+        User current = getAuthenticatedEntity();
+        return userMapper.toResponseVO(current);
     }
 
     @Transactional(readOnly = true)
     public UserResponseVO findByEmail(String email) {
-        return userDAO.findByEmail(email);
+        return userPort.findByEmail(email)
+                .map(userMapper::toResponseVO)
+                .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public UserResponseVO findById(Long userId) {
-        return userDAO.findById(userId);
+        return userPort.findById(userId)
+                .map(userMapper::toResponseVO)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
     }
 
     @Transactional
@@ -110,7 +140,14 @@ public class UserBusiness {
             throw new ValidationException(ve);
         }
         String encrypted = passwordEncoder.encode(newPassword);
-        userDAO.updateUserPassword(userId, encrypted);
+
+        User current = getAuthenticatedEntity();
+        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+        if (!isAdmin && (current.getId() == null || !current.getId().equals(userId))) {
+            throw new UnauthorizedException("Apenas administradores ou o próprio usuário podem atualizar a senha.");
+        }
+
+        userPort.updatePassword(userId, encrypted);
     }
 
     @Transactional
@@ -121,20 +158,32 @@ public class UserBusiness {
             throw new ValidationException(ve);
         }
         java.util.Set<Role> resolved = roles.stream()
-                .map(roleName -> roleDAO.findByAuthority(roleName)
+                .map(roleName -> rolePort.findByAuthority(roleName)
                         .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
                 .collect(java.util.stream.Collectors.toSet());
-        return userDAO.updateUserRoles(userId, resolved);
+
+        User current = getAuthenticatedEntity();
+        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+        if (!isAdmin) {
+            throw new UnauthorizedException("Apenas administradores podem alterar roles de usuários.");
+        }
+
+        User user = userPort.findById(userId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
+        user.getRoles().clear();
+        user.getRoles().addAll(resolved);
+        User saved = userPort.save(user);
+        return userMapper.toResponseVO(saved);
     }
 
     @Transactional
     public void deleteRolesFromOtherUsers(Long adminId) {
-        userDAO.deleteRolesFromOtherUsers(adminId);
+        userPort.deleteRolesFromOtherUsers(adminId);
     }
 
     @Transactional
     public void deleteOtherUsers(Long adminId) {
-        userDAO.deleteOtherUsers(adminId);
+        userPort.deleteOtherUsers(adminId);
     }
 
     private void validateUserData(UserRequestVO vo, boolean isCreation) {
@@ -182,11 +231,11 @@ public class UserBusiness {
     private Set<Role> resolveUserRoles(UserRequestVO vo) {
         if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
             return vo.getRoles().stream()
-                    .map(roleName -> roleDAO.findByAuthority(roleName)
+                    .map(roleName -> rolePort.findByAuthority(roleName)
                             .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
                     .collect(Collectors.toSet());
         } else {
-            Role defaultRole = roleDAO.findByAuthority("ROLE_OPERATOR")
+            Role defaultRole = rolePort.findByAuthority("ROLE_OPERATOR")
                     .orElseThrow(() -> new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema"));
             return Set.of(defaultRole);
         }
@@ -194,13 +243,24 @@ public class UserBusiness {
 
     @Transactional
     public User findOrCreateUser(UserRequestVO vo) {
-        return userDAO.findUserByEmail(vo.getEmail())
+        return userPort.findByEmail(vo.getEmail())
                 .orElseGet(() -> {
                     User user = userMapper.toEntity(vo);
                     Set<Role> roles = resolveUserRoles(vo);
                     roles.forEach(user::addRole);
                     user.setPassword(passwordEncoder.encode(vo.getPassword()));
-                    return userDAO.save(user);
+                    return userPort.save(user);
                 });
+    }
+
+    private User getAuthenticatedEntity() {
+        jakarta.servlet.http.HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String email = authentication.getName();
+            return userPort.findByEmail(email)
+                    .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
+        }
+        throw new UnauthorizedException("Usuário não autenticado");
     }
 }

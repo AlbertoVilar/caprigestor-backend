@@ -1,9 +1,20 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
 import com.devmaster.goatfarm.authority.api.dto.*;
-import com.devmaster.goatfarm.authority.facade.AuthFacade;
+import com.devmaster.goatfarm.application.ports.in.AuthManagementUseCase;
+import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
+import com.devmaster.goatfarm.application.ports.in.GoatFarmManagementUseCase;
+import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
+import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
+import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
+import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
+import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -14,36 +25,69 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
+    private final AuthManagementUseCase authUseCase;
+    private final UserManagementUseCase userUseCase;
+    private final GoatFarmManagementUseCase farmUseCase;
+    private final UserMapper userMapper;
+    private final GoatFarmMapper farmMapper;
+    private final AddressMapper addressMapper;
+    private final PhoneMapper phoneMapper;
 
-    private final AuthFacade authFacade;
-
-    public AuthController(AuthFacade authFacade) {
-        this.authFacade = authFacade;
+    public AuthController(AuthManagementUseCase authUseCase,
+                          UserManagementUseCase userUseCase,
+                          GoatFarmManagementUseCase farmUseCase,
+                          UserMapper userMapper,
+                          GoatFarmMapper farmMapper,
+                          AddressMapper addressMapper,
+                          PhoneMapper phoneMapper) {
+        this.authUseCase = authUseCase;
+        this.userUseCase = userUseCase;
+        this.farmUseCase = farmUseCase;
+        this.userMapper = userMapper;
+        this.farmMapper = farmMapper;
+        this.addressMapper = addressMapper;
+        this.phoneMapper = phoneMapper;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
-        return ResponseEntity.ok(authFacade.login(loginRequest));
+        return ResponseEntity.ok(authUseCase.login(loginRequest));
     }
 
     @PostMapping("/register")
     public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO registerRequest) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(authFacade.register(registerRequest));
+        UserRequestVO vo = UserRequestVO.builder()
+                .name(registerRequest.getName())
+                .email(registerRequest.getEmail())
+                .cpf(registerRequest.getCpf())
+                .password(registerRequest.getPassword())
+                .confirmPassword(registerRequest.getConfirmPassword())
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                userMapper.toResponseDTO(userUseCase.saveUser(vo))
+        );
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<LoginResponseDTO> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO refreshRequest) {
-        return ResponseEntity.ok(authFacade.refreshToken(refreshRequest));
+        return ResponseEntity.ok(authUseCase.refreshToken(refreshRequest));
     }
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getCurrentUser() {
-        return ResponseEntity.ok(authFacade.getMe());
+        return ResponseEntity.ok(userMapper.toResponseDTO(userUseCase.getMe()));
     }
 
     @PostMapping("/register-farm")
     @Operation(summary = "Register new farm and user", description = "Public endpoint to create a new farm along with its owner user")
     public ResponseEntity<GoatFarmFullResponseDTO> registerFarm(@Valid @RequestBody GoatFarmFullRequestDTO farmRequest) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(authFacade.registerFarm(farmRequest));
+        GoatFarmRequestVO farmVO = farmMapper.toRequestVO(farmRequest.getFarm());
+        UserRequestVO userVO = userMapper.toRequestVO(farmRequest.getUser());
+        AddressRequestVO addressVO = addressMapper.toVO(farmRequest.getAddress());
+        java.util.List<PhoneRequestVO> phoneVOs = farmRequest.getPhones() == null ? java.util.Collections.emptyList()
+                : farmRequest.getPhones().stream().map(phoneMapper::toRequestVO).toList();
+
+        GoatFarmFullResponseVO responseVO = farmUseCase.createFullGoatFarm(farmVO, userVO, addressVO, phoneVOs);
+        return ResponseEntity.status(HttpStatus.CREATED).body(farmMapper.toFullDTO(responseVO));
     }
 }
