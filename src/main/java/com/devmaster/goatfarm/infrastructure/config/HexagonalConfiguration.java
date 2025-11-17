@@ -1,12 +1,4 @@
 package com.devmaster.goatfarm.infrastructure.config;
-
-import com.devmaster.goatfarm.application.ports.out.EventPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.infrastructure.adapters.out.persistence.EventPersistenceAdapter;
-import com.devmaster.goatfarm.infrastructure.adapters.out.persistence.GoatPersistenceAdapter;
-import com.devmaster.goatfarm.events.model.repository.EventRepository;
-import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -15,22 +7,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class HexagonalConfiguration {
-
-    /**
-     * Configura o adaptador de persistência para eventos
-     */
-    @Bean
-    public EventPersistencePort eventPersistencePort(EventRepository eventRepository) {
-        return new EventPersistenceAdapter(eventRepository);
-    }
-
-    /**
-     * Configura o adaptador de persistência para cabras
-     */
-    @Bean
-    public GoatPersistencePort goatPersistencePort(GoatRepository goatRepository) {
-        return new GoatPersistenceAdapter(goatRepository);
-    }
-
-    // O caso de uso EventManagementUseCase é provido pelo bean @Service EventBusiness
+    // Os adapters de persistência são registrados via @Component.
+    // Os casos de uso (ports in) são providos por @Service nas classes de negócio.
 }
