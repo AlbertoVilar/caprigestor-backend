@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.facade.GoatFacade;
+import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +46,7 @@ class GoatControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private GoatFacade goatFacade;
+    private GoatManagementUseCase goatUseCase;
 
     @MockBean
     private JpaMetamodelMappingContext jpaMappingContext;
@@ -89,9 +89,9 @@ class GoatControllerTest {
 @WithMockUser(roles = "OPERATOR")
     void shouldGetAllGoatsSuccessfully() throws Exception {
         // Arrange
-        List<GoatResponseDTO> goats = Arrays.asList(goatResponseDTO);
-        Page<GoatResponseDTO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatFacade.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
+        List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
+        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
 
         // Act & Assert
         mockMvc.perform(get("/api/goatfarms/1/goats")
@@ -105,14 +105,14 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].status").value("ATIVO"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatFacade).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
     }
 
     @Test
 @WithMockUser(roles = "OPERATOR")
     void shouldGetGoatByIdSuccessfully() throws Exception {
         // Arrange
-        when(goatFacade.findGoatById(eq(1L), eq("001"))).thenReturn(goatResponseDTO);
+        when(goatUseCase.findGoatById(eq(1L), eq("001"))).thenReturn(goatResponseVO);
 
         // Act & Assert
         mockMvc.perform(get("/api/goatfarms/1/goats/001"))
@@ -122,21 +122,21 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.breed").value("SAANEN"))
                 .andExpect(jsonPath("$.gender").value("FEMEA"));
 
-        verify(goatFacade).findGoatById(eq(1L), eq("001"));
+        verify(goatUseCase).findGoatById(eq(1L), eq("001"));
     }
 
     @Test
 @WithMockUser(roles = "OPERATOR")
     void shouldReturnNotFoundWhenGoatDoesNotExist() throws Exception {
         // Arrange
-        when(goatFacade.findGoatById(eq(1L), eq("999"))).thenThrow(new ResourceNotFoundException("Goat not found with id: 999"));
+        when(goatUseCase.findGoatById(eq(1L), eq("999"))).thenThrow(new ResourceNotFoundException("Goat not found with id: 999"));
 
         // Act & Assert
         mockMvc.perform(get("/api/goatfarms/1/goats/999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Goat not found with id: 999"));
 
-        verify(goatFacade).findGoatById(eq(1L), eq("999"));
+        verify(goatUseCase).findGoatById(eq(1L), eq("999"));
     }
 
     @Test
@@ -161,7 +161,7 @@ class GoatControllerTest {
         createdGoatResponseDTO.setColor("Marrom");
         createdGoatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        when(goatFacade.createGoat(eq(1L), any(GoatRequestDTO.class))).thenReturn(createdGoatResponseDTO);
+        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(goatResponseVO);
 
         // Act & Assert
         mockMvc.perform(post("/api/goatfarms/1/goats")
@@ -175,7 +175,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.gender").value("MACHO"))
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
-        verify(goatFacade).createGoat(eq(1L), any(GoatRequestDTO.class));
+        verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class));
     }
 
     @Test
@@ -200,7 +200,7 @@ class GoatControllerTest {
         updatedGoatResponseDTO.setColor("Branca");
         updatedGoatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        when(goatFacade.updateGoat(eq(1L), eq("001"), any(GoatRequestDTO.class))).thenReturn(updatedGoatResponseDTO);
+        when(goatUseCase.updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class))).thenReturn(goatResponseVO);
 
         // Act & Assert
         mockMvc.perform(put("/api/goatfarms/1/goats/001")
@@ -214,21 +214,21 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.gender").value("FEMEA"))
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
-        verify(goatFacade).updateGoat(eq(1L), eq("001"), any(GoatRequestDTO.class));
+        verify(goatUseCase).updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class));
     }
 
     @Test
 @WithMockUser(roles = "OPERATOR")
     void shouldDeleteGoatSuccessfully() throws Exception {
         // Arrange
-        doNothing().when(goatFacade).deleteGoat(eq(1L), eq("001"));
+        doNothing().when(goatUseCase).deleteGoat(eq(1L), eq("001"));
 
         // Act & Assert
         mockMvc.perform(delete("/api/goatfarms/1/goats/001")
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
-        verify(goatFacade).deleteGoat(eq(1L), eq("001"));
+        verify(goatUseCase).deleteGoat(eq(1L), eq("001"));
     }
 
     @Test
@@ -236,7 +236,7 @@ class GoatControllerTest {
     void shouldReturnNotFoundWhenDeletingNonExistentGoat() throws Exception {
         // Arrange
         doThrow(new ResourceNotFoundException("Goat not found with id: 999"))
-                .when(goatFacade).deleteGoat(eq(1L), eq("999"));
+                .when(goatUseCase).deleteGoat(eq(1L), eq("999"));
 
         // Act & Assert
         mockMvc.perform(delete("/api/goatfarms/1/goats/999")
@@ -244,7 +244,7 @@ class GoatControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Goat not found with id: 999"));
 
-        verify(goatFacade).deleteGoat(eq(1L), eq("999"));
+        verify(goatUseCase).deleteGoat(eq(1L), eq("999"));
     }
 
     @Test
@@ -253,7 +253,7 @@ class GoatControllerTest {
         mockMvc.perform(get("/api/goatfarms/1/goats"))
                 .andExpect(status().isUnauthorized());
 
-        verify(goatFacade, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+        verify(goatUseCase, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
     }
 
     @Test
@@ -263,7 +263,7 @@ class GoatControllerTest {
         mockMvc.perform(get("/api/goatfarms/1/goats"))
                 .andExpect(status().isForbidden());
 
-        verify(goatFacade, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+        verify(goatUseCase, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
     }
 
     @org.springframework.context.annotation.Configuration
@@ -284,16 +284,16 @@ class GoatControllerTest {
                         .content(objectMapper.writeValueAsString(invalidGoatRequestDTO)))
                 .andExpect(status().isBadRequest());
 
-        verify(goatFacade, never()).createGoat(eq(1L), any(GoatRequestDTO.class));
+        verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class));
     }
 
     @Test
 @WithMockUser(roles = "OPERATOR")
     void shouldGetGoatsByFarmSuccessfully() throws Exception {
         // Arrange
-        List<GoatResponseDTO> goats = Arrays.asList(goatResponseDTO);
-        Page<GoatResponseDTO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatFacade.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
+        List<GoatResponseVO> goats2 = Arrays.asList(goatResponseVO);
+        Page<GoatResponseVO> goatPage2 = new PageImpl<>(goats2, PageRequest.of(0, 10), 1);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage2);
 
         // Act & Assert
         mockMvc.perform(get("/api/goatfarms/1/goats")
@@ -304,6 +304,6 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].name").value("Cabra Teste"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatFacade).findAllGoatsByFarm(eq(1L), any(Pageable.class));
-    }
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+}
 }

@@ -13,6 +13,7 @@ import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
+import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Service
-public class GoatBusiness {
+public class GoatBusiness implements GoatManagementUseCase {
 
     private final GoatDAO goatDAO;
     private final GoatFarmDAO goatFarmDAO;
