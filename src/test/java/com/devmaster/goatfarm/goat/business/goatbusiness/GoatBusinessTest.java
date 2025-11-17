@@ -1,14 +1,13 @@
 package com.devmaster.goatfarm.goat.business.goatbusiness;
 
-import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.dao.GoatDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
@@ -37,9 +36,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class GoatBusinessTest {
 
-    @Mock private GoatDAO goatDAO;
-    @Mock private GoatFarmDAO goatFarmDAO;
-    @Mock private UserDAO userDAO;
+    @Mock private GoatPersistencePort goatPort;
+    @Mock private GoatFarmPersistencePort goatFarmPort;
     @Mock private GenealogyBusiness genealogyBusiness;
     @Mock private OwnershipService ownershipService;
     @Mock private GoatMapper goatMapper;
@@ -119,11 +117,11 @@ public class GoatBusinessTest {
     void shouldCreateGoatSuccessfully() {
         // ===== Arrange =====
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
-        when(goatDAO.existsById("164322002")).thenReturn(false);
-        when(goatFarmDAO.findFarmEntityById(1L)).thenReturn(goatFarm);
+        when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(java.util.Optional.of(goatFarm));
         when(goatMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
-        when(goatDAO.save(any(Goat.class))).thenReturn(goat);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
         when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null);
         when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
 
@@ -146,12 +144,12 @@ public class GoatBusinessTest {
 
         // ===== Verify =====
         verify(ownershipService, times(1)).verifyFarmOwnership(1L);
-        verify(goatDAO, times(1)).existsById("164322002");
-        verify(goatFarmDAO, times(1)).findFarmEntityById(1L);
-        verify(goatDAO, never()).findByRegistrationNumber(any());
+        verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
+        verify(goatFarmPort, times(1)).findById(1L);
+        verify(goatPort, never()).findByRegistrationNumber(any());
         verify(goatMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
-        verify(goatDAO, times(1)).save(any(Goat.class));
+        verify(goatPort, times(1)).save(any(Goat.class));
         verify(genealogyBusiness, times(1)).createGenealogy(1L, "164322002");
         verify(goatMapper, times(1)).toResponseVO(goat);
     }
@@ -182,13 +180,13 @@ public class GoatBusinessTest {
 
         // ===== ARRANGE - Mocks =====
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
-        when(goatDAO.existsById("164322002")).thenReturn(false);
-        when(goatFarmDAO.findFarmEntityById(1L)).thenReturn(goatFarm);
-        when(goatDAO.findByRegistrationNumber("164321001")).thenReturn(Optional.of(fatherGoat));
-        when(goatDAO.findByRegistrationNumber("164321002")).thenReturn(Optional.of(motherGoat));
+        when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(goatFarm));
+        when(goatPort.findByRegistrationNumber("164321001")).thenReturn(Optional.of(fatherGoat));
+        when(goatPort.findByRegistrationNumber("164321002")).thenReturn(Optional.of(motherGoat));
         when(goatMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
-        when(goatDAO.save(any(Goat.class))).thenReturn(goat);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
         when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null);
         when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
 
@@ -202,13 +200,13 @@ public class GoatBusinessTest {
 
         // ===== VERIFY =====
         verify(ownershipService, times(1)).verifyFarmOwnership(1L);
-        verify(goatDAO, times(1)).existsById("164322002");
-        verify(goatFarmDAO, times(1)).findFarmEntityById(1L);
-        verify(goatDAO, times(1)).findByRegistrationNumber("164321001"); // Pai
-        verify(goatDAO, times(1)).findByRegistrationNumber("164321002"); // Mãe
+        verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
+        verify(goatFarmPort, times(1)).findById(1L);
+        verify(goatPort, times(1)).findByRegistrationNumber("164321001"); // Pai
+        verify(goatPort, times(1)).findByRegistrationNumber("164321002"); // Mãe
         verify(goatMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
-        verify(goatDAO, times(1)).save(any(Goat.class));
+        verify(goatPort, times(1)).save(any(Goat.class));
         verify(genealogyBusiness, times(1)).createGenealogy(1L, "164322002");
         verify(goatMapper, times(1)).toResponseVO(goat);
     }
