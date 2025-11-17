@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
-import com.devmaster.goatfarm.authority.facade.UserFacade;
+import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import org.junit.jupiter.api.Test;
@@ -19,14 +19,14 @@ public class UserControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private UserFacade userFacade;
+    private UserManagementUseCase userUseCase;
 
     @MockBean
     private UserMapper userMapper;
 
     @Test
     public void whenGetUserById_thenReturns200() throws Exception {
-        // Supondo que o facade retorne um DTO e o mapper o converta
+        // Supondo que o use case retorne um VO e o mapper o converta
         // A lógica exata do teste dependerá da implementação
         
         mockMvc.perform(get("/api/users/1"))
