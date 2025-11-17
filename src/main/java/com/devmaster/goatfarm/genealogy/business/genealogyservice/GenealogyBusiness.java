@@ -5,23 +5,23 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.genealogy.dao.GenealogyDAO;
+import com.devmaster.goatfarm.application.ports.out.GenealogyPersistencePort;
 import com.devmaster.goatfarm.genealogy.mapper.GenealogyMapper;
 import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
-import com.devmaster.goatfarm.goat.dao.GoatDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class GenealogyBusiness {
+public class GenealogyBusiness implements com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase {
 
     @Autowired
-    private GenealogyDAO genealogyDAO;
+    private GenealogyPersistencePort genealogyPort;
 
     @Autowired
-    private GoatDAO goatDAO;
+    private GoatPersistencePort goatPort;
 
     @Autowired
     private GenealogyMapper genealogyMapper;
@@ -30,8 +30,9 @@ public class GenealogyBusiness {
     private OwnershipService ownershipService;
 
     @Transactional(readOnly = true)
+    @Override
     public GenealogyResponseVO findGenealogy(Long farmId, String goatId) {
-        return genealogyDAO
+        return genealogyPort
                 .findByGoatRegistrationAndGoatFarmId(goatId, farmId)
                 .map(genealogyMapper::toResponseVO)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -39,24 +40,26 @@ public class GenealogyBusiness {
     }
 
     @Transactional
+    @Override
     public GenealogyResponseVO createGenealogy(Long farmId, String goatId) {
         ownershipService.verifyGoatOwnership(farmId, goatId);
-        if (genealogyDAO.existsByGoatRegistration(goatId)) {
+        if (genealogyPort.existsByGoatRegistration(goatId)) {
             throw new DatabaseException("Genealogia já existe para o animal: " + goatId);
         }
 
-        Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
+        Goat goat = goatPort.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId + " na fazenda " + farmId));
 
         final Genealogy entity = genealogyMapper.toEntity(goat);
-        genealogyDAO.save(entity);
+        genealogyPort.save(entity);
         return genealogyMapper.toResponseVO(entity);
     }
 
     @Transactional
+    @Override
     public GenealogyResponseVO createGenealogyWithData(Long farmId, String goatId, GenealogyRequestDTO requestDTO) {
         ownershipService.verifyGoatOwnership(farmId, goatId);
-        if (genealogyDAO.existsByGoatRegistration(requestDTO.getGoatRegistration())) {
+        if (genealogyPort.existsByGoatRegistration(requestDTO.getGoatRegistration())) {
             throw new DatabaseException("Genealogia já existe para o animal: " + requestDTO.getGoatRegistration());
         }
         // Verifica se o goatId da URL corresponde ao goatRegistration do DTO
@@ -64,7 +67,7 @@ public class GenealogyBusiness {
             throw new IllegalArgumentException("O ID da cabra na URL não corresponde ao ID da cabra no corpo da requisição.");
         }
 
-        Goat goat = goatDAO.findByIdAndFarmId(goatId, farmId)
+        Goat goat = goatPort.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId + " na fazenda " + farmId));
 
         Genealogy entity = genealogyMapper.toEntity(requestDTO);
@@ -74,7 +77,7 @@ public class GenealogyBusiness {
         // entity.setGoat(goat);
 
         try {
-            entity = genealogyDAO.save(entity);
+            entity = genealogyPort.save(entity);
         } catch (Exception e) {
             throw new DatabaseException("Erro ao persistir genealogia: " + e.getMessage());
         }

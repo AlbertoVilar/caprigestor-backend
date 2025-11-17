@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.genealogy.mapper;
 
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
+import com.devmaster.goatfarm.genealogy.business.bo.GenealogyRequestVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
@@ -27,6 +28,9 @@ public interface GenealogyMapper {
 
     GenealogyResponseDTO toResponseDTO(GenealogyResponseVO vo);
 
+    // Conversões para suportar VO na camada de caso de uso
+    GenealogyRequestVO toRequestVO(GenealogyRequestDTO dto);
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "goatBirthDate", ignore = true)
     @Mapping(target = "goatBreed", ignore = true)
@@ -39,6 +43,19 @@ public interface GenealogyMapper {
     @Mapping(target = "goatTOD", ignore = true)
     @Mapping(target = "goatTOE", ignore = true)
     Genealogy toEntity(GenealogyRequestDTO dto);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "goatBirthDate", ignore = true)
+    @Mapping(target = "goatBreed", ignore = true)
+    @Mapping(target = "goatCategory", ignore = true)
+    @Mapping(target = "goatCoatColor", ignore = true)
+    @Mapping(target = "goatCreator", ignore = true)
+    @Mapping(target = "goatOwner", ignore = true)
+    @Mapping(target = "goatSex", ignore = true)
+    @Mapping(target = "goatStatus", ignore = true)
+    @Mapping(target = "goatTOD", ignore = true)
+    @Mapping(target = "goatTOE", ignore = true)
+    Genealogy toEntity(GenealogyRequestVO vo);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "goatName", source = "name")
