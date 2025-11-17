@@ -1,10 +1,10 @@
-package com.devmaster.goatfarm.application.services;
+package com.devmaster.goatfarm.application.core.business;
 
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.application.ports.out.EventPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.enuns.EventType;
@@ -18,30 +18,26 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
-/**
- * Serviço de aplicação para gerenciamento de eventos
- * Implementa os casos de uso de eventos usando as portas definidas
- */
 @Service
 @Transactional
-public class EventApplicationService implements EventManagementUseCase {
+public class EventBusiness implements EventManagementUseCase {
 
     private final EventPersistencePort eventPersistencePort;
     private final GoatPersistencePort goatPersistencePort;
     private final OwnershipService ownershipService;
     private final EventMapper eventMapper;
 
-    public EventApplicationService(EventPersistencePort eventPersistencePort,
-                                 GoatPersistencePort goatPersistencePort,
-                                 OwnershipService ownershipService,
-                                 EventMapper eventMapper) {
+    public EventBusiness(EventPersistencePort eventPersistencePort,
+                         GoatPersistencePort goatPersistencePort,
+                         OwnershipService ownershipService,
+                         EventMapper eventMapper) {
         this.eventPersistencePort = eventPersistencePort;
         this.goatPersistencePort = goatPersistencePort;
         this.ownershipService = ownershipService;
         this.eventMapper = eventMapper;
     }
-
     @Override
     public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
         Goat goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
@@ -52,7 +48,6 @@ public class EventApplicationService implements EventManagementUseCase {
         Event event = eventMapper.toEntity(requestVO);
         event.setGoat(goat);
         event = eventPersistencePort.save(event);
-        
         return eventMapper.toResponseVO(event);
     }
 
@@ -64,7 +59,9 @@ public class EventApplicationService implements EventManagementUseCase {
         Event event = eventPersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
 
-        if (!event.getGoat().getRegistrationNumber().equals(goatRegistrationNumber)) {
+        if (!Optional.ofNullable(event.getGoat())
+                .map(Goat::getRegistrationNumber)
+                .orElse("").equals(goatRegistrationNumber)) {
             throw new ResourceNotFoundException("Este evento não pertence à cabra de registro: " + goatRegistrationNumber);
         }
 
@@ -72,8 +69,15 @@ public class EventApplicationService implements EventManagementUseCase {
 
         eventMapper.updateEvent(event, requestVO);
         Event updatedEvent = eventPersistencePort.save(event);
-        
         return eventMapper.toResponseVO(updatedEvent);
+    }
+
+    @Transactional(readOnly = true)
+    public EventResponseVO findEventById(Long eventId) {
+        Event event = eventPersistencePort.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + eventId));
+        verifyFarmOwnership(event.getGoat());
+        return eventMapper.toResponseVO(event);
     }
 
     @Override
@@ -88,7 +92,6 @@ public class EventApplicationService implements EventManagementUseCase {
         if (events.isEmpty()) {
             throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com número de registro: " + goatNumRegistration);
         }
-        
         return events.stream().map(eventMapper::toResponseVO).toList();
     }
 
@@ -105,7 +108,6 @@ public class EventApplicationService implements EventManagementUseCase {
         verifyFarmOwnership(goat);
 
         Page<Event> events = eventPersistencePort.findWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
-        
         return events.map(eventMapper::toResponseVO);
     }
 
@@ -113,9 +115,7 @@ public class EventApplicationService implements EventManagementUseCase {
     public void deleteEvent(Long id) {
         Event event = eventPersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
-
         verifyFarmOwnership(event.getGoat());
-
         eventPersistencePort.deleteById(id);
     }
 

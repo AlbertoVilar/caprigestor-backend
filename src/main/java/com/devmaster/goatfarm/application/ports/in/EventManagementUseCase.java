@@ -65,4 +65,11 @@ public interface EventManagementUseCase {
      * @param adminId ID do administrador
      */
     void deleteEventsFromOtherUsers(Long adminId);
+
+    /**
+     * Busca um evento pelo ID
+     * @param id ID do evento
+     * @return Dados do evento
+     */
+    EventResponseVO findEventById(Long id);
 }

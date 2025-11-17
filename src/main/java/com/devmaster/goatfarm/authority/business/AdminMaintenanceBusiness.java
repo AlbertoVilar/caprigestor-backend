@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.authority.business;
 
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
-import com.devmaster.goatfarm.events.business.eventbusiness.EventBusiness;
+import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
 import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminMaintenanceBusiness {
 
     @Autowired
-    private EventBusiness eventBusiness;
+    private EventManagementUseCase eventManagementUseCase;
     @Autowired
     private GoatBusiness goatBusiness;
     @Autowired
@@ -28,7 +28,7 @@ public class AdminMaintenanceBusiness {
 
     @Transactional
     public void cleanDatabaseAndSetupAdmin(Long adminIdToKeep) {
-        eventBusiness.deleteEventsFromOtherUsers(adminIdToKeep);
+        eventManagementUseCase.deleteEventsFromOtherUsers(adminIdToKeep);
         // goatBusiness.deleteGoatsFromOtherUsers(adminIdToKeep); // TODO: Implementar método
         goatFarmBusiness.deleteGoatFarmsFromOtherUsers(adminIdToKeep);
         // phoneBusiness.deletePhonesFromOtherUsers(adminIdToKeep); // TODO: Implementar método
