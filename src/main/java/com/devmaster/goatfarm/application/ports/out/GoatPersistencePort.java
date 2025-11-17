@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.application.ports.out;
 
 import com.devmaster.goatfarm.goat.model.entity.Goat;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,19 +16,19 @@ public interface GoatPersistencePort {
     /**
      * Salva uma cabra
      * @param goat Cabra a ser salva
-     * @return Cabra salva com ID gerado
+     * @return Cabra salva
      */
     Goat save(Goat goat);
 
     /**
-     * Busca uma cabra por ID
-     * @param id ID da cabra
+     * Busca uma cabra pelo registrationNumber (ID primário)
+     * @param registrationNumber Número de registro da cabra
      * @return Optional contendo a cabra se encontrada
      */
-    Optional<Goat> findById(Long id);
+    Optional<Goat> findById(String registrationNumber);
 
     /**
-     * Busca uma cabra por número de registro
+     * Alias explícito para busca por número de registro
      * @param registrationNumber Número de registro da cabra
      * @return Optional contendo a cabra se encontrada
      */
@@ -40,10 +42,35 @@ public interface GoatPersistencePort {
     List<Goat> findByGoatFarmId(Long goatFarmId);
 
     /**
-     * Remove uma cabra por ID
-     * @param id ID da cabra
+     * Busca cabras de um capril com paginação
+     * @param goatFarmId ID do capril
+     * @param pageable Configuração de paginação
+     * @return Página de cabras
      */
-    void deleteById(Long id);
+    Page<Goat> findAllByFarmId(Long goatFarmId, Pageable pageable);
+
+    /**
+     * Busca cabras por nome e capril com paginação
+     * @param goatFarmId ID do capril
+     * @param name Nome para filtro
+     * @param pageable Configuração de paginação
+     * @return Página de cabras filtradas
+     */
+    Page<Goat> findByNameAndFarmId(Long goatFarmId, String name, Pageable pageable);
+
+    /**
+     * Busca cabra por registrationNumber e farmId
+     * @param id Número de registro
+     * @param farmId ID do capril
+     * @return Optional contendo a cabra se encontrada
+     */
+    Optional<Goat> findByIdAndFarmId(String id, Long farmId);
+
+    /**
+     * Remove uma cabra pelo registrationNumber
+     * @param registrationNumber Número de registro da cabra
+     */
+    void deleteById(String registrationNumber);
 
     /**
      * Verifica se uma cabra existe por número de registro
