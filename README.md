@@ -105,6 +105,31 @@ Após subir, a API estará acessível em `http://localhost:8080` (ajuste conform
 - Endpoints protegidos exigem cabeçalho `Authorization: Bearer <token>`.
 - Políticas de acesso definidas nas configurações de segurança do Spring.
 
+### Endpoints Públicos
+
+- `POST /api/auth/login` — autenticação
+- `POST /api/auth/register` — criação de usuário
+- `POST /api/auth/refresh` — renovação de token
+- `POST /api/auth/register-farm` — criação pública de fazenda completa
+- `POST /api/goatfarms/full` — criação pública de fazenda completa (fazenda, usuário, endereço, telefones)
+- `GET /api/goatfarms` — lista fazendas
+- `GET /api/goatfarms/{id}` — detalhes da fazenda
+- `GET /api/goatfarms/name` — busca por nome
+- `GET /api/goatfarms/{farmId}/goats` — lista cabras da fazenda
+- `GET /api/goatfarms/{farmId}/goats/{goatId}` — detalhes da cabra
+- `GET /api/goatfarms/{farmId}/goats/search` — busca por nome na fazenda
+- `GET /api/goatfarms/{farmId}/goats/{goatId}/genealogies` — genealogia
+
+Observação: As demais rotas sob `/api/**` exigem autenticação e papéis válidos.
+
+### Cadastro Completo da Fazenda (público)
+
+- `POST /api/goatfarms/full` e `POST /api/auth/register-farm` executam o mesmo fluxo de criação completa.
+- Regras:
+  - É obrigatório informar ao menos um telefone em `phones`.
+  - No retorno, `updatedAt` vem nulo na criação e `version` retorna o valor de controle de concorrência otimista.
+  - O backend usa `@Version` (concorrência otimista) em `GoatFarm`; conflitos retornam `409 Conflict`.
+
 ## 8. Swagger
 
 - UI: `http://localhost:8080/swagger-ui/index.html`

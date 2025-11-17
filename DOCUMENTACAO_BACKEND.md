@@ -2,15 +2,19 @@
 
 ## 1. Visão Geral da Arquitetura
 
-### Arquitetura em Camadas
+### Arquitetura Hexagonal (Ports & Adapters)
 
-O sistema GoatFarm utiliza uma arquitetura em camadas bem definida, seguindo os princípios da Clean Architecture. Para facilitar o entendimento, utilizamos a **"Analogia do Restaurante"**:
+O sistema GoatFarm foi refatorado para arquitetura hexagonal (Ports & Adapters), mantendo separação clara de responsabilidades e baixo acoplamento:
 
-- **Controller (O Garçom)**: Porta de entrada da API, recebe as requisições HTTP e direciona para o Facade
-- **Facade (O Maître d')**: Ponto de contato principal, gerencia segurança e orquestra chamadas
-- **Business (O Chef)**: Contém a lógica de negócio, validações e orquestração de operações
-- **DAO (O Ajudante de Cozinha)**: Acesso direto aos dados, operações CRUD específicas
-- **Repository (A Dispensa)**: Interface com o banco de dados, abstração da persistência
+- **Application (Ports/UseCases)**: Interfaces que definem os casos de uso do sistema — ex.: `GoatFarmManagementUseCase`, `AddressManagementUseCase`, `PhoneManagementUseCase`.
+- **Domain (Business/Entities)**: Regras de negócio e entidades JPA. Classes `Business` implementam as `Ports` e orquestram validações e persistência.
+- **Adapters In (API/Controllers/Mappers)**: Controllers REST que recebem DTOs, convertem via MapStruct para VOs e chamam os UseCases. Ex.: `GoatFarmController`, `AuthController`, `PhoneController`.
+- **Adapters Out (Persistence/Repositories)**: Repositórios Spring Data e portas de saída para acesso a dados. Implementam o contrato de persistência requerido pelos casos de uso.
+
+Principais benefícios:
+- Controllers dependem de portas (UseCases) ao invés de Facades, reduzindo acoplamento.
+- Mappers centralizam conversões entre DTO ↔ VO ↔ Entity.
+- Aggregate Root: `GoatFarm` concentra relacionamentos (`Address`, `Phone`, `Goat`) com regras de ownership.
 
 ### Tecnologias Principais
 
@@ -232,10 +236,11 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
     *   `GET /api/auth/me`
         *   **Descrição:** Retorna os dados do usuário atualmente autenticado.
         *   **Response:** `UserResponseDTO`
-    *   `POST /api/auth/register-farm`
-        *   **Descrição:** Registra uma nova fazenda junto com seu usuário proprietário.
+    *   `POST /api/auth/register-farm` (público)
+        *   **Descrição:** Registra uma nova fazenda junto com seu usuário proprietário. Endpoint público.
         *   **Request Body:** `GoatFarmFullRequestDTO` (contém dados da fazenda, usuário, endereço e telefones)
         *   **Response:** `GoatFarmFullResponseDTO`
+        *   **Regras:** É obrigatório informar ao menos um telefone (`phones`). `updatedAt` é nulo na criação; `version` é retornado do controle de concorrência otimista.
 
 **1.2. `UserController`**
 *   **Base URL:** `/api/users`
@@ -279,10 +284,11 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
 **2.1. `GoatFarmController`**
 *   **Base URL:** `/api/goatfarms`
 *   **Endpoints:**
-    *   `POST /api/goatfarms/full`
-        *   **Descrição:** Cria uma fazenda completa (fazenda, usuário, endereço, telefones).
+    *   `POST /api/goatfarms/full` (público)
+        *   **Descrição:** Cria uma fazenda completa (fazenda, usuário, endereço, telefones). Endpoint público.
         *   **Request Body:** `GoatFarmFullRequestDTO`
         *   **Response:** `GoatFarmFullResponseDTO`
+        *   **Regras:** É obrigatório informar ao menos um telefone (`phones`). `updatedAt` é nulo na criação; `version` é retornado do controle de concorrência otimista.
     *   `POST /api/goatfarms`
         *   **Descrição:** Cria uma nova fazenda.
         *   **Request Body:** `GoatFarmRequestDTO`
@@ -544,7 +550,17 @@ O sistema utiliza **múltiplos filtros de segurança** com diferentes ordens:
 @Order(1)
 public SecurityFilterChain publicEndpointsFilterChain(HttpSecurity http) throws Exception {
     http
-        .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+        // Endpoints explicitamente públicos (login/register/refresh/register-farm/full)
+        .securityMatcher(
+            "/api/auth/login", 
+            "/api/auth/register", 
+            "/api/auth/refresh", 
+            "/api/auth/register-farm",
+            "/api/goatfarms/full",
+            "/h2-console/**", 
+            "/swagger-ui/**", 
+            "/v3/api-docs/**"
+        )
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
         .csrf(csrf -> csrf.disable())
         .headers(headers -> headers.frameOptions().disable())
@@ -596,6 +612,10 @@ public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exce
   - `GET /api/goatfarms/{farmId}/goats/{goatId}` — detalhes da cabra (público)
   - `GET /api/goatfarms/{farmId}/goats/search` — busca por nome na fazenda (público)
   - `GET /api/goatfarms/{farmId}/goats/{goatId}/genealogies` — genealogia (público)
+
+- Escrita pública (apenas criação):
+  - `POST /api/auth/register-farm` — cria fazenda + usuário + endereço + telefones
+  - `POST /api/goatfarms/full` — cria fazenda completa (público)
 
 ### Roles e Permissões
 
