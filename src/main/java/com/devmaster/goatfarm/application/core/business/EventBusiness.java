@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.application.ports.out.EventPersistencePort;
+import com.devmaster.goatfarm.application.ports.out.EventPublisher;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
@@ -28,15 +29,18 @@ public class EventBusiness implements EventManagementUseCase {
     private final GoatPersistencePort goatPersistencePort;
     private final OwnershipService ownershipService;
     private final EventMapper eventMapper;
+    private final EventPublisher eventPublisher;
 
     public EventBusiness(EventPersistencePort eventPersistencePort,
                          GoatPersistencePort goatPersistencePort,
                          OwnershipService ownershipService,
-                         EventMapper eventMapper) {
+                         EventMapper eventMapper,
+                         EventPublisher eventPublisher) {
         this.eventPersistencePort = eventPersistencePort;
         this.goatPersistencePort = goatPersistencePort;
         this.ownershipService = ownershipService;
         this.eventMapper = eventMapper;
+        this.eventPublisher = eventPublisher;
     }
     @Override
     public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
@@ -48,6 +52,8 @@ public class EventBusiness implements EventManagementUseCase {
         Event event = eventMapper.toEntity(requestVO);
         event.setGoat(goat);
         event = eventPersistencePort.save(event);
+        // Publicar evento de forma assíncrona
+        eventPublisher.publishEvent(event);
         return eventMapper.toResponseVO(event);
     }
 

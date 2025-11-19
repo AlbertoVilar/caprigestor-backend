@@ -33,7 +33,7 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
     @Operation(summary = "Cadastra uma nova cabra em uma fazenda")
-    public ResponseEntity<GoatResponseDTO> createGoat(@PathVariable Long farmId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
+    public ResponseEntity<GoatResponseDTO> createGoat(@PathVariable("farmId") Long farmId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(goatMapper.toResponseDTO(
                         goatUseCase.createGoat(farmId, goatMapper.toRequestVO(goatRequestDTO))
@@ -43,7 +43,7 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PutMapping("/{goatId}")
     @Operation(summary = "Atualiza os dados de uma cabra existente em uma fazenda")
-    public ResponseEntity<GoatResponseDTO> updateGoat(@PathVariable Long farmId, @PathVariable String goatId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
+    public ResponseEntity<GoatResponseDTO> updateGoat(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         return ResponseEntity.ok(
                 goatMapper.toResponseDTO(
                         goatUseCase.updateGoat(farmId, goatId, goatMapper.toRequestVO(goatRequestDTO))
@@ -54,14 +54,14 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @DeleteMapping("/{goatId}")
     @Operation(summary = "Remove uma cabra de uma fazenda")
-    public ResponseEntity<Void> deleteGoat(@PathVariable Long farmId, @PathVariable String goatId) {
+    public ResponseEntity<Void> deleteGoat(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
         goatUseCase.deleteGoat(farmId, goatId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{goatId}")
     @Operation(summary = "Busca uma cabra pelo ID dentro de uma fazenda")
-    public ResponseEntity<GoatResponseDTO> findGoatById(@PathVariable Long farmId, @PathVariable String goatId) {
+    public ResponseEntity<GoatResponseDTO> findGoatById(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
         return ResponseEntity.ok(
                 goatMapper.toResponseDTO(
                         goatUseCase.findGoatById(farmId, goatId)
@@ -71,7 +71,7 @@ public class GoatController {
 
     @GetMapping
     @Operation(summary = "Lista todas as cabras de uma fazenda")
-    public ResponseEntity<Page<GoatResponseDTO>> findAllGoatsByFarm(@PathVariable Long farmId, @PageableDefault(size = 12) Pageable pageable) {
+    public ResponseEntity<Page<GoatResponseDTO>> findAllGoatsByFarm(@PathVariable("farmId") Long farmId, @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(
                 goatUseCase.findAllGoatsByFarm(farmId, pageable).map(goatMapper::toResponseDTO)
         );
@@ -80,7 +80,7 @@ public class GoatController {
     @GetMapping("/search")
     @Operation(summary = "Busca cabras por nome dentro de uma fazenda")
     public ResponseEntity<Page<GoatResponseDTO>> findGoatsByNameAndFarm(
-            @PathVariable Long farmId,
+            @PathVariable("farmId") Long farmId,
             @RequestParam String name,
             @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(

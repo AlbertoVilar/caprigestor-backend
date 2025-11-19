@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.authority.business.usersbusiness;
 
-// Adicione aos imports existentes:
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -8,8 +7,8 @@ import org.junit.jupiter.api.AfterEach;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.dao.RoleDAO;
-import com.devmaster.goatfarm.authority.dao.UserDAO;
+import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
@@ -29,8 +28,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,10 +36,10 @@ import static org.mockito.Mockito.when;
 class UserBusinessTest {
 
     @Mock
-    private UserDAO userDAO;
+    private UserPersistencePort userPort;
 
     @Mock
-    private RoleDAO roleDAO;
+    private RolePersistencePort rolePort;
 
     @Mock
     private UserMapper userMapper;
@@ -60,13 +57,11 @@ class UserBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // ===== MOCK DO CONTEXTO HTTP (necessário para validateUserData) =====
         MockHttpServletRequest mockRequest = new MockHttpServletRequest();
         mockRequest.setRequestURI("/api/users");
         ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
         RequestContextHolder.setRequestAttributes(attributes);
 
-        // ===== Resto do código que já estava aqui =====
         userRequestVO = new UserRequestVO();
         userRequestVO.setName("João Silva");
         userRequestVO.setEmail("joao@email.com");
@@ -74,6 +69,12 @@ class UserBusinessTest {
         userRequestVO.setPassword("senha123");
         userRequestVO.setConfirmPassword("senha123");
         userRequestVO.setRoles(List.of("ROLE_OPERATOR"));
+
+        userEntity = new User();
+        userEntity.setId(1L);
+        userEntity.setName("João Silva");
+        userEntity.setEmail("joao@email.com");
+        userEntity.setCpf("12345678900");
 
         userResponseVO = new UserResponseVO(
                 1L,
@@ -89,45 +90,41 @@ class UserBusinessTest {
 
     @AfterEach
     void tearDown() {
-        // Limpa o contexto HTTP para não interferir em outros testes
         RequestContextHolder.resetRequestAttributes();
     }
 
     @Test
     @DisplayName("Deve criar usuário com sucesso quando não há duplicidade")
     void shouldCreateUserSuccessfully() {
-        // ARRANGE
-        when(userDAO.findUserByEmail("joao@email.com")).thenReturn(Optional.empty());
-        when(userDAO.findUserByCpf("12345678900")).thenReturn(Optional.empty());
-        when(roleDAO.findByAuthority("ROLE_OPERATOR")).thenReturn(Optional.of(operatorRole));
+        when(userPort.findByEmail("joao@email.com")).thenReturn(Optional.empty());
+        when(userPort.findByCpf("12345678900")).thenReturn(Optional.empty());
+        when(rolePort.findByAuthority("ROLE_OPERATOR")).thenReturn(Optional.of(operatorRole));
         when(passwordEncoder.encode("senha123")).thenReturn("$2a$10$hashedPassword");
-        when(userDAO.saveUser(any(UserRequestVO.class), eq("$2a$10$hashedPassword"), anySet())).thenReturn(userResponseVO);
 
-        // ACT
+        when(userMapper.toEntity(any(UserRequestVO.class))).thenReturn(userEntity);
+        when(userPort.save(any(User.class))).thenReturn(userEntity);
+        when(userMapper.toResponseVO(any(User.class))).thenReturn(userResponseVO);
+
         UserResponseVO resultado = userBusiness.saveUser(userRequestVO);
 
-        // ASSERT
         assertThat(resultado).isNotNull();
         assertThat(resultado.getId()).isEqualTo(1L);
         assertThat(resultado.getName()).isEqualTo("João Silva");
         assertThat(resultado.getEmail()).isEqualTo("joao@email.com");
 
-        verify(userDAO, times(1)).findUserByEmail("joao@email.com");
-        verify(userDAO, times(1)).findUserByCpf("12345678900");
+        verify(userPort, times(1)).findByEmail("joao@email.com");
+        verify(userPort, times(1)).findByCpf("12345678900");
         verify(passwordEncoder, times(1)).encode("senha123");
-        verify(roleDAO, times(1)).findByAuthority("ROLE_OPERATOR");
-        verify(userDAO, times(1)).saveUser(any(UserRequestVO.class), eq("$2a$10$hashedPassword"), anySet());
+        verify(rolePort, times(1)).findByAuthority("ROLE_OPERATOR");
+        verify(userPort, times(1)).save(any(User.class));
+        verify(userMapper, times(1)).toResponseVO(any(User.class));
     }
 
     @Test
     @DisplayName("Deve lançar exceção ao salvar usuário com email duplicado")
     void shouldThrowExceptionWhenSavingUserWithDuplicateEmail() {
-        // ARRANGE
-        when(userDAO.findUserByEmail("joao@email.com")).thenReturn(Optional.of(new User()));
+        when(userPort.findByEmail("joao@email.com")).thenReturn(Optional.of(new User()));
 
-        // ACT & ASSERT
-        assertThrows(DuplicateEntityException.class, () -> {
-            userBusiness.saveUser(userRequestVO);
-        });
+        assertThrows(DuplicateEntityException.class, () -> userBusiness.saveUser(userRequestVO));
     }
 }

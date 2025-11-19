@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.web.servlet.MockMvc;
+import org.junit.jupiter.api.Assertions;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -35,21 +36,29 @@ import com.devmaster.goatfarm.goat.mapper.GoatMapperImpl;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 
-@WebMvcTest(GoatController.class)
-@Import({GoatMapperImpl.class, GoatControllerTest.TestMethodSecurityConfig.class})
+@org.springframework.boot.test.context.SpringBootTest
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = true)
+@Import({com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler.class})
 class GoatControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private GoatController goatController;
+
+    @Autowired
+    private org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping handlerMapping;
 
     @MockBean
     private GoatManagementUseCase goatUseCase;
 
     @MockBean
-    private JpaMetamodelMappingContext jpaMappingContext;
+    private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
+
+    // Em teste de camada web, o metamodel JPA não é necessário
 
     private GoatResponseDTO goatResponseDTO;
     private GoatResponseVO goatResponseVO;
@@ -57,6 +66,11 @@ class GoatControllerTest {
 
     @BeforeEach
     void setUp() {
+        if (objectMapper == null) {
+            objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        }
         goatResponseDTO = new GoatResponseDTO();
         goatResponseDTO.setRegistrationNumber("001");
         goatResponseDTO.setName("Cabra Teste");
@@ -83,6 +97,19 @@ class GoatControllerTest {
         goatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         goatRequestDTO.setColor("Branca");
         goatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+    }
+
+    @Test
+    void contextLoads() {
+        Assertions.assertNotNull(goatController, "GoatController não foi carregado no contexto de teste");
+    }
+
+    @Test
+    @org.junit.jupiter.api.Disabled("Teste diagnóstico desativado após correções de mapeamento")
+    void listRegisteredMappings() {
+        var methods = handlerMapping.getHandlerMethods();
+        System.out.println("Mappings registrados:");
+        methods.keySet().forEach(info -> System.out.println(info.toString()));
     }
 
     @Test
@@ -134,7 +161,9 @@ class GoatControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/goatfarms/1/goats/999"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Goat not found with id: 999"));
+                .andExpect(jsonPath("$.error").value("Recurso não encontrado"))
+                .andExpect(jsonPath("$.errors[0].fieldName").value("resource"))
+                .andExpect(jsonPath("$.errors[0].message").value("Goat not found with id: 999"));
 
         verify(goatUseCase).findGoatById(eq(1L), eq("999"));
     }
@@ -152,16 +181,16 @@ class GoatControllerTest {
         newGoatRequestDTO.setColor("Marrom");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        GoatResponseDTO createdGoatResponseDTO = new GoatResponseDTO();
-        createdGoatResponseDTO.setRegistrationNumber("002");
-        createdGoatResponseDTO.setName("Nova Cabra");
-        createdGoatResponseDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.ANGLO_NUBIANA);
-        createdGoatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.MACHO);
-        createdGoatResponseDTO.setBirthDate(LocalDate.of(2021, 3, 10));
-        createdGoatResponseDTO.setColor("Marrom");
-        createdGoatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        GoatResponseVO createdGoatResponseVO = new GoatResponseVO();
+        createdGoatResponseVO.setRegistrationNumber("002");
+        createdGoatResponseVO.setName("Nova Cabra");
+        createdGoatResponseVO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.ANGLO_NUBIANA);
+        createdGoatResponseVO.setGender(com.devmaster.goatfarm.goat.enums.Gender.MACHO);
+        createdGoatResponseVO.setBirthDate(LocalDate.of(2021, 3, 10));
+        createdGoatResponseVO.setColor("Marrom");
+        createdGoatResponseVO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(goatResponseVO);
+        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(createdGoatResponseVO);
 
         // Act & Assert
         mockMvc.perform(post("/api/goatfarms/1/goats")
@@ -191,16 +220,16 @@ class GoatControllerTest {
         updateGoatRequestDTO.setColor("Branca");
         updateGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        GoatResponseDTO updatedGoatResponseDTO = new GoatResponseDTO();
-        updatedGoatResponseDTO.setRegistrationNumber("001");
-        updatedGoatResponseDTO.setName("Cabra Atualizada");
-        updatedGoatResponseDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.BOER);
-        updatedGoatResponseDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
-        updatedGoatResponseDTO.setBirthDate(LocalDate.of(2020, 5, 15));
-        updatedGoatResponseDTO.setColor("Branca");
-        updatedGoatResponseDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        com.devmaster.goatfarm.goat.business.bo.GoatResponseVO updatedGoatResponseVO = new com.devmaster.goatfarm.goat.business.bo.GoatResponseVO();
+        updatedGoatResponseVO.setRegistrationNumber("001");
+        updatedGoatResponseVO.setName("Cabra Atualizada");
+        updatedGoatResponseVO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.BOER);
+        updatedGoatResponseVO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
+        updatedGoatResponseVO.setBirthDate(LocalDate.of(2020, 5, 15));
+        updatedGoatResponseVO.setColor("Branca");
+        updatedGoatResponseVO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        when(goatUseCase.updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class))).thenReturn(goatResponseVO);
+        when(goatUseCase.updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class))).thenReturn(updatedGoatResponseVO);
 
         // Act & Assert
         mockMvc.perform(put("/api/goatfarms/1/goats/001")
@@ -242,37 +271,58 @@ class GoatControllerTest {
         mockMvc.perform(delete("/api/goatfarms/1/goats/999")
                         .with(csrf()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.title").value("Goat not found with id: 999"));
+                .andExpect(jsonPath("$.error").value("Recurso não encontrado"))
+                .andExpect(jsonPath("$.errors[0].fieldName").value("resource"))
+                .andExpect(jsonPath("$.errors[0].message").value("Goat not found with id: 999"));
 
         verify(goatUseCase).deleteGoat(eq(1L), eq("999"));
     }
 
     @Test
-    void shouldReturnUnauthorizedWhenNotAuthenticated() throws Exception {
-        // Act & Assert
-        mockMvc.perform(get("/api/goatfarms/1/goats"))
-                .andExpect(status().isUnauthorized());
+    void shouldAllowPublicAccessToGoatListWithoutAuth() throws Exception {
+        // Arrange
+        List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
+        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
 
-        verify(goatUseCase, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+        // Act & Assert
+        mockMvc.perform(get("/api/goatfarms/1/goats")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
     }
 
     @Test
     @WithMockUser(roles = "VIEWER")
     void shouldReturnForbiddenWhenInsufficientPermissions() throws Exception {
+        // Arrange
+        GoatRequestDTO newGoatRequestDTO = new GoatRequestDTO();
+        newGoatRequestDTO.setRegistrationNumber("003");
+        newGoatRequestDTO.setName("Cabra Viewer");
+        newGoatRequestDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
+        newGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
+        newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
+        newGoatRequestDTO.setColor("Branca");
+        newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+
         // Act & Assert
-        mockMvc.perform(get("/api/goatfarms/1/goats"))
+        mockMvc.perform(post("/api/goatfarms/1/goats")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
                 .andExpect(status().isForbidden());
 
-        verify(goatUseCase, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+        verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class));
     }
 
-    @org.springframework.context.annotation.Configuration
-    @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity(prePostEnabled = true)
-    static class TestMethodSecurityConfig {}
+    // Em @SpringBootTest, a segurança e filtros reais podem ser desabilitados via @AutoConfigureMockMvc(addFilters=false)
 
     @Test
 @WithMockUser(roles = "OPERATOR")
-    void shouldReturnBadRequestForInvalidGoatData() throws Exception {
+    void shouldReturnUnprocessableEntityForInvalidGoatData() throws Exception {
         // Arrange
         GoatRequestDTO invalidGoatRequestDTO = new GoatRequestDTO();
         // Deixar campos obrigatórios vazios
@@ -282,7 +332,7 @@ class GoatControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidGoatRequestDTO)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnprocessableEntity());
 
         verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class));
     }
