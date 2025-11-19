@@ -1,0 +1,88 @@
+%% Mermaid - Arquitetura em Camadas do GoatFarm
+%% Visualize em IDEs com suporte a Mermaid, VS Code (Markdown Preview Mermaid Support), ou GitHub
+
+flowchart TD
+  subgraph Client[Cliente / Frontend]
+    UI[Aplicações Web/CLI]
+  end
+
+  UI --> C[Controllers API REST]
+
+  subgraph API[Camada API]
+    C1[GoatController]
+    C2[GoatFarmController]
+    C3[EventController]
+    C4[AuthController]
+    C5[AdminController]
+    C1 -.-> SW[Swagger/OpenAPI]
+    C2 -.-> SW
+    C3 -.-> SW
+    C4 -.-> SW
+    C5 -.-> SW
+  end
+
+  C --> F[Facades]
+
+  subgraph Facade[Orquestração de Casos de Uso]
+    F1[GoatFacade]
+    F2[GoatFarmFacade]
+    F3[EventFacade]
+    F4[UserFacade]
+  end
+
+  F --> B[Business]
+
+  subgraph Business[Regras de Negócio]
+    B1[GoatBusiness]
+    B2[GoatFarmBusiness]
+    B3[EventBusiness]
+    B4[UserBusiness]
+    B5[AdminBusiness]
+    B6[AdminMaintenanceBusiness]
+    Sec[OwnershipService]
+  end
+
+  B --> D[DAO]
+
+  subgraph DAO[Persistência (DAO)]
+    D1[GoatDAO]
+    D2[GoatFarmDAO]
+    D3[EventDao]
+    D4[UserDAO]
+  end
+
+  D --> R[Repositories]
+
+  subgraph Repo[Spring Data JPA]
+    R1[GoatRepository]
+    R2[GoatFarmRepository]
+    R3[EventRepository]
+    R4[UserRepository]
+    R5[PhoneRepository]
+  end
+
+  R --> DB[(Banco de Dados)]
+  DB ---|Perfis| P1[H2 (test)]
+  DB --- P2[PostgreSQL (dev/prod)]
+
+  B --- M[MapStruct Mappers]
+  M --> DTO[DTOs / VOs]
+
+  subgraph Config[Configuração]
+    CFG1[Spring Security / OAuth2 JWT]
+    CFG2[GlobalExceptionHandler]
+    CFG3[Flyway]
+    CFG4[Profiles (dev/test/prod)]
+  end
+
+  CFG1 --> C
+  Sec --> B1
+  Sec --> B2
+  Sec --> B3
+  B6 -->|Limpeza Orquestrada| B1
+  B6 --> B2
+  B6 --> B3
+  B6 --> B4
+
+  classDef infra fill:#eef,stroke:#66f,stroke-width:1px
+  class Client,API,Facade,Business,DAO,Repo,Config,DB,DTO infra

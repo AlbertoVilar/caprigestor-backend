@@ -1,90 +1,62 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
-import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
+import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
+import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
-import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.facade.UserFacade;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Arrays;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 @WebMvcTest(UserController.class)
-class UserControllerTest {
+public class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @MockBean
+    private UserManagementUseCase userUseCase;
 
     @MockBean
-    private UserFacade userFacade;
+    private UserMapper userMapper;
 
-    private UserResponseDTO userResponseDTO;
-    private UserRequestDTO userRequestDTO;
+    // Em testes de camada web, o metamodel JPA pode ser mockado para evitar erros de contexto
+    @MockBean
+    private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
-    private User user;
+    @Test
+    @WithMockUser(roles = "OPERATOR")
+    public void whenGetUserById_thenReturns200() throws Exception {
+        // Arrange: stub do use case e mapper
+        UserResponseVO vo = new UserResponseVO(
+                1L,
+                "Test User",
+                "test@example.com",
+                "12345678901",
+                java.util.List.of("ROLE_OPERATOR")
+        );
 
-    @BeforeEach
-    void setUp() {
-        userResponseDTO = new UserResponseDTO();
-        userResponseDTO.setId(1L);
-        userResponseDTO.setName("Test User");
-        userResponseDTO.setEmail("test@example.com");
-        
-        userRequestDTO = new UserRequestDTO();
-        userRequestDTO.setName("Test User");
-        userRequestDTO.setEmail("test@example.com");
-        
-        userRequestVO = new UserRequestVO("Test User", "test@example.com", "12345678901", "password123", "password123", List.of("USER"));
-        
-        userResponseVO = new UserResponseVO(1L, "Test User", "test@example.com", "12345678901", List.of("USER"));
+        UserResponseDTO dto = new UserResponseDTO();
+        dto.setId(1L);
+        dto.setName("Test User");
+        dto.setEmail("test@example.com");
+        dto.setCpf("12345678901");
+        dto.setRoles(java.util.List.of("ROLE_OPERATOR"));
 
-        user = new User();
-        user.setId(1L);
-        user.setName("Test User");
-        user.setEmail("test@example.com");
+        when(userUseCase.findById(1L)).thenReturn(vo);
+        when(userMapper.toResponseDTO(any(UserResponseVO.class))).thenReturn(dto);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/users/1"))
+                .andExpect(status().isOk());
     }
-
-    // Teste removido - UserFacade não tem método findAllPaged
-
-    // Teste removido - UserFacade não tem método findById
-
-    // Teste removido - UserFacade não tem método findById
-
-    // Teste removido - endpoint não existe mais
-
-    // Teste removido - UserFacade não tem método update
-
-    // Teste removido - UserFacade não tem método delete
-
-    // Teste removido - UserFacade não tem método delete
-
-    // Teste removido - endpoint não existe mais
-
-    // Teste removido - endpoint não existe mais
-
-    // Teste removido - endpoint não existe mais
 }

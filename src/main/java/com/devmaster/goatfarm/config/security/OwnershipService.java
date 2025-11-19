@@ -1,31 +1,31 @@
 package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
-import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
-import com.devmaster.goatfarm.goat.dao.GoatDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OwnershipService {
 
-    private final GoatFarmDAO goatFarmDAO;
-    private final UserDAO userDAO;
-    private final GoatDAO goatDAO;
+    private final GoatFarmPersistencePort goatFarmPort;
+    private final UserPersistencePort userPort;
+    private final GoatPersistencePort goatPort;
 
-    public OwnershipService(GoatFarmDAO goatFarmDAO, UserDAO userDAO, GoatDAO goatDAO) {
-        this.goatFarmDAO = goatFarmDAO;
-        this.userDAO = userDAO;
-        this.goatDAO = goatDAO;
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort) {
+        this.goatFarmPort = goatFarmPort;
+        this.userPort = userPort;
+        this.goatPort = goatPort;
     }
 
     public void verifyFarmOwnership(Long farmId) {
-        var current = userDAO.getAuthenticatedEntity();
+        var current = getAuthenticatedEntity();
         boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
         if (isAdmin) return;
-
-        var farm = goatFarmDAO.findFarmEntityById(farmId);
+        var farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new UnauthorizedException("Fazenda não encontrada: " + farmId));
         if (farm.getUser() == null || !farm.getUser().getId().equals(current.getId())) {
             throw new UnauthorizedException("Usuário não é proprietário desta fazenda.");
         }
@@ -35,18 +35,29 @@ public class OwnershipService {
         // Primeiro, verifica se o usuário é dono da fazenda (admin tem bypass)
         verifyFarmOwnership(farmId);
         // Depois, garante que a cabra pertence à fazenda informada
-        var goatOpt = goatDAO.findByIdAndFarmId(goatId, farmId);
+        var goatOpt = goatPort.findByIdAndFarmId(goatId, farmId);
         if (goatOpt.isEmpty()) {
             throw new UnauthorizedException("Cabra não pertence à fazenda informada.");
         }
     }
 
     public User getCurrentUser() {
-        return userDAO.getAuthenticatedEntity();
+        return getAuthenticatedEntity();
     }
 
     public boolean isCurrentUserAdmin() {
-        var current = userDAO.getAuthenticatedEntity();
+        var current = getAuthenticatedEntity();
         return current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+    }
+
+    private User getAuthenticatedEntity() {
+        jakarta.servlet.http.HttpServletRequest request = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes sra ? sra.getRequest() : null;
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String email = authentication.getName();
+            return userPort.findByEmail(email)
+                    .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
+        }
+        throw new UnauthorizedException("Usuário não autenticado");
     }
 }

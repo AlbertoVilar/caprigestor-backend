@@ -15,6 +15,23 @@ services:
     networks:
       - caprigestor-network
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: caprigestor-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    networks:
+      - caprigestor-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: caprigestor-pgadmin

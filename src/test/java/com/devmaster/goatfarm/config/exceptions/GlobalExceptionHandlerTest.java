@@ -1,6 +1,11 @@
 package com.devmaster.goatfarm.config.exceptions;
 
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -8,8 +13,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.ProblemDetail;
-import org.springframework.web.context.request.WebRequest;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -20,79 +23,76 @@ class GlobalExceptionHandlerTest {
     private GlobalExceptionHandler globalExceptionHandler;
 
     @Mock
-    private WebRequest webRequest;
+    private HttpServletRequest httpServletRequest;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        when(webRequest.getDescription(false)).thenReturn("/api/test");
+        when(httpServletRequest.getRequestURI()).thenReturn("/api/test");
     }
 
     @Test
     void shouldHandleResourceNotFoundException() {
-        // Arrange
         String errorMessage = "Recurso não encontrado";
         ResourceNotFoundException exception = new ResourceNotFoundException(errorMessage);
 
-        // Act
-        ResponseEntity<ProblemDetail> response = globalExceptionHandler.handleResourceNotFound(exception, webRequest);
+        ResponseEntity<ValidationError> response = globalExceptionHandler.resourceNotFound(exception, httpServletRequest);
 
-        // Assert
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.NOT_FOUND.value(), response.getBody().getStatus());
-        assertEquals("Recurso não encontrado", response.getBody().getTitle());
-        assertEquals(errorMessage, response.getBody().getDetail());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
+        assertEquals("Recurso não encontrado", body.getError());
+        assertEquals("/api/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(e -> "resource".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 
     @Test
-    void shouldHandleGenericException() {
-        // Arrange
+    void shouldHandleInvalidArgumentException() {
         String errorMessage = "Erro genérico";
-        Exception exception = new Exception(errorMessage);
+        InvalidArgumentException exception = new InvalidArgumentException(errorMessage);
 
-        // Act
-        ResponseEntity<ProblemDetail> response = globalExceptionHandler.handleAllOtherExceptions(exception);
+        ResponseEntity<ValidationError> response = globalExceptionHandler.invalidArgument(exception, httpServletRequest);
 
-        // Assert
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getBody().getStatus());
-        assertEquals("Erro interno do servidor", response.getBody().getTitle());
-        assertEquals(errorMessage, response.getBody().getDetail());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+        assertEquals("Argumento inválido", body.getError());
+        assertEquals("/api/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(e -> "argument".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 
     @Test
     void shouldHandleDuplicateEntityException() {
-        // Arrange
         String errorMessage = "Entidade duplicada";
         DuplicateEntityException exception = new DuplicateEntityException(errorMessage);
 
-        // Act
-        ResponseEntity<ProblemDetail> response = globalExceptionHandler.handleDuplicateEntity(exception, webRequest);
+        ResponseEntity<ValidationError> response = globalExceptionHandler.duplicate(exception, httpServletRequest);
 
-        // Assert
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.CONFLICT.value(), response.getBody().getStatus());
-        assertEquals("Entidade duplicada", response.getBody().getTitle());
-        assertEquals(errorMessage, response.getBody().getDetail());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+        assertEquals("Conflito de dados", body.getError());
+        assertEquals("/api/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(e -> "duplicate".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 
     @Test
     void shouldHandleValidationException() {
-        // Arrange
-        String errorMessage = "Erro de validação";
-        Exception exception = new Exception(errorMessage);
+        ValidationError validationError = new ValidationError(java.time.Instant.now(), 422, "Erro de validação", "/api/test");
+        validationError.addError("field", "mensagem de erro");
+        ValidationException exception = new ValidationException(validationError);
 
-        // Act
-        ResponseEntity<ProblemDetail> response = globalExceptionHandler.handleAllOtherExceptions(exception);
+        ResponseEntity<ValidationError> response = globalExceptionHandler.validation(exception, httpServletRequest);
 
-        // Assert
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getBody().getStatus());
-        assertEquals("Erro interno do servidor", response.getBody().getTitle());
-        assertEquals(errorMessage, response.getBody().getDetail());
+        ValidationError body = response.getBody();
+        assertEquals(422, body.getStatus());
+        assertEquals("Erro de validação", body.getError());
+        assertEquals("/api/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(e -> "field".equals(e.getFieldName()) && "mensagem de erro".equals(e.getMessage())));
     }
 }

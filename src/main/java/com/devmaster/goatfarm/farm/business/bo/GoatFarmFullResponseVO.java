@@ -19,6 +19,9 @@ public class GoatFarmFullResponseVO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Controle de concorrência otimista
+    private Integer version;
+
         private Long userId;
     private String userName;
     private String userEmail;
@@ -51,6 +54,9 @@ public class GoatFarmFullResponseVO {
     
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
     
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }

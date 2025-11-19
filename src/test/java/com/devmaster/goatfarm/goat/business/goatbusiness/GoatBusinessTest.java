@@ -1,77 +1,49 @@
 package com.devmaster.goatfarm.goat.business.goatbusiness;
 
-// ===== IMPORTS DO PROJETO =====
-import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.dao.GoatDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-
-// ===== IMPORTS DO JUNIT 5 =====
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-// ===== IMPORTS DO MOCKITO =====
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
-
-// ===== IMPORTS DO ASSERTJ =====
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-// ===== IMPORTS DO SPRING TEST =====
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-// ===== IMPORTS DO JAVA =====
 import java.time.LocalDate;
 import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class GoatBusinessTest {
 
-    // ===== MOCKS (Dependências do GoatBusiness) =====
-    @Mock
-    private GoatDAO goatDAO;
+    @Mock private GoatPersistencePort goatPort;
+    @Mock private GoatFarmPersistencePort goatFarmPort;
+    @Mock private GenealogyBusiness genealogyBusiness;
+    @Mock private OwnershipService ownershipService;
+    @Mock private GoatMapper goatMapper;
 
-    @Mock
-    private GoatFarmDAO goatFarmDAO;
+    @InjectMocks private GoatBusiness goatBusiness;
 
-    @Mock
-    private UserDAO userDAO;
-
-    @Mock
-    private GenealogyBusiness genealogyBusiness;
-
-    @Mock
-    private OwnershipService ownershipService;
-
-    @Mock
-    private GoatMapper goatMapper;
-
-    @InjectMocks
-    private GoatBusiness goatBusiness;
-
-    // ===== DADOS DE TESTE =====
     private GoatRequestVO requestVO;
     private GoatResponseVO responseVO;
     private Goat goat;
@@ -80,26 +52,17 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // ===== MOCK DO CONTEXTO HTTP =====
-        MockHttpServletRequest mockRequest = new MockHttpServletRequest();
-        mockRequest.setRequestURI("/api/goats");
-        ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
-        RequestContextHolder.setRequestAttributes(attributes);
+        // Preparar RequestContext para evitar IllegalStateException em validações internas
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        // ===== USER =====
-        currentUser = new User();
-        currentUser.setId(1L);
-        currentUser.setName("Alberto Vilar");
-        currentUser.setEmail("alberto.vilar@test.com");
-
-        // ===== GOAT FARM =====
+        // Dados base
         goatFarm = new GoatFarm();
         goatFarm.setId(1L);
-        goatFarm.setName("Capril Vilar");
-        goatFarm.setTod("16432");
-        goatFarm.setUser(currentUser);
 
-        // ===== GOAT REQUEST VO =====
+        currentUser = new User();
+        currentUser.setId(1L);
+
         requestVO = new GoatRequestVO();
         requestVO.setRegistrationNumber("164322002");
         requestVO.setName("Xeque V Do Capril Vilar");
@@ -111,12 +74,9 @@ public class GoatBusinessTest {
         requestVO.setTod("16432");
         requestVO.setToe("22002");
         requestVO.setCategory(Category.PO);
-        requestVO.setFatherRegistrationNumber(null);
-        requestVO.setMotherRegistrationNumber(null);
         requestVO.setFarmId(1L);
         requestVO.setUserId(1L);
 
-        // ===== GOAT (ENTIDADE) =====
         goat = new Goat();
         goat.setRegistrationNumber(requestVO.getRegistrationNumber());
         goat.setName(requestVO.getName());
@@ -133,7 +93,6 @@ public class GoatBusinessTest {
         goat.setFather(null);
         goat.setMother(null);
 
-        // ===== GOAT RESPONSE VO =====
         responseVO = new GoatResponseVO();
         responseVO.setRegistrationNumber(goat.getRegistrationNumber());
         responseVO.setName(goat.getName());
@@ -153,44 +112,23 @@ public class GoatBusinessTest {
         RequestContextHolder.resetRequestAttributes();
     }
 
-    // =====// ===== TESTES =====
     @Test
-    @DisplayName("Deve criar Goat com sucesso")
+    @DisplayName("Deve criar cabra com sucesso quando pai e mãe são nulos")
     void shouldCreateGoatSuccessfully() {
-
-        /** === Aqui vai a lógica do seu teste === **/
-
-        // 1. Mock verifyFarmOwnership (método void - usa doNothing)
+        // ===== Arrange =====
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
-
-        // 2. Mock existsById (retorna false para indicar que não há duplicidade)
-        when(goatDAO.existsById("164322002")).thenReturn(false);
-
-        // 3. Mock findFarmEntityById (busca a fazenda)
-        when(goatFarmDAO.findFarmEntityById(1L)).thenReturn(goatFarm);
-
-        // 4. Mock findByRegistrationNumber para pai e mãe (ambos null)
-        when(goatDAO.findByRegistrationNumber(null)).thenReturn(Optional.empty());
-
-        // 5. Mock toEntity (converte VO para entidade)
+        when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(java.util.Optional.of(goatFarm));
         when(goatMapper.toEntity(requestVO)).thenReturn(goat);
-
-        // 6. Mock getCurrentUser (pega usuário logado)
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
-
-        // 7. Mock save (salva no banco)
-        when(goatDAO.save(any(Goat.class))).thenReturn(goat);
-
-        // 8. Mock createGenealogy (CORRIGIDO: usa when/thenReturn para método que retorna valor)
-        when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null); // Retornamos null pois não nos importamos com o resultado aqui
-
-        // 9. Mock toResponseVO (converte entidade para VO)
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null);
         when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
 
-        // ===== ACT (Executar a ação) ===== //
+        // ===== Act =====
         GoatResponseVO resultado = goatBusiness.createGoat(1L, requestVO);
 
-        // ===== ASSERT (Verificar o resultado) ===== //
+        // ===== Assert =====
         assertThat(resultado).isNotNull();
         assertThat(resultado.getRegistrationNumber()).isEqualTo("164322002");
         assertThat(resultado.getName()).isEqualTo("Xeque V Do Capril Vilar");
@@ -204,14 +142,71 @@ public class GoatBusinessTest {
         assertThat(resultado.getCategory()).isEqualTo(Category.PO);
         assertThat(resultado.getFarmId()).isEqualTo(1L);
 
-        // ===== VERIFY (Confirmar que os métodos foram chamados) ===== //
+        // ===== Verify =====
         verify(ownershipService, times(1)).verifyFarmOwnership(1L);
-        verify(goatDAO, times(1)).existsById("164322002");
-        verify(goatFarmDAO, times(1)).findFarmEntityById(1L);
-        verify(goatDAO, times(2)).findByRegistrationNumber(null); // Chamado para pai e mãe
+        verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
+        verify(goatFarmPort, times(1)).findById(1L);
+        verify(goatPort, never()).findByRegistrationNumber(any());
         verify(goatMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
-        verify(goatDAO, times(1)).save(any(Goat.class));
+        verify(goatPort, times(1)).save(any(Goat.class));
+        verify(genealogyBusiness, times(1)).createGenealogy(1L, "164322002");
+        verify(goatMapper, times(1)).toResponseVO(goat);
+    }
+
+    @Test
+    @DisplayName("Deve criar cabra com sucesso quando há pai e mãe")
+    void shouldCreateGoatWithParents() {
+        // ===== ARRANGE - Dados adicionais =====
+        // Criar o pai
+        Goat fatherGoat = new Goat();
+        fatherGoat.setRegistrationNumber("164321001");
+        fatherGoat.setName("Reprodutor Alpha");
+        fatherGoat.setGender(Gender.MACHO);
+
+        // Criar a mãe
+        Goat motherGoat = new Goat();
+        motherGoat.setRegistrationNumber("164321002");
+        motherGoat.setName("Matriz Beta");
+        motherGoat.setGender(Gender.FEMEA);
+
+        // Atualizar o requestVO para incluir pai e mãe
+        requestVO.setFatherRegistrationNumber("164321001");
+        requestVO.setMotherRegistrationNumber("164321002");
+
+        // Atualizar o goat esperado
+        goat.setFather(fatherGoat);
+        goat.setMother(motherGoat);
+
+        // ===== ARRANGE - Mocks =====
+        doNothing().when(ownershipService).verifyFarmOwnership(1L);
+        when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(goatFarm));
+        when(goatPort.findByRegistrationNumber("164321001")).thenReturn(Optional.of(fatherGoat));
+        when(goatPort.findByRegistrationNumber("164321002")).thenReturn(Optional.of(motherGoat));
+        when(goatMapper.toEntity(requestVO)).thenReturn(goat);
+        when(ownershipService.getCurrentUser()).thenReturn(currentUser);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null);
+        when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
+
+        // ===== ACT =====
+        GoatResponseVO resultado = goatBusiness.createGoat(1L, requestVO);
+
+        // ===== ASSERT =====
+        assertThat(resultado).isNotNull();
+        assertThat(resultado.getRegistrationNumber()).isEqualTo("164322002");
+        assertThat(resultado.getName()).isEqualTo("Xeque V Do Capril Vilar");
+
+        // ===== VERIFY =====
+        verify(ownershipService, times(1)).verifyFarmOwnership(1L);
+        verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
+        verify(goatFarmPort, times(1)).findById(1L);
+        verify(goatPort, times(1)).findByRegistrationNumber("164321001"); // Pai
+        verify(goatPort, times(1)).findByRegistrationNumber("164321002"); // Mãe
+        verify(goatMapper, times(1)).toEntity(requestVO);
+        verify(ownershipService, times(1)).getCurrentUser();
+        verify(goatPort, times(1)).save(any(Goat.class));
         verify(genealogyBusiness, times(1)).createGenealogy(1L, "164322002");
         verify(goatMapper, times(1)).toResponseVO(goat);
     }

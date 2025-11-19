@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.config.security;
 
-import com.devmaster.goatfarm.authority.dao.UserDAO; import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.application.ports.out.UserPersistencePort; import com.devmaster.goatfarm.authority.model.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,14 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomUserDetailsService implements UserDetailsService {
 
     @Autowired
-    private UserDAO userDAO; 
+    private UserPersistencePort userPort; 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userDAO.findUserByUsername(username);
-        if (user == null) {
-            // Evita problemas de encoding em ambientes que não tratam UTF-8
-            throw new UsernameNotFoundException("Usuario nao encontrado: " + username);
-        }
+        User user = userPort.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario nao encontrado: " + username));
         return user;
     }
 }

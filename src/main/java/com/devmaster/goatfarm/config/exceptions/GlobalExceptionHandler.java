@@ -7,9 +7,12 @@ import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,6 +46,30 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.BAD_REQUEST;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
         err.addError("argument", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ValidationError> httpMessageNotReadable(HttpMessageNotReadableException e, HttpServletRequest request) {
+        String error = "Erro de leitura do corpo da requisição";
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+
+        Throwable cause = e.getCause();
+        if (cause instanceof UnrecognizedPropertyException upe) {
+            err.addError(upe.getPropertyName(), "Campo não reconhecido no JSON");
+        } else if (cause instanceof InvalidFormatException ife) {
+            String field = (ife.getPath() != null && !ife.getPath().isEmpty() && ife.getPath().get(0).getFieldName() != null)
+                    ? ife.getPath().get(0).getFieldName()
+                    : "corpo";
+            Object value = ife.getValue();
+            String valueStr = value == null ? "null" : String.valueOf(value);
+            err.addError(field, "Formato/valor inválido: '" + valueStr + "'");
+        } else {
+            String detail = e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : e.getMessage();
+            err.addError("json", detail);
+        }
+
         return ResponseEntity.status(status).body(err);
     }
 

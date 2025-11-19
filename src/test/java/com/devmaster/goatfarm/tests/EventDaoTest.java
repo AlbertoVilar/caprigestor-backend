@@ -1,114 +1,80 @@
 package com.devmaster.goatfarm.tests;
 
-import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
-import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
-import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.events.model.repository.EventRepository;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
-import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.infrastructure.adapters.out.persistence.EventPersistenceAdapter;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 public class EventDaoTest {
 
-    // Cria um mock do EventRepository para simular o banco de dados de eventos
     @Mock
     private EventRepository eventRepository;
 
-    // Cria um mock do GoatRepository para simular o banco de dados de cabras
-    @Mock
-    private GoatRepository goatRepository;
-
-    // Mock do serviço de ownership
-    @Mock
-    private OwnershipService ownershipService;
-
-    // Injeta os mocks acima dentro de uma instância real de EventDao
     @InjectMocks
-    private EventDao eventDao;
+    private EventPersistenceAdapter eventPersistenceAdapter;
 
-    // Inicializa os mocks antes da execução dos testes
-    public EventDaoTest() {
-        MockitoAnnotations.openMocks(this);
+    @Test
+    void whenSaveEvent_thenEventIsSaved() {
+        Goat goat = new Goat();
+        goat.setRegistrationNumber("R-123");
+
+        Event event = new Event();
+        event.setGoat(goat);
+        event.setEventType(EventType.VACINACAO);
+        event.setDate(LocalDate.now());
+        event.setDescription("Test Event");
+
+        Event persisted = new Event();
+        persisted.setGoat(goat);
+        persisted.setEventType(EventType.VACINACAO);
+        persisted.setDate(event.getDate());
+        persisted.setDescription(event.getDescription());
+        persisted.setId(1L);
+
+        when(eventRepository.save(event)).thenReturn(persisted);
+
+        Event savedEvent = eventPersistenceAdapter.save(event);
+
+        assertThat(savedEvent).isNotNull();
+        assertThat(savedEvent.getId()).isEqualTo(1L);
+        assertThat(savedEvent.getDescription()).isEqualTo("Test Event");
+        assertThat(savedEvent.getGoat()).isNotNull();
+        assertThat(savedEvent.getEventType()).isEqualTo(EventType.VACINACAO);
+
+        verify(eventRepository).save(event);
     }
 
-    // Testa se o método createEvent funciona corretamente com dados válidos
     @Test
-    public void shouldCreateEventSuccessfully() {
-        // Arrange: prepara os dados simulados
-        String goatId = "1234567890";
-
-        // Simula um usuário
-        User user = new User();
-        user.setId(1L);
-        user.setName("Test User");
-        user.setEmail("test@example.com");
-
-        // Simula uma fazenda
-        GoatFarm farm = new GoatFarm();
-        farm.setId(1L);
-        farm.setName("Fazenda Teste");
-        farm.setUser(user);
-
-        // Simula uma cabra existente com esse ID
+    void whenFindByGoat_thenAdapterDelegatesToRepository() {
         Goat goat = new Goat();
-        goat.setRegistrationNumber(goatId);
-        goat.setFarm(farm);
+        goat.setRegistrationNumber("R-123");
 
-        // Cria uma requisição de evento (como se fosse um POST)
-        EventRequestVO requestVO = new EventRequestVO(
-                goatId,
-                EventType.SAUDE,
-                LocalDate.now(),
-                "Verificação de rotina",
-                "Capril Central",
-                "Dra. Ana",
-                "Tudo normal"
-        );
+        Event e1 = new Event();
+        e1.setId(10L);
+        e1.setGoat(goat);
+        e1.setEventType(EventType.VACINACAO);
+        e1.setDate(LocalDate.now());
 
-        // Cria um evento simulado como resposta do banco após salvar
-        Event savedEvent = new Event(
-                1L,
-                goat,
-                requestVO.eventType(),
-                requestVO.date(),
-                requestVO.description(),
-                requestVO.location(),
-                requestVO.veterinarian(),
-                requestVO.outcome()
-        );
+        when(eventRepository.findEventsByGoatRegistrationNumber("R-123")).thenReturn(List.of(e1));
 
-        // Define o comportamento dos mocks
-        when(goatRepository.findById(goatId)).thenReturn(Optional.of(goat)); // finge que a cabra existe
-        when(eventRepository.save(any(Event.class))).thenReturn(savedEvent); // finge que o evento foi salvo
-        when(ownershipService.getCurrentUser()).thenReturn(user);
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        List<Event> events = eventPersistenceAdapter.findByGoatRegistrationNumber("R-123");
 
-        // Act: executa o método a ser testado
-        Event response = eventDao.saveEvent(savedEvent);
-
-        // Assert: verifica o resultado retornado
-        assertNotNull(response); // o retorno não pode ser nulo
-        assertEquals("1234567890", response.getGoat().getRegistrationNumber()); // o ID da cabra deve bater
-        assertEquals("Dra. Ana", response.getVeterinarian()); // o veterinário também
-
-        // Verifica se o método save do repositório foi chamado corretamente
-        verify(eventRepository).save(any(Event.class));
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).getId()).isEqualTo(10L);
+        verify(eventRepository).findEventsByGoatRegistrationNumber("R-123");
     }
 }

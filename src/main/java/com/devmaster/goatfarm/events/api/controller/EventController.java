@@ -1,9 +1,12 @@
 package com.devmaster.goatfarm.events.api.controller;
 
+import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
+import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
+import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.enuns.EventType;
-import com.devmaster.goatfarm.events.facade.EventFacade;
+import com.devmaster.goatfarm.events.mapper.EventMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -24,8 +27,14 @@ import java.util.List;
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/events")
 public class EventController {
 
+    private final EventManagementUseCase eventUseCase;
+    private final EventMapper eventMapper;
+
     @Autowired
-    private EventFacade eventFacade;
+    public EventController(EventManagementUseCase eventUseCase, EventMapper eventMapper) {
+        this.eventUseCase = eventUseCase;
+        this.eventMapper = eventMapper;
+    }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
@@ -34,7 +43,9 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @Valid @RequestBody EventRequestDTO requestDTO) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventFacade.createEvent(farmId, goatId, requestDTO));
+        EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
+        EventResponseVO responseVO = eventUseCase.createEvent(requestVO, goatId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(eventMapper.toResponseDTO(responseVO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
@@ -45,7 +56,9 @@ public class EventController {
             @PathVariable String goatId,
             @PathVariable Long eventId,
             @Valid @RequestBody EventRequestDTO requestDTO) {
-        return ResponseEntity.ok(eventFacade.updateEvent(farmId, goatId, eventId, requestDTO));
+        EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
+        EventResponseVO responseVO = eventUseCase.updateEvent(eventId, requestVO, goatId);
+        return ResponseEntity.ok(eventMapper.toResponseDTO(responseVO));
     }
 
     @GetMapping("/{eventId}")
@@ -54,7 +67,8 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId) {
-        return ResponseEntity.ok(eventFacade.findEventById(farmId, goatId, eventId));
+        EventResponseVO responseVO = eventUseCase.findEventById(eventId);
+        return ResponseEntity.ok(eventMapper.toResponseDTO(responseVO));
     }
 
     @GetMapping
@@ -63,7 +77,9 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PageableDefault(size = 12) Pageable pageable) {
-        return ResponseEntity.ok(eventFacade.findAllEventsByGoatAndFarm(farmId, goatId, pageable));
+        Page<EventResponseVO> responseVOs = eventUseCase.findEventsWithFilters(goatId, null, null, null, pageable);
+        Page<EventResponseDTO> responseDTOs = responseVOs.map(eventMapper::toResponseDTO);
+        return ResponseEntity.ok(responseDTOs);
     }
 
     @GetMapping("/filter")
@@ -75,7 +91,9 @@ public class EventController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 12) Pageable pageable) {
-        return ResponseEntity.ok(eventFacade.findEventsByGoatWithFilters(farmId, goatId, eventType, startDate, endDate, pageable));
+        Page<EventResponseVO> responseVOs = eventUseCase.findEventsWithFilters(goatId, eventType, startDate, endDate, pageable);
+        Page<EventResponseDTO> responseDTOs = responseVOs.map(eventMapper::toResponseDTO);
+        return ResponseEntity.ok(responseDTOs);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
@@ -85,7 +103,7 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId) {
-        eventFacade.deleteEvent(farmId, goatId, eventId);
+        eventUseCase.deleteEvent(eventId);
         return ResponseEntity.noContent().build();
     }
 }

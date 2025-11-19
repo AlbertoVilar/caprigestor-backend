@@ -1,8 +1,7 @@
 package com.devmaster.goatfarm.authority.business;
 
-import com.devmaster.goatfarm.authority.dao.RoleDAO;
-import com.devmaster.goatfarm.authority.dao.UserDAO;
-import com.devmaster.goatfarm.authority.mapper.RoleMapper;
+import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import org.slf4j.Logger;
@@ -19,13 +18,12 @@ public class AdminBusiness {
     private static final Logger logger = LoggerFactory.getLogger(AdminBusiness.class);
 
     @Autowired
-    private UserDAO userDAO;
+    private UserPersistencePort userPort;
 
     @Autowired
-    private RoleDAO roleDAO;
+    private RolePersistencePort rolePort;
 
-    @Autowired
-    private RoleMapper roleMapper;
+    // RoleMapper removido: roles são recuperadas via porta
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -34,10 +32,10 @@ public class AdminBusiness {
     private AdminMaintenanceBusiness adminMaintenanceBusiness;
 
     public boolean updateUserPassword(String email, String newPassword) {
-        User user = userDAO.findUserByEmail(email).orElse(null);
+        User user = userPort.findByEmail(email).orElse(null);
         if (user != null) {
-            user.setPassword(passwordEncoder.encode(newPassword));
-            userDAO.save(user);
+            String encrypted = passwordEncoder.encode(newPassword);
+            userPort.updatePassword(user.getId(), encrypted);
             return true;
         } else {
             logger.warn("Usuário com email {} não encontrado para atualização de senha", email);
@@ -46,7 +44,7 @@ public class AdminBusiness {
     }
 
     public User getUserByEmail(String email) {
-        User user = userDAO.findUserByEmail(email).orElse(null);
+        User user = userPort.findByEmail(email).orElse(null);
         if (user == null) {
             logger.warn("Usuário com email {} não encontrado", email);
             return null;
@@ -57,14 +55,14 @@ public class AdminBusiness {
     @Transactional
     public boolean cleanDatabaseAndSetupAdmin() {
         try {
-            User adminUser = userDAO.findUserByEmail("alberto.vilar@example.com").orElse(null);
+            User adminUser = userPort.findByEmail("alberto.vilar@example.com").orElse(null);
             if (adminUser == null) {
                 logger.error("Usuário admin não encontrado");
                 return false;
             }
 
             adminUser.setPassword(passwordEncoder.encode("132747"));
-            userDAO.save(adminUser);
+            userPort.save(adminUser);
 
             adminMaintenanceBusiness.cleanDatabaseAndSetupAdmin(adminUser.getId());
 
@@ -74,7 +72,7 @@ public class AdminBusiness {
             adminUser.getRoles().clear();
             adminUser.getRoles().add(ensureRoleExists("ROLE_ADMIN"));
             adminUser.getRoles().add(ensureRoleExists("ROLE_OPERATOR"));
-            userDAO.save(adminUser);
+            userPort.save(adminUser);
 
             logger.info("Banco limpo e usuário admin configurado com sucesso");
             return true;
@@ -85,12 +83,11 @@ public class AdminBusiness {
     }
 
     private Role ensureRoleExists(String authority) {
-        return roleDAO.findByAuthority(authority)
+        return rolePort.findByAuthority(authority)
                 .orElseGet(() -> {
-                    Role role = roleMapper.toEntity(authority);
-                    Role saved = roleDAO.save(role);
-                    logger.info("Role {} criada", authority);
-                    return saved;
+                    // Se a role não existir, não a cria aqui, apenas loga e lança erro
+                    logger.error("Role {} não encontrada e criação automática não suportada nesta camada", authority);
+                    throw new RuntimeException("Role não encontrada: " + authority);
                 });
     }
 }

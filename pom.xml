@@ -118,6 +118,19 @@
 			<version>1.5.5.Final</version>
 			<scope>provided</scope>
 		</dependency>
+
+		<!-- Spring AMQP (RabbitMQ) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-amqp</artifactId>
+		</dependency>
+
+		<!-- Para testes de mensageria (opcional, mas recomendado) -->
+		<dependency>
+			<groupId>org.springframework.amqp</groupId>
+			<artifactId>spring-rabbit-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

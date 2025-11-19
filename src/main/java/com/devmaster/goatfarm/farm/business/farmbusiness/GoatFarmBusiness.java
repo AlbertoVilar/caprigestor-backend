@@ -12,7 +12,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
+import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
@@ -38,9 +38,9 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class GoatFarmBusiness {
+public class GoatFarmBusiness implements com.devmaster.goatfarm.application.ports.in.GoatFarmManagementUseCase {
 
-    private final GoatFarmDAO goatFarmDAO;
+    private final GoatFarmPersistencePort goatFarmPort;
     private final AddressBusiness addressBusiness;
     private final UserBusiness userBusiness;
     private final PhoneBusiness phoneBusiness;
@@ -50,7 +50,7 @@ public class GoatFarmBusiness {
 
     @Autowired
     public GoatFarmBusiness(
-            GoatFarmDAO goatFarmDAO,
+            GoatFarmPersistencePort goatFarmPort,
             AddressBusiness addressBusiness,
             UserBusiness userBusiness,
             PhoneBusiness phoneBusiness,
@@ -58,7 +58,7 @@ public class GoatFarmBusiness {
             PhoneMapper phoneMapper,
             OwnershipService ownershipService
     ) {
-        this.goatFarmDAO = goatFarmDAO;
+        this.goatFarmPort = goatFarmPort;
         this.addressBusiness = addressBusiness;
         this.userBusiness = userBusiness;
         this.phoneBusiness = phoneBusiness;
@@ -69,27 +69,32 @@ public class GoatFarmBusiness {
 
     @Transactional(readOnly = true)
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        return goatFarmDAO.findGoatFarmById(id);
+        GoatFarm farm = goatFarmPort.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id));
+        return goatFarmMapper.toFullResponseVO(farm);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
-        return goatFarmDAO.searchGoatFarmByName(name, pageable);
+        return goatFarmPort.searchByName(name, pageable).map(goatFarmMapper::toFullResponseVO);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
-        return goatFarmDAO.findAllGoatFarm(pageable);
+        return goatFarmPort.findAll(pageable).map(goatFarmMapper::toFullResponseVO);
     }
 
     @Transactional
     public void deleteGoatFarm(Long id) {
-        goatFarmDAO.deleteGoatFarm(id);
+        if (goatFarmPort.findById(id).isEmpty()) {
+            throw new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada.");
+        }
+        goatFarmPort.deleteById(id);
     }
 
     @Transactional
     public void deleteGoatFarmsFromOtherUsers(Long adminId) {
-        goatFarmDAO.deleteGoatFarmsFromOtherUsers(adminId);
+        goatFarmPort.deleteGoatFarmsFromOtherUsers(adminId);
     }
 
     @Transactional
@@ -98,10 +103,10 @@ public class GoatFarmBusiness {
             throw new IllegalArgumentException("Dados da fazenda são obrigatórios.");
         }
 
-        if (goatFarmDAO.existsByName(requestVO.getName())) {
+        if (goatFarmPort.existsByName(requestVO.getName())) {
             throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + requestVO.getName() + "'.");
         }
-        if (requestVO.getTod() != null && goatFarmDAO.existsByTod(requestVO.getTod())) {
+        if (requestVO.getTod() != null && goatFarmPort.existsByTod(requestVO.getTod())) {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + requestVO.getTod() + "'.");
         }
 
@@ -110,7 +115,7 @@ public class GoatFarmBusiness {
         User currentUser = ownershipService.getCurrentUser();
         entity.setUser(currentUser);
 
-        GoatFarm saved = goatFarmDAO.save(entity);
+        GoatFarm saved = goatFarmPort.save(entity);
         return goatFarmMapper.toResponseVO(saved);
     }
 
@@ -123,15 +128,16 @@ public class GoatFarmBusiness {
         // Verifica propriedade da fazenda
         ownershipService.verifyFarmOwnership(id);
 
-        GoatFarm farmEntity = goatFarmDAO.findFarmEntityById(id);
+        GoatFarm farmEntity = goatFarmPort.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id));
 
         // Atualiza dados básicos da fazenda
         if (farmVO != null) {
             // Valida duplicidade de nome/tod quando fornecidos
-            if (farmVO.getName() != null && !farmVO.getName().equals(farmEntity.getName()) && goatFarmDAO.existsByName(farmVO.getName())) {
+            if (farmVO.getName() != null && !farmVO.getName().equals(farmEntity.getName()) && goatFarmPort.existsByName(farmVO.getName())) {
                 throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmVO.getName() + "'.");
             }
-            if (farmVO.getTod() != null && !farmVO.getTod().equals(farmEntity.getTod()) && goatFarmDAO.existsByTod(farmVO.getTod())) {
+            if (farmVO.getTod() != null && !farmVO.getTod().equals(farmEntity.getTod()) && goatFarmPort.existsByTod(farmVO.getTod())) {
                 throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
             }
             goatFarmMapper.updateEntity(farmEntity, farmVO);
@@ -152,9 +158,10 @@ public class GoatFarmBusiness {
         // Observação: atualização de telefones pode ser orquestrada no PhoneBusiness.
         // Para manter escopo enxuto e compilar, persistimos alterações básicas.
 
-        GoatFarm saved = goatFarmDAO.save(farmEntity);
+        GoatFarm saved = goatFarmPort.save(farmEntity);
         // Recarrega para garantir relacionamentos atualizados
-        GoatFarm reloaded = goatFarmDAO.findFarmEntityById(saved.getId());
+        GoatFarm reloaded = goatFarmPort.findById(saved.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + saved.getId()));
         return goatFarmMapper.toFullResponseVO(reloaded);
     }
 
@@ -165,10 +172,10 @@ public class GoatFarmBusiness {
                                                      List<PhoneRequestVO> phoneVOs) {
         validateFullGoatFarmCreation(farmVO, userVO, addressVO, phoneVOs);
 
-        if (goatFarmDAO.existsByName(farmVO.getName())) {
+        if (goatFarmPort.existsByName(farmVO.getName())) {
             throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmVO.getName() + "'.");
         }
-        if (farmVO.getTod() != null && goatFarmDAO.existsByTod(farmVO.getTod())) {
+        if (farmVO.getTod() != null && goatFarmPort.existsByTod(farmVO.getTod())) {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
         }
 
@@ -180,9 +187,10 @@ public class GoatFarmBusiness {
         farmEntity.setAddress(addressEntity);
 
         try {
-            GoatFarm savedFarm = goatFarmDAO.save(farmEntity);
+            GoatFarm savedFarm = goatFarmPort.save(farmEntity);
             phoneBusiness.createPhones(savedFarm.getId(), phoneVOs);
-            GoatFarm reloaded = goatFarmDAO.findFarmEntityById(savedFarm.getId());
+            GoatFarm reloaded = goatFarmPort.findById(savedFarm.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + savedFarm.getId()));
             return goatFarmMapper.toFullResponseVO(reloaded);
         } catch (DataIntegrityViolationException e) {
             throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Erro ao criar fazenda: " + e.getMessage(), e);
@@ -195,7 +203,8 @@ public class GoatFarmBusiness {
     public FarmPermissionsVO getFarmPermissions(Long farmId) {
         User current = ownershipService.getCurrentUser();
         boolean isAdmin = ownershipService.isCurrentUserAdmin();
-        GoatFarm farm = goatFarmDAO.findFarmEntityById(farmId);
+        GoatFarm farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
         boolean isOwner = farm.getUser() != null && farm.getUser().getId().equals(current.getId());
         return new FarmPermissionsVO(isAdmin || isOwner);
     }

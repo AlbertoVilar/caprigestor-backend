@@ -60,7 +60,9 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain publicEndpointsFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/auth/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+            // Torna públicos apenas os endpoints de autenticação explícitos (login/register/refresh)
+            // Exclui "/api/auth/me" para que ele seja tratado pelo filtro JWT e exija autenticação
+            .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/api/goatfarms/full", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions().disable())
