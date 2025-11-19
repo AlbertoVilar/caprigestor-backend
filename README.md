@@ -697,3 +697,42 @@ Este projeto ainda não possui licença definida. Até eu escolher uma licença 
 ⭐ Se este projeto foi útil para você, considere dar uma estrela!
 
 </div>
+## Mensageria de Eventos (RabbitMQ)
+
+Este projeto integra processamento assíncrono de eventos usando RabbitMQ, seguindo a Arquitetura Hexagonal (Portas e Adaptadores).
+
+### Visão Geral
+- Porta `EventPublisher` define o contrato de publicação de eventos.
+- Adaptador `RabbitMQEventPublisher` publica eventos no exchange com confirmações (`publisher confirms`) e retornos (`returns`) habilitados.
+- `EventConsumer` consome mensagens da fila e aciona o fluxo de negócio.
+- `EventMessage` é o DTO padronizado para trafegar os dados de evento.
+
+### Subir RabbitMQ
+- Via Docker Compose: `docker/docker-compose.yml`.
+  - No diretório `docker/`, execute: `docker-compose up -d`.
+  - UI disponível em `http://localhost:15672` (credenciais conforme `.env.example`).
+
+### Executar em modo desenvolvimento
+- Ative o perfil `dev` com logs em arquivo e maior verbosidade:
+  - Windows PowerShell: `set SPRING_PROFILES_ACTIVE=dev; set SERVER_PORT=8080; .\mvnw.cmd spring-boot:run`
+  - Logs: gerados em `logs/dev.log` (não versionado).
+
+### Diagnóstico de Publicação/Consumo
+- Ao publicar um evento, espere ver no `logs/dev.log`:
+  - Linha de publicação com `exchange`, `routingKey` e ID do evento.
+  - `publish confirmed` indicando confirmação pelo broker.
+  - `EVENT RECEIVED FROM QUEUE` indicando consumo pelo listener.
+- Se aparecer `unroutable`, verifique `exchange/routingKey` e o binding da fila.
+
+### Estrutura de Pacotes (mensageria)
+```
+com.devmaster.goatfarm.events.messaging
+├── config        # RabbitTemplate, confirms/returns, listener config
+├── consumer      # EventConsumer (@RabbitListener)
+├── dto           # EventMessage
+└── publisher     # RabbitMQEventPublisher
+```
+
+### Notas
+- `logs/dev.log` foi removido do versionamento; é gerado em runtime.
+- Confirmações e retornos do publisher estão habilitados para facilitar troubleshooting.

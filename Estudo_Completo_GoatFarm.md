@@ -862,3 +862,16 @@ Esta documentação apresenta a arquitetura completa do backend do sistema GoatF
 - **Mapeamento automático** com MapStruct para reduzir código boilerplate
 
 O sistema está preparado para evolução e manutenção, seguindo boas práticas de desenvolvimento e arquitetura de software.
+## Mensageria de Eventos (RabbitMQ)
+
+Integração adicionada para processamento assíncrono de eventos utilizando RabbitMQ, alinhada à Arquitetura Hexagonal.
+
+- Porta: `EventPublisher`.
+- Adaptador: `RabbitMQEventPublisher` com confirmações e retornos habilitados.
+- Consumidor: `EventConsumer` com `@RabbitListener`.
+- DTO: `EventMessage` para trafegar dados do evento.
+
+Operação em `dev`:
+- Subir RabbitMQ com `docker/docker-compose.yml`.
+- Rodar aplicação com `SPRING_PROFILES_ACTIVE=dev`.
+- Verificar `logs/dev.log` para publicação confirmada, consumo e ACK.
