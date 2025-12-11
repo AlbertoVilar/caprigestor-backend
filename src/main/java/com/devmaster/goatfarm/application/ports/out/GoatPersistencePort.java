@@ -66,6 +66,8 @@ public interface GoatPersistencePort {
      */
     Optional<Goat> findByIdAndFarmId(String id, Long farmId);
 
+    Optional<Goat> findByIdAndFarmIdWithFamilyGraph(String id, Long farmId);
+
     /**
      * Remove uma cabra pelo registrationNumber
      * @param registrationNumber Número de registro da cabra

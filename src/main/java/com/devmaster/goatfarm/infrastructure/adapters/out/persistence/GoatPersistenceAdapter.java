@@ -60,6 +60,11 @@ public class GoatPersistenceAdapter implements GoatPersistencePort {
     }
 
     @Override
+    public Optional<Goat> findByIdAndFarmIdWithFamilyGraph(String id, Long farmId) {
+        return goatRepository.findByIdAndFarmIdWithFamilyGraph(id, farmId);
+    }
+
+    @Override
     public void deleteById(String registrationNumber) {
         goatRepository.deleteById(registrationNumber);
     }

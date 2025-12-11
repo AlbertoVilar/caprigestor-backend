@@ -27,4 +27,25 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     @Transactional
     @Query(nativeQuery = true, value = "DELETE FROM cabras WHERE capril_id IN (SELECT c.id FROM capril c WHERE c.user_id != :adminId)")
     void deleteGoatsFromOtherUsers(@Param("adminId") Long adminId);
+
+    // Carregamento completo com JOIN FETCH para genealogia (pai/mãe, avós e bisavós)
+    @Query(
+        "SELECT g FROM Goat g " +
+        "LEFT JOIN FETCH g.father f " +
+        "LEFT JOIN FETCH f.father ff " +
+        "LEFT JOIN FETCH ff.father fff " +
+        "LEFT JOIN FETCH ff.mother ffm " +
+        "LEFT JOIN FETCH f.mother fm " +
+        "LEFT JOIN FETCH fm.father fmf " +
+        "LEFT JOIN FETCH fm.mother fmm " +
+        "LEFT JOIN FETCH g.mother m " +
+        "LEFT JOIN FETCH m.father mf " +
+        "LEFT JOIN FETCH mf.father mff " +
+        "LEFT JOIN FETCH mf.mother mfm " +
+        "LEFT JOIN FETCH m.mother mm " +
+        "LEFT JOIN FETCH mm.father mmf " +
+        "LEFT JOIN FETCH mm.mother mmm " +
+        "WHERE g.registrationNumber = :id AND g.farm.id = :farmId"
+    )
+    Optional<Goat> findByIdAndFarmIdWithFamilyGraph(@Param("id") String id, @Param("farmId") Long farmId);
 }

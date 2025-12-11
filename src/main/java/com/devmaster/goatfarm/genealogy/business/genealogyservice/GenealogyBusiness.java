@@ -47,7 +47,7 @@ public class GenealogyBusiness implements com.devmaster.goatfarm.application.por
             throw new DatabaseException("Genealogia já existe para o animal: " + goatId);
         }
 
-        Goat goat = goatPort.findByIdAndFarmId(goatId, farmId)
+        Goat goat = goatPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId + " na fazenda " + farmId));
 
         final Genealogy entity = genealogyMapper.toEntity(goat);
@@ -67,14 +67,29 @@ public class GenealogyBusiness implements com.devmaster.goatfarm.application.por
             throw new IllegalArgumentException("O ID da cabra na URL não corresponde ao ID da cabra no corpo da requisição.");
         }
 
-        Goat goat = goatPort.findByIdAndFarmId(goatId, farmId)
+        Goat goat = goatPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId + " na fazenda " + farmId));
 
-        Genealogy entity = genealogyMapper.toEntity(requestDTO);
+        // Se foram informados registros de pai/mãe no DTO, garantimos que o Goat em memória
+        // tenha as referências corretas para que o mapper construa toda a árvore de ancestrais.
+        try {
+            if (requestDTO.getFatherRegistration() != null && !requestDTO.getFatherRegistration().isBlank()) {
+                goatPort.findByRegistrationNumber(requestDTO.getFatherRegistration())
+                        .ifPresent(goat::setFather);
+            }
+            if (requestDTO.getMotherRegistration() != null && !requestDTO.getMotherRegistration().isBlank()) {
+                goatPort.findByRegistrationNumber(requestDTO.getMotherRegistration())
+                        .ifPresent(goat::setMother);
+            }
+        } catch (Exception e) {
+            throw new DatabaseException("Erro ao localizar parentes informados: " + e.getMessage());
+        }
+
+        // Monta a Genealogy completamente a partir do Goat (com pai/mãe preenchidos),
+        // permitindo que o mapper derive avós e bisavós automaticamente.
+        Genealogy entity = genealogyMapper.toEntity(goat);
         // Garante que a genealogia está associada à cabra correta
         entity.setGoatRegistration(goat.getRegistrationNumber());
-        // Se o mapper não preencher o objeto Goat na Genealogy, pode ser necessário setar manualmente
-        // entity.setGoat(goat);
 
         try {
             entity = genealogyPort.save(entity);

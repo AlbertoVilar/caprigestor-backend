@@ -13,7 +13,13 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface GoatMapper {
-
+    @Mapping(target = "fatherName", source = "father.name")
+    @Mapping(target = "fatherRegistrationNumber", source = "father.registrationNumber")
+    @Mapping(target = "motherName", source = "mother.name")
+    @Mapping(target = "motherRegistrationNumber", source = "mother.registrationNumber")
+    @Mapping(target = "userName", source = "user.name")
+    @Mapping(target = "farmId", source = "farm.id")
+    @Mapping(target = "farmName", source = "farm.name")
     GoatResponseVO toResponseVO(Goat entity);
 
     GoatResponseDTO toResponseDTO(GoatResponseVO vo);
@@ -24,7 +30,6 @@ public interface GoatMapper {
     // - 'id' é ignorado defensivamente, caso exista no VO e não na Entity Goat.
     // - 'registrationNumber' é a PK e deve ser mapeada do VO.
     // - 'user', 'farm', 'father', 'mother' são setados na camada Business.
-    @Mapping(target = "id", ignore = true) // Ignora 'id' se existir no VO, pois Goat usa registrationNumber como PK
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "farm", ignore = true)
     @Mapping(target = "father", ignore = true)
@@ -37,7 +42,6 @@ public interface GoatMapper {
     // - 'user', 'farm' são ignorados, pois não devem ser atualizados via VO aqui.
     // - Propriedades ambíguas (name, gender, etc.) são explicitamente mapeadas de 'vo'.
     // - 'father' e 'mother' são mapeados dos parâmetros.
-    @Mapping(target = "id", ignore = true) // Ignora 'id' se existir no VO
     @Mapping(target = "registrationNumber", ignore = true) // PK não deve ser atualizada via VO
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "farm", ignore = true)
