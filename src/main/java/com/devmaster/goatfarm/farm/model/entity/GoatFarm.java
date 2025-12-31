@@ -33,7 +33,7 @@ public class GoatFarm {
     private User user;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "address_id", referencedColumnName = "id")
+    @JoinColumn(name = "address_id", referencedColumnName = "id", unique = true)
     private Address address;
 
     @OneToMany(mappedBy = "goatFarm", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -63,4 +63,4 @@ public class GoatFarm {
         updatedAt = Instant.now();
     }
 }
-
+
