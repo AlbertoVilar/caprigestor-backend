@@ -32,8 +32,8 @@
 - [Pré-requisitos](#pré-requisitos)
 - [Instalação](#instalação)
 - [Configuração](#configuração)
-- [Uso](#como-usar)
 - [Perfis de Execução](#perfis-de-execução)
+- [Uso](#como-usar)
 - [Banco de Dados](#banco-de-dados)
 - [Segurança](#segurança)
 - [API](#api--documentação)
@@ -41,7 +41,7 @@
 - [Docker](#docker)
 - [Licença](#licença)
 - [Contato](#contato)
-- [Mensageria (RabbitMQ)](#-mensageria-de-eventos-rabbitmq)
+- [Mensageria](#-mensageria-de-eventos-rabbitmq)
 
 ---
 
@@ -51,7 +51,7 @@
 
 ### 🎯 Objetivo
 
-Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todos os aspectos de suas fazendas, desde o cadastro de animais até o rastreamento genealógico e controle de eventos.
+Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todos os aspectos de suas fazendas, desde o cadastro de animais até o rastreamento genealógico completo e controle de eventos.
 
 ---
 
@@ -64,21 +64,23 @@ Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todo
 - ✅ Gerenciamento de estábulos e locais
 
 ### 🐐 Gestão de Animais
-- ✅ Cadastro detalhado de caprinos com informações relevantes
-- ✅ Rastreamento genealógico (pai/mãe e ancestrais quando disponíveis)
-- ✅ Status e classificação: **PO, PC, PA**
+- ✅ Cadastro detalhado de caprinos com todas as informações relevantes
+- ✅ Rastreamento genealógico completo (pai, mãe, avós)
+- ✅ Visualização de árvore genealógica interativa
+- ✅ Status e categorização (PO, PA, PC)
 - ✅ Busca avançada e filtros
 
-### 🧬 Regras de Domínio (Genealogia + Classificação)
-Classificações:
-- **PO** — *Puro de Origem*
-- **PC** — *Puro por Cruza*
-- **PA** — *Puro por Avaliação*
+### 🧬 Regras de Negócio (Genealogia & Classificação)
 
-Regras:
-- Se **PO** ou **PC** ⇒ **pai e mãe são obrigatórios**
-- Se **PA** ⇒ **o sistema deve aceitar sem inserir pai e mãe** (pais podem ser desconhecidos)
-- **Pai/mãe podem ser de outra fazenda** (ex.: reprodutor comprado de fora)
+O sistema valida a genealogia com base na classificação do animal:
+
+| Classificação | Descrição | Exigência de Filiação |
+| :--- | :--- | :--- |
+| **PO** | *Puro de Origem* | 🔴 **Obrigatório** (Pai e Mãe) |
+| **PC** | *Puro por Cruza* | 🔴 **Obrigatório** (Pai e Mãe) |
+| **PA** | *Puro por Avaliação* | 🟢 **Opcional** (Permite cadastro sem filiação) |
+
+> **Nota:** Os genitores (pai/mãe) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminação externa.
 
 ### 🔐 Controle de Acesso
 - ✅ Autenticação JWT stateless
@@ -98,30 +100,31 @@ Regras:
 ## 🛠️ Tecnologias Utilizadas
 
 ### Core
-- **Java 21**
-- **Spring Boot 3.x**
-- **Spring Security**
-- **Spring Data JPA**
+- **Java 21** – Linguagem de programação moderna e robusta
+- **Spring Boot 3.x** – Framework principal para desenvolvimento
+- **Spring Security** – Segurança e controle de acesso
+- **Spring Data JPA** – Camada de persistência
 
 ### Banco de Dados
-- **PostgreSQL 16** – banco principal
-- **Flyway** – versionamento do schema
-- **H2 Database (opcional)** – apenas para **testes unitários isolados** (não recomendado para desenvolvimento diário)
+- **PostgreSQL 16** – Banco de dados relacional principal
+- **Flyway** – Controle de versionamento do schema
+- **Testcontainers** – Banco efêmero para testes de integração
+- **H2 Database** – Apenas para testes unitários isolados (opcional)
 
 ### Segurança
-- **JWT (JSON Web Tokens)**
-- **OAuth2**
+- **JWT (JSON Web Tokens)** – Autenticação stateless
+- **OAuth2** – Protocolo de autorização
 
 ### Documentação e Testes
-- **Swagger/OpenAPI**
-- **JUnit 5**
-- **Mockito**
-- **Testcontainers** – PostgreSQL efêmero para testes de integração (recomendado)
+- **Swagger/OpenAPI** – Documentação interativa da API
+- **JUnit 5** – Framework de testes
+- **Mockito** – Mocks para testes unitários
+- **Testcontainers** – Infraestrutura de testes robusta
 
 ### DevOps
-- **Docker**
-- **Docker Compose**
-- **Maven**
+- **Docker** – Containerização
+- **Docker Compose** – Orquestração de containers
+- **Maven** – Gerenciamento de dependências e build
 
 ---
 
@@ -131,10 +134,9 @@ O projeto segue a **arquitetura hexagonal** (ports & adapters), garantindo baixo
 
 ### 📦 Estrutura de Camadas
 
+```
 domain → application → infrastructure
-
-lua
-Copiar código
+```
 
 ### 🗂️ Módulos
 
@@ -157,16 +159,9 @@ Copiar código
   - DAO → Porta de Saída (Output Port)
   - Repository (implementado pelo DAO) → Adaptador de Saída (Driven Adapter)
 
-> "A arquitetura não está nos nomes das pastas, mas nas DEPENDÊNCIAS entre camadas." – Uncle Bob (Clean Architecture)  
-> "O objetivo é isolar a lógica de negócio. Como você organiza as pastas é detalhe de implementação." – Alistair Cockburn (Arquitetura Hexagonal)
-
-- Testabilidade: regras de negócio testadas sem Spring (ex.: `@ExtendWith(MockitoExtension.class)`), provando baixo acoplamento com infraestrutura.
-
 ---
 
 ## 🧭 Diagrama do Domínio (Mermaid)
-
-> Renderize este bloco com Mermaid. (Pode existir também em `docs/diagrams/domain.mmd`, se você mantiver essa pasta.)
 
 ```mermaid
 erDiagram
@@ -250,397 +245,243 @@ erDiagram
     string goat_registration_number FK
     int farm_id FK
   }
-🧩 Diagrama de Classes (Mermaid)
-Se você tiver arquivo standalone: docs/diagrams/class.mmd
+```
 
-mermaid
-Copiar código
+---
+
+## 🧩 Diagrama de Classes (Mermaid)
+
+```mermaid
 classDiagram
-     %% ========== MÓDULO FARM ==========
-     class GoatFarm {
-         +Long id
-         +String name
-         +Long ownerId
-         +Long addressId
-         +Instant createdAt
-         +Instant updatedAt
-     }
+    %% ========== MÓDULO FARM ==========
+    class GoatFarm {
+        +Long id
+        +String name
+        +Long ownerId
+        +Long addressId
+    }
 
-     class Address {
-         +Long id
-         +String street
-         +String number
-         +String neighborhood
-         +String city
-         +String state
-         +String zipcode
-         +String country
-     }
+    class Address {
+        +Long id
+        +String street
+        +String city
+        +String state
+    }
 
-     class Phone {
-         +Long id
-         +String number
-         +PhoneType type
-         +Long ownerId
-     }
+    class Phone {
+        +Long id
+        +String number
+        +PhoneType type
+    }
 
-     class PhoneType {
-         <<enumeration>>
-         MOBILE
-         LANDLINE
-     }
+    %% ========== MÓDULO AUTHORITY ==========
+    class User {
+        +Long id
+        +String email
+        +boolean enabled
+    }
 
-     class Stable {
-         +Long id
-         +String name
-         +Long farmId
-     }
+    class Role {
+        <<enumeration>>
+        ADMIN
+        OPERATOR
+    }
 
-     %% ========== MÓDULO AUTHORITY ==========
-     class User {
-         +Long id
-         +String username
-         +String email
-         -String password
-         +boolean enabled
-     }
+    %% ========== MÓDULO GOAT ==========
+    class Goat {
+        +String registrationNumber
+        +String name
+        +Gender gender
+        +GoatLifeStatus status
+        +GoatClassification classification
+    }
 
-     class Role {
-         <<enumeration>>
-         ADMIN
-         OPERATOR
-     }
+    class Gender {
+        <<enumeration>>
+        MALE
+        FEMALE
+    }
 
-     class UserRole {
-         +Long userId
-         +Role role
-     }
+    %% ========== RELACIONAMENTOS ==========
+    GoatFarm "1" --> "1" Address : possui
+    GoatFarm "1" --> "0..*" Phone : tem
+    GoatFarm "1" --> "0..*" Goat : gerencia
+    User "1" --> "0..*" GoatFarm : possui
+```
 
-     %% ========== MÓDULO GOAT ==========
-     class Goat {
-         +Long id
-         +Long farmId
-         +String registrationNumber
-         +String name
-         +Gender gender
-         +GoatLifeStatus status
-         +GoatClassification classification
-         +LocalDate birthDate
-         +Long fatherId
-         +Long motherId
-         +String notes
-     }
+---
 
-     class Gender {
-         <<enumeration>>
-         MALE
-         FEMALE
-     }
+## 📋 Pré-requisitos
 
-     class GoatLifeStatus {
-         <<enumeration>>
-         ACTIVE
-         INACTIVE
-         DECEASED
-     }
-
-     class GoatClassification {
-         <<enumeration>>
-         PO
-         PC
-         PA
-     }
-
-     %% ========== MÓDULO EVENTS ==========
-     class Event {
-         +Long id
-         +Long farmId
-         +Long goatId
-         +EventType type
-         +LocalDate eventDate
-         +String payload
-     }
-
-     class EventType {
-         <<enumeration>>
-         BIRTH
-         COVERAGE
-         PARTURITION
-         VACCINATION
-         WEIGHT
-         TREATMENT
-     }
-
-     %% ========== RELACIONAMENTOS ==========
-     GoatFarm "1" --> "1" Address : possui
-     GoatFarm "1" --> "0..*" Phone : tem
-     GoatFarm "1" --> "0..*" Stable : contém
-     GoatFarm "1" --> "0..*" Goat : gerencia
-
-     User "1" --> "0..*" GoatFarm : possui
-     User "1" --> "0..*" UserRole : tem
-     UserRole "*" --> "1" Role : referencia
-
-     Goat "0..1" --> "0..1" Goat : pai (fatherId)
-     Goat "0..1" --> "0..1" Goat : mãe (motherId)
-     Goat --> Gender : tem
-     Goat --> GoatLifeStatus : possui
-     Goat --> GoatClassification : classificação
-
-     Goat "1" --> "0..*" Event : registra
-     Event --> EventType : tipo
-     GoatFarm "1" --> "0..*" Event : monitora
-
-     note for Goat "Regras:\n- Se classification=PO ou PC: pai e mãe obrigatórios.\n- Se classification=PA: pai e mãe opcionais.\n- Pai/mãe podem ser de outra fazenda.\n- fatherId deve referenciar Goat com gender=MALE.\n- motherId deve referenciar Goat com gender=FEMALE."
-
-     note for Event "Invariantes:\n- farmId deve corresponder à fazenda do Goat.\n- goatId deve referenciar Goat válido.\n- payload varia conforme EventType."
-📋 Pré-requisitos
 Antes de começar, certifique-se de ter instalado:
 
-☕ Java 21 ou superior
+- ☕ **Java 21** ou superior
+- 🔧 **Maven 3.8+** (ou use o wrapper incluído)
+- 🐳 **Docker & Docker Compose** (obrigatório para banco de dados e mensageria)
+- 💻 **IDE**: IntelliJ IDEA, Eclipse ou VS Code
 
-🔧 Maven 3.8+ (ou use o wrapper incluído)
+---
 
-🐳 Docker & Docker Compose (recomendado)
+## 🚀 Instalação
 
-💻 IDE: IntelliJ IDEA, Eclipse ou VS Code
-
-🚀 Instalação
-1️⃣ Clone o repositório
-bash
-Copiar código
+1️⃣ **Clone o repositório**
+```bash
 git clone https://github.com/albertovilar/caprigestor-backend.git
 cd caprigestor-backend
-2️⃣ Subir infraestrutura (PostgreSQL + RabbitMQ + PgAdmin)
-Ajuste o caminho conforme seu projeto (ex.: docker/).
+```
 
-bash
-Copiar código
+2️⃣ **Subir infraestrutura (PostgreSQL + RabbitMQ)**
+```bash
 cd docker
 docker compose up -d
-Serviços:
+```
+> **Serviços:**
+> - PostgreSQL: `localhost:5432`
+> - RabbitMQ UI: `http://localhost:15672` (admin/admin)
+> - PgAdmin: `http://localhost:8081`
 
-PostgreSQL: localhost:5432
+---
 
-PgAdmin: http://localhost:8081
+## ⚙️ Configuração
 
-RabbitMQ UI: http://localhost:15672 (admin/admin)
+### Filosofia dos Perfis
+O projeto adota uma estratégia estrita de perfis para evitar configurações implícitas e garantir consistência entre ambientes.
 
-⚙️ Configuração
-🧩 Filosofia dos Perfis (sem confusão)
-A regra do projeto é:
+- **`default`**: Apenas configurações básicas (logging, jackson). **Não conecta ao banco.**
+- **`dev`**: Ambiente de desenvolvimento. Conecta ao **PostgreSQL local** e roda **Flyway**.
+- **`test`**: Ambiente de testes. Usa **Testcontainers** para subir um banco efêmero.
+- **`prod`**: Ambiente de produção. Configurações via variáveis de ambiente.
 
-default: apenas configurações cross-cutting (RabbitMQ, logging, etc.) e SEM datasource
+---
 
-dev: desenvolvimento real com PostgreSQL + Flyway
+## 💻 Perfis de Execução
 
-test: testes com PostgreSQL via Testcontainers + Flyway
+Para rodar a aplicação, você **DEVE** especificar o perfil ativo.
 
-prod: produção com variáveis de ambiente + Flyway
+| Perfil | Uso | Banco de Dados | Flyway | DDL Auto |
+|--------|-----|----------------|--------|----------|
+| `dev` | Desenvolvimento | PostgreSQL (Docker) | ✅ Habilitado | `validate` |
+| `test` | Testes Automatizados | Testcontainers | ✅ Habilitado | `validate` |
+| `prod` | Produção | PostgreSQL (AWS/Cloud) | ✅ Habilitado | `validate` |
+| `default` | Base | ❌ Nenhum | ❌ Desabilitado | `none` |
 
-✅ O objetivo é eliminar ambiguidades e impedir que H2 “roube” execuções por engano.
+### ▶️ Como Executar (Modo Dev)
 
-🧪 Perfis de Execução
-Perfil	Uso	Banco	Flyway	DDL
-default	base	nenhum	❌	none (ou equivalente)
-dev	desenvolvimento	PostgreSQL local	✅	validate
-test	testes	PostgreSQL (Testcontainers)	✅	validate
-prod	produção	PostgreSQL	✅	validate
-
-🔧 Como ativar
-bash
-Copiar código
+**Via Maven Wrapper (Recomendado):**
+```bash
 # Windows (PowerShell)
 ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 
 # Linux/Mac
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-💻 Como Usar
-Após iniciar, a API estará disponível em:
+```
 
-API: http://localhost:8080
+**Via JAR:**
+```bash
+java -jar target/CapriGestor-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
+```
 
-Swagger UI: http://localhost:8080/swagger-ui/index.html
+---
 
-🗄️ Banco de Dados
-✅ Política de dados (Padrão do projeto)
-Schema é 100% versionado por Flyway em src/main/resources/db/migration/
+## 💻 Como Usar
 
-Sem ddl-auto=update/create em qualquer perfil oficial
+Após iniciar com o perfil `dev`, a API estará disponível em:
 
-Seeds (se existirem) devem ser migrations V###__seed_*.sql
+- **API Base:** `http://localhost:8080/api`
+- **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
 
-import.sql não é usado (evita divergência silenciosa entre ambientes)
+> ⚠️ **Importante:** A maioria das operações requer autenticação via Bearer Token e os dados são isolados por `farmId`.
 
-📍 Perfil dev (PostgreSQL)
-Banco recomendado: caprigestor_dev
+---
 
-ddl-auto=validate
+## 🗄️ Banco de Dados
 
-spring.sql.init.mode=never
+### Versionamento (Flyway)
+Todo o schema do banco é gerenciado pelo **Flyway**.
+- Migrations em: `src/main/resources/db/migration`
+- O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
 
-spring.flyway.enabled=true
+### H2 Database
+O H2 **não é usado** como banco de desenvolvimento para evitar divergências de SQL. Ele é reservado estritamente para testes unitários muito específicos, se necessário.
 
-spring.flyway.locations=classpath:db/migration
+---
 
-spring.flyway.clean-disabled=true (proteção)
+## 🔐 Segurança
 
-Se você usa .env no Docker Compose, injete usuário/senha por variáveis de ambiente no application-dev.properties.
+- **OAuth2 + JWT:** Autenticação stateless robusta.
+- **Roles:**
+  - `ROLE_ADMIN`: Acesso total.
+  - `ROLE_OPERATOR`: Acesso operacional à fazenda vinculada.
+- **Header Obrigatório:**
+  ```http
+  Authorization: Bearer <seu-token-jwt>
+  ```
 
-🧪 Perfil test (Testcontainers)
-Banco PostgreSQL efêmero criado/destruído automaticamente
+---
 
-Flyway aplicando schema no container
+## 🧪 Testes
 
-Sem configuração manual de URL/credenciais
+Os testes de integração sobem a aplicação completa usando **Testcontainers** para garantir fidelidade ao ambiente real.
 
-⚠️ H2 pode existir apenas como perfil extra e explícito (ex.: test-h2) para testes unitários isolados — não é perfil oficial.
-
-🔐 Segurança
-🛡️ Autenticação e Autorização
-OAuth2 + JWT
-
-Roles típicas: ROLE_ADMIN, ROLE_OPERATOR
-
-Token stateless
-
-Header esperado
-http
-Copiar código
-Authorization: Bearer <seu-token-jwt>
-📡 API & Documentação
-Swagger UI: http://localhost:8080/swagger-ui/index.html
-
-Documentação Técnica Completa: DOCUMENTACAO_BACKEND.md
-
-⚠️ Importante: Operações são agregadas por farmId (evita vazamento entre fazendas).
-
-🧪 Testes
-▶️ Executar todos os testes
-bash
-Copiar código
+**Executar todos os testes:**
+```bash
 # Windows
 ./mvnw.cmd test
 
 # Linux/Mac
 ./mvnw test
-Características
-Banco: PostgreSQL via Testcontainers
+```
+> *Nota: É necessário ter o Docker rodando para que os Testcontainers funcionem.*
 
-Isolamento: banco efêmero por execução
+---
 
-Schema: carregado pelo Flyway
+## 🐳 Docker
 
-Requisito: Docker rodando
+Para subir todo o ecossistema (App + Banco + Mensageria):
 
-Executar testes específicos
-bash
-Copiar código
-./mvnw test -Dtest=GoatControllerTest
-🐳 Docker
-🚀 Subir serviços
-bash
-Copiar código
+```bash
 cd docker
 docker compose up -d
-📋 Serviços disponíveis
-Serviço	Porta	Descrição
-API	8080	Backend Spring Boot
-PostgreSQL	5432	Banco de dados
-PgAdmin	8081	Interface do PostgreSQL
-RabbitMQ	5672	AMQP
-RabbitMQ UI	15672	Painel do RabbitMQ
+```
 
-🛑 Parar serviços
-bash
-Copiar código
-docker compose down
-🗑️ Limpar volumes
-bash
-Copiar código
-docker compose down -v
-🔗 Links Relacionados
-🖥️ Frontend do CapriGestor
+| Serviço | Porta | Descrição |
+|---------|-------|-----------|
+| API | 8080 | Backend Spring Boot |
+| PostgreSQL | 5432 | Banco de Dados |
+| RabbitMQ | 5672 | Mensageria (AMQP) |
+| RabbitMQ UI | 15672 | Painel de Gestão |
+| PgAdmin | 8081 | Gestão Visual do Banco |
 
-📋 Documentação Técnica Completa
+---
 
-📄 Licença
-Este projeto ainda não possui licença definida. Até uma licença ser escolhida (por exemplo, MIT), todos os direitos permanecem reservados.
+## 📨 Mensageria de Eventos (RabbitMQ)
 
-👤 Contato
-José Alberto Vilar Pereira
+O sistema utiliza RabbitMQ para processamento assíncrono de eventos (nascimentos, atualizações), garantindo desacoplamento.
+
+- **Exchange:** `events-exchange`
+- **Fila:** `events-queue`
+- **Routing Key:** `event.created`
+
+Para monitorar, acesse o painel do RabbitMQ em `http://localhost:15672` (User/Pass: `admin`/`admin`).
+
+---
+
+## 📄 Licença
+
+Este projeto é proprietário. Todos os direitos reservados.
+
+---
+
+## 👤 Contato
+
+**José Alberto Vilar Pereira**
 
 📧 Email: albertovilar1@gmail.com
-
-💼 LinkedIn: https://www.linkedin.com/in/alberto-vilar-316725ab
-
-🐙 GitHub: https://github.com/albertovilar
-
-📸 Screenshots
-💡 Espaço reservado para capturas de tela, GIFs demonstrativos e observações sobre UX e integração.
+💼 LinkedIn: [Alberto Vilar](https://www.linkedin.com/in/alberto-vilar-316725ab)
+🐙 GitHub: [@albertovilar](https://github.com/albertovilar)
 
 <div align="center">
 Desenvolvido com ☕ e ❤️ por Alberto Vilar
 
 ⭐ Se este projeto foi útil para você, considere dar uma estrela!
-
 </div>
-📨 Mensageria de Eventos (RabbitMQ)
-Este projeto integra processamento assíncrono de eventos usando RabbitMQ, seguindo a Arquitetura Hexagonal (Portas e Adaptadores).
-
-Visão Geral
-Porta EventPublisher define o contrato de publicação de eventos.
-
-Adaptador RabbitMQEventPublisher publica eventos no exchange com confirmações (publisher confirms) e retornos (returns) habilitados.
-
-EventConsumer consome mensagens da fila e aciona o fluxo de negócio.
-
-EventMessage é o DTO padronizado para trafegar os dados de evento.
-
-Subir RabbitMQ
-Via Docker Compose: docker/docker-compose.yml
-
-No diretório docker/, execute: docker compose up -d
-
-UI: http://localhost:15672 (credenciais padrão: admin/admin)
-
-Executar em modo desenvolvimento
-Ative o perfil dev:
-
-Windows PowerShell: ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
-
-Linux/Mac: ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-
-Logs: conforme configurado no seu application-dev.properties (ex.: logging.file.name=logs/dev.log)
-
-Diagnóstico de Publicação/Consumo
-Ao publicar um evento, espere ver logs indicando:
-
-publicação com exchange + routingKey + ID do evento
-
-confirmação do broker (confirm)
-
-consumo pelo listener (EVENT RECEIVED FROM QUEUE)
-
-Se aparecer unroutable, verifique exchange/routingKey e binding da fila.
-
-Estrutura de Pacotes (mensageria)
-less
-Copiar código
-com.devmaster.goatfarm.events.messaging
-├── config        # RabbitTemplate, confirms/returns, listener config
-├── consumer      # EventConsumer (@RabbitListener)
-├── dto           # EventMessage
-└── publisher     # RabbitMQEventPublisher
-Notas
-Logs em arquivo ajudam troubleshooting (não versionar logs/).
-
-Confirmações e retornos do publisher ficam habilitados para facilitar diagnóstico.
-
-Copiar código
-
-
-
-
-
-
