@@ -356,24 +356,31 @@ O projeto adota uma estratégia estrita de perfis para evitar configurações im
 
 ## 💻 Perfis de Execução
 
-Para rodar a aplicação, você **DEVE** especificar o perfil ativo.
+O projeto está configurado para usar o perfil `dev` por padrão para facilitar o desenvolvimento.
 
 | Perfil | Uso | Banco de Dados | Flyway | DDL Auto |
 |--------|-----|----------------|--------|----------|
-| `dev` | Desenvolvimento | PostgreSQL (Docker) | ✅ Habilitado | `validate` |
+| `dev` | Desenvolvimento (Padrão) | PostgreSQL (Docker) | ✅ Habilitado | `validate` |
 | `test` | Testes Automatizados | Testcontainers | ✅ Habilitado | `validate` |
 | `prod` | Produção | PostgreSQL (AWS/Cloud) | ✅ Habilitado | `validate` |
 | `default` | Base | ❌ Nenhum | ❌ Desabilitado | `none` |
 
 ### ▶️ Como Executar (Modo Dev)
 
-**Via Maven Wrapper (Recomendado):**
+**Via Maven Wrapper (Simples):**
+O perfil `dev` é ativado automaticamente.
 ```bash
 # Windows (PowerShell)
-./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw.cmd spring-boot:run
 
 # Linux/Mac
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+./mvnw spring-boot:run
+```
+
+**Via Maven (Explícito):**
+Caso queira forçar um perfil específico:
+```bash
+./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 **Via JAR:**
