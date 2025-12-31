@@ -97,16 +97,10 @@ public class AddressBusiness implements com.devmaster.goatfarm.application.ports
 
     public Address findOrCreateAddressEntity(AddressRequestVO requestVO) {
         validateAddressData(requestVO);
-        Optional<Address> existing = addressPort.searchExactAddress(
-                requestVO.getStreet(),
-                requestVO.getNeighborhood(),
-                requestVO.getCity(),
-                requestVO.getState(),
-                requestVO.getZipCode()
-        );
-        if (existing.isPresent()) {
-            return existing.get();
-        }
+        // Alteração crítica: Não buscamos mais endereço existente para reutilizar.
+        // Como Address agora é dependente (orphanRemoval=true) da Farm, cada Farm deve ter sua própria instância de Address.
+        // Isso evita que a deleção de uma fazenda apague o endereço compartilhado por outra.
+        
         Address entity = addressMapper.toEntity(requestVO);
         return addressPort.save(entity);
     }
