@@ -645,7 +645,9 @@ docker compose up -d
 |---------|-------|-----------|
 | **API** | 8080 | Backend Spring Boot |
 | **PostgreSQL** | 5432 | Banco de dados |
-| **PgAdmin** | 5050 | Interface web para PostgreSQL |
+| **PgAdmin** | 8081 | Interface web para PostgreSQL |
+| **RabbitMQ** | 5672 | Mensageria (AMQP) |
+| **RabbitMQ UI** | 15672 | Painel de controle do RabbitMQ |
 
 ### 🛑 Parar serviços
 
@@ -709,13 +711,14 @@ Este projeto integra processamento assíncrono de eventos usando RabbitMQ, segui
 
 ### Subir RabbitMQ
 - Via Docker Compose: `docker/docker-compose.yml`.
-  - No diretório `docker/`, execute: `docker-compose up -d`.
-  - UI disponível em `http://localhost:15672` (credenciais conforme `.env.example`).
+  - No diretório `docker/`, execute: `docker compose up -d`.
+  - UI disponível em `http://localhost:15672` (credenciais: `admin`/`admin`).
 
 ### Executar em modo desenvolvimento
 - Ative o perfil `dev` com logs em arquivo e maior verbosidade:
-  - Windows PowerShell: `set SPRING_PROFILES_ACTIVE=dev; set SERVER_PORT=8080; .\mvnw.cmd spring-boot:run`
-  - Logs: gerados em `logs/dev.log` (não versionado).
+  - Windows PowerShell: `./mvnw.cmd spring-boot:run -D"spring-boot.run.profiles=dev"`
+  - Linux/Mac: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`
+  - Logs: gerados em `logs/application.log` (conforme configurado em `application-dev.properties`).
 
 ### Diagnóstico de Publicação/Consumo
 - Ao publicar um evento, espere ver no `logs/dev.log`:

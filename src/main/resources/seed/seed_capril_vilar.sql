@@ -50,88 +50,88 @@ ON CONFLICT (ddd, numero) DO NOTHING;
 
 -- BISAVÔS MATERNOS
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1403110395', 'NATAL DO JACOMÉ', 'MALE', 'SAANEN', 'Indefinida', '2010-01-01', 'ACTIVE',
+VALUES ('1403110395', 'NATAL DO JACOMÉ', 'MACHO', 'SAANEN', 'Indefinida', '2010-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1650112018', '12018 CAPRIMEL', 'FEMALE', 'SAANEN', 'Indefinida', '2012-01-01', 'ACTIVE',
+VALUES ('1650112018', '12018 CAPRIMEL', 'FEMEA', 'SAANEN', 'Indefinida', '2012-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('2104406006', 'HERE DO ANGICANO', 'MALE', 'SAANEN', 'Indefinida', '2006-01-01', 'ACTIVE',
+VALUES ('2104406006', 'HERE DO ANGICANO', 'MACHO', 'SAANEN', 'Indefinida', '2006-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('2114510040', 'TOPÁZIO DO CRS', 'FEMALE', 'SAANEN', 'Indefinida', '2010-01-01', 'ACTIVE',
+VALUES ('2114510040', 'TOPÁZIO DO CRS', 'FEMEA', 'SAANEN', 'Indefinida', '2010-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 -- BISAVÔS PATERNOS - LADO DO AVÔ
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1422911451', 'BALU DA CAPRIVAMA', 'MALE', 'SAANEN', 'Indefinida', '2013-01-01', 'ACTIVE',
+VALUES ('1422911451', 'BALU DA CAPRIVAMA', 'MACHO', 'SAANEN', 'Indefinida', '2013-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1422911408', 'COROA DA CAPRIVAMA', 'FEMALE', 'SAANEN', 'Indefinida', '2013-01-01', 'ACTIVE',
+VALUES ('1422911408', 'COROA DA CAPRIVAMA', 'FEMEA', 'SAANEN', 'Indefinida', '2013-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 -- BISAVÔS PATERNOS - LADO DA AVÓ
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1412811133', 'SHERIFF SAVANA', 'MALE', 'SAANEN', 'Indefinida', '2011-01-01', 'ACTIVE',
+VALUES ('1412811133', 'SHERIFF SAVANA', 'MACHO', 'SAANEN', 'Indefinida', '2011-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1418513119', 'JUCELISE DO JALILI', 'FEMALE', 'SAANEN', 'Indefinida', '2013-01-01', 'ACTIVE',
+VALUES ('1418513119', 'JUCELISE DO JALILI', 'FEMEA', 'SAANEN', 'Indefinida', '2013-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), NULL, NULL)
 ON CONFLICT (num_registro) DO NOTHING;
 
 -- AVÓS PATERNOS
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1422915618', 'PETRÓLEO CAPRIVAMAR', 'MALE', 'SAANEN', 'Indefinida', '2015-01-01', 'ACTIVE',
+VALUES ('1422915618', 'PETRÓLEO CAPRIVAMAR', 'MACHO', 'SAANEN', 'Indefinida', '2015-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1422911451', '1422911408')
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1422913470', 'BÉLGICA DA CAPRIVAMAR', 'FEMALE', 'SAANEN', 'Indefinida', '2013-01-01', 'ACTIVE',
+VALUES ('1422913470', 'BÉLGICA DA CAPRIVAMAR', 'FEMEA', 'SAANEN', 'Indefinida', '2013-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1412811133', '1418513119')
 ON CONFLICT (num_registro) DO NOTHING;
 
 -- AVÓS MATERNOS
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1650113018', 'JOSA CAPRIMEL', 'MALE', 'SAANEN', 'Indefinida', '2013-01-01', 'ACTIVE',
+VALUES ('1650113018', 'JOSA CAPRIMEL', 'MACHO', 'SAANEN', 'Indefinida', '2013-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1403110395', '1650112018')
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('2114513061', 'PANTALONA DO CRS', 'FEMALE', 'SAANEN', 'Indefinida', '2013-01-01', 'ACTIVE',
+VALUES ('2114513061', 'PANTALONA DO CRS', 'FEMEA', 'SAANEN', 'Indefinida', '2013-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '2104406006', '2114510040')
 ON CONFLICT (num_registro) DO NOTHING;
 
 -- PAIS
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1635717065', 'C.V.C SIGNOS PETROLEO', 'MALE', 'SAANEN', 'Indefinida', '2017-01-01', 'ACTIVE',
+VALUES ('1635717065', 'C.V.C SIGNOS PETROLEO', 'MACHO', 'SAANEN', 'Indefinida', '2017-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1422915618', '1422913470')
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('2114517012', 'NAIDE DO CRS', 'FEMALE', 'SAANEN', 'Indefinida', '2017-01-01', 'ACTIVE',
+VALUES ('2114517012', 'NAIDE DO CRS', 'FEMEA', 'SAANEN', 'Indefinida', '2017-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1650113018', '2114513061')
 ON CONFLICT (num_registro) DO NOTHING;
 
 -- FILHOS
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro, tod, toe, categoria)
-VALUES ('1643218012', 'XEQUE V DO CAPRIL VILAR', 'MALE', 'SAANEN', 'CHAMOISÉE', '2018-06-27', 'ACTIVE',
+VALUES ('1643218012', 'XEQUE V DO CAPRIL VILAR', 'MACHO', 'SAANEN', 'CHAMOISÉE', '2018-06-27', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1635717065', '2114517012', '16432', '18012', 'PO')
 ON CONFLICT (num_registro) DO NOTHING;
 
 INSERT INTO cabras (num_registro, nome, sexo, raca, cor, data_nascimento, status, capril_id, usuario_id, pai_num_registro, mae_num_registro)
-VALUES ('1643218013', 'IRMÃO DO XEQUE', 'MALE', 'SAANEN', 'CHAMOISÉE', '2020-01-01', 'ACTIVE',
+VALUES ('1643218013', 'IRMÃO DO XEQUE', 'MACHO', 'SAANEN', 'CHAMOISÉE', '2020-01-01', 'ATIVO',
         (SELECT id FROM capril WHERE name = 'Capril Vilar'), (SELECT id FROM users WHERE email = 'albertovilar1@gmail.com'), '1635717065', '2114517012')
 ON CONFLICT (num_registro) DO NOTHING;
 
