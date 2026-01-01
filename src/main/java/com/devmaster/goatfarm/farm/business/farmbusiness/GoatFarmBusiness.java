@@ -21,15 +21,12 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -189,8 +186,6 @@ public class GoatFarmBusiness {
         }
     }
 
-    // ... (outros métodos mantidos como estão)
-
     @Transactional(readOnly = true)
     public FarmPermissionsVO getFarmPermissions(Long farmId) {
         User current = ownershipService.getCurrentUser();
@@ -201,8 +196,7 @@ public class GoatFarmBusiness {
     }
 
     private void validateFullGoatFarmCreation(GoatFarmRequestVO farmVO, UserRequestVO userVO, AddressRequestVO addressVO, List<PhoneRequestVO> phoneVOs) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", request.getRequestURI());
+        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", null);
 
         if (farmVO == null) {
             validationError.addError("farm", "Dados da fazenda são obrigatórios.");

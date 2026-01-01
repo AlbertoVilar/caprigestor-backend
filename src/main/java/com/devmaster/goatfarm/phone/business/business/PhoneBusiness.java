@@ -9,14 +9,11 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.dao.PhoneDAO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.List;
@@ -111,8 +108,7 @@ public class PhoneBusiness {
     }
 
     private void validatePhoneData(PhoneRequestVO requestVO) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", request.getRequestURI());
+        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", null);
 
         if (requestVO.getNumber() == null || requestVO.getNumber().trim().isEmpty()) {
             validationError.addError("number", "Número do telefone é obrigatório");

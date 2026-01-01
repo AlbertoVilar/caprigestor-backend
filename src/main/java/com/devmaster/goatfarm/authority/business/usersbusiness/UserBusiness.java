@@ -10,12 +10,9 @@ import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.Set;
@@ -105,7 +102,7 @@ public class UserBusiness {
     @Transactional
     public void updatePassword(Long userId, String newPassword) {
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação", ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getRequestURI());
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação", null);
             ve.addError("password", "Senha é obrigatória e não pode estar em branco");
             throw new ValidationException(ve);
         }
@@ -116,7 +113,7 @@ public class UserBusiness {
     @Transactional
     public UserResponseVO updateRoles(Long userId, java.util.List<String> roles) {
         if (roles == null || roles.isEmpty()) {
-            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação", ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getRequestURI());
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação", null);
             ve.addError("roles", "É necessário informar ao menos uma role");
             throw new ValidationException(ve);
         }
@@ -138,8 +135,7 @@ public class UserBusiness {
     }
 
     private void validateUserData(UserRequestVO vo, boolean isCreation) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", request.getRequestURI());
+        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", null);
 
         if (isCreation) {
             if (vo.getName() == null || vo.getName().trim().isEmpty()) {

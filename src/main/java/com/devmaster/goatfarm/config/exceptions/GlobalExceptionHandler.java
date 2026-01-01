@@ -59,7 +59,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ValidationError> validation(ValidationException e, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(e.getValidationError());
+        ValidationError validationError = e.getValidationError();
+        validationError.setPath(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(validationError);
     }
 
     @ExceptionHandler(DuplicateEntityException.class)
