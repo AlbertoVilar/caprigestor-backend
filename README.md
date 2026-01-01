@@ -332,6 +332,26 @@ cd caprigestor-backend
 
 2️⃣ **Subir infraestrutura (PostgreSQL + RabbitMQ)**
 ```bash
+## 🧪 Testes
+
+O projeto possui uma suíte robusta de testes:
+
+- **Testes Unitários:** Cobrem as regras de negócio (`*Business`), isolados de dependências externas (banco, web).
+- **Testes de Integração:** Validam o fluxo completo, incluindo banco de dados e endpoints REST (`@SpringBootTest`).
+- **Arquitetura:** Testes que garantem a integridade da Arquitetura Hexagonal (dependências corretas entre camadas).
+
+Para executar os testes:
+```bash
+./mvnw clean test
+```
+
+---
+
+## 🐳 Docker
+
+Para subir o ambiente completo (Banco de Dados + RabbitMQ):
+
+```bash
 cd docker
 docker compose up -d
 ```
