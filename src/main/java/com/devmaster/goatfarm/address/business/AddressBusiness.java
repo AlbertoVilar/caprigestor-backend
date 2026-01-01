@@ -9,12 +9,9 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.util.List;
@@ -70,8 +67,7 @@ public class AddressBusiness implements com.devmaster.goatfarm.application.ports
 
 
     private void validateAddressData(AddressRequestVO requestVO) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", request.getRequestURI());
+        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação");
 
         if (requestVO.getZipCode() != null) {
             String cep = requestVO.getZipCode().replaceAll("[^0-9]", "");

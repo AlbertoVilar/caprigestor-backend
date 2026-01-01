@@ -51,7 +51,6 @@ public class OwnershipService {
     }
 
     private User getAuthenticatedEntity() {
-        jakarta.servlet.http.HttpServletRequest request = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes sra ? sra.getRequest() : null;
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String email = authentication.getName();
@@ -61,3 +60,4 @@ public class OwnershipService {
         throw new UnauthorizedException("Usuário não autenticado");
     }
 }
+

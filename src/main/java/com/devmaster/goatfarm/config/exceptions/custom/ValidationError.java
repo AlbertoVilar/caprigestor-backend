@@ -14,6 +14,10 @@ public class ValidationError extends CustomError {
         super(timestamp, status, error, path);
     }
 
+    public ValidationError(Instant timestamp, Integer status, String error) {
+        super(timestamp, status, error, null);
+    }
+
     public List<FieldMessage> getErrors() {
         return errors;
     }
@@ -24,3 +28,4 @@ public class ValidationError extends CustomError {
         errors.add(new FieldMessage(fieldName, message));
     }
 }
+
