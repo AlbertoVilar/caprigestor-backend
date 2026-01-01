@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.authority.api.controller;
+package com.devmaster.goatfarm.authority.api;
 
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;

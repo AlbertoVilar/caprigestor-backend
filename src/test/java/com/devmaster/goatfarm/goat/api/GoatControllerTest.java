@@ -1,5 +1,6 @@
-package com.devmaster.goatfarm.goat.api.controller;
+package com.devmaster.goatfarm.goat.api;
 
+import com.devmaster.goatfarm.goat.api.controller.GoatController;
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;

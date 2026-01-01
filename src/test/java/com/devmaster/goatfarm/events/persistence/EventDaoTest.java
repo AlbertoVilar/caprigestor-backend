@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.tests;
+package com.devmaster.goatfarm.events.persistence;
 
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;

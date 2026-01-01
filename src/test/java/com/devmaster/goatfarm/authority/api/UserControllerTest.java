@@ -1,5 +1,6 @@
-package com.devmaster.goatfarm.authority.api.controller;
+package com.devmaster.goatfarm.authority.api;
 
+import com.devmaster.goatfarm.authority.api.controller.UserController;
 import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
@@ -60,3 +61,4 @@ public class UserControllerTest {
                 .andExpect(status().isOk());
     }
 }
+

@@ -1,5 +1,6 @@
-package com.devmaster.goatfarm.authority.business.usersbusiness;
+package com.devmaster.goatfarm.authority.business;
 
+import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 // Removed unused imports
 // import org.springframework.web.context.request.RequestContextHolder;
 // import org.springframework.web.context.request.ServletRequestAttributes;
