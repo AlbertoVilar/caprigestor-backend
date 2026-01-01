@@ -81,7 +81,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void shouldHandleValidationException() {
-        ValidationError validationError = new ValidationError(java.time.Instant.now(), 422, "Erro de validação", "/api/test");
+        // Create ValidationError with NULL path (simulating Business layer output)
+        ValidationError validationError = new ValidationError(java.time.Instant.now(), 422, "Erro de validação", null);
         validationError.addError("field", "mensagem de erro");
         ValidationException exception = new ValidationException(validationError);
 
@@ -92,7 +93,7 @@ class GlobalExceptionHandlerTest {
         ValidationError body = response.getBody();
         assertEquals(422, body.getStatus());
         assertEquals("Erro de validação", body.getError());
-        assertEquals("/api/test", body.getPath());
+        assertEquals("/api/test", body.getPath()); // Verify path is populated from request
         assertTrue(body.getErrors().stream().anyMatch(e -> "field".equals(e.getFieldName()) && "mensagem de erro".equals(e.getMessage())));
     }
 }

@@ -22,9 +22,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+// Removed unused imports
+// import org.springframework.mock.web.MockHttpServletRequest;
+// import org.springframework.web.context.request.RequestContextHolder;
+// import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -52,10 +53,8 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // Preparar RequestContext para evitar IllegalStateException em validações internas
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-
+        // Removed RequestContextHolder setup
+        
         // Dados base
         goatFarm = new GoatFarm();
         goatFarm.setId(1L);
@@ -107,10 +106,11 @@ public class GoatBusinessTest {
         responseVO.setFarmId(goatFarm.getId());
     }
 
-    @AfterEach
-    void tearDown() {
-        RequestContextHolder.resetRequestAttributes();
-    }
+    // Removed tearDown
+    // @AfterEach
+    // void tearDown() {
+    //     RequestContextHolder.resetRequestAttributes();
+    // }
 
     @Test
     @DisplayName("Deve criar cabra com sucesso quando pai e mãe são nulos")

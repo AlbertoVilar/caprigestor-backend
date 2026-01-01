@@ -1,9 +1,10 @@
 package com.devmaster.goatfarm.authority.business.usersbusiness;
 
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.junit.jupiter.api.AfterEach;
+// Removed unused imports
+// import org.springframework.web.context.request.RequestContextHolder;
+// import org.springframework.web.context.request.ServletRequestAttributes;
+// import org.springframework.mock.web.MockHttpServletRequest;
+// import org.junit.jupiter.api.AfterEach;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
@@ -57,11 +58,8 @@ class UserBusinessTest {
 
     @BeforeEach
     void setUp() {
-        MockHttpServletRequest mockRequest = new MockHttpServletRequest();
-        mockRequest.setRequestURI("/api/users");
-        ServletRequestAttributes attributes = new ServletRequestAttributes(mockRequest);
-        RequestContextHolder.setRequestAttributes(attributes);
-
+        // Removed RequestContextHolder setup
+        
         userRequestVO = new UserRequestVO();
         userRequestVO.setName("João Silva");
         userRequestVO.setEmail("joao@email.com");
@@ -88,10 +86,11 @@ class UserBusinessTest {
         operatorRole.setAuthority("ROLE_OPERATOR");
     }
 
-    @AfterEach
-    void tearDown() {
-        RequestContextHolder.resetRequestAttributes();
-    }
+    // Removed tearDown method
+    // @AfterEach
+    // void tearDown() {
+    //    RequestContextHolder.resetRequestAttributes();
+    // }
 
     @Test
     @DisplayName("Deve criar usuário com sucesso quando não há duplicidade")
