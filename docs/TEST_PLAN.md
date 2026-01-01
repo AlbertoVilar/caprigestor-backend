@@ -2,9 +2,10 @@
 
 ## 1. Análise do Sistema
 
-### Arquitetura
+### Arquitetura e Organização
 O sistema segue uma arquitetura em camadas com forte influência de **Arquitetura Hexagonal (Ports & Adapters)**.
 - **Pontos Fortes**: Lógica de negócio centralizada em classes `*Business` (ex: `GoatFarmBusiness`, `GenealogyBusiness`), desacoplada da persistência direta.
+- **Estrutura de Testes (Novo)**: A estrutura de testes foi reorganizada para espelhar fielmente a estrutura de pacotes da aplicação principal (`src/main/java`), facilitando a localização e manutenção dos testes.
 - **Pontos de Atenção (Resolvido)**: O acoplamento indevido com a API Servlet (`RequestContextHolder`) nas classes de negócio foi removido. A responsabilidade de preencher o `path` nas exceções de validação foi movida para o `GlobalExceptionHandler`.
 
 ### Integridade de Dados
@@ -97,3 +98,40 @@ Para validar a integridade da refatoração e o funcionamento correto das exceç
 4.  **Verificar o corpo da resposta JSON**:
     - Deve conter o campo `"path": "/api/..."` (correspondente à rota chamada).
     - O campo `path` deve estar **preenchido corretamente** e nunca ser `null`.
+
+---
+
+## 6. Estrutura de Diretórios de Teste (Refatorada)
+
+A estrutura de testes foi padronizada para refletir a organização dos pacotes de produção (`src/main/java`), garantindo escalabilidade e facilidade de navegação.
+
+```text
+src/test/java/com/devmaster/goatfarm
+├── address
+│   ├── api         # Testes de Controller
+│   └── business    # Testes de Regras de Negócio
+├── authority
+│   ├── api         # Testes de Controller e Integração de Auth
+│   └── business    # Testes de UserBusiness
+├── config
+│   └── exceptions  # Testes de GlobalExceptionHandler
+├── events
+│   ├── api         # Testes de EventController
+│   └── persistence # Testes de Repositório/DAO
+├── farm
+│   ├── api         # Testes de GoatFarmController
+│   └── business    # Testes de GoatFarmBusiness
+├── genealogy
+│   ├── api         # Testes de GenealogyController
+│   └── business    # Testes de GenealogyBusiness
+├── goat
+│   ├── api         # Testes de GoatController
+│   └── business    # Testes de GoatBusiness
+├── integration     # Testes de Integração End-to-End
+│   ├── GoatFarmApplicationTests.java
+│   └── ValidationPathIntegrationTest.java
+├── phone
+│   ├── api         # Testes de PhoneController
+│   └── business    # Testes de PhoneBusiness
+└── security        # Testes de Segurança e Ownership
+```

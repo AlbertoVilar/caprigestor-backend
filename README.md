@@ -336,7 +336,7 @@ cd caprigestor-backend
 
 O projeto possui uma suíte robusta de testes:
 
-- **Testes Unitários:** Cobrem as regras de negócio (`*Business`), isolados de dependências externas (banco, web).
+- **Testes Unitários:** Cobrem as regras de negócio (`*Business`), isolados de dependências externas (banco, web). Organizados espelhando a estrutura de pacotes de `src/main`.
 - **Testes de Integração:** Validam o fluxo completo, incluindo banco de dados e endpoints REST (`@SpringBootTest`).
 - **Arquitetura:** Testes que garantem a integridade da Arquitetura Hexagonal (dependências corretas entre camadas).
 
