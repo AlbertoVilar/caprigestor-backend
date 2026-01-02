@@ -17,17 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GenealogyBusiness {
 
-    @Autowired
-    private GenealogyDAO genealogyDAO;
+    private final GenealogyDAO genealogyDAO;
+    private final GoatDAO goatDAO;
+    private final GenealogyMapper genealogyMapper;
+    private final OwnershipService ownershipService;
 
-    @Autowired
-    private GoatDAO goatDAO;
-
-    @Autowired
-    private GenealogyMapper genealogyMapper;
-
-    @Autowired
-    private OwnershipService ownershipService;
+    public GenealogyBusiness(GenealogyDAO genealogyDAO, GoatDAO goatDAO, GenealogyMapper genealogyMapper, OwnershipService ownershipService) {
+        this.genealogyDAO = genealogyDAO;
+        this.goatDAO = goatDAO;
+        this.genealogyMapper = genealogyMapper;
+        this.ownershipService = ownershipService;
+    }
 
     @Transactional(readOnly = true)
     public GenealogyResponseVO findGenealogy(Long farmId, String goatId) {
@@ -81,3 +81,4 @@ public class GenealogyBusiness {
         return genealogyMapper.toResponseVO(entity);
     }
 }
+

@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.authority.business.usersbusiness;
+package com.devmaster.goatfarm.authority.business;
 
 // Adicione aos imports existentes:
 import org.springframework.web.context.request.RequestContextHolder;
@@ -13,6 +13,7 @@ import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

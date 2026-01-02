@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.tests;
+package com.devmaster.goatfarm.integration;
 
 import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.model.entity.Event;
@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @Import(EventDao.class)
-public class EventDaoTest {
+public class EventDaoIntegrationTest {
 
     @Autowired
     private TestEntityManager entityManager;
@@ -51,3 +51,5 @@ public class EventDaoTest {
         assertThat(savedEvent.getDescription()).isEqualTo("Test Event");
     }
 }
+
+

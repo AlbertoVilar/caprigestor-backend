@@ -816,3 +816,49 @@ Esta documentação apresenta a arquitetura completa do backend do sistema GoatF
 - **Mapeamento automático** com MapStruct para reduzir código boilerplate
 
 O sistema está preparado para evolução e manutenção, seguindo boas práticas de desenvolvimento e arquitetura de software.
+## Mensageria de Eventos (RabbitMQ) e Arquitetura Hexagonal
+
+### Objetivo
+Delegar o processamento de eventos para um fluxo assíncrono, aumentando resiliência e desacoplamento entre camada de API e regras de negócio.
+
+### Arquitetura
+- Porta: `EventPublisher` (módulo de aplicação) — contrato para publicar eventos.
+- Adaptador: `RabbitMQEventPublisher` — implementação que envia para RabbitMQ.
+- Consumidor: `EventConsumer` — lê da fila e orquestra o `EventBusiness`.
+- DTO: `EventMessage` — representação serializada do evento.
+
+### Configuração Técnica
+- `RabbitMQConfig`:
+  - `RabbitTemplate` com `PublisherConfirmType.CORRELATED` (confirmação de publicação).
+  - `setPublisherReturns(true)` e `setMandatory(true)` (log para mensagens não roteadas).
+  - Callbacks de confirm e returns para troubleshooting.
+- Listener (`@RabbitListener`) consome e faz ACK imediato após processar.
+
+### Fluxo
+1. API recebe o comando/criação de evento.
+2. `EventPublisher` publica `EventMessage` no exchange com routingKey.
+3. Broker confirma publicação (`publish confirmed`).
+4. Fila roteia para o `EventConsumer`.
+5. `EventConsumer` processa e realiza ACK.
+
+### Observabilidade
+- Perfil `dev` com alta verbosidade e logs em arquivo `logs/dev.log`.
+- Mensagens esperadas:
+  - Publicação com `exchange`, `routingKey` e ID.
+  - `publish confirmed`.
+  - `EVENT RECEIVED FROM QUEUE`.
+  - Se `unroutable`, revisar exchange/binding.
+
+### Estrutura de Pacotes
+```
+com.devmaster.goatfarm.events.messaging
+├── config
+├── consumer
+├── dto
+└── publisher
+```
+
+### Execução
+- Suba RabbitMQ via `docker/docker-compose.yml`.
+- Rode a aplicação com `SPRING_PROFILES_ACTIVE=dev`.
+- Use os endpoints de eventos; verifique `logs/dev.log`.

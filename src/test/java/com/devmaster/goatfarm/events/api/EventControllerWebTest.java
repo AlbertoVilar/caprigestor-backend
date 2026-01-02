@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
+import com.devmaster.goatfarm.events.facade.EventFacade;
 
 @WebMvcTest(EventController.class)
 public class EventControllerWebTest {
@@ -15,7 +15,7 @@ public class EventControllerWebTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private EventManagementUseCase eventUseCase;
+    private EventFacade eventFacade;
 
     @Test
     void contextLoads() {

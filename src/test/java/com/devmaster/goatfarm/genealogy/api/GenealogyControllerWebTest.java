@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase;
+import com.devmaster.goatfarm.genealogy.facade.GenealogyFacade;
 
 @WebMvcTest(GenealogyController.class)
 public class GenealogyControllerWebTest {
@@ -15,7 +15,7 @@ public class GenealogyControllerWebTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private GenealogyManagementUseCase genealogyUseCase;
+    private GenealogyFacade genealogyFacade;
 
     @Test
     void contextLoads() {

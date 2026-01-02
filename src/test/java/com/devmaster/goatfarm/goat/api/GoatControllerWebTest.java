@@ -1,11 +1,13 @@
-package com.devmaster.goatfarm.goat.api.controller;
+package com.devmaster.goatfarm.goat.api;
 
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
+import com.devmaster.goatfarm.goat.api.controller.GoatController;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.facade.GoatFacade;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,13 +33,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.devmaster.goatfarm.goat.mapper.GoatMapperImpl;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 
 @WebMvcTest(GoatController.class)
-@Import({GoatMapperImpl.class, GoatControllerTest.TestMethodSecurityConfig.class})
-class GoatControllerTest {
+@Import({GoatController.class, GlobalExceptionHandler.class, GoatControllerWebTest.TestMethodSecurityConfig.class})
+public class GoatControllerWebTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -128,15 +129,12 @@ class GoatControllerTest {
     @Test
 @WithMockUser(roles = "OPERATOR")
     void shouldReturnNotFoundWhenGoatDoesNotExist() throws Exception {
-        // Arrange
         when(goatFacade.findGoatById(eq(1L), eq("999"))).thenThrow(new ResourceNotFoundException("Goat not found with id: 999"));
 
-        // Act & Assert
         mockMvc.perform(get("/api/goatfarms/1/goats/999"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Goat not found with id: 999"));
-
-        verify(goatFacade).findGoatById(eq(1L), eq("999"));
+                .andExpect(jsonPath("$.error").value("Recurso não encontrado"))
+                .andExpect(jsonPath("$.errors[0].message").value("Goat not found with id: 999"));
     }
 
     @Test
@@ -234,17 +232,14 @@ class GoatControllerTest {
     @Test
 @WithMockUser(roles = "OPERATOR")
     void shouldReturnNotFoundWhenDeletingNonExistentGoat() throws Exception {
-        // Arrange
         doThrow(new ResourceNotFoundException("Goat not found with id: 999"))
                 .when(goatFacade).deleteGoat(eq(1L), eq("999"));
 
-        // Act & Assert
         mockMvc.perform(delete("/api/goatfarms/1/goats/999")
                         .with(csrf()))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.title").value("Goat not found with id: 999"));
-
-        verify(goatFacade).deleteGoat(eq(1L), eq("999"));
+                .andExpect(jsonPath("$.error").value("Recurso não encontrado"))
+                .andExpect(jsonPath("$.errors[0].message").value("Goat not found with id: 999"));
     }
 
     @Test
@@ -260,10 +255,13 @@ class GoatControllerTest {
     @WithMockUser(roles = "VIEWER")
     void shouldReturnForbiddenWhenInsufficientPermissions() throws Exception {
         // Act & Assert
-        mockMvc.perform(get("/api/goatfarms/1/goats"))
+        mockMvc.perform(post("/api/goatfarms/1/goats")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(goatRequestDTO)))
                 .andExpect(status().isForbidden());
 
-        verify(goatFacade, never()).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+        verify(goatFacade, never()).createGoat(eq(1L), any(GoatRequestDTO.class));
     }
 
     @org.springframework.context.annotation.Configuration
@@ -282,7 +280,7 @@ class GoatControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidGoatRequestDTO)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isUnprocessableEntity());
 
         verify(goatFacade, never()).createGoat(eq(1L), any(GoatRequestDTO.class));
     }

@@ -18,20 +18,19 @@ public class AdminBusiness {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminBusiness.class);
 
-    @Autowired
-    private UserDAO userDAO;
+    private final UserDAO userDAO;
+    private final RoleDAO roleDAO;
+    private final RoleMapper roleMapper;
+    private final PasswordEncoder passwordEncoder;
+    private final AdminMaintenanceBusiness adminMaintenanceBusiness;
 
-    @Autowired
-    private RoleDAO roleDAO;
-
-    @Autowired
-    private RoleMapper roleMapper;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private AdminMaintenanceBusiness adminMaintenanceBusiness;
+    public AdminBusiness(UserDAO userDAO, RoleDAO roleDAO, RoleMapper roleMapper, PasswordEncoder passwordEncoder, AdminMaintenanceBusiness adminMaintenanceBusiness) {
+        this.userDAO = userDAO;
+        this.roleDAO = roleDAO;
+        this.roleMapper = roleMapper;
+        this.passwordEncoder = passwordEncoder;
+        this.adminMaintenanceBusiness = adminMaintenanceBusiness;
+    }
 
     public boolean updateUserPassword(String email, String newPassword) {
         User user = userDAO.findUserByEmail(email).orElse(null);

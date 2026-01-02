@@ -23,21 +23,18 @@ import java.util.stream.Collectors;
 @Service
 public class PhoneBusiness {
 
-    @Autowired
-    private PhoneDAO phoneDAO;
-    
-    @Autowired
-    private PhoneMapper phoneMapper;
-    
-    @Autowired
-    @Lazy
-    private GoatFarmDAO goatFarmDAO;
+    private final PhoneDAO phoneDAO;
+    private final PhoneMapper phoneMapper;
+    private final GoatFarmDAO goatFarmDAO;
+    private final OwnershipService ownershipService;
 
-    @Autowired
-    private OwnershipService ownershipService;
+    public PhoneBusiness(PhoneDAO phoneDAO, PhoneMapper phoneMapper, @Lazy GoatFarmDAO goatFarmDAO, OwnershipService ownershipService) {
+        this.phoneDAO = phoneDAO;
+        this.phoneMapper = phoneMapper;
+        this.goatFarmDAO = goatFarmDAO;
+        this.ownershipService = ownershipService;
+    }
     
-    // ... (outros métodos mantidos como estão)
-
     @Transactional
     public PhoneResponseVO createPhone(Long farmId, PhoneRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);

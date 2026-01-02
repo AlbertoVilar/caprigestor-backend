@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.authority.api;
 
 import com.devmaster.goatfarm.authority.api.controller.UserController;
-import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
+import com.devmaster.goatfarm.authority.facade.UserFacade;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
@@ -25,7 +25,7 @@ public class UserControllerWebTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private UserManagementUseCase userUseCase;
+    private UserFacade userFacade;
 
     @MockBean
     private UserMapper userMapper;
@@ -38,14 +38,6 @@ public class UserControllerWebTest {
     @WithMockUser(roles = "OPERATOR")
     public void whenGetUserById_thenReturns200() throws Exception {
         // Arrange: stub do use case e mapper
-        UserResponseVO vo = new UserResponseVO(
-                1L,
-                "Test User",
-                "test@example.com",
-                "12345678901",
-                java.util.List.of("ROLE_OPERATOR")
-        );
-
         UserResponseDTO dto = new UserResponseDTO();
         dto.setId(1L);
         dto.setName("Test User");
@@ -53,12 +45,14 @@ public class UserControllerWebTest {
         dto.setCpf("12345678901");
         dto.setRoles(java.util.List.of("ROLE_OPERATOR"));
 
-        when(userUseCase.findById(1L)).thenReturn(vo);
-        when(userMapper.toResponseDTO(any(UserResponseVO.class))).thenReturn(dto);
+        when(userFacade.findById(1L)).thenReturn(dto);
 
         // Act & Assert
         mockMvc.perform(get("/api/users/1"))
                 .andExpect(status().isOk());
     }
 }
+
+
+
 

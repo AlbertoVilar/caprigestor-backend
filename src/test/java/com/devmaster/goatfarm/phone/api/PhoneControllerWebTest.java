@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.devmaster.goatfarm.application.ports.in.PhoneManagementUseCase;
+import com.devmaster.goatfarm.phone.facade.PhoneFacade;
 
 @WebMvcTest(PhoneController.class)
 public class PhoneControllerWebTest {
@@ -15,7 +15,7 @@ public class PhoneControllerWebTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private PhoneManagementUseCase phoneUseCase;
+    private PhoneFacade phoneFacade;
 
     @Test
     void contextLoads() {

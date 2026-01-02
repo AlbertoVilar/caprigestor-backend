@@ -22,14 +22,15 @@ import java.util.stream.Collectors;
 @Transactional
 public class AddressBusiness {
 
-    @Autowired
-    private AddressDAO addressDAO;
+    private final AddressDAO addressDAO;
+    private final AddressMapper addressMapper;
+    private final OwnershipService ownershipService;
 
-    @Autowired
-    private AddressMapper addressMapper;
-
-    @Autowired
-    private OwnershipService ownershipService;
+    public AddressBusiness(AddressDAO addressDAO, AddressMapper addressMapper, OwnershipService ownershipService) {
+        this.addressDAO = addressDAO;
+        this.addressMapper = addressMapper;
+        this.ownershipService = ownershipService;
+    }
 
     public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);

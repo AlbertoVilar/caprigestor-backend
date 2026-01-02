@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.goat.business.goatbusiness;
+package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.authority.dao.UserDAO;
 import com.devmaster.goatfarm.authority.model.entity.User;
@@ -15,6 +15,7 @@ import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
