@@ -44,6 +44,7 @@ public class GoatBusiness {
 
     @Transactional
     public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
+
         ownershipService.verifyFarmOwnership(farmId);
 
         if (requestVO.getRegistrationNumber() != null && goatDAO.existsById(requestVO.getRegistrationNumber())) {
