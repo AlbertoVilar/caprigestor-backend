@@ -4,9 +4,11 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateFarmDTO;
+import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -17,10 +19,13 @@ import java.time.ZoneId;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
+import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 
-@Mapper(componentModel = "spring", uses = {PhoneMapper.class, UserMapper.class})
+@Mapper(componentModel = "spring", uses = {PhoneMapper.class, UserMapper.class, AddressMapper.class})
 public interface GoatFarmMapper {
+
+    GoatFarmFullRequestVO toFullRequestVO(GoatFarmFullRequestDTO dto);
 
     @Mapping(target = "address", expression = "java(toAddressDTO(vo))")
     @Mapping(target = "user", expression = "java(toUserDTO(vo))")

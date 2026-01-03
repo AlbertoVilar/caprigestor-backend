@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
@@ -87,7 +88,14 @@ public class AuthController {
         java.util.List<PhoneRequestVO> phoneVOs = farmRequest.getPhones() == null ? java.util.Collections.emptyList()
                 : farmRequest.getPhones().stream().map(phoneMapper::toRequestVO).toList();
 
-        GoatFarmFullResponseVO responseVO = farmUseCase.createFullGoatFarm(farmVO, userVO, addressVO, phoneVOs);
+        GoatFarmFullRequestVO fullRequestVO = GoatFarmFullRequestVO.builder()
+                .farm(farmVO)
+                .user(userVO)
+                .address(addressVO)
+                .phones(phoneVOs)
+                .build();
+
+        GoatFarmFullResponseVO responseVO = farmUseCase.createGoatFarm(fullRequestVO);
         return ResponseEntity.status(HttpStatus.CREATED).body(farmMapper.toFullDTO(responseVO));
     }
 }

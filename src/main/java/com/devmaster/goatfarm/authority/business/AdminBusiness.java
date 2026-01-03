@@ -17,19 +17,17 @@ public class AdminBusiness {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminBusiness.class);
 
-    @Autowired
-    private UserPersistencePort userPort;
+    private final UserPersistencePort userPort;
+    private final RolePersistencePort rolePort;
+    private final PasswordEncoder passwordEncoder;
+    private final AdminMaintenanceBusiness adminMaintenanceBusiness;
 
-    @Autowired
-    private RolePersistencePort rolePort;
-
-    // RoleMapper removido: roles são recuperadas via porta
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private AdminMaintenanceBusiness adminMaintenanceBusiness;
+    public AdminBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, PasswordEncoder passwordEncoder, AdminMaintenanceBusiness adminMaintenanceBusiness) {
+        this.userPort = userPort;
+        this.rolePort = rolePort;
+        this.passwordEncoder = passwordEncoder;
+        this.adminMaintenanceBusiness = adminMaintenanceBusiness;
+    }
 
     public boolean updateUserPassword(String email, String newPassword) {
         User user = userPort.findByEmail(email).orElse(null);

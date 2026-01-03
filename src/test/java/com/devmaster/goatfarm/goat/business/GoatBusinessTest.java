@@ -15,7 +15,6 @@ import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,10 +22,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-// Removed unused imports
-// import org.springframework.mock.web.MockHttpServletRequest;
-// import org.springframework.web.context.request.RequestContextHolder;
-// import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -54,8 +49,6 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // Removed RequestContextHolder setup
-        
         // Dados base
         goatFarm = new GoatFarm();
         goatFarm.setId(1L);
@@ -106,12 +99,6 @@ public class GoatBusinessTest {
         responseVO.setCategory(goat.getCategory());
         responseVO.setFarmId(goatFarm.getId());
     }
-
-    // Removed tearDown
-    // @AfterEach
-    // void tearDown() {
-    //     RequestContextHolder.resetRequestAttributes();
-    // }
 
     @Test
     @DisplayName("Deve criar cabra com sucesso quando pai e mãe são nulos")

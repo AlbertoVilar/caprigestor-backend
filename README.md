@@ -63,6 +63,18 @@ Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todo
 - ✅ Listagem e busca paginadas
 - ✅ Gerenciamento de estábulos e locais
 
+### 🛡️ GoatFarm Atomic Registration
+O sistema implementa um fluxo de registro estrito e atômico para garantir consistência e segurança:
+
+- **Domain Rule:** `GoatFarm` é o Aggregate Root. A criação de Fazenda, Endereço, Telefones e Usuário (no caso anônimo) é indivisível.
+- **Fluxo Atômico:** Uma única transação engloba todas as entidades. Se qualquer validação falhar, nada é persistido (Rollback total).
+- **Security & Privacy:**
+  - **Authenticated Flow:** Se o usuário já está logado, ele se torna automaticamente o *Owner*. Qualquer dado de usuário enviado no payload é ignorado para prevenir *Account Takeover*.
+  - **Anonymous Flow:** Cria automaticamente um novo usuário com `ROLE_USER`.
+    - Bloqueia envio de campos sensíveis (`roles`, `admin`, `id`).
+    - Se o e-mail já existe, retorna erro genérico para impedir *User Enumeration*.
+  - **Anti-Mass Assignment:** DTOs de entrada são blindados contra injeção de propriedades não autorizadas.
+
 ### 🐐 Gestão de Animais
 - ✅ Cadastro detalhado de caprinos com todas as informações relevantes
 - ✅ Rastreamento genealógico completo (pai, mãe, avós)

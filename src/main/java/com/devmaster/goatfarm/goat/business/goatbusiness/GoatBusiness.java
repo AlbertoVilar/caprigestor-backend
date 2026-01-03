@@ -41,6 +41,7 @@ public class GoatBusiness implements GoatManagementUseCase {
 
     @Transactional
     public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
+
         ownershipService.verifyFarmOwnership(farmId);
 
         if (requestVO.getRegistrationNumber() != null && goatPort.existsByRegistrationNumber(requestVO.getRegistrationNumber())) {

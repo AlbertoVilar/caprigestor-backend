@@ -22,14 +22,15 @@ import java.util.stream.Collectors;
 @Transactional
 public class AddressBusiness implements com.devmaster.goatfarm.application.ports.in.AddressManagementUseCase {
 
-    @Autowired
-    private AddressPersistencePort addressPort;
+    private final AddressPersistencePort addressPort;
+    private final AddressMapper addressMapper;
+    private final OwnershipService ownershipService;
 
-    @Autowired
-    private AddressMapper addressMapper;
-
-    @Autowired
-    private OwnershipService ownershipService;
+    public AddressBusiness(AddressPersistencePort addressPort, AddressMapper addressMapper, OwnershipService ownershipService) {
+        this.addressPort = addressPort;
+        this.addressMapper = addressMapper;
+        this.ownershipService = ownershipService;
+    }
 
     public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);

@@ -27,21 +27,19 @@ import java.util.stream.Collectors;
 @Service
 public class PhoneBusiness implements com.devmaster.goatfarm.application.ports.in.PhoneManagementUseCase {
 
-    @Autowired
-    private PhonePersistencePort phonePort;
-    
-    @Autowired
-    private PhoneMapper phoneMapper;
-    
-    @Autowired
-    @Lazy
-    private GoatFarmPersistencePort goatFarmPort;
+    private final PhonePersistencePort phonePort;
+    private final PhoneMapper phoneMapper;
+    private final GoatFarmPersistencePort goatFarmPort;
+    private final OwnershipService ownershipService;
 
     @Autowired
-    private OwnershipService ownershipService;
+    public PhoneBusiness(PhonePersistencePort phonePort, PhoneMapper phoneMapper, @Lazy GoatFarmPersistencePort goatFarmPort, OwnershipService ownershipService) {
+        this.phonePort = phonePort;
+        this.phoneMapper = phoneMapper;
+        this.goatFarmPort = goatFarmPort;
+        this.ownershipService = ownershipService;
+    }
     
-    // ... (outros métodos mantidos como estão)
-
     @Transactional
     public PhoneResponseVO createPhone(Long farmId, PhoneRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);

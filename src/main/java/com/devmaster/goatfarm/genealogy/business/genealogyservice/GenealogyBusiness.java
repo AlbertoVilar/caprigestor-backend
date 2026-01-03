@@ -17,17 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GenealogyBusiness implements com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase {
 
-    @Autowired
-    private GenealogyPersistencePort genealogyPort;
+    private final GenealogyPersistencePort genealogyPort;
+    private final GoatPersistencePort goatPort;
+    private final GenealogyMapper genealogyMapper;
+    private final OwnershipService ownershipService;
 
     @Autowired
-    private GoatPersistencePort goatPort;
-
-    @Autowired
-    private GenealogyMapper genealogyMapper;
-
-    @Autowired
-    private OwnershipService ownershipService;
+    public GenealogyBusiness(GenealogyPersistencePort genealogyPort, GoatPersistencePort goatPort, GenealogyMapper genealogyMapper, OwnershipService ownershipService) {
+        this.genealogyPort = genealogyPort;
+        this.goatPort = goatPort;
+        this.genealogyMapper = genealogyMapper;
+        this.ownershipService = ownershipService;
+    }
 
     @Transactional(readOnly = true)
     @Override
@@ -99,3 +100,5 @@ public class GenealogyBusiness implements com.devmaster.goatfarm.application.por
         return genealogyMapper.toResponseVO(entity);
     }
 }
+
+

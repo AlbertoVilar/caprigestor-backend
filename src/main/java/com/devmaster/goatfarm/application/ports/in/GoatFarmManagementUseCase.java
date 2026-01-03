@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
@@ -17,12 +18,7 @@ import java.util.List;
  */
 public interface GoatFarmManagementUseCase {
 
-    GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmVO,
-                                              UserRequestVO userVO,
-                                              AddressRequestVO addressVO,
-                                              List<PhoneRequestVO> phoneVOs);
-
-    GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO);
+    GoatFarmFullResponseVO createGoatFarm(GoatFarmFullRequestVO fullRequestVO);
 
     GoatFarmFullResponseVO updateGoatFarm(Long id,
                                           GoatFarmRequestVO farmVO,

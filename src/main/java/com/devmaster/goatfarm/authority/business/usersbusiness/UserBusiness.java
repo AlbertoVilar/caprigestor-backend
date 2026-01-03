@@ -33,8 +33,6 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ... (outros métodos mantidos como estão)
-
     @Transactional
     public UserResponseVO saveUser(UserRequestVO vo) {
         validateUserData(vo, true);
@@ -109,7 +107,7 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
         return userMapper.toResponseVO(updated);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserResponseVO getMe() {
         User current = getAuthenticatedEntity();
         return userMapper.toResponseVO(current);
@@ -213,8 +211,8 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
 
         if (vo.getRoles() != null) {
             for (String role : vo.getRoles()) {
-                if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR")) {
-                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
+                if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR") && !role.equals("ROLE_USER")) {
+                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR, ROLE_USER");
                 }
             }
         }
@@ -239,6 +237,7 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
 
     @Transactional
     public User findOrCreateUser(UserRequestVO vo) {
+        validateUserData(vo, true);
         return userPort.findByEmail(vo.getEmail())
                 .orElseGet(() -> {
                     User user = userMapper.toEntity(vo);
@@ -247,6 +246,11 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
                     user.setPassword(passwordEncoder.encode(vo.getPassword()));
                     return userPort.save(user);
                 });
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Optional<User> findUserByEmail(String email) {
+        return userPort.findByEmail(email);
     }
 
     private User getAuthenticatedEntity() {
@@ -259,3 +263,4 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
         throw new UnauthorizedException("Usuário não autenticado");
     }
 }
+

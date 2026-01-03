@@ -38,8 +38,6 @@ public class UserRequestDTO {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String confirmPassword;
 
-    @NotNull(message = "Roles sÃ£o obrigatÃ³rias")
-    @NotEmpty(message = "Pelo menos uma role deve ser selecionada")
     private List<String> roles; 
         public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -60,3 +58,4 @@ public class UserRequestDTO {
     public void setRoles(List<String> roles) { this.roles = roles; }
 }
 
+

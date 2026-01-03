@@ -2,8 +2,6 @@ package com.devmaster.goatfarm.farm.api.controller;
 
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
-import com.devmaster.goatfarm.farm.api.dto.GoatFarmRequestDTO;
-import com.devmaster.goatfarm.farm.api.dto.GoatFarmResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.FarmPermissionsDTO;
 import com.devmaster.goatfarm.application.ports.in.GoatFarmManagementUseCase;
@@ -45,26 +43,10 @@ public class GoatFarmController {
         this.phoneMapper = phoneMapper;
     }
 
-    @PostMapping("/full")
-    public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(@RequestBody GoatFarmFullRequestDTO requestDTO) {
-        var responseVO = farmUseCase.createFullGoatFarm(
-                farmMapper.toRequestVO(requestDTO.getFarm()),
-                userMapper.toRequestVO(requestDTO.getUser()),
-                addressMapper.toVO(requestDTO.getAddress()),
-                requestDTO.getPhones().stream().map(phoneMapper::toRequestVO).collect(java.util.stream.Collectors.toList())
-        );
-        return new ResponseEntity<>(farmMapper.toFullDTO(responseVO), HttpStatus.CREATED);
-    }
-
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
-    public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(@RequestBody @Valid GoatFarmRequestDTO requestDTO) {
-        try {
-            var responseVO = farmUseCase.createGoatFarm(farmMapper.toRequestVO(requestDTO));
-            return new ResponseEntity<>(farmMapper.toResponseDTO(responseVO), HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(e.getMessage());
-        }
+    public ResponseEntity<GoatFarmFullResponseDTO> createGoatFarm(@RequestBody @Valid GoatFarmFullRequestDTO requestDTO) {
+        var responseVO = farmUseCase.createGoatFarm(farmMapper.toFullRequestVO(requestDTO));
+        return new ResponseEntity<>(farmMapper.toFullDTO(responseVO), HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
