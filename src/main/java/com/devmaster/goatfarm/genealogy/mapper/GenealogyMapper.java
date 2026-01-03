@@ -4,7 +4,6 @@ import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyRequestVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -12,64 +11,23 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface GenealogyMapper {
 
-    @Mapping(target = "goatName", source = "goatName")
-    @Mapping(target = "goatRegistration", source = "goatRegistration")
-    @Mapping(target = "breed", source = "goatBreed")
-    @Mapping(target = "color", source = "goatCoatColor")
-    @Mapping(target = "status", source = "goatStatus")
-    @Mapping(target = "gender", source = "goatSex")
-    @Mapping(target = "category", source = "goatCategory")
-    @Mapping(target = "tod", source = "goatTOD")
-    @Mapping(target = "toe", source = "goatTOE")
-    @Mapping(target = "birthDate", source = "goatBirthDate")
-    @Mapping(target = "breeder", source = "goatCreator")
-    @Mapping(target = "farmOwner", source = "goatOwner")
-    GenealogyResponseVO toResponseVO(Genealogy entity);
-
     GenealogyResponseDTO toResponseDTO(GenealogyResponseVO vo);
 
     // Conversões para suportar VO na camada de caso de uso
     GenealogyRequestVO toRequestVO(GenealogyRequestDTO dto);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "goatBirthDate", ignore = true)
-    @Mapping(target = "goatBreed", ignore = true)
-    @Mapping(target = "goatCategory", ignore = true)
-    @Mapping(target = "goatCoatColor", ignore = true)
-    @Mapping(target = "goatCreator", ignore = true)
-    @Mapping(target = "goatOwner", ignore = true)
-    @Mapping(target = "goatSex", ignore = true)
-    @Mapping(target = "goatStatus", ignore = true)
-    @Mapping(target = "goatTOD", ignore = true)
-    @Mapping(target = "goatTOE", ignore = true)
-    Genealogy toEntity(GenealogyRequestDTO dto);
-
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "goatBirthDate", ignore = true)
-    @Mapping(target = "goatBreed", ignore = true)
-    @Mapping(target = "goatCategory", ignore = true)
-    @Mapping(target = "goatCoatColor", ignore = true)
-    @Mapping(target = "goatCreator", ignore = true)
-    @Mapping(target = "goatOwner", ignore = true)
-    @Mapping(target = "goatSex", ignore = true)
-    @Mapping(target = "goatStatus", ignore = true)
-    @Mapping(target = "goatTOD", ignore = true)
-    @Mapping(target = "goatTOE", ignore = true)
-    Genealogy toEntity(GenealogyRequestVO vo);
-
-    @Mapping(target = "id", ignore = true)
     @Mapping(target = "goatName", source = "name")
     @Mapping(target = "goatRegistration", source = "registrationNumber")
-    @Mapping(target = "goatBreed", expression = "java(goat.getBreed() != null ? goat.getBreed().toString() : null)")
-    @Mapping(target = "goatCoatColor", source = "color")
-    @Mapping(target = "goatStatus", expression = "java(goat.getStatus() != null ? goat.getStatus().toString() : null)")
-    @Mapping(target = "goatSex", expression = "java(goat.getGender() != null ? goat.getGender().toString() : null)")
-    @Mapping(target = "goatCategory", expression = "java(goat.getCategory() != null ? goat.getCategory().toString() : null)")
-    @Mapping(target = "goatTOD", source = "tod")
-    @Mapping(target = "goatTOE", source = "toe")
-    @Mapping(target = "goatBirthDate", expression = "java(goat.getBirthDate() != null ? goat.getBirthDate().toString() : null)")
-    @Mapping(target = "goatCreator", source = "user.name")
-    @Mapping(target = "goatOwner", source = "farm.user.name")
+    @Mapping(target = "breed", expression = "java(goat.getBreed() != null ? goat.getBreed().toString() : null)")
+    @Mapping(target = "color", source = "color")
+    @Mapping(target = "status", expression = "java(goat.getStatus() != null ? goat.getStatus().toString() : null)")
+    @Mapping(target = "gender", expression = "java(goat.getGender() != null ? goat.getGender().toString() : null)")
+    @Mapping(target = "category", expression = "java(goat.getCategory() != null ? goat.getCategory().toString() : null)")
+    @Mapping(target = "tod", source = "tod")
+    @Mapping(target = "toe", source = "toe")
+    @Mapping(target = "birthDate", expression = "java(goat.getBirthDate() != null ? goat.getBirthDate().toString() : null)")
+    @Mapping(target = "breeder", source = "user.name")
+    @Mapping(target = "farmOwner", source = "farm.user.name")
     @Mapping(target = "fatherName", expression = "java(goat.getFather() != null ? goat.getFather().getName() : null)")
     @Mapping(target = "fatherRegistration", expression = "java(goat.getFather() != null ? goat.getFather().getRegistrationNumber() : null)")
     @Mapping(target = "paternalGrandfatherName", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null ? goat.getFather().getFather().getName() : null)")
@@ -98,20 +56,5 @@ public interface GenealogyMapper {
     @Mapping(target = "maternalGreatGrandfather2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getFather() != null ? goat.getMother().getMother().getFather().getRegistrationNumber() : null)")
     @Mapping(target = "maternalGreatGrandmother2Name", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getName() : null)")
     @Mapping(target = "maternalGreatGrandmother2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getRegistrationNumber() : null)")
-    Genealogy toEntity(Goat goat);
-
-    /**
-     * Projeção sob demanda:
-     * Constrói o GenealogyResponseVO a partir de um Goat com grafo familiar carregado.
-     *
-     * <p>
-     * Reaproveita o mapeamento existente:
-     * Goat -> Genealogy (snapshot em memória) -> GenealogyResponseVO.
-     * Não persiste nada em banco.
-     * </p>
-     */
-    default GenealogyResponseVO toResponseVO(Goat goat) {
-        if (goat == null) return null;
-        return toResponseVO(toEntity(goat));
-    }
+    GenealogyResponseVO toResponseVO(Goat goat);
 }
