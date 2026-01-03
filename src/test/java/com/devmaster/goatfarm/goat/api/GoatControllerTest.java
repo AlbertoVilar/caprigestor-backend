@@ -33,10 +33,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 @org.springframework.boot.test.context.SpringBootTest
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = true)
 @Import({com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler.class})
+@ActiveProfiles("test")
 class GoatControllerTest {
 
     @Autowired
@@ -122,10 +124,10 @@ class GoatControllerTest {
                         .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].registrationNumber").value("001"))
-                .andExpect(jsonPath("$.name").value("Cabra Teste"))
-                .andExpect(jsonPath("$.breed").value("SAANEN"))
-                .andExpect(jsonPath("$.gender").value("FEMEA"))
-                .andExpect(jsonPath("$.status").value("ATIVO"))
+                .andExpect(jsonPath("$.content[0].name").value("Cabra Teste"))
+                .andExpect(jsonPath("$.content[0].breed").value("SAANEN"))
+                .andExpect(jsonPath("$.content[0].gender").value("FEMEA"))
+                .andExpect(jsonPath("$.content[0].status").value("ATIVO"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
         verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
