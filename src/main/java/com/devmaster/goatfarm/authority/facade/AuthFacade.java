@@ -78,7 +78,8 @@ public class AuthFacade {
     }
 
     public GoatFarmFullResponseDTO registerFarm(GoatFarmFullRequestDTO farmRequest) {
-        GoatFarmFullResponseDTO farmResponse = farmFacade.createFullGoatFarm(farmRequest);
+        GoatFarmFullResponseDTO farmResponse = farmFacade.createGoatFarm(farmRequest);
         return farmResponse;
     }
 }
+

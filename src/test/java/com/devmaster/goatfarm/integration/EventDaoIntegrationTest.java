@@ -4,6 +4,10 @@ import com.devmaster.goatfarm.events.dao.EventDao;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.events.model.repository.EventRepository;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +34,8 @@ public class EventDaoIntegrationTest {
     public void whenSaveEvent_thenEventIsSaved() {
         User user = new User();
         user.setName("Test User");
-        user.setEmail("test@example.com");
-        user.setCpf("12345678900");
+        user.setEmail("test_integration@example.com");
+        user.setCpf("12345678999");
         user.setPassword("password");
         entityManager.persist(user);
 
@@ -40,9 +44,21 @@ public class EventDaoIntegrationTest {
         farm.setUser(user);
         entityManager.persist(farm);
 
+        Goat goat = new Goat();
+        goat.setRegistrationNumber("GOAT-123");
+        goat.setName("Test Goat");
+        goat.setGender(Gender.FEMEA);
+        goat.setBirthDate(java.time.LocalDate.now());
+        goat.setStatus(GoatStatus.ATIVO);
+        goat.setFarm(farm);
+        goat.setUser(user);
+        entityManager.persist(goat);
+
         Event event = new Event();
         event.setDescription("Test Event");
-        // event.setGoat(goat); // Supondo que a entidade Goat também seja criada e persistida
+        event.setDate(java.time.LocalDate.now());
+        event.setEventType(EventType.PARTO);
+        event.setGoat(goat); 
         
         Event savedEvent = eventDao.saveEvent(event);
         
@@ -51,5 +67,9 @@ public class EventDaoIntegrationTest {
         assertThat(savedEvent.getDescription()).isEqualTo("Test Event");
     }
 }
+
+
+
+
 
 

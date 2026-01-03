@@ -30,19 +30,10 @@ public class GoatFarmFacade {
     @Autowired
     private PhoneMapper phoneMapper;
 
-    public GoatFarmFullResponseDTO createFullGoatFarm(GoatFarmFullRequestDTO requestDTO) {
-        return farmMapper.toFullDTO(farmBusiness.createFullGoatFarm(
-                farmMapper.toRequestVO(requestDTO.getFarm()),
-                userMapper.toRequestVO(requestDTO.getUser()),
-                addressMapper.toVO(requestDTO.getAddress()),
-                requestDTO.getPhones().stream()
-                        .map(phoneMapper::toRequestVO)
-                        .collect(java.util.stream.Collectors.toList())
+    public GoatFarmFullResponseDTO createGoatFarm(GoatFarmFullRequestDTO requestDTO) {
+        return farmMapper.toFullDTO(farmBusiness.createGoatFarm(
+                farmMapper.toFullRequestVO(requestDTO)
         ));
-    }
-
-    public GoatFarmResponseDTO createGoatFarm(GoatFarmRequestDTO requestDTO) {
-        return farmMapper.toResponseDTO(farmBusiness.createGoatFarm(farmMapper.toRequestVO(requestDTO)));
     }
 
     public GoatFarmFullResponseDTO updateGoatFarm(Long id, GoatFarmUpdateRequestDTO requestDTO) {
@@ -80,3 +71,5 @@ public class GoatFarmFacade {
         return dto;
     }
 }
+
+

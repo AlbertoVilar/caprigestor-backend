@@ -33,8 +33,6 @@ public class UserBusiness {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ... (outros métodos mantidos como estão)
-
     @Transactional
     public UserResponseVO saveUser(UserRequestVO vo) {
         validateUserData(vo, true);
@@ -84,7 +82,7 @@ public class UserBusiness {
         return userDAO.updateUser(userId, vo, encryptedPassword, resolvedRoles);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserResponseVO getMe() {
         return userDAO.getMe();
     }
@@ -164,8 +162,8 @@ public class UserBusiness {
 
         if (vo.getRoles() != null) {
             for (String role : vo.getRoles()) {
-                if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR")) {
-                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR");
+                if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR") && !role.equals("ROLE_USER")) {
+                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR, ROLE_USER");
                 }
             }
         }
@@ -190,6 +188,9 @@ public class UserBusiness {
 
     @Transactional
     public User findOrCreateUser(UserRequestVO vo) {
+        // Valida dados básicos antes de prosseguir (senha, cpf, etc)
+        validateUserData(vo, true);
+        
         return userDAO.findUserByEmail(vo.getEmail())
                 .orElseGet(() -> {
                     User user = userMapper.toEntity(vo);
@@ -198,5 +199,9 @@ public class UserBusiness {
                     user.setPassword(passwordEncoder.encode(vo.getPassword()));
                     return userDAO.save(user);
                 });
+    }
+
+    public java.util.Optional<User> findUserByEmail(String email) {
+        return userDAO.findUserByEmail(email);
     }
 }

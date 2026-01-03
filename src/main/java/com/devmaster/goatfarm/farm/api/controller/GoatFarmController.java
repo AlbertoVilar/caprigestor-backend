@@ -25,19 +25,9 @@ public class GoatFarmController {
     @Autowired
     private GoatFarmFacade farmFacade;
 
-    @PostMapping("/full")
-    public ResponseEntity<GoatFarmFullResponseDTO> createFullGoatFarm(@RequestBody GoatFarmFullRequestDTO requestDTO) {
-        return new ResponseEntity<>(farmFacade.createFullGoatFarm(requestDTO), HttpStatus.CREATED);
-    }
-
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
     @PostMapping
-    public ResponseEntity<GoatFarmResponseDTO> createGoatFarm(@RequestBody @Valid GoatFarmRequestDTO requestDTO) {
-        try {
-            return new ResponseEntity<>(farmFacade.createGoatFarm(requestDTO), HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException(e.getMessage());
-        }
+    public ResponseEntity<GoatFarmFullResponseDTO> createGoatFarm(@RequestBody @Valid GoatFarmFullRequestDTO requestDTO) {
+        return new ResponseEntity<>(farmFacade.createGoatFarm(requestDTO), HttpStatus.CREATED);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
@@ -76,3 +66,4 @@ public class GoatFarmController {
         return ResponseEntity.ok(farmFacade.getFarmPermissions(farmId));
     }
 }
+

@@ -5,11 +5,14 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
+import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.dao.GoatFarmDAO;
@@ -90,25 +93,39 @@ public class GoatFarmBusiness {
     }
 
     @Transactional
-    public GoatFarmResponseVO createGoatFarm(GoatFarmRequestVO requestVO) {
-        if (requestVO == null) {
-            throw new IllegalArgumentException("Dados da fazenda são obrigatórios.");
+    public GoatFarmFullResponseVO createGoatFarm(GoatFarmFullRequestVO fullRequestVO) {
+        validateGoatFarmCreation(fullRequestVO);
+
+        GoatFarmRequestVO farmVO = fullRequestVO.getFarm();
+        UserRequestVO userVO = fullRequestVO.getUser();
+        AddressRequestVO addressVO = fullRequestVO.getAddress();
+        List<PhoneRequestVO> phoneVOs = fullRequestVO.getPhones();
+
+        if (goatFarmDAO.existsByName(farmVO.getName())) {
+            throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmVO.getName() + "'.");
+        }
+        if (farmVO.getTod() != null && goatFarmDAO.existsByTod(farmVO.getTod())) {
+            throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
         }
 
-        if (goatFarmDAO.existsByName(requestVO.getName())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + requestVO.getName() + "'.");
-        }
-        if (requestVO.getTod() != null && goatFarmDAO.existsByTod(requestVO.getTod())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o código '" + requestVO.getTod() + "'.");
-        }
+        User owner = resolveOwner(userVO);
+        var addressEntity = addressBusiness.findOrCreateAddressEntity(addressVO);
 
-        GoatFarm entity = goatFarmMapper.toEntity(requestVO);
-        // Define o usuário atual como proprietário
-        User currentUser = ownershipService.getCurrentUser();
-        entity.setUser(currentUser);
+        GoatFarm farmEntity = goatFarmMapper.toEntity(farmVO);
+        farmEntity.setUser(owner);
+        farmEntity.setAddress(addressEntity);
 
-        GoatFarm saved = goatFarmDAO.save(entity);
-        return goatFarmMapper.toResponseVO(saved);
+        try {
+            GoatFarm savedFarm = goatFarmDAO.save(farmEntity);
+            phoneBusiness.createPhones(savedFarm.getId(), phoneVOs);
+            
+            // Recarrega para garantir relacionamentos atualizados
+            GoatFarm reloaded = goatFarmDAO.findFarmEntityById(savedFarm.getId());
+            return goatFarmMapper.toFullResponseVO(reloaded);
+        } catch (DataIntegrityViolationException e) {
+            // Mensagem genérica para o cliente, detalhe na causa (logs)
+            throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Não foi possível processar a solicitação devido a conflito de dados.", e);
+        }
     }
 
     @Transactional
@@ -155,37 +172,6 @@ public class GoatFarmBusiness {
         return goatFarmMapper.toFullResponseVO(reloaded);
     }
 
-    @Transactional
-    public GoatFarmFullResponseVO createFullGoatFarm(GoatFarmRequestVO farmVO,
-                                                     UserRequestVO userVO,
-                                                     AddressRequestVO addressVO,
-                                                     List<PhoneRequestVO> phoneVOs) {
-        validateFullGoatFarmCreation(farmVO, userVO, addressVO, phoneVOs);
-
-        if (goatFarmDAO.existsByName(farmVO.getName())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o nome '" + farmVO.getName() + "'.");
-        }
-        if (farmVO.getTod() != null && goatFarmDAO.existsByTod(farmVO.getTod())) {
-            throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
-        }
-
-        User owner = userBusiness.findOrCreateUser(userVO);
-        var addressEntity = addressBusiness.findOrCreateAddressEntity(addressVO);
-
-        GoatFarm farmEntity = goatFarmMapper.toEntity(farmVO);
-        farmEntity.setUser(owner);
-        farmEntity.setAddress(addressEntity);
-
-        try {
-            GoatFarm savedFarm = goatFarmDAO.save(farmEntity);
-            phoneBusiness.createPhones(savedFarm.getId(), phoneVOs);
-            GoatFarm reloaded = goatFarmDAO.findFarmEntityById(savedFarm.getId());
-            return goatFarmMapper.toFullResponseVO(reloaded);
-        } catch (DataIntegrityViolationException e) {
-            throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Erro ao criar fazenda: " + e.getMessage(), e);
-        }
-    }
-
     @Transactional(readOnly = true)
     public FarmPermissionsVO getFarmPermissions(Long farmId) {
         User current = ownershipService.getCurrentUser();
@@ -195,19 +181,58 @@ public class GoatFarmBusiness {
         return new FarmPermissionsVO(isAdmin || isOwner);
     }
 
-    private void validateFullGoatFarmCreation(GoatFarmRequestVO farmVO, UserRequestVO userVO, AddressRequestVO addressVO, List<PhoneRequestVO> phoneVOs) {
+    private User resolveOwner(UserRequestVO userVO) {
+        try {
+            // Tenta obter usuário autenticado
+            User currentUser = ownershipService.getCurrentUser();
+            // Se chegou aqui, existe usuário autenticado. Ele será o owner.
+            // Ignoramos userVO (ou poderíamos validar se bate, mas regra A diz "Owner é sempre user autenticado")
+            return currentUser;
+        } catch (UnauthorizedException e) {
+            // Fluxo anônimo (Registration)
+            // userVO validado em validateGoatFarmCreation
+            
+            // Validação estrita: Não pode definir roles
+            if (userVO.getRoles() != null && !userVO.getRoles().isEmpty()) {
+                throw new ValidationException(new ValidationError(Instant.now(), 400, "Não é permitido definir permissões (roles) no cadastro público.", null));
+            }
+
+            // Garante que não estamos vinculando a um usuário existente (Segurança/IDOR)
+            if (userBusiness.findUserByEmail(userVO.getEmail()).isPresent()) {
+                // Mensagem genérica para evitar enumeração de usuários
+                throw new DuplicateEntityException("Não foi possível completar o cadastro com os dados informados.");
+            }
+            
+            // Define role padrão ROLE_USER
+            userVO.setRoles(java.util.List.of("ROLE_USER"));
+            
+            // Cria novo usuário
+            return userBusiness.findOrCreateUser(userVO);
+        }
+    }
+
+    private void validateGoatFarmCreation(GoatFarmFullRequestVO fullRequestVO) {
         ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", null);
 
-        if (farmVO == null) {
+        if (fullRequestVO.getFarm() == null) {
             validationError.addError("farm", "Dados da fazenda são obrigatórios.");
         }
-        if (userVO == null) {
-            validationError.addError("user", "Dados do usuário são obrigatórios.");
+        
+        // Validação condicional do usuário
+        try {
+            ownershipService.getCurrentUser();
+            // Autenticado: userVO é opcional/ignorado
+        } catch (UnauthorizedException e) {
+            // Anônimo: userVO é obrigatório
+            if (fullRequestVO.getUser() == null) {
+                validationError.addError("user", "Dados do usuário são obrigatórios para cadastro público.");
+            }
         }
-        if (addressVO == null) {
+
+        if (fullRequestVO.getAddress() == null) {
             validationError.addError("address", "Dados de endereço são obrigatórios.");
         }
-        if (phoneVOs == null || phoneVOs.isEmpty()) {
+        if (fullRequestVO.getPhones() == null || fullRequestVO.getPhones().isEmpty()) {
             validationError.addError("phones", "É obrigatório informar ao menos um telefone.");
         }
 
