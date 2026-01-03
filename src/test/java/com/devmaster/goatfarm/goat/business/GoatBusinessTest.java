@@ -5,7 +5,6 @@ import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
@@ -35,7 +34,6 @@ public class GoatBusinessTest {
 
     @Mock private GoatPersistencePort goatPort;
     @Mock private GoatFarmPersistencePort goatFarmPort;
-    @Mock private GenealogyBusiness genealogyBusiness;
     @Mock private OwnershipService ownershipService;
     @Mock private GoatMapper goatMapper;
 
@@ -110,7 +108,6 @@ public class GoatBusinessTest {
         when(goatMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
         when(goatPort.save(any(Goat.class))).thenReturn(goat);
-        when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null);
         when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
 
         // ===== Act =====
@@ -138,7 +135,6 @@ public class GoatBusinessTest {
         verify(goatMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
-        verify(genealogyBusiness, times(1)).createGenealogy(1L, "164322002");
         verify(goatMapper, times(1)).toResponseVO(goat);
     }
 
@@ -175,7 +171,6 @@ public class GoatBusinessTest {
         when(goatMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
         when(goatPort.save(any(Goat.class))).thenReturn(goat);
-        when(genealogyBusiness.createGenealogy(1L, "164322002")).thenReturn(null);
         when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
 
         // ===== ACT =====
@@ -195,7 +190,7 @@ public class GoatBusinessTest {
         verify(goatMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
-        verify(genealogyBusiness, times(1)).createGenealogy(1L, "164322002");
         verify(goatMapper, times(1)).toResponseVO(goat);
     }
 }
+

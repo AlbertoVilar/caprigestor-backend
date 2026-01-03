@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Component
+@Profile("!test")
 public class AdminUserInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminUserInitializer.class);
@@ -59,8 +61,8 @@ public class AdminUserInitializer implements CommandLineRunner {
             
             userRepository.save(adminUser);
             
-            logger.info(">>> Senha do usuÃ¡rio Alberto Vilar atualizada com sucesso! <<<");
-            logger.info(">>> Email: albertovilar1@gmail.com | Senha: 132747 <<<");
+            logger.info(">>> Senha do usuário Alberto Vilar atualizada com sucesso! <<<");
+            logger.info(">>> Email: albertovilar1@gmail.com | Senha: (omitida) <<<");
         } else {
                         User adminUser = new User();
             adminUser.setName("Alberto Vilar");
@@ -73,8 +75,8 @@ public class AdminUserInitializer implements CommandLineRunner {
             
             userRepository.save(adminUser);
             
-            logger.info(">>> UsuÃ¡rio Alberto Vilar criado com sucesso! <<<");
-            logger.info(">>> Email: albertovilar1@gmail.com | Senha: 132747 <<<");
+            logger.info(">>> Usuário Alberto Vilar criado com sucesso! <<<");
+            logger.info(">>> Email: albertovilar1@gmail.com | Senha: (omitida) <<<");
         }
     }
     

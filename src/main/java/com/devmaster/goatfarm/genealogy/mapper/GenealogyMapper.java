@@ -1,8 +1,5 @@
 package com.devmaster.goatfarm.genealogy.mapper;
 
-import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
-import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
-import com.devmaster.goatfarm.genealogy.business.bo.GenealogyRequestVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import org.mapstruct.Mapper;
@@ -10,11 +7,6 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface GenealogyMapper {
-
-    GenealogyResponseDTO toResponseDTO(GenealogyResponseVO vo);
-
-    // Conversões para suportar VO na camada de caso de uso
-    GenealogyRequestVO toRequestVO(GenealogyRequestDTO dto);
 
     @Mapping(target = "goatName", source = "name")
     @Mapping(target = "goatRegistration", source = "registrationNumber")

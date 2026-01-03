@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.infrastructure.adapters.out.persistence;
 
+import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.goat.model.repository.GoatRepository;
 import org.springframework.data.domain.Page;
@@ -15,7 +18,7 @@ import java.util.Optional;
  * Implementa a porta de saída GoatPersistencePort usando Spring Data JPA
  */
 @Component
-public class GoatPersistenceAdapter implements GoatPersistencePort {
+public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyQueryPort {
 
     private final GoatRepository goatRepository;
 

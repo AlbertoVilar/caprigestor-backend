@@ -11,7 +11,6 @@ import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.genealogy.business.genealogyservice.GenealogyBusiness;
 import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -25,23 +24,20 @@ import java.util.Optional;
 public class GoatBusiness implements GoatManagementUseCase {
     private final GoatPersistencePort goatPort;
     private final GoatFarmPersistencePort goatFarmPort;
-    private final GenealogyBusiness genealogyBusiness;
     private final OwnershipService ownershipService;
     private final GoatMapper goatMapper;
 
     @Autowired
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
-                        GenealogyBusiness genealogyBusiness, OwnershipService ownershipService, GoatMapper goatMapper) {
+                        OwnershipService ownershipService, GoatMapper goatMapper) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
-        this.genealogyBusiness = genealogyBusiness;
         this.ownershipService = ownershipService;
         this.goatMapper = goatMapper;
     }
 
     @Transactional
     public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
-
         ownershipService.verifyFarmOwnership(farmId);
 
         if (requestVO.getRegistrationNumber() != null && goatPort.existsByRegistrationNumber(requestVO.getRegistrationNumber())) {
@@ -61,10 +57,6 @@ public class GoatBusiness implements GoatManagementUseCase {
         goat.setMother(mother);
         
         Goat savedGoat = goatPort.save(goat);
-
-        if (savedGoat.getRegistrationNumber() != null) {
-            genealogyBusiness.createGenealogy(farmId, savedGoat.getRegistrationNumber());
-        }
 
         return goatMapper.toResponseVO(savedGoat);
     }
@@ -116,3 +108,4 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 }
 
+
