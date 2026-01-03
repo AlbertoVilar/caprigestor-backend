@@ -513,15 +513,6 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
         *   **Descrição:** Busca a genealogia de uma cabra específica em uma fazenda.
         *   **Path Variables:** `farmId` (Long), `goatId` (String)
         *   **Response:** `GenealogyResponseDTO`
-    *   `POST /api/goatfarms/{farmId}/goats/{goatId}/genealogies`
-        *   **Descrição:** **(DEPRECATED)** Cria a genealogia para uma cabra específica em uma fazenda (gerada automaticamente a partir dos dados da cabra). Mantido para compatibilidade retroativa.
-        *   **Path Variables:** `farmId` (Long), `goatId` (String)
-        *   **Response:** `GenealogyResponseDTO`
-    *   `POST /api/goatfarms/{farmId}/goats/{goatId}/genealogies/with-data`
-        *   **Descrição:** **(DEPRECATED)** Cria a genealogia para uma cabra específica em uma fazenda, fornecendo dados detalhados. Mantido para compatibilidade retroativa, mas não persiste dados.
-        *   **Path Variables:** `farmId` (Long), `goatId` (String)
-        *   **Request Body:** `GenealogyRequestDTO`
-        *   **Response:** `GenealogyResponseDTO`
 
 ## 5. Segurança
 

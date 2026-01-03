@@ -156,7 +156,7 @@ domain → application → infrastructure
 |--------|-----------|
 | **goat** | Regras de negócio e acesso a dados de caprinos |
 | **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
-| **genealogy** | Relacionamento e linhagem (ascendência/descendência) |
+| **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
 | **farm** | Entidades e serviços de fazendas/estábulos/locais |
 | **authority** | Autenticação, autorização, usuários e papéis |
 | **shared** | Utilitários, DTOs comuns, exceções e infra compartilhada |
@@ -166,10 +166,10 @@ domain → application → infrastructure
 - Princípios: inversão de dependências, isolamento do domínio e Portas & Adaptadores.
 - Convenção pragmática de nomes mapeada para hexagonal:
   - Controller → Adaptador de Entrada (Driving Adapter)
-  - Facade → Porta de Entrada (Input Port)
-  - Business → Serviço de Aplicação/Domínio
-  - DAO → Porta de Saída (Output Port)
-  - Repository (implementado pelo DAO) → Adaptador de Saída (Driven Adapter)
+  - UseCase / Port → Porta de Entrada (Input Port)
+  - Business → Serviço de Aplicação (Implementa Input Port)
+  - Output Port → Porta de Saída (Interface para Infraestrutura)
+  - Adapter / Repository → Adaptador de Saída (Driven Adapter)
 
 ---
 
