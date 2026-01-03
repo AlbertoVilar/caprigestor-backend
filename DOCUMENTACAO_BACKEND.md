@@ -118,9 +118,10 @@ O sistema GoatFarm utiliza uma arquitetura em camadas bem definida, seguindo os 
 - `@OneToMany` com `Genealogy`: Um animal pode ter múltiplos registros genealógicos
 
 ### Genealogy (Genealogia)
-**Propósito**: Registra informações genealógicas e linhagem dos animais.
+**Propósito**: Anteriormente registrava informações genealógicas.
+**Nota Importante**: O módulo de genealogia foi refatorado para funcionar como uma **Projeção sob Demanda (Read Model)**. A fonte da verdade agora são os relacionamentos diretos (`father`, `mother`) na entidade `Goat`. A entidade `Genealogy` e sua tabela correspondente não são mais utilizadas para persistência ativa.
 
-**Campos Principais**:
+**Campos Principais (Legacy)**:
 - `id`: Identificador único
 - `generation`: Geração na linhagem
 - `relationship`: Tipo de relacionamento (pai, mãe, avô, etc.)
@@ -515,11 +516,11 @@ Este documento detalha as alterações nos endpoints da API após a refatoraçã
         *   **Path Variables:** `farmId` (Long), `goatId` (String)
         *   **Response:** `GenealogyResponseDTO`
     *   `POST /api/goatfarms/{farmId}/goats/{goatId}/genealogies`
-        *   **Descrição:** Cria a genealogia para uma cabra específica em uma fazenda (gerada automaticamente a partir dos dados da cabra).
+        *   **Descrição:** **(DEPRECATED)** Cria a genealogia para uma cabra específica em uma fazenda (gerada automaticamente a partir dos dados da cabra). Mantido para compatibilidade retroativa.
         *   **Path Variables:** `farmId` (Long), `goatId` (String)
         *   **Response:** `GenealogyResponseDTO`
     *   `POST /api/goatfarms/{farmId}/goats/{goatId}/genealogies/with-data`
-        *   **Descrição:** Cria a genealogia para uma cabra específica em uma fazenda, fornecendo dados detalhados.
+        *   **Descrição:** **(DEPRECATED)** Cria a genealogia para uma cabra específica em uma fazenda, fornecendo dados detalhados. Mantido para compatibilidade retroativa, mas não persiste dados.
         *   **Path Variables:** `farmId` (Long), `goatId` (String)
         *   **Request Body:** `GenealogyRequestDTO`
         *   **Response:** `GenealogyResponseDTO`

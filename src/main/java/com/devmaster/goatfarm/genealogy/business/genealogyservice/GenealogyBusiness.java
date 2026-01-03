@@ -1,104 +1,102 @@
 package com.devmaster.goatfarm.genealogy.business.genealogyservice;
 
-import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.application.ports.out.GenealogyPersistencePort;
 import com.devmaster.goatfarm.genealogy.mapper.GenealogyMapper;
-import com.devmaster.goatfarm.genealogy.model.entity.Genealogy;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Serviço de negócio para Genealogia.
+ * <p>
+ * ATENÇÃO: Mudança Arquitetural
+ * O módulo de genealogia foi refatorado para funcionar como uma PROJEÇÃO SOB DEMANDA (Read Model).
+ * Não há mais persistência de entidade 'Genealogy'. A fonte da verdade é o agregado 'Goat'
+ * e seus relacionamentos (pai/mãe).
+ * </p>
+ */
 @Service
 public class GenealogyBusiness implements com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase {
 
-    private final GenealogyPersistencePort genealogyPort;
     private final GoatPersistencePort goatPort;
     private final GenealogyMapper genealogyMapper;
     private final OwnershipService ownershipService;
 
     @Autowired
-    public GenealogyBusiness(GenealogyPersistencePort genealogyPort, GoatPersistencePort goatPort, GenealogyMapper genealogyMapper, OwnershipService ownershipService) {
-        this.genealogyPort = genealogyPort;
+    public GenealogyBusiness(GoatPersistencePort goatPort, GenealogyMapper genealogyMapper, OwnershipService ownershipService) {
         this.goatPort = goatPort;
         this.genealogyMapper = genealogyMapper;
         this.ownershipService = ownershipService;
     }
 
+    /**
+     * Busca a genealogia de uma cabra.
+     * Agora opera como uma projeção (Query Use Case), montando a árvore genealógica
+     * a partir dos relacionamentos da entidade Goat.
+     */
     @Transactional(readOnly = true)
     @Override
     public GenealogyResponseVO findGenealogy(Long farmId, String goatId) {
-        return genealogyPort
-                .findByGoatRegistrationAndGoatFarmId(goatId, farmId)
+        // Validação de ownership já implícita na busca por farmId, mas mantemos consistência
+        // ownershipService.verifyFarmOwnership(farmId); // Opcional se a query já filtra
+
+        return goatPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
                 .map(genealogyMapper::toResponseVO)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Genealogia não encontrada para a cabra " + goatId + " na fazenda " + farmId));
+                        "Cabra não encontrada ou não pertence à fazenda informada: " + goatId));
     }
 
-    @Transactional
+    /**
+     * @deprecated Genealogia agora é uma projeção automática. Este método existe apenas para manter compatibilidade com o frontend.
+     * Retorna a projeção atual da genealogia sem persistir nada.
+     */
+    @Deprecated
+    @Transactional(readOnly = true)
     @Override
     public GenealogyResponseVO createGenealogy(Long farmId, String goatId) {
         ownershipService.verifyGoatOwnership(farmId, goatId);
-        if (genealogyPort.existsByGoatRegistration(goatId)) {
-            throw new DatabaseException("Genealogia já existe para o animal: " + goatId);
-        }
-
-        Goat goat = goatPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId + " na fazenda " + farmId));
-
-        final Genealogy entity = genealogyMapper.toEntity(goat);
-        genealogyPort.save(entity);
-        return genealogyMapper.toResponseVO(entity);
+        
+        // Comportamento simulado: apenas retorna a projeção existente
+        return findGenealogy(farmId, goatId);
     }
 
-    @Transactional
+    /**
+     * @deprecated Genealogia agora é uma projeção automática. Este método existe apenas para manter compatibilidade com o frontend.
+     * Simula a resposta esperada usando os dados fornecidos, mas NÃO persiste alterações.
+     */
+    @Deprecated
+    @Transactional(readOnly = true)
     @Override
     public GenealogyResponseVO createGenealogyWithData(Long farmId, String goatId, GenealogyRequestDTO requestDTO) {
         ownershipService.verifyGoatOwnership(farmId, goatId);
-        if (genealogyPort.existsByGoatRegistration(requestDTO.getGoatRegistration())) {
-            throw new DatabaseException("Genealogia já existe para o animal: " + requestDTO.getGoatRegistration());
-        }
-        // Verifica se o goatId da URL corresponde ao goatRegistration do DTO
+        
+        // Verifica consistência da URL
         if (!goatId.equals(requestDTO.getGoatRegistration())) {
             throw new IllegalArgumentException("O ID da cabra na URL não corresponde ao ID da cabra no corpo da requisição.");
         }
 
         Goat goat = goatPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId + " na fazenda " + farmId));
+                .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado: " + goatId));
 
-        // Se foram informados registros de pai/mãe no DTO, garantimos que o Goat em memória
-        // tenha as referências corretas para que o mapper construa toda a árvore de ancestrais.
-        try {
-            if (requestDTO.getFatherRegistration() != null && !requestDTO.getFatherRegistration().isBlank()) {
-                goatPort.findByRegistrationNumber(requestDTO.getFatherRegistration())
-                        .ifPresent(goat::setFather);
-            }
-            if (requestDTO.getMotherRegistration() != null && !requestDTO.getMotherRegistration().isBlank()) {
-                goatPort.findByRegistrationNumber(requestDTO.getMotherRegistration())
-                        .ifPresent(goat::setMother);
-            }
-        } catch (Exception e) {
-            throw new DatabaseException("Erro ao localizar parentes informados: " + e.getMessage());
+        // Simula a aplicação dos dados do DTO em memória para retornar o JSON esperado pelo front
+        // Nota: Isso NÃO salva no banco. Se o usuário quiser alterar pai/mãe, deve usar o endpoint de atualização de Goat.
+        if (requestDTO.getFatherRegistration() != null && !requestDTO.getFatherRegistration().isBlank()) {
+            goatPort.findByRegistrationNumber(requestDTO.getFatherRegistration())
+                    .ifPresent(goat::setFather);
+        }
+        if (requestDTO.getMotherRegistration() != null && !requestDTO.getMotherRegistration().isBlank()) {
+            goatPort.findByRegistrationNumber(requestDTO.getMotherRegistration())
+                    .ifPresent(goat::setMother);
         }
 
-        // Monta a Genealogy completamente a partir do Goat (com pai/mãe preenchidos),
-        // permitindo que o mapper derive avós e bisavós automaticamente.
-        Genealogy entity = genealogyMapper.toEntity(goat);
-        // Garante que a genealogia está associada à cabra correta
-        entity.setGoatRegistration(goat.getRegistrationNumber());
-
-        try {
-            entity = genealogyPort.save(entity);
-        } catch (Exception e) {
-            throw new DatabaseException("Erro ao persistir genealogia: " + e.getMessage());
-        }
-        return genealogyMapper.toResponseVO(entity);
+        return genealogyMapper.toResponseVO(goat);
     }
 }
+
 
 
