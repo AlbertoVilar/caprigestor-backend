@@ -2,21 +2,18 @@ package com.devmaster.goatfarm.address.business;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.application.ports.out.AddressPersistencePort;
 import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.application.ports.out.AddressPersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -120,7 +117,7 @@ public class AddressBusiness implements com.devmaster.goatfarm.application.ports
         );
 
         // Nomes completos (sem acentos para comparação normalizada)
-        java.util.Set<String> stateNamesNormalized = java.util.Set.of(
+        Set<String> stateNamesNormalized = java.util.Set.of(
                 "ACRE","ALAGOAS","AMAPA","AMAZONAS","BAHIA","CEARA","DISTRITO FEDERAL","ESPIRITO SANTO","GOIAS",
                 "MARANHAO","MATO GROSSO","MATO GROSSO DO SUL","MINAS GERAIS","PARA","PARAIBA","PARANA","PERNAMBUCO",
                 "PIAUI","RIO DE JANEIRO","RIO GRANDE DO NORTE","RIO GRANDE DO SUL","RONDONIA","RORAIMA","SANTA CATARINA",
