@@ -99,4 +99,19 @@ public interface GenealogyMapper {
     @Mapping(target = "maternalGreatGrandmother2Name", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getName() : null)")
     @Mapping(target = "maternalGreatGrandmother2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getRegistrationNumber() : null)")
     Genealogy toEntity(Goat goat);
+
+    /**
+     * Projeção sob demanda:
+     * Constrói o GenealogyResponseVO a partir de um Goat com grafo familiar carregado.
+     *
+     * <p>
+     * Reaproveita o mapeamento existente:
+     * Goat -> Genealogy (snapshot em memória) -> GenealogyResponseVO.
+     * Não persiste nada em banco.
+     * </p>
+     */
+    default GenealogyResponseVO toResponseVO(Goat goat) {
+        if (goat == null) return null;
+        return toResponseVO(toEntity(goat));
+    }
 }
