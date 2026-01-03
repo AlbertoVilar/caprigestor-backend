@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </p>
  */
 @Service
-public class GenealogyBusiness implements com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase {
+public class GenealogyBusiness implements com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase, com.devmaster.goatfarm.application.ports.in.LegacyGenealogyUseCase {
 
     private final GoatPersistencePort goatPort;
     private final GenealogyMapper genealogyMapper;

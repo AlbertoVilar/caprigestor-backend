@@ -115,20 +115,15 @@ O sistema GoatFarm utiliza uma arquitetura em camadas bem definida, seguindo os 
 - `@ManyToOne` com `User`: Um animal tem um responsável
 - `@ManyToOne` com `Goat` (pai): Referência ao pai
 - `@ManyToOne` com `Goat` (mãe): Referência à mãe
-- `@OneToMany` com `Genealogy`: Um animal pode ter múltiplos registros genealógicos
 
 ### Genealogy (Genealogia)
-**Propósito**: Anteriormente registrava informações genealógicas.
-**Nota Importante**: O módulo de genealogia foi refatorado para funcionar como uma **Projeção sob Demanda (Read Model)**. A fonte da verdade agora são os relacionamentos diretos (`father`, `mother`) na entidade `Goat`. A entidade `Genealogy` e sua tabela correspondente não são mais utilizadas para persistência ativa.
+**Propósito**: Fornece uma **Projeção sob Demanda (Read Model)** da árvore genealógica de um animal.
+**Nota**: A persistência dedicada para genealogia (tabela `genealogia` e entidade `Genealogy`) foi removida. A fonte da verdade são os relacionamentos diretos (`father`, `mother`) na entidade `Goat`.
 
-**Campos Principais (Legacy)**:
-- `id`: Identificador único
-- `generation`: Geração na linhagem
-- `relationship`: Tipo de relacionamento (pai, mãe, avô, etc.)
-- `createdAt`, `updatedAt`: Timestamps de auditoria
+**Endpoints**:
+- `GET .../genealogies`: Retorna a árvore projetada.
+- `POST .../genealogies` (Deprecated): Mantido para compatibilidade.
 
-**Relacionamentos**:
-- `@ManyToOne` com `Goat`: Uma genealogia pertence a um animal
 
 ### Event (Evento)
 **Propósito**: Registra eventos relacionados aos animais (nascimento, vacinação, etc.).

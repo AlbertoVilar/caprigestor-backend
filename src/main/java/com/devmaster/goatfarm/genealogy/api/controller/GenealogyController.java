@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.genealogy.api.controller;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyRequestDTO;
 import com.devmaster.goatfarm.genealogy.api.dto.GenealogyResponseDTO;
 import com.devmaster.goatfarm.application.ports.in.GenealogyManagementUseCase;
+import com.devmaster.goatfarm.application.ports.in.LegacyGenealogyUseCase;
 import com.devmaster.goatfarm.genealogy.mapper.GenealogyMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,11 +19,13 @@ import org.springframework.web.bind.annotation.*;
 public class GenealogyController {
 
     private final GenealogyManagementUseCase genealogyUseCase;
+    private final LegacyGenealogyUseCase legacyGenealogyUseCase;
     private final GenealogyMapper genealogyMapper;
 
     @Autowired
-    public GenealogyController(GenealogyManagementUseCase genealogyUseCase, GenealogyMapper genealogyMapper) {
+    public GenealogyController(GenealogyManagementUseCase genealogyUseCase, LegacyGenealogyUseCase legacyGenealogyUseCase, GenealogyMapper genealogyMapper) {
         this.genealogyUseCase = genealogyUseCase;
+        this.legacyGenealogyUseCase = legacyGenealogyUseCase;
         this.genealogyMapper = genealogyMapper;
     }
 
@@ -37,7 +40,7 @@ public class GenealogyController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Operation(summary = "Criar genealogia (DEPRECATED)", description = "Este endpoint foi depreciado. A genealogia agora é gerada automaticamente. Mantido apenas para compatibilidade retroativa; retorna a projeção atual.", deprecated = true)
     public ResponseEntity<GenealogyResponseDTO> createGenealogy(@PathVariable Long farmId, @PathVariable String goatId) {
-        return new ResponseEntity<>(genealogyMapper.toResponseDTO(genealogyUseCase.createGenealogy(farmId, goatId)), HttpStatus.CREATED);
+        return new ResponseEntity<>(genealogyMapper.toResponseDTO(legacyGenealogyUseCase.createGenealogy(farmId, goatId)), HttpStatus.CREATED);
     }
 
     @Deprecated
@@ -45,6 +48,6 @@ public class GenealogyController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('OPERATOR')")
     @Operation(summary = "Criar genealogia com dados (DEPRECATED)", description = "Este endpoint foi depreciado. Para atualizar ancestrais, utilize a atualização da entidade Cabra. Este endpoint retorna uma simulação da projeção com os dados enviados, mas NÃO persiste alterações.", deprecated = true)
     public ResponseEntity<GenealogyResponseDTO> createGenealogyWithData(@PathVariable Long farmId, @PathVariable String goatId, @RequestBody GenealogyRequestDTO requestDTO) {
-        return new ResponseEntity<>(genealogyMapper.toResponseDTO(genealogyUseCase.createGenealogyWithData(farmId, goatId, requestDTO)), HttpStatus.CREATED);
+        return new ResponseEntity<>(genealogyMapper.toResponseDTO(legacyGenealogyUseCase.createGenealogyWithData(farmId, goatId, requestDTO)), HttpStatus.CREATED);
     }
 }

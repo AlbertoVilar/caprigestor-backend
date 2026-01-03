@@ -9,8 +9,4 @@ import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 public interface GenealogyManagementUseCase {
 
     GenealogyResponseVO findGenealogy(Long farmId, String goatId);
-
-    GenealogyResponseVO createGenealogy(Long farmId, String goatId);
-
-    GenealogyResponseVO createGenealogyWithData(Long farmId, String goatId, GenealogyRequestDTO requestDTO);
 }
