@@ -4,41 +4,44 @@
 Accepted
 
 ## Context
-O sistema permite o cadastro de fazendas (`GoatFarm`) tanto por usuários já autenticados quanto por usuários novos (anônimos). Anteriormente, a criação de entidades relacionadas (User, Address, Phones) poderia ocorrer de forma fragmentada ou não transacional, gerando inconsistência de dados e potenciais falhas de segurança (como *Privilege Escalation* ou *IDOR* - Insecure Direct Object References).
+The system allows farm registration (`GoatFarm`) by both authenticated users and new users (anonymous). Previously, the creation of related entities (User, Address, Phones) could occur in a fragmented or non-transactional manner, leading to data inconsistency and potential security flaws (such as *Privilege Escalation* or *IDOR* - Insecure Direct Object References).
 
-O requisito de negócio define que `GoatFarm` é o **Aggregate Root** e sua existência está intrinsecamente ligada a um `User` (proprietário), um `Address` e `Phones`.
+The business requirement defines that `GoatFarm` is the **Aggregate Root** and its existence is intrinsically linked to a `User` (owner), an `Address`, and `Phones`.
 
 ## Decision
-Decidimos implementar um **único método público de criação atômica** (`createGoatFarm`) que orquestra todo o processo dentro de uma única transação `@Transactional`.
+We decided to implement a **single public atomic creation method** (`createGoatFarm`) that orchestrates the entire process within a single `@Transactional` transaction.
 
-### Detalhes da Implementação
+### Implementation Details
 
-1.  **Single Entry Point:** Apenas o endpoint `POST /api/goatfarms` (mapeado para `GoatFarmBusiness.createGoatFarm`) é responsável pela criação. Não existem endpoints públicos para criar endereços ou usuários isoladamente no contexto de registro de fazenda.
-2.  **Validação Acumulada:** O sistema valida a presença de todos os componentes obrigatórios (`Farm`, `Address`, `Phones` e `User` condicionalmente) antes de iniciar qualquer persistência, retornando todos os erros de uma vez.
+1.  **Single Entry Point:** Only the `POST /api/goatfarms` endpoint (mapped to `GoatFarmBusiness.createGoatFarm`) is responsible for creation. There are no public endpoints to create addresses or users in isolation within the farm registration context.
+2.  **Accumulated Validation:** The system validates the presence of all mandatory components (`Farm`, `Address`, `Phones`, and `User` conditionally) before starting any persistence, returning all errors at once.
 3.  **Owner Resolution Strategy:**
-    *   **Autenticado:** O `owner` é resolvido via `OwnershipService.getCurrentUser()`. Qualquer dado de usuário enviado no corpo da requisição é **ignorado**.
-    *   **Anônimo:** O sistema exige dados de usuário.
-        *   Cria um novo usuário.
-        *   Força a role `ROLE_USER`.
-        *   Rejeita explicitamente campos de privilégio (`roles`, `admin`, etc).
-        *   Se o email já existir, lança `DuplicateEntityException` com mensagem genérica para evitar enumeração.
+    *   **Authenticated:** The `owner` is resolved via `OwnershipService.getCurrentUser()`. Any user data sent in the request body is **ignored**.
+    *   **Anonymous:** The system requires user data.
+        *   Creates a new user.
+        *   Forces the role `ROLE_USER`.
+        *   Explicitly rejects privilege fields (`roles`, `admin`, etc).
+        *   If the email already exists, throws `DuplicateEntityException` with a generic message to avoid enumeration.
+4.  **Architectural Layer:** The atomic creation flow is implemented in the **Application/Business Layer**, and is not a direct responsibility of JPA entities.
+5.  **Transaction & Rollback:** Any failure during the creation of User, Farm, Address, or Phones results in a **complete transaction rollback**.
+6.  **Test Coverage:** This decision is protected by unit tests (`GoatFarmBusinessTest`), ensuring that the contract is not violated in future refactorings.
 
 ## Consequences
 
-### Positivos
-*   **Consistência:** Garantia de que não existirão "fazendas órfãs" ou "usuários sem fazenda" criados pela metade devido a falhas no meio do processo.
-*   **Segurança:** Elimina vetores de ataque comuns em registros multipartes. O backend detém controle total sobre as permissões atribuídas.
-*   **Manutenibilidade:** Lógica centralizada em um único método de negócio, facilitando testes e auditoria.
+### Positive
+*   **Consistency:** Guarantees that there will be no "orphan farms" or "farm-less users" created halfway due to failures in the middle of the process.
+*   **Security:** Eliminates common attack vectors in multi-part registrations. The backend retains full control over assigned permissions.
+*   **Maintainability:** Logic centralized in a single business method, facilitating testing and auditing.
 
-### Negativos/Trade-offs
-*   **Complexidade do Payload:** O frontend precisa enviar um JSON aninhado e completo (`GoatFarmFullRequestDTO`), o que pode ser mais complexo de montar do que chamadas sequenciais simples.
-*   **Acoplamento:** A criação de usuário está acoplada à criação da fazenda neste fluxo específico, o que é aceitável dado o domínio, mas requer cuidado se no futuro quisermos permitir usuários sem fazenda.
+### Negative/Trade-offs
+*   **Payload Complexity:** The frontend needs to send a nested and complete JSON (`GoatFarmFullRequestDTO`), which can be more complex to assemble than simple sequential calls.
+*   **Coupling:** User creation is coupled to farm creation in this specific flow, which is acceptable given the domain, but requires care if we want to allow users without farms in the future.
 
-## Alternativas Consideradas
+## Alternatives Considered
 
-### Criação em Etapas (Wizard)
-Permitir criar User -> obter ID -> criar Farm com ID.
-*   **Rejeitado por:** Risco de criar usuários "zumbis" se o usuário desistir na etapa 2. Risco de segurança ao permitir associação via ID (IDOR).
+### Step-by-Step Creation (Wizard)
+Allow creating User -> get ID -> create Farm with ID.
+*   **Rejected due to:** Risk of creating "zombie" users if the user gives up at step 2. Security risk when allowing association via ID (IDOR).
 
-### Endpoint de Registro de Usuário Separado
-*   **Rejeitado por:** O domínio exige que, no contexto de `GoatFarm`, o usuário nasça junto com a fazenda (ou já exista). Separar o registro complicaria a transação atômica.
+### Separate User Registration Endpoint
+*   **Rejected due to:** The domain requires that, in the `GoatFarm` context, the user is born with the farm (or already exists). Separating registration would complicate the atomic transaction.
