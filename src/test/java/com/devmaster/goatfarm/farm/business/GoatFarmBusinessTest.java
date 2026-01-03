@@ -11,7 +11,6 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
@@ -113,7 +112,13 @@ class GoatFarmBusinessTest {
 
         assertNotNull(result);
         verify(ownershipService, atLeastOnce()).getCurrentUser();
-        verify(goatFarmDAO).save(any());
+        
+        ArgumentCaptor<GoatFarm> farmCaptor = ArgumentCaptor.forClass(GoatFarm.class);
+        verify(goatFarmDAO).save(farmCaptor.capture());
+        GoatFarm capturedFarm = farmCaptor.getValue();
+        assertEquals(mockUser, capturedFarm.getUser());
+        assertEquals(mockAddress, capturedFarm.getAddress());
+        
         verify(phoneBusiness).createPhones(eq(100L), any());
     }
 
@@ -133,6 +138,7 @@ class GoatFarmBusinessTest {
         GoatFarmFullResponseVO result = goatFarmBusiness.createGoatFarm(fullRequestVO);
 
         assertNotNull(result);
+        verify(ownershipService, times(1)).getCurrentUser();
         
         // Verifica se a role foi definida corretamente
         ArgumentCaptor<UserRequestVO> userCaptor = ArgumentCaptor.forClass(UserRequestVO.class);
@@ -207,6 +213,7 @@ class GoatFarmBusinessTest {
     @Test
     @DisplayName("Should fail when validation fails (null farm)")
     void createGoatFarm_fail_validation_null_farm() {
+        when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setFarm(null);
         assertThrows(ValidationException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
@@ -216,6 +223,7 @@ class GoatFarmBusinessTest {
     @Test
     @DisplayName("Should fail when validation fails (null phones)")
     void createGoatFarm_fail_validation_null_phones() {
+        when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setPhones(null);
         assertThrows(ValidationException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
@@ -225,6 +233,7 @@ class GoatFarmBusinessTest {
     @Test
     @DisplayName("Should fail when validation fails (empty phones)")
     void createGoatFarm_fail_validation_empty_phones() {
+        when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setPhones(Collections.emptyList());
         assertThrows(ValidationException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
@@ -234,22 +243,30 @@ class GoatFarmBusinessTest {
     @Test
     @DisplayName("Should fail when farm name is duplicate")
     void createGoatFarm_fail_duplicate_name() {
+        when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         when(goatFarmDAO.existsByName(farmVO.getName())).thenReturn(true);
         
         assertThrows(DuplicateEntityException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
+        
+        verify(goatFarmDAO, never()).save(any());
+        verify(phoneBusiness, never()).createPhones(anyLong(), any());
     }
 
     @Test
     @DisplayName("Should fail when farm TOD is duplicate")
     void createGoatFarm_fail_duplicate_tod() {
+        when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         when(goatFarmDAO.existsByName(any())).thenReturn(false);
         when(goatFarmDAO.existsByTod(farmVO.getTod())).thenReturn(true);
         
         assertThrows(DuplicateEntityException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
+        
+        verify(goatFarmDAO, never()).save(any());
+        verify(phoneBusiness, never()).createPhones(anyLong(), any());
     }
 
     @Test
@@ -257,6 +274,7 @@ class GoatFarmBusinessTest {
     void createGoatFarm_fail_database_error() {
         when(ownershipService.getCurrentUser()).thenReturn(mockUser);
         when(goatFarmDAO.existsByName(any())).thenReturn(false);
+        when(goatFarmDAO.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
         when(goatFarmMapper.toEntity(any())).thenReturn(mockFarm);
         

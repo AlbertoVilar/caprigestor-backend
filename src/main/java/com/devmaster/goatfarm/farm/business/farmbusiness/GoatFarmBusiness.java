@@ -94,7 +94,14 @@ public class GoatFarmBusiness {
 
     @Transactional
     public GoatFarmFullResponseVO createGoatFarm(GoatFarmFullRequestVO fullRequestVO) {
-        validateGoatFarmCreation(fullRequestVO);
+        User currentUser = null;
+        try {
+            currentUser = ownershipService.getCurrentUser();
+        } catch (UnauthorizedException e) {
+            // Usuário anônimo
+        }
+
+        validateGoatFarmCreation(fullRequestVO, currentUser);
 
         GoatFarmRequestVO farmVO = fullRequestVO.getFarm();
         UserRequestVO userVO = fullRequestVO.getUser();
@@ -108,7 +115,7 @@ public class GoatFarmBusiness {
             throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
         }
 
-        User owner = resolveOwner(userVO);
+        User owner = resolveOwner(userVO, currentUser);
         var addressEntity = addressBusiness.findOrCreateAddressEntity(addressVO);
 
         GoatFarm farmEntity = goatFarmMapper.toEntity(farmVO);
@@ -181,37 +188,34 @@ public class GoatFarmBusiness {
         return new FarmPermissionsVO(isAdmin || isOwner);
     }
 
-    private User resolveOwner(UserRequestVO userVO) {
-        try {
-            // Tenta obter usuário autenticado
-            User currentUser = ownershipService.getCurrentUser();
-            // Se chegou aqui, existe usuário autenticado. Ele será o owner.
-            // Ignoramos userVO (ou poderíamos validar se bate, mas regra A diz "Owner é sempre user autenticado")
+    private User resolveOwner(UserRequestVO userVO, User currentUser) {
+        if (currentUser != null) {
+            // Se existe usuário autenticado, ele será o owner.
             return currentUser;
-        } catch (UnauthorizedException e) {
-            // Fluxo anônimo (Registration)
-            // userVO validado em validateGoatFarmCreation
-            
-            // Validação estrita: Não pode definir roles
-            if (userVO.getRoles() != null && !userVO.getRoles().isEmpty()) {
-                throw new ValidationException(new ValidationError(Instant.now(), 400, "Não é permitido definir permissões (roles) no cadastro público.", null));
-            }
-
-            // Garante que não estamos vinculando a um usuário existente (Segurança/IDOR)
-            if (userBusiness.findUserByEmail(userVO.getEmail()).isPresent()) {
-                // Mensagem genérica para evitar enumeração de usuários
-                throw new DuplicateEntityException("Não foi possível completar o cadastro com os dados informados.");
-            }
-            
-            // Define role padrão ROLE_USER
-            userVO.setRoles(java.util.List.of("ROLE_USER"));
-            
-            // Cria novo usuário
-            return userBusiness.findOrCreateUser(userVO);
         }
+
+        // Fluxo anônimo (Registration)
+        // userVO validado em validateGoatFarmCreation
+        
+        // Validação estrita: Não pode definir roles
+        if (userVO.getRoles() != null && !userVO.getRoles().isEmpty()) {
+            throw new ValidationException(new ValidationError(Instant.now(), 400, "Não é permitido definir permissões (roles) no cadastro público.", null));
+        }
+
+        // Garante que não estamos vinculando a um usuário existente (Segurança/IDOR)
+        if (userBusiness.findUserByEmail(userVO.getEmail()).isPresent()) {
+            // Mensagem genérica para evitar enumeração de usuários
+            throw new DuplicateEntityException("Não foi possível completar o cadastro com os dados informados.");
+        }
+        
+        // Define role padrão ROLE_USER
+        userVO.setRoles(java.util.List.of("ROLE_USER"));
+        
+        // Cria novo usuário
+        return userBusiness.findOrCreateUser(userVO);
     }
 
-    private void validateGoatFarmCreation(GoatFarmFullRequestVO fullRequestVO) {
+    private void validateGoatFarmCreation(GoatFarmFullRequestVO fullRequestVO, User currentUser) {
         ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", null);
 
         if (fullRequestVO.getFarm() == null) {
@@ -219,10 +223,7 @@ public class GoatFarmBusiness {
         }
         
         // Validação condicional do usuário
-        try {
-            ownershipService.getCurrentUser();
-            // Autenticado: userVO é opcional/ignorado
-        } catch (UnauthorizedException e) {
+        if (currentUser == null) {
             // Anônimo: userVO é obrigatório
             if (fullRequestVO.getUser() == null) {
                 validationError.addError("user", "Dados do usuário são obrigatórios para cadastro público.");
