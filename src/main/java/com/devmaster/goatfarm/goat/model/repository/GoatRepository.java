@@ -31,6 +31,8 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     // Carregamento completo com JOIN FETCH para genealogia (pai/mãe, avós e bisavós)
     @Query(
         "SELECT g FROM Goat g " +
+        "LEFT JOIN FETCH g.farm gf " +
+        "LEFT JOIN FETCH gf.user " +
         "LEFT JOIN FETCH g.father f " +
         "LEFT JOIN FETCH f.father ff " +
         "LEFT JOIN FETCH ff.father fff " +
@@ -49,3 +51,4 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     )
     Optional<Goat> findByIdAndFarmIdWithFamilyGraph(@Param("id") String id, @Param("farmId") Long farmId);
 }
+

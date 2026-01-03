@@ -30,7 +30,7 @@ public class GenealogyController {
     }
 
     @GetMapping
-    @Operation(summary = "Obter genealogia", description = "Retorna a árvore genealógica projetada a partir dos dados cadastrais da cabra e seus ancestrais. Não utiliza persistência dedicada.")
+    @Operation(summary = "Obter genealogia", description = "Retorna a árvore genealógica projetada a partir dos dados cadastrais da cabra e seus ancestrais. Não utiliza persistência dedicada. NOTA: Este endpoint NÃO retorna endereço ou telefone da fazenda; para esses dados, utilize o endpoint de detalhes da fazenda.")
     public ResponseEntity<GenealogyResponseDTO> getGenealogy(@PathVariable Long farmId, @PathVariable String goatId) {
         return ResponseEntity.ok(genealogyMapper.toResponseDTO(genealogyUseCase.findGenealogy(farmId, goatId)));
     }

@@ -32,7 +32,7 @@ public class GoatFarm {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "address_id", referencedColumnName = "id", unique = true)
     private Address address;
 
@@ -64,3 +64,4 @@ public class GoatFarm {
     }
 }
 
+

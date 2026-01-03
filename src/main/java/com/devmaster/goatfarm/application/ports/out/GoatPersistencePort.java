@@ -29,7 +29,7 @@ public interface GoatPersistencePort {
 
     /**
      * Alias explícito para busca por número de registro
-     * @param registrationNumber Número de registro da cabra
+     * @param registrationNumber Número de registro da cabraA
      * @return Optional contendo a cabra se encontrada
      */
     Optional<Goat> findByRegistrationNumber(String registrationNumber);

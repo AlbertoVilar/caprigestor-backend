@@ -12,8 +12,11 @@ import java.util.Optional;
 public interface GoatFarmPersistencePort {
     Optional<GoatFarm> findById(Long id);
     Optional<GoatFarm> findByIdAndUserId(Long id, Long userId);
+
     Optional<GoatFarm> findByAddressId(Long addressId);
 
+    Optional<GoatFarm> findByIdWithDetails(Long id);
+    
     Page<GoatFarm> searchByName(String name, Pageable pageable);
     Page<GoatFarm> findAll(Pageable pageable);
 

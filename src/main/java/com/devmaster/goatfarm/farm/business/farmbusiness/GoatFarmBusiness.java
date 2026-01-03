@@ -69,7 +69,7 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
 
     @Transactional(readOnly = true)
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        GoatFarm farm = goatFarmPort.findById(id)
+        GoatFarm farm = goatFarmPort.findByIdWithDetails(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id));
         return goatFarmMapper.toFullResponseVO(farm);
     }

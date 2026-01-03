@@ -64,11 +64,14 @@ O sistema GoatFarm utiliza uma arquitetura em camadas bem definida, seguindo os 
 
 **Relacionamentos**:
 - `@ManyToOne` com `User`: Uma fazenda pertence a um usuário
-- `@ManyToOne` com `Address`: Uma fazenda tem um endereço
-- `@OneToMany` com `Phone`: Uma fazenda pode ter múltiplos telefones
+- `@ManyToOne` com `Address`: Uma fazenda tem um endereço (FetchType.LAZY)
+- `@OneToMany` com `Phone`: Uma fazenda pode ter múltiplos telefones (FetchType.LAZY)
 - `@OneToMany` com `Goat`: Uma fazenda pode ter múltiplos animais
 
-**Observação**: Utiliza `@JsonManagedReference` e `@JsonBackReference` para evitar loops de serialização JSON.
+**Observação**:
+- As relações `Address` e `Phone` são carregadas sob demanda (LAZY) para performance.
+- Endpoints de listagem ou de entidades relacionadas (como Genealogia) NÃO carregam endereço/telefone.
+- Utilize o endpoint de detalhes da fazenda (`GET /api/goatfarms/{id}`) para obter o objeto completo.
 
 ### Address (Endereço)
 **Propósito**: Armazena informações de localização das fazendas.

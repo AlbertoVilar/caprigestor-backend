@@ -36,6 +36,11 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort {
     }
 
     @Override
+    public Optional<GoatFarm> findByIdWithDetails(Long id) {
+        return repository.findByIdWithDetails(id);
+    }
+
+    @Override
     public Page<GoatFarm> searchByName(String name, Pageable pageable) {
         return repository.searchGoatFarmByName(name, pageable);
     }
