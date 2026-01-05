@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Estudo Completo do Sistema GoatFarm
 
 Este documento é uma compilação de todo o código-fonte, configurações e documentação do sistema GoatFarm, gerado após uma série de refatorações arquiteturais. O objetivo é servir como um material de estudo completo e uma referência do estado final e arquiteturalmente correto do projeto.

@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Refactor: Hex Architecture – GoatFarm Aggregate Root
 
 Branch: `feature/hex-architecture-refactor`

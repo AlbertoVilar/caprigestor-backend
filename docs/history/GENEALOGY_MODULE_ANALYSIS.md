@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Análise Arquitetural: Módulo de Genealogia (GoatFarm)
 
 ## 1. Visão Geral

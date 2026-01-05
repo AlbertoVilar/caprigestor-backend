@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Domain Modeling Analysis: User × Owner × Farm
 
 This analysis evaluates the domain modeling of the CapriGestor application, specifically focusing on the relationship between system actors (Users) and their roles (Owners) in the context of Farms.

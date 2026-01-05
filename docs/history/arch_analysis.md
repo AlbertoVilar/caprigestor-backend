@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Architectural Analysis: GoatFarm (CapriGestor)
 
 This document provides a faithful description of the current project structure, following the principles of Hexagonal Architecture / Clean Architecture as implemented in the codebase.

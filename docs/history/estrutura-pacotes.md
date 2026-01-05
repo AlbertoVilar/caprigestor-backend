@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Estrutura de Empacotamento e Distribuição de Pacotes (GoatFarm)
 
 Este documento descreve, em formato de visão de pastas do VSCode, como está a estrutura de empacotamento do sistema e a distribuição de todos os pacotes e classes Java. Inclui também um panorama de build/empacotamento (Maven/Spring Boot).

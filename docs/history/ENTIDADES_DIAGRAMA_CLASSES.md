@@ -1,3 +1,7 @@
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
+
 # Entidades e Relacionamentos — Diagrama de Classes (Base CapriGestor)
 
 Este documento lista entidades, atributos essenciais e relacionamentos com cardinalidades para facilitar a criação do diagrama de classes. Foco nos módulos atuais: `farm`, `goat`, `genealogy`, `events`, `authority` e itens compartilhados.
