@@ -1,12 +1,13 @@
 package com.devmaster.goatfarm.milk.business.bo;
 
-import com.devmaster.goatfarm.milk.enums.LactationStatus;
+import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -14,11 +15,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LactationBO {
+public class MilkProductionResponseVO {
     private Long id;
-    private LactationStatus status;
-    private LocalDate startDate;
-    private LocalDate endDate;
-    private LocalDate pregnancyStartDate;
-    private LocalDate dryStartDate;
+    private LocalDate date;
+    private MilkingShift shift;
+    private BigDecimal volumeLiters;
+    private String notes;
 }
