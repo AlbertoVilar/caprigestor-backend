@@ -24,8 +24,8 @@ public class Lactation {
     @Column(name = "farm_id", nullable = false)
     private Long farmId;
 
-    @Column(name = "goat_id", nullable = false)
-    private Long goatId;
+    @Column(name = "goat_id", nullable = false, length = 50)
+    private String goatId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

@@ -1,0 +1,2 @@
+ALTER TABLE lactation ALTER COLUMN goat_id TYPE VARCHAR(50);
+ALTER TABLE milk_production ALTER COLUMN goat_id TYPE VARCHAR(50);

@@ -25,8 +25,8 @@ public class MilkProduction {
     @Column(name = "farm_id", nullable = false)
     private Long farmId;
 
-    @Column(name = "goat_id", nullable = false)
-    private Long goatId;
+    @Column(name = "goat_id", nullable = false, length = 50)
+    private String goatId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lactation_id", nullable = false)
