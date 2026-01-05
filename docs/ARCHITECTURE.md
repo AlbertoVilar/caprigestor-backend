@@ -6,6 +6,25 @@ Este documento descreve a arquitetura técnica do sistema, baseada em Arquitetur
 
 O sistema está estruturado para isolar o núcleo da aplicação (Domínio e Regras de Negócio) das dependências externas (Banco de Dados, API Web, Mensageria).
 
+### Fluxo de Controle
+
+```mermaid
+graph TD
+    Controller --> UseCase
+    UseCase --> Port
+    Port --> Adapter
+    
+    Goat --> Genealogia["Genealogia (read model)"]
+```
+
+#### Diagrama em Texto (ASCII)
+
+```text
+[Controller] -> [UseCase] -> [Port] -> [Adapter]
+
+[Goat] -> [Genealogia (read model)]
+```
+
 ### Estrutura de Camadas
 
 1.  **Application Core (Núcleo)**:
