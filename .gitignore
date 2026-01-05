@@ -44,16 +44,3 @@ logs/
 docker/.env
 ### Static Content ###
 /src/main/resources/static/
-
-# Local docs (rascunho, não versionar)
-docs/PLANO_GESTAO_NEGOCIO.md
-docs/PLANO_GESTAO_NEGOCIO_RESUMO.md
-
-# Analysis docs
-GENEALOGY_MODULE_ANALYSIS.md
-docs/ENTIDADES_DIAGRAMA_CLASSES.md
-docs/AllCode.md
-Estudo_Completo_GoatFarm.md
-docs/estrutura-pacotes.md
-docs/arch_analysis.md
-docs/domain_modeling_analysis.md
