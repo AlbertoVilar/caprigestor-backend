@@ -32,4 +32,4 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
 
     @Query("SELECT gf FROM GoatFarm gf LEFT JOIN FETCH gf.address LEFT JOIN FETCH gf.phones WHERE gf.id = :id")
     Optional<GoatFarm> findByIdWithDetails(@Param("id") Long id);
-}
+}

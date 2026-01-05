@@ -108,4 +108,4 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 }
 
-
+

@@ -51,4 +51,4 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     )
     Optional<Goat> findByIdAndFarmIdWithFamilyGraph(@Param("id") String id, @Param("farmId") Long farmId);
 }
-
+
