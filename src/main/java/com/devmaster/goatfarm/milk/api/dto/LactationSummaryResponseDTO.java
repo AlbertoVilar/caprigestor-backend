@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LactationSummaryDTO {
+public class LactationSummaryResponseDTO {
     private BigDecimal totalLiters;
     private Integer daysInLactation;
     private BigDecimal averagePerDay;
