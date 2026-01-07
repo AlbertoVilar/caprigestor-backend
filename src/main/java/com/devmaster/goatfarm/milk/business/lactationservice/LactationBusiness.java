@@ -17,11 +17,11 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO getActiveLactation(Long farmId, String goatId) {
-        throw new UnsupportedOperationException("Not implemented");
+        return null;
     }
 
     @Override
     public void dryLactation(Long farmId, String goatId, Long lactationId) {
-        throw new UnsupportedOperationException("Not implemented");
+        // no-op (wiring only)
     }
 }

@@ -22,11 +22,11 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     @Override
     public MilkProductionResponseVO createMilkProduction(Long farmId, String goatId, MilkProductionRequestVO requestVO) {
-        throw new UnsupportedOperationException("Not implemented");
+        return null;
     }
 
     @Override
     public List<MilkProductionResponseVO> getMilkProductions(Long farmId, String goatId, LocalDate from, LocalDate to) {
-        throw new UnsupportedOperationException("Not implemented");
+        return null;
     }
 }

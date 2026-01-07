@@ -30,6 +30,7 @@ public class MilkProductionController {
             @Parameter(description = "Farm identifier") @PathVariable Long farmId,
             @Parameter(description = "Goat identifier") @PathVariable String goatId,
             @RequestBody MilkProductionRequestDTO request) {
+        milkProductionMapper.toRequestVO(request);
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
     }
 
