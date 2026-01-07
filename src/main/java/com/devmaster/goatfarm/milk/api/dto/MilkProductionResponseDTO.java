@@ -22,3 +22,4 @@ public class MilkProductionResponseDTO {
     private BigDecimal volumeLiters;
     private String notes;
 }
+

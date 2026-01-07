@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.milk.business.bo;
 
+import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,10 +15,9 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LactationSummaryVO {
-    private BigDecimal totalLiters;
-    private Integer daysInLactation;
-    private BigDecimal averagePerDay;
-    private BigDecimal peakLiters;
-    private LocalDate peakDate;
+public class MilkProductionRequestVO {
+    private LocalDate date;
+    private MilkingShift shift;
+    private BigDecimal volumeLiters;
+    private String notes;
 }
