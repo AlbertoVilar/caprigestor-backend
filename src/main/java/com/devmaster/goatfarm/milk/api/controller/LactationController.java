@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/farms/{farmId}/goats/{goatId}/lactations")
+@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/lactations")
 @RequiredArgsConstructor
 @Tag(name = "Lactation API", description = "Lactation management for goats")
 public class LactationController {

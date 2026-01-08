@@ -141,3 +141,19 @@ VALUES ('2114517012', 'PARTO', '2025-05-08', 'Nascimento de dois cabritos machos
 
 INSERT INTO eventos (goat_registration_number, tipo_evento, data, descricao, local, veterinario, resultado)
 VALUES ('2114517012', 'SAUDE', '2025-05-05', 'Apresentou sintomas de mastite clínica', 'Capril Vilar', 'Dr. Carlos Mendes', 'Iniciado tratamento com antibiótico específico. Isolamento recomendado por 5 dias.');
+-- Active lactation seed for goatId 2114513061
+INSERT INTO lactation (farm_id, goat_id, status, start_date, created_at, updated_at)
+SELECT
+  (SELECT id FROM capril WHERE name = 'Capril Vilar'),
+  '2114513061',
+  'ACTIVE',
+  '2026-01-01',
+  NOW(),
+  NOW()
+WHERE NOT EXISTS (
+  SELECT 1 FROM lactation
+  WHERE farm_id = (SELECT id FROM capril WHERE name = 'Capril Vilar')
+    AND goat_id = '2114513061'
+    AND status = 'ACTIVE'
+);
+

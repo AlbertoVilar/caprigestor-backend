@@ -3,10 +3,13 @@ package com.devmaster.goatfarm.milk.api.controller;
 import com.devmaster.goatfarm.application.ports.in.MilkProductionUseCase;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
+import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
+import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/farms/{farmId}/goats/{goatId}/milk-productions")
+@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions")
 @RequiredArgsConstructor
 @Tag(name = "Milk Production API", description = "Milk production management for goats")
 public class MilkProductionController {
@@ -29,9 +32,10 @@ public class MilkProductionController {
     public ResponseEntity<MilkProductionResponseDTO> createMilkProduction(
             @Parameter(description = "Farm identifier") @PathVariable Long farmId,
             @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @RequestBody MilkProductionRequestDTO request) {
-        milkProductionMapper.toRequestVO(request);
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+            @Valid @RequestBody MilkProductionRequestDTO request) {
+        MilkProductionRequestVO requestVO = milkProductionMapper.toRequestVO(request);
+        MilkProductionResponseVO responseVO = milkProductionUseCase.createMilkProduction(farmId, goatId, requestVO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(milkProductionMapper.toResponseDTO(responseVO));
     }
 
     @GetMapping
