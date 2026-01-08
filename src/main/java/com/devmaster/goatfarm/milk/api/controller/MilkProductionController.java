@@ -11,12 +11,18 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.SortDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions")
@@ -38,13 +44,38 @@ public class MilkProductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(milkProductionMapper.toResponseDTO(responseVO));
     }
 
+    @Operation(summary = "List milk productions (optional date filter)")
     @GetMapping
-    @Operation(summary = "List milk productions for a goat with optional date filters")
-    public ResponseEntity<List<MilkProductionResponseDTO>> getMilkProductions(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Start date (inclusive)") @RequestParam(required = false) LocalDate from,
-            @Parameter(description = "End date (inclusive)") @RequestParam(required = false) LocalDate to) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Page<MilkProductionResponseDTO>> getMilkProductions(
+            @Parameter(description = "Farm id") @PathVariable Long farmId,
+            @Parameter(description = "Goat id") @PathVariable String goatId,
+
+            @Parameter(description = "Start date (inclusive) in ISO format yyyy-MM-dd")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+
+            @Parameter(description = "End date (inclusive) in ISO format yyyy-MM-dd")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to,
+
+            @ParameterObject
+            @PageableDefault(size = 12)
+            @SortDefault.SortDefaults({
+                    @SortDefault(sort = "date", direction = Sort.Direction.DESC),
+                    @SortDefault(sort = "shift", direction = Sort.Direction.ASC),
+                    @SortDefault(sort = "id", direction = Sort.Direction.DESC)
+            })
+            Pageable pageable
+    ) {
+        Page<MilkProductionResponseVO> page =
+                milkProductionUseCase.getMilkProductions(farmId, goatId, from, to, pageable);
+
+        Page<MilkProductionResponseDTO> dtoPage =
+                page.map(milkProductionMapper::toResponseDTO);
+
+        return ResponseEntity.ok(dtoPage);
     }
+
 }

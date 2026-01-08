@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.model.repository.MilkProductionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -34,4 +36,22 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
                 shift
         );
     }
+
+    @Override
+    public Page<MilkProduction> search(
+            Long farmId,
+            String goatId,
+            LocalDate from,
+            LocalDate to,
+            Pageable pageable
+    ) {
+        return milkProductionRepository.search(
+                farmId,
+                goatId,
+                from,
+                to,
+                pageable
+        );
+    }
+
 }

@@ -12,13 +12,14 @@ import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
 import com.devmaster.goatfarm.milk.model.entity.Lactation;
 import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class MilkProductionBusiness implements MilkProductionUseCase {
 
     /** Ports (infra abstraída) */
@@ -27,6 +28,12 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     /** Mapper de domínio */
     private final MilkProductionMapper milkProductionMapper;
+
+    public MilkProductionBusiness(MilkProductionPersistencePort milkProductionPersistencePort, LactationPersistencePort lactationPersistencePort, MilkProductionMapper milkProductionMapper) {
+        this.milkProductionPersistencePort = milkProductionPersistencePort;
+        this.lactationPersistencePort = lactationPersistencePort;
+        this.milkProductionMapper = milkProductionMapper;
+    }
 
     /**
      * Criação de produção diária de leite
@@ -56,13 +63,22 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
      * Consulta de produções por período
      */
     @Override
-    public List<MilkProductionResponseVO> getMilkProductions(
+    public Page<MilkProductionResponseVO> getMilkProductions(
             Long farmId,
             String goatId,
             LocalDate from,
-            LocalDate to
+            LocalDate to,
+            Pageable pageable
     ) {
-        return null;
+        Page<MilkProduction> productions =
+                milkProductionPersistencePort.search(
+                        farmId,
+                        goatId,
+                        from,
+                        to,
+                        pageable
+                );
+        return productions.map(milkProductionMapper::toResponseVO);
     }
 
     /* ==========================================================
