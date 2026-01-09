@@ -2,8 +2,10 @@ package com.devmaster.goatfarm.milk.mapper;
 
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
+import com.devmaster.goatfarm.milk.api.dto.MilkProductionUpdateRequestDTO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
+import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -14,6 +16,8 @@ import java.util.List;
 public interface MilkProductionMapper {
 
     MilkProductionRequestVO toRequestVO(MilkProductionRequestDTO dto);
+
+    MilkProductionUpdateRequestVO toRequestVO(MilkProductionUpdateRequestDTO dto);
 
     MilkProductionResponseDTO toResponseDTO(MilkProductionResponseVO vo);
 

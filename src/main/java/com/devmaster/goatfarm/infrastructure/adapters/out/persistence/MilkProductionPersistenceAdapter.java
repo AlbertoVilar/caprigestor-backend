@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +21,11 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
     @Override
     public MilkProduction save(MilkProduction milkProduction) {
         return milkProductionRepository.save(milkProduction);
+    }
+
+    @Override
+    public void delete(MilkProduction milkProduction) {
+        milkProductionRepository.delete(milkProduction);
     }
 
     @Override
@@ -35,6 +41,11 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
                 date,
                 shift
         );
+    }
+
+    @Override
+    public Optional<MilkProduction> findById(Long farmId, String goatId, Long id) {
+        return milkProductionRepository.findByIdAndFarmIdAndGoatId(id, farmId, goatId);
     }
 
     @Override

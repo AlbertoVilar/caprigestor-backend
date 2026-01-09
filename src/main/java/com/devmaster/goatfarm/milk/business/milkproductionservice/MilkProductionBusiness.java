@@ -4,8 +4,10 @@ import com.devmaster.goatfarm.application.ports.in.MilkProductionUseCase;
 import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePort;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
+import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
@@ -59,6 +61,48 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         return milkProductionMapper.toResponseVO(saved);
     }
 
+    @Override
+    public MilkProductionResponseVO update(
+            Long farmId,
+            String goatId,
+            Long id,
+            MilkProductionUpdateRequestVO request
+    ) {
+        MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
+                .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
+
+        if (request.getVolumeLiters() != null) {
+            milkProduction.setVolumeLiters(request.getVolumeLiters());
+        }
+        if (request.getNotes() != null) {
+            milkProduction.setNotes(request.getNotes());
+        }
+
+        MilkProduction saved = milkProductionPersistencePort.save(milkProduction);
+        return milkProductionMapper.toResponseVO(saved);
+    }
+
+    @Override
+    public MilkProductionResponseVO findById(Long farmId, String goatId, Long id) {
+        MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Produção de leite não encontrada com o ID: " + id
+                        )
+                );
+
+        return milkProductionMapper.toResponseVO(milkProduction);
+    }
+
+
+    @Override
+    public void delete(Long farmId, String goatId, Long id) {
+        MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
+                .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
+
+        milkProductionPersistencePort.delete(milkProduction);
+    }
+
     /**
      * Consulta de produções por período
      */
@@ -80,6 +124,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
                 );
         return productions.map(milkProductionMapper::toResponseVO);
     }
+
 
     /* ==========================================================
        Regras de domínio (assinaturas internas)

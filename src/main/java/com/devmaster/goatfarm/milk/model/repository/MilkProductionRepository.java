@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Repository
 public interface MilkProductionRepository extends JpaRepository<MilkProduction, Long> {
@@ -20,6 +21,8 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
             LocalDate date,
             MilkingShift shift
     );
+
+    Optional<MilkProduction> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
 
     @Query("""
     select mp from MilkProduction mp

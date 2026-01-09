@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 public interface MilkProductionPersistencePort {
 
@@ -18,6 +19,8 @@ public interface MilkProductionPersistencePort {
             MilkingShift shift
     );
 
+    Optional<MilkProduction> findById(Long farmId, String goatId, Long id);
+
     Page<MilkProduction> search(
             Long farmId,
             String goatId,
@@ -26,4 +29,5 @@ public interface MilkProductionPersistencePort {
             Pageable pageable
     );
 
+    void delete(MilkProduction milkProduction);
 }

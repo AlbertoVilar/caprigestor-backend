@@ -3,8 +3,10 @@ package com.devmaster.goatfarm.milk.api.controller;
 import com.devmaster.goatfarm.application.ports.in.MilkProductionUseCase;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
+import com.devmaster.goatfarm.milk.api.dto.MilkProductionUpdateRequestDTO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
+import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,6 +46,35 @@ public class MilkProductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(milkProductionMapper.toResponseDTO(responseVO));
     }
 
+    @PatchMapping("/{id}")
+    @Operation(summary = "Update a milk production entry (partial update)")
+    public ResponseEntity<MilkProductionResponseDTO> update(
+            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
+            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Milk production identifier") @PathVariable Long id,
+            @Valid @RequestBody MilkProductionUpdateRequestDTO request
+    ) {
+        MilkProductionUpdateRequestVO requestVO = milkProductionMapper.toRequestVO(request);
+        MilkProductionResponseVO responseVO = milkProductionUseCase.update(farmId, goatId, id, requestVO);
+        return ResponseEntity.ok(milkProductionMapper.toResponseDTO(responseVO));
+    }
+
+
+
+    @Operation(summary = "Get milk production by ID")
+    @GetMapping("/{id}")
+    public ResponseEntity<MilkProductionResponseDTO> findById(
+            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
+            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Milk production identifier") @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(
+                milkProductionMapper.toResponseDTO(
+                        milkProductionUseCase.findById(farmId, goatId, id)
+                )
+        );
+    }
+
     @Operation(summary = "List milk productions (optional date filter)")
     @GetMapping
     public ResponseEntity<Page<MilkProductionResponseDTO>> getMilkProductions(
@@ -78,4 +109,14 @@ public class MilkProductionController {
         return ResponseEntity.ok(dtoPage);
     }
 
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a milk production entry")
+    public ResponseEntity<Void> delete(
+            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
+            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Milk production identifier") @PathVariable Long id
+    ) {
+        milkProductionUseCase.delete(farmId, goatId, id);
+        return ResponseEntity.noContent().build();
+    }
 }
