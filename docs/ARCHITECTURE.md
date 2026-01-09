@@ -48,6 +48,7 @@ O projeto é modularizado por domínio funcional:
 *   `farm`: Agregado raiz da Fazenda (`GoatFarm`).
 *   `goat`: Gestão de animais (`Goat`).
 *   `genealogy`: Projeção de árvore genealógica (Read-Only).
+*   `milk`: Gestão de produção de leite.
 *   `phone`: Gestão de telefones.
 *   `infrastructure`: Configurações globais e adaptadores genéricos.
 

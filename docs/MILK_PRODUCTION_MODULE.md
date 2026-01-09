@@ -13,7 +13,16 @@ O módulo expõe uma API RESTful completa para gerenciamento das produções.
 | **POST** | `/` | Cria um novo registro de produção de leite. |
 | **GET** | `/` | Lista as produções de forma paginada (suporta filtros de data). |
 | **GET** | `/{id}` | Busca os detalhes de uma produção específica por ID. |
+| **PATCH** | `/{id}` | Atualiza parcialmente uma produção (apenas volume e observações). |
 | **DELETE** | `/{id}` | Remove um registro de produção existente. |
+
+## Fluxo de Atualização (PATCH)
+
+A operação de atualização permite modificar dados mutáveis de uma produção existente:
+
+1.  **Campos Mutáveis**: Apenas `volumeLiters` e `notes` podem ser alterados.
+2.  **Imutabilidade**: `date` e `shift` não podem ser alterados via PATCH para garantir a integridade das validações de duplicidade.
+3.  **Validação de Escopo**: Assim como no DELETE, o sistema verifica se o registro pertence ao `farmId` e `goatId` informados.
 
 ## Fluxo de Exclusão (DELETE)
 

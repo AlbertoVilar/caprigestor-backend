@@ -82,6 +82,12 @@ O sistema implementa um fluxo de registro estrito e atômico para garantir consi
 - ✅ Status e categorização (PO, PA, PC)
 - ✅ Busca avançada e filtros
 
+### 🥛 Gestão de Produção Leiteira
+- ✅ Registro diário de produção por turno
+- ✅ Controle de volume e observações
+- ✅ Histórico completo de lactações
+- ✅ Validação de duplicidade (Data + Turno)
+
 ### 🧬 Regras de Negócio (Genealogia & Classificação)
 
 O sistema valida a genealogia com base na classificação do animal:
@@ -155,6 +161,7 @@ domain → application → infrastructure
 | Módulo | Descrição |
 |--------|-----------|
 | **goat** | Regras de negócio e acesso a dados de caprinos |
+| **milk** | Gestão de produção de leite e lactações |
 | **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
 | **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
 | **farm** | Entidades e serviços de fazendas/estábulos/locais |

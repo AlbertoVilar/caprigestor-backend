@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePort;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
@@ -18,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -49,6 +52,18 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         //=======================
         // *** VALIDAÇÃO *** //
         //=======================
+        
+        if (requestVO.getDate() == null) {
+            ValidationError err = new ValidationError(Instant.now(), 422, "Erro de validação", null);
+            err.addError("date", "Data da ordenha é obrigatória");
+            throw new ValidationException(err);
+        }
+        if (requestVO.getDate().isAfter(LocalDate.now())) {
+            ValidationError err = new ValidationError(Instant.now(), 422, "Erro de validação", null);
+            err.addError("date", "Data da ordenha não pode ser futura");
+            throw new ValidationException(err);
+        }
+
         // Regra 1: Não permitir produção duplicada para a mesma data e turno
         validateNoDuplicateProduction(farmId, goatId, requestVO.getDate(), requestVO.getShift());
         Lactation lactation = getRequiredActiveLactation(farmId, goatId, requestVO.getDate());

@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.milk.api.dto;
 
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,7 +18,11 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class MilkProductionRequestDTO {
+
+    @NotNull(message = "Data da ordenha é obrigatória")
+    @Schema(description = "Data da ordenha (obrigatória)", example = "2026-01-30", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate date;
+
     private MilkingShift shift;
     private BigDecimal volumeLiters;
     private String notes;

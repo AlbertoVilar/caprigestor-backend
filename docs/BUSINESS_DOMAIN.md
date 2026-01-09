@@ -33,6 +33,16 @@ Este documento descreve as entidades principais, regras de negócio e requisitos
 *   **Tipos**: Parto, Cobertura, Vacinação, Pesagem, Morte, Transferência.
 *   **Fluxo**: Eventos são registrados e podem disparar processamentos assíncronos (via RabbitMQ) para atualizações de status ou notificações.
 
+### MilkProduction (Produção de Leite)
+*   **Descrição**: Registro diário da produção de leite de uma cabra.
+*   **Atributos Chave**: `date`, `shift` (Turno: Manhã/Tarde), `volumeLiters`.
+*   **Relacionamentos**:
+    *   Pertence a uma `Goat` (fêmea).
+    *   Vinculado a uma `Lactation` (Ciclo de lactação ativo).
+*   **Regras**:
+    *   Unicidade: Apenas um registro por Data + Turno para a mesma cabra.
+    *   Escopo: Só pode ser registrado para cabras da fazenda do usuário logado.
+
 ### Genealogy (Genealogia)
 *   **Conceito**: Não é uma entidade persistida, mas uma **projeção**.
 *   **Funcionamento**:
