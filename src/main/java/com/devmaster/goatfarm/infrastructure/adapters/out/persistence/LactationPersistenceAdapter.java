@@ -16,6 +16,11 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     private final LactationRepository lactationRepository;
 
     @Override
+    public Lactation save(Lactation lactation) {
+        return lactationRepository.save(lactation);
+    }
+
+    @Override
     public Optional<Lactation> findActiveByFarmIdAndGoatId(Long farmId, String goatId) {
         return lactationRepository.findByFarmIdAndGoatIdAndStatus(farmId, goatId, LactationStatus.ACTIVE);
     }

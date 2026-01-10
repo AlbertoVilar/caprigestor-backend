@@ -6,5 +6,7 @@ import java.util.Optional;
 
 public interface LactationPersistencePort {
 
+    Lactation save(Lactation lactation);
+
     Optional<Lactation> findActiveByFarmIdAndGoatId(Long farmId, String goatId);
 }
