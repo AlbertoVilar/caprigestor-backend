@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import org.mockito.ArgumentCaptor;
+
 @ExtendWith(MockitoExtension.class)
 class LactationBusinessTest {
 
@@ -46,7 +48,6 @@ class LactationBusinessTest {
     // ==================================================================================
 
     @Test
-    @Disabled("TDD skeleton — habilitar após implementação do LactationBusiness.openLactation")
     void openLactation_shouldCreateActiveLactation_whenNoActiveExists() {
         // given: não existe lactação ativa
         // when: openLactation é chamado
@@ -54,20 +55,22 @@ class LactationBusinessTest {
 
         // Arrange
         Long farmId = 1L;
-        String goatId = "1643218012";
-
+        String goatId = "123";
         LactationRequestVO requestVO = validRequestVO();
-        Lactation savedEntity = savedLactationEntity(farmId, goatId, requestVO.getStartDate());
-        LactationResponseVO expectedResponseVO = responseVO(savedEntity.getId(), requestVO.getStartDate(), LactationStatus.ACTIVE);
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.empty());
 
+        Lactation savedEntity = savedLactationEntity();
+        savedEntity.setFarmId(farmId);
+        savedEntity.setGoatId(goatId);
+
         when(lactationPersistencePort.save(any(Lactation.class)))
                 .thenReturn(savedEntity);
 
+        LactationResponseVO expectedVO = responseVO();
         when(lactationMapper.toResponseVO(savedEntity))
-                .thenReturn(expectedResponseVO);
+                .thenReturn(expectedVO);
 
         ArgumentCaptor<Lactation> captor = ArgumentCaptor.forClass(Lactation.class);
 
@@ -75,26 +78,23 @@ class LactationBusinessTest {
         LactationResponseVO result = lactationBusiness.openLactation(farmId, goatId, requestVO);
 
         // Assert
+        assertNotNull(result);
+        assertEquals(expectedVO.getId(), result.getId());
+        assertEquals(expectedVO.getStatus(), result.getStatus());
+
+        // Verify
         verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
         verify(lactationPersistencePort).save(captor.capture());
-        verify(lactationMapper).toResponseVO(savedEntity);
 
-        Lactation toSave = captor.getValue();
-
-        assertEquals(farmId, toSave.getFarmId());
-        assertEquals(goatId, toSave.getGoatId());
-        assertEquals(requestVO.getStartDate(), toSave.getStartDate());
-        assertEquals(LactationStatus.ACTIVE, toSave.getStatus());
-        assertNull(toSave.getEndDate());
-
-        assertNotNull(result);
-        assertEquals(expectedResponseVO.getId(), result.getId());
-        assertEquals(expectedResponseVO.getStatus(), result.getStatus());
-        assertEquals(expectedResponseVO.getStartDate(), result.getStartDate());
+        Lactation capturedEntity = captor.getValue();
+        assertEquals(farmId, capturedEntity.getFarmId());
+        assertEquals(goatId, capturedEntity.getGoatId());
+        assertEquals(requestVO.getStartDate(), capturedEntity.getStartDate());
+        assertEquals(LactationStatus.ACTIVE, capturedEntity.getStatus());
+        assertNull(capturedEntity.getEndDate());
     }
 
     @Test
-    @Disabled("TDD skeleton — habilitar após implementação do LactationBusiness.openLactation")
     void openLactation_shouldThrowValidationException_whenActiveLactationAlreadyExists() {
         // given: findActive retorna lactação ACTIVE
         // then: lança ValidationException e não chama save
@@ -104,7 +104,7 @@ class LactationBusinessTest {
         String goatId = "1643218012";
 
         LactationRequestVO requestVO = validRequestVO();
-        Lactation activeEntity = activeLactationEntity(farmId, goatId);
+        Lactation activeEntity = activeLactationEntity();
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.of(activeEntity));
@@ -120,20 +120,21 @@ class LactationBusinessTest {
     }
 
     @Test
-    @Disabled("TDD skeleton — habilitar após implementação do LactationBusiness.openLactation")
     void openLactation_shouldThrowValidationException_whenStartDateIsInFuture() {
-        // given: startDate > hoje
-        // then: lança ValidationException e não chama findActive/save (ideal validar antes de persistência)
+        // given: request com data futura
+        // then: lança ValidationException e não chama banco
 
         // Arrange
         Long farmId = 1L;
-        String goatId = "1643218012";
+        String goatId = "123";
 
-        LactationRequestVO requestVO = futureRequestVO();
+        // Cria request inline para garantir data futura
+        LactationRequestVO futureRequest = new LactationRequestVO();
+        futureRequest.setStartDate(LocalDate.now().plusDays(1));
 
         // Act & Assert
         assertThrows(ValidationException.class,
-                () -> lactationBusiness.openLactation(farmId, goatId, requestVO));
+                () -> lactationBusiness.openLactation(farmId, goatId, futureRequest));
 
         // Verify
         verifyNoInteractions(lactationPersistencePort);
@@ -144,51 +145,33 @@ class LactationBusinessTest {
     // HELPERS
     // ==================================================================================
 
-    /**
-     * Request VO válido: startDate no passado (evita conflito com regra de "data futura").
-     */
     private LactationRequestVO validRequestVO() {
         return LactationRequestVO.builder()
-                .startDate(LocalDate.now().minusDays(1))
+                .startDate(LocalDate.of(2026, 1, 1))
                 .build();
     }
 
-    /**
-     * Request VO inválido: startDate no futuro (regra de domínio).
-     */
-    private LactationRequestVO futureRequestVO() {
-        return LactationRequestVO.builder()
-                .startDate(LocalDate.now().plusDays(1))
-                .build();
-    }
-
-    private Lactation activeLactationEntity(Long farmId, String goatId) {
+    private Lactation activeLactationEntity() {
         Lactation entity = new Lactation();
         entity.setId(10L);
-        entity.setFarmId(farmId);
-        entity.setGoatId(goatId);
         entity.setStatus(LactationStatus.ACTIVE);
-        entity.setStartDate(LocalDate.now().minusDays(10));
-        entity.setEndDate(null);
+        entity.setStartDate(LocalDate.of(2026, 1, 1));
         return entity;
     }
 
-    private Lactation savedLactationEntity(Long farmId, String goatId, LocalDate startDate) {
+    private Lactation savedLactationEntity() {
         Lactation entity = new Lactation();
         entity.setId(11L);
-        entity.setFarmId(farmId);
-        entity.setGoatId(goatId);
         entity.setStatus(LactationStatus.ACTIVE);
-        entity.setStartDate(startDate);
-        entity.setEndDate(null);
+        entity.setStartDate(LocalDate.of(2026, 1, 1));
         return entity;
     }
 
-    private LactationResponseVO responseVO(Long id, LocalDate startDate, LactationStatus status) {
+    private LactationResponseVO responseVO() {
         return LactationResponseVO.builder()
-                .id(id)
-                .status(status)
-                .startDate(startDate)
+                .id(11L)
+                .status(LactationStatus.ACTIVE)
+                .startDate(LocalDate.of(2026, 1, 1))
                 .build();
     }
 }

@@ -9,6 +9,17 @@ import com.devmaster.goatfarm.milk.mapper.LactationMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.milk.enums.LactationStatus;
+import com.devmaster.goatfarm.milk.model.entity.Lactation;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+
 @Service
 @RequiredArgsConstructor
 public class LactationBusiness implements LactationCommandUseCase, LactationQueryUseCase {
@@ -18,7 +29,26 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
-        return null;
+        // Validar data futura
+        if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
+             throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Start date cannot be in the future."));
+        }
+
+        // Validar se já existe lactação ativa
+        Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        if (activeLactation.isPresent()) {
+            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "There is already an active lactation for this goat."));
+        }
+        
+        Lactation entity = new Lactation();
+        entity.setFarmId(farmId);
+        entity.setGoatId(goatId);
+        entity.setStartDate(vo.getStartDate());
+        entity.setStatus(LactationStatus.ACTIVE);
+        entity.setEndDate(null);
+
+        Lactation saved = lactationPersistencePort.save(entity);
+        return lactationMapper.toResponseVO(saved);
     }
 
     @Override
