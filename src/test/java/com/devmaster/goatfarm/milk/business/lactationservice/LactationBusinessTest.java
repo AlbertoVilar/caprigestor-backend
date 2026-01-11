@@ -10,7 +10,6 @@ import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.mapper.LactationMapper;
 import com.devmaster.goatfarm.milk.model.entity.Lactation;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -376,6 +375,8 @@ class LactationBusinessTest {
     private LactationResponseVO responseVO() {
         return LactationResponseVO.builder()
                 .id(11L)
+                .farmId(1L)
+                .goatId("123")
                 .status(LactationStatus.ACTIVE)
                 .startDate(LocalDate.of(2026, 1, 1))
                 .build();

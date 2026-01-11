@@ -16,6 +16,8 @@ import java.time.LocalDate;
 @Builder
 public class LactationResponseVO {
     private Long id;
+    private Long farmId;
+    private String goatId;
     private LactationStatus status;
     private LocalDate startDate;
     private LocalDate endDate;
