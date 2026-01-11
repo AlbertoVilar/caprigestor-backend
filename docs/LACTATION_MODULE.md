@@ -6,7 +6,7 @@ Este módulo é responsável pelo ciclo de vida produtivo das cabras, gerenciand
 ## Endpoints do CRUD
 
 O módulo expõe uma API RESTful completa para gerenciamento das lactações.
-**Base Path:** `/api/v1/farms/{farmId}/goats/{goatId}/lactations`
+**Base Path:** `/api/goatfarms/{farmId}/goats/{goatId}/lactations`
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
