@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.model.entity.Lactation;
 import com.devmaster.goatfarm.milk.model.repository.LactationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -23,5 +25,15 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     @Override
     public Optional<Lactation> findActiveByFarmIdAndGoatId(Long farmId, String goatId) {
         return lactationRepository.findByFarmIdAndGoatIdAndStatus(farmId, goatId, LactationStatus.ACTIVE);
+    }
+
+    @Override
+    public Optional<Lactation> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId) {
+        return lactationRepository.findByIdAndFarmIdAndGoatId(id, farmId, goatId);
+    }
+
+    @Override
+    public Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
+        return lactationRepository.findAllByFarmIdAndGoatId(farmId, goatId, pageable);
     }
 }
