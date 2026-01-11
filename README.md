@@ -82,11 +82,12 @@ O sistema implementa um fluxo de registro estrito e atômico para garantir consi
 - ✅ Status e categorização (PO, PA, PC)
 - ✅ Busca avançada e filtros
 
-### 🥛 Gestão de Produção Leiteira
-- ✅ Registro diário de produção por turno
+### 🥛 Gestão de Produção Leiteira e Lactação
+- ✅ **Lactação:** Ciclo de vida produtivo (abertura, secagem, status ativo/fechado)
+- ✅ **Produção Diária:** Registro de ordenhas por turno (Manhã/Tarde)
 - ✅ Controle de volume e observações
-- ✅ Histórico completo de lactações
-- ✅ Validação de duplicidade (Data + Turno)
+- ✅ Histórico completo de lactações e produções
+- ✅ Validação de duplicidade e regras de negócio
 
 ### 🧬 Regras de Negócio (Genealogia & Classificação)
 
@@ -191,6 +192,8 @@ erDiagram
   GOAT_FARM ||--o{ PHONE : has
   GOAT_FARM ||--o{ GOAT : hosts
   GOAT ||--o{ EVENT : has
+  GOAT ||--o{ LACTATION : has
+  GOAT ||--o{ MILK_PRODUCTION : produces
   GOAT ||--o| GOAT : father
   GOAT ||--o| GOAT : mother
 
@@ -264,6 +267,24 @@ erDiagram
     string goat_registration_number FK
     int farm_id FK
   }
+
+  LACTATION {
+    int id PK
+    date start_date
+    date end_date
+    string status
+    int goat_id FK
+    int farm_id FK
+  }
+
+  MILK_PRODUCTION {
+    int id PK
+    date date
+    string shift
+    float volume_liters
+    int goat_id FK
+    int farm_id FK
+  }
 ```
 
 ---
@@ -321,10 +342,33 @@ classDiagram
         FEMALE
     }
 
+    %% ========== MÓDULO MILK ==========
+    class Lactation {
+        +Long id
+        +LocalDate startDate
+        +LocalDate endDate
+        +LactationStatus status
+    }
+
+    class MilkProduction {
+        +Long id
+        +LocalDate date
+        +String shift
+        +double volumeLiters
+    }
+
+    class LactationStatus {
+        <<enumeration>>
+        ACTIVE
+        CLOSED
+    }
+
     %% ========== RELACIONAMENTOS ==========
     GoatFarm "1" --> "1" Address : possui
     GoatFarm "1" --> "0..*" Phone : tem
     GoatFarm "1" --> "0..*" Goat : gerencia
+    Goat "1" --> "0..*" Lactation : possui
+    Goat "1" --> "0..*" MilkProduction : produz
     User "1" --> "0..*" GoatFarm : possui
 ```
 

@@ -33,6 +33,14 @@ Este documento descreve as entidades principais, regras de negócio e requisitos
 *   **Tipos**: Parto, Cobertura, Vacinação, Pesagem, Morte, Transferência.
 *   **Fluxo**: Eventos são registrados e podem disparar processamentos assíncronos (via RabbitMQ) para atualizações de status ou notificações.
 
+### Lactation (Lactação)
+*   **Descrição**: Representa o ciclo produtivo de uma cabra.
+*   **Atributos Chave**: `startDate`, `endDate`, `status` (ACTIVE, CLOSED).
+*   **Regras**:
+    *   Uma cabra só pode ter **uma** lactação ativa por vez.
+    *   Para encerrar (secagem), deve-se informar a `endDate`.
+    *   O status é a fonte de verdade para saber se o animal está "em lactação".
+
 ### MilkProduction (Produção de Leite)
 *   **Descrição**: Registro diário da produção de leite de uma cabra.
 *   **Atributos Chave**: `date`, `shift` (Turno: Manhã/Tarde), `volumeLiters`.

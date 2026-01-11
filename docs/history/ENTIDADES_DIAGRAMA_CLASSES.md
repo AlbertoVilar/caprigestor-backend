@@ -113,6 +113,34 @@ Relacionamentos (Events)
 
 ---
 
+## Milk (Lactation & Production)
+
+- Lactation
+  - id
+  - farmId
+  - goatId
+  - startDate
+  - endDate
+  - status (ACTIVE, CLOSED)
+  - pregnancyStartDate
+  - dryStartDate
+
+- MilkProduction
+  - id
+  - farmId
+  - goatId
+  - date
+  - shift (MORNING, AFTERNOON, NIGHT)
+  - volumeLiters
+  - notes
+
+Relacionamentos (Milk)
+- Goat 1 — N Lactation
+- Goat 1 — N MilkProduction
+- Lactation 1 — N MilkProduction (Lógico: produção ocorre durante lactação)
+
+---
+
 ## Shared
 
 - Person (se utilizado)
@@ -227,6 +255,24 @@ classDiagram
     +String payload
   }
 
+  class Lactation {
+    +Long id
+    +Long farmId
+    +Long goatId
+    +LocalDate startDate
+    +LocalDate endDate
+    +LactationStatus status
+  }
+
+  class MilkProduction {
+    +Long id
+    +Long farmId
+    +Long goatId
+    +LocalDate date
+    +String shift
+    +double volumeLiters
+  }
+
   class Person {
     +Long id
     +String fullName
@@ -243,6 +289,8 @@ classDiagram
   Goat --> Goat : father 0..1
   Goat --> Goat : mother 0..1
   Goat --> Event : 1..N
+  Goat --> Lactation : 1..N
+  Goat --> MilkProduction : 1..N
   Person --> Phone : 1..N
 ```
 
