@@ -492,7 +492,9 @@ Todo o schema do banco é gerenciado pelo **Flyway**.
 - O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
 
 ### H2 Database
-O H2 **não é usado** como banco de desenvolvimento para evitar divergências de SQL. Ele é reservado estritamente para testes unitários muito específicos, se necessário.
+O H2 é utilizado em dois cenários:
+1.  **Testes Unitários**: Execução rápida e isolada.
+2.  **Smoke Tests**: Validação rápida do build (`profile: smoke`), permitindo rodar a aplicação em memória sem depender do Docker.
 
 ---
 
