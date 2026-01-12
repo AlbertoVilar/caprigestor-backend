@@ -18,6 +18,7 @@ public class ReproductiveEventResponseVO {
     private Long id;
     private Long farmId;
     private String goatId;
+    private Long pregnancyId;
     private ReproductiveEventType eventType;
     private LocalDate eventDate;
     private BreedingType breedingType;
@@ -25,5 +26,5 @@ public class ReproductiveEventResponseVO {
     private String notes;
     private LocalDate checkScheduledDate;
     private PregnancyCheckResult checkResult;
-    private LocalDate checkDate;
+    // checkDate removed
 }

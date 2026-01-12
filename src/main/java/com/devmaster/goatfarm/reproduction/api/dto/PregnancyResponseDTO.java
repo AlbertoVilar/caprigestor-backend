@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.reproduction.api.dto;
 
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,8 +19,9 @@ public class PregnancyResponseDTO {
     private String goatId;
     private PregnancyStatus status;
     private LocalDate breedingDate;
-    private LocalDate confirmedAt;
+    private LocalDate confirmDate;
     private LocalDate expectedDueDate;
-    private LocalDate recommendedDryDate;
     private LocalDate closedAt;
+    private PregnancyCloseReason closeReason;
+    private String notes;
 }

@@ -52,8 +52,7 @@ public class ReproductiveEvent {
     @Column(name = "check_result")
     private PregnancyCheckResult checkResult;
 
-    @Column(name = "check_date")
-    private LocalDate checkDate;
+    // Removed checkDate (redundant with eventDate)
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

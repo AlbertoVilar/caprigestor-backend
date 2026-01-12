@@ -55,8 +55,20 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 ### PregnancyCloseRequestDTO
 ```json
 {
-  "closedAt": "2026-06-01",
-  "notes": "Parto normal",
-  "outcome": "BORN"
+  "closeDate": "2026-06-01",
+  "status": "CLOSED",
+  "closeReason": "BIRTH",
+  "notes": "Parto normal"
 }
 ```
+
+### Response Objects
+**PregnancyResponseDTO**
+- `confirmedAt` renamed to `confirmDate`.
+- `recommendedDryDate` removed.
+- `closeReason` added.
+- `notes` added.
+
+**ReproductiveEventResponseDTO**
+- `checkDate` removed.
+- `pregnancyId` added.

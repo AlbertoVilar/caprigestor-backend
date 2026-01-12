@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.reproduction.model.entity;
 
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,17 +34,21 @@ public class Pregnancy {
     @Column(name = "breeding_date")
     private LocalDate breedingDate;
 
-    @Column(name = "confirmed_at")
-    private LocalDate confirmedAt;
+    @Column(name = "confirm_date")
+    private LocalDate confirmDate;
 
     @Column(name = "expected_due_date")
     private LocalDate expectedDueDate;
 
-    @Column(name = "recommended_dry_date")
-    private LocalDate recommendedDryDate;
-
     @Column(name = "closed_at")
     private LocalDate closedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "close_reason")
+    private PregnancyCloseReason closeReason;
+
+    @Column(name = "notes", length = 1000)
+    private String notes;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
