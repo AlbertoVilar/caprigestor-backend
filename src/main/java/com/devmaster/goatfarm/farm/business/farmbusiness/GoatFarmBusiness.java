@@ -217,8 +217,8 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
             throw new DuplicateEntityException("Não foi possível completar o cadastro com os dados informados.");
         }
         
-        // Define role padrão ROLE_USER
-        userVO.setRoles(java.util.List.of("ROLE_USER"));
+        // Define role padrão ROLE_FARM_OWNER
+        userVO.setRoles(java.util.List.of("ROLE_FARM_OWNER"));
         
         // Cria novo usuário
         return userBusiness.findOrCreateUser(userVO);
