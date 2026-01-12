@@ -270,13 +270,15 @@ Observação: todas as entidades de negócio devem referenciar `farm_id` para su
 
 ## APIs e Páginas (rascunho)
 
-- Compras: `/suppliers`, `/products`, `/purchase-orders`, `/receipts`, `/ap`
-- Vendas: `/customers`, `/sales-orders`, `/invoices`, `/ar`
-- Estoque: `/inventory/movements`, `/inventory/lots`
-- Leite: `/milk/production`, `/milk/sales`
-- Veterinário: `/vet/appointments`, `/vet/med-usage`
-- Alimentação: `/feeding/plans`, `/feeding/consumption`
-- Financeiro: `/finance/chart-of-accounts`, `/finance/cost-centers`, `/finance/entries`, `/finance/ap`, `/finance/ar`
+> **Nota**: O padrão de rotas do projeto segue a estrutura hierárquica `/api/goatfarms/{farmId}/...`. As rotas abaixo são sugestões e devem ser adaptadas para esse padrão na implementação.
+
+- Compras: `/api/goatfarms/{farmId}/suppliers`, `/api/goatfarms/{farmId}/products`, `/api/goatfarms/{farmId}/purchase-orders`
+- Vendas: `/api/goatfarms/{farmId}/customers`, `/api/goatfarms/{farmId}/sales-orders`, `/api/goatfarms/{farmId}/invoices`
+- Estoque: `/api/goatfarms/{farmId}/inventory/movements`, `/api/goatfarms/{farmId}/inventory/lots`
+- Leite: `/api/goatfarms/{farmId}/milk/production`, `/api/goatfarms/{farmId}/milk/sales`
+- Veterinário: `/api/goatfarms/{farmId}/vet/appointments`, `/api/goatfarms/{farmId}/vet/med-usage`
+- Alimentação: `/api/goatfarms/{farmId}/feeding/plans`, `/api/goatfarms/{farmId}/feeding/consumption`
+- Financeiro: `/api/goatfarms/{farmId}/finance/chart-of-accounts`, `/api/goatfarms/{farmId}/finance/entries`
 
 ## Riscos e Considerações
 

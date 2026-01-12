@@ -1,7 +1,5 @@
-> ⚠️ DOCUMENTO HISTÓRICO
-> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
-> **Não representa o estado atual da arquitetura ou do código.**
-> *Atualizado em 2026-01-11 para manter consistência com novos módulos (Lactation/Milk).*
+> **NOTA HISTÓRICA**: Este arquivo é mantido para fins de registro histórico. Seu conteúdo pode não refletir o estado atual do código ou da arquitetura.
+> Última verificação: 2026-01-11
 
 # Entidades e Relacionamentos — Diagrama de Classes (Base CapriGestor)
 
