@@ -158,7 +158,7 @@ class GoatFarmBusinessTest {
         verify(userBusiness).findOrCreateUser(userCaptor.capture());
         UserRequestVO capturedUser = userCaptor.getValue();
         assertNotNull(capturedUser.getRoles());
-        assertTrue(capturedUser.getRoles().contains("ROLE_USER"));
+        assertTrue(capturedUser.getRoles().contains("ROLE_FARM_OWNER"));
         assertEquals(1, capturedUser.getRoles().size());
         
         verify(goatFarmPort).save(any());
