@@ -90,6 +90,11 @@ public class SecurityConfig {
                 // Genealogias públicas (apenas leitura)
                 .requestMatchers(HttpMethod.GET,
                         "/api/goatfarms/*/goats/*/genealogies").permitAll()
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.POST, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
+                .requestMatchers(HttpMethod.PUT, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
+                .requestMatchers(HttpMethod.DELETE, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 // Qualquer outra requisição exige autenticação
                 .anyRequest().authenticated()
             )

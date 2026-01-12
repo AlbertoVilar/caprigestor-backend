@@ -30,7 +30,7 @@ public class GoatController {
         this.goatMapper = goatMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
     @Operation(summary = "Cadastra uma nova cabra em uma fazenda")
     public ResponseEntity<GoatResponseDTO> createGoat(@PathVariable("farmId") Long farmId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
@@ -40,7 +40,7 @@ public class GoatController {
                 ));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PutMapping("/{goatId}")
     @Operation(summary = "Atualiza os dados de uma cabra existente em uma fazenda")
     public ResponseEntity<GoatResponseDTO> updateGoat(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
@@ -51,7 +51,7 @@ public class GoatController {
         );
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @DeleteMapping("/{goatId}")
     @Operation(summary = "Remove uma cabra de uma fazenda")
     public ResponseEntity<Void> deleteGoat(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {

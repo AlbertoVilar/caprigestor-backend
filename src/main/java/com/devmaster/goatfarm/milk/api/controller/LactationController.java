@@ -20,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -32,6 +33,7 @@ public class LactationController {
     private final LactationCommandUseCase lactationCommandUseCase;
     private final LactationMapper lactationMapper;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping
     @Operation(summary = "Open a new lactation for a goat")
     public ResponseEntity<LactationResponseDTO> openLactation(
@@ -52,6 +54,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PatchMapping("/{lactationId}/dry")
     @Operation(summary = "Mark a lactation as dry")
     public ResponseEntity<LactationResponseDTO> dryLactation(
