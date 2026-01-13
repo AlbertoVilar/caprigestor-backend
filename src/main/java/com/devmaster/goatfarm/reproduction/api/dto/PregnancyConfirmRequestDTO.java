@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.reproduction.api.dto;
 
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,9 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PregnancyConfirmRequestDTO {
-    @NotNull(message = "Confirmation date is required")
-    private LocalDate confirmationDate;
+    @NotNull(message = "Check date is required")
+    private LocalDate checkDate;
 
-    private LocalDate expectedDueDate;
+    @NotNull(message = "Check result is required")
+    private PregnancyCheckResult checkResult;
     private String notes;
 }

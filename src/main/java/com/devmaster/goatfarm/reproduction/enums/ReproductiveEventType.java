@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.reproduction.enums;
 
 public enum ReproductiveEventType {
-    BREEDING,
-    PREGNANCY_CHECK
+    COVERAGE,
+    PREGNANCY_CHECK,
+    PREGNANCY_CLOSE
 }

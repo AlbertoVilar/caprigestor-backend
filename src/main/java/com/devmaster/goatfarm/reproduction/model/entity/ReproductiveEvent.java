@@ -45,6 +45,9 @@ public class ReproductiveEvent {
     @Column(name = "notes", length = 1000)
     private String notes;
 
+    @Column(name = "pregnancy_id")
+    private Long pregnancyId;
+
     @Column(name = "check_scheduled_date")
     private LocalDate checkScheduledDate;
 
