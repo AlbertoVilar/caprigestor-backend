@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface ReproductiveEventPersistencePort {
     ReproductiveEvent save(ReproductiveEvent entity);
+
     Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+
     Optional<ReproductiveEvent> findLatestCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date);
 }

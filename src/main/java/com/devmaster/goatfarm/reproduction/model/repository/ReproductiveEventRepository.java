@@ -12,11 +12,15 @@ import java.util.Optional;
 
 @Repository
 public interface ReproductiveEventRepository extends JpaRepository<ReproductiveEvent, Long> {
-    Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+
+    Page<ReproductiveEvent> findAllByFarmIdAndGoatIdOrderByEventDateDesc(Long farmId, String goatId, Pageable pageable);
+
     Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDesc(
             Long farmId,
             String goatId,
             ReproductiveEventType eventType,
             LocalDate eventDate
     );
+
+
 }

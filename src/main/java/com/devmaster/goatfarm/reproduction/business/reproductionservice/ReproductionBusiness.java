@@ -175,12 +175,14 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     @Override
     public Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+                .map(reproductionMapper::toPregnancyResponseVO);
     }
 
     @Override
     public Page<ReproductiveEventResponseVO> getReproductiveEvents(Long farmId, String goatId, Pageable pageable) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+                .map(reproductionMapper::toReproductiveEventResponseVO);
     }
 
     private ValidationException buildValidationException(String field, String message) {

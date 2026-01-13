@@ -25,7 +25,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
 
     @Override
     public Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
-        return repository.findAllByFarmIdAndGoatId(farmId, goatId, pageable);
+        return repository.findAllByFarmIdAndGoatIdOrderByEventDateDesc(farmId, goatId, pageable);
     }
 
     @Override
