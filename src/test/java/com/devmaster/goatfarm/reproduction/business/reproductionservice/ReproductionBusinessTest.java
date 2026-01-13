@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
@@ -193,7 +194,7 @@ class ReproductionBusinessTest {
     }
 
     @Test
-    void confirmPregnancy_shouldThrowValidation_whenResultIsNegative() {
+    void confirmPregnancy_shouldCreateCheckEventOnly_whenResultIsNegative() {
         // Arrange
         PregnancyConfirmRequestVO requestVO = validConfirmRequestVONegative();
         ReproductiveEvent coverageEvent = coverageEventEntity();
@@ -203,8 +204,16 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(coverageEvent));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        ValidationException exception = assertThrows(ValidationException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
+
+        // Validate exception content (audit requirement)
+        ValidationError validationError = exception.getValidationError();
+        assertThat(validationError).isNotNull();
+        assertThat(validationError.getErrors()).anyMatch(err ->
+                "checkResult".equals(err.getFieldName()) &&
+                        err.getMessage().contains("NEGATIVE is not allowed")
+        );
 
         ArgumentCaptor<ReproductiveEvent> eventCaptor = ArgumentCaptor.forClass(ReproductiveEvent.class);
         verify(reproductiveEventPersistencePort).save(eventCaptor.capture());
