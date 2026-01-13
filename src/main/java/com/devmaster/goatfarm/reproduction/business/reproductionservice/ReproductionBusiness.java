@@ -67,7 +67,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = ValidationException.class)
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
         if (vo.getCheckDate() == null) {
             throw buildValidationException("checkDate", "Check date is required");
