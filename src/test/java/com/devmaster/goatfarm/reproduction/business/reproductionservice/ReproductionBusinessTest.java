@@ -65,7 +65,7 @@ class ReproductionBusinessTest {
     // ==================================================================================
 
     @Test
-    void registerBreeding_shouldCreateCoverageEvent_whenRequestIsValid() {
+    void registerBreeding_shouldCreateCoverageEvent_whenValidRequest() {
         // Arrange
         BreedingRequestVO requestVO = validBreedingRequestVO();
 
