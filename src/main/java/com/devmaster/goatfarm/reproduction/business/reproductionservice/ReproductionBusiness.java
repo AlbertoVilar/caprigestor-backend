@@ -100,6 +100,10 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             }
         }
 
+        if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
+            throw buildValidationException("checkResult", "NEGATIVE is not allowed for confirm. Use pregnancy check registration endpoint in the future.");
+        }
+
         ReproductiveEvent checkEvent = ReproductiveEvent.builder()
                 .farmId(farmId)
                 .goatId(goatId)
@@ -110,10 +114,6 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
 
         reproductiveEventPersistencePort.save(checkEvent);
-
-        if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
-            throw buildValidationException("checkResult", "NEGATIVE is not allowed for confirm. Use pregnancy check registration endpoint in the future.");
-        }
 
         LocalDate breedingDate = latestCoverage.get().getEventDate();
         LocalDate expectedDueDate = breedingDate.plusDays(GESTATION_DAYS); // Domain rule: gestation = 150 days

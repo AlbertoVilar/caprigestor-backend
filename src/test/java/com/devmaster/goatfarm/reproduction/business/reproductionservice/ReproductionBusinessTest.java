@@ -194,7 +194,7 @@ class ReproductionBusinessTest {
     }
 
     @Test
-    void confirmPregnancy_shouldCreateCheckEventOnly_whenResultIsNegative() {
+    void confirmPregnancy_shouldRejectNegativeWithoutPersistence() {
         // Arrange
         PregnancyConfirmRequestVO requestVO = validConfirmRequestVONegative();
         ReproductiveEvent coverageEvent = coverageEventEntity();
@@ -210,18 +210,13 @@ class ReproductionBusinessTest {
         // Validate exception content (audit requirement)
         ValidationError validationError = exception.getValidationError();
         assertThat(validationError).isNotNull();
-        assertThat(validationError.getErrors()).anyMatch(err ->
-                "checkResult".equals(err.getFieldName()) &&
-                        err.getMessage().contains("NEGATIVE is not allowed")
-        );
+            assertThat(validationError.getStatus()).isEqualTo(400);
+            assertThat(validationError.getErrors()).anyMatch(err ->
+                    "checkResult".equals(err.getFieldName()) &&
+                            err.getMessage().contains("NEGATIVE is not allowed")
+            );
 
-        ArgumentCaptor<ReproductiveEvent> eventCaptor = ArgumentCaptor.forClass(ReproductiveEvent.class);
-        verify(reproductiveEventPersistencePort).save(eventCaptor.capture());
-
-        ReproductiveEvent capturedEvent = eventCaptor.getValue();
-        assertThat(capturedEvent.getEventType()).isEqualTo(ReproductiveEventType.PREGNANCY_CHECK);
-        assertThat(capturedEvent.getCheckResult()).isEqualTo(PregnancyCheckResult.NEGATIVE);
-
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verifyNoInteractions(reproductionMapper);
     }
