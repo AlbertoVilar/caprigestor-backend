@@ -25,8 +25,9 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 |---|---|---|---|---|
 | POST | `/breeding` | Registra uma cobertura | `BreedingRequestDTO` | `ReproductiveEventResponseDTO` |
 | PATCH | `/pregnancies/confirm` | Confirma prenhez | `PregnancyConfirmRequestDTO` | `PregnancyResponseDTO` |
-| GET | `/pregnancies/active` | Busca gestação ativa | - | `PregnancyResponseDTO` |
-| PATCH | `/pregnancies/{pregnancyId}/close` | Encerra gestação | `PregnancyCloseRequestDTO` | `PregnancyResponseDTO` |
+| GET | /pregnancies/active | Busca gestação ativa | - | `PregnancyResponseDTO` |
+| GET | /pregnancies/{pregnancyId} | Busca gestação por ID | - | `PregnancyResponseDTO` |
+| PATCH | /pregnancies/{pregnancyId}/close | Encerra gestação | `PregnancyCloseRequestDTO` | `PregnancyResponseDTO` |
 | GET | `/events` | Histórico de eventos | - | `Page<ReproductiveEventResponseDTO>` |
 | GET | `/pregnancies` | Histórico de gestações | - | `Page<PregnancyResponseDTO>` |
 
