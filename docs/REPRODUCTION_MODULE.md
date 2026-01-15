@@ -76,6 +76,51 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 - `checkDate` removed.
 - `pregnancyId` added.
 
+## GET /pregnancies/{pregnancyId}
+
+Endpoint para buscar o detalhe de uma gestação específica de uma cabra.
+
+- **Método**: GET  
+- **Rota completa**:  
+  `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}`
+
+### Exemplo de request
+
+```http
+GET /api/goatfarms/1/goats/GOAT-001/reproduction/pregnancies/10 HTTP/1.1
+Host: api.caprigestor.local
+Accept: application/json
+```
+
+### Exemplo de response 200
+
+```json
+{
+  "id": 10,
+  "goatId": "GOAT-001",
+  "breedingDate": "2026-01-01",
+  "confirmDate": "2026-02-01",
+  "status": "ACTIVE",
+  "closeDate": null,
+  "closeReason": null,
+  "notes": "Gestação confirmada por ultrassom"
+}
+```
+
+### Status codes
+
+- **200 OK** – gestação encontrada para o `farmId` informado.  
+- **400 Bad Request** – `pregnancyId` inválido (null ou <= 0).  
+- **404 Not Found** – gestação não encontrada ou não pertence ao `farmId` informado.
+
+## Concurrency Safety (Blindagem)
+
+Para garantir que a regra “apenas 1 gestação ativa por cabra” seja respeitada mesmo em cenários de concorrência extrema:
+
+1. **Unique Index Partial**: o banco de dados possui um índice único `(farm_id, goat_id) WHERE status = 'ACTIVE'`.  
+2. **Pre-check no Business**: a aplicação verifica duplicidade antes de salvar uma nova pregnancy ativa.  
+3. **Handler 409**: se ainda assim ocorrer uma race condition e o índice único for violado, a aplicação captura a `DataIntegrityViolationException` e retorna **HTTP 409 Conflict** com mensagem amigável, usando o campo `"status"` no payload de erro.
+
 ## Flyway V16 – banco sujo (duplicated ACTIVE)
 
 Quando o banco PostgreSQL já possui dados antigos, a migration `V16__enforce_single_active_pregnancy.sql` pode falhar ao criar o índice único parcial se existirem 2+ pregnancies com `status = 'ACTIVE'` para o mesmo `(farm_id, goat_id)`.

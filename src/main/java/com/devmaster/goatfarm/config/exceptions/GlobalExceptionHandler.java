@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -105,11 +106,6 @@ public class GlobalExceptionHandler {
         String error = "Conflito de integridade de dados";
         HttpStatus status = HttpStatus.CONFLICT;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
-        // We try to provide a generic message or extract something if possible, but keeping it safe.
-        // The user mentioned: field coerente (ex.: "status") e mensagem clara.
-        // For partial index violation, it's hard to know exactly which field without parsing.
-        // But for this specific case (active pregnancy), it's likely "status".
-        // I'll add a generic error on "status" or just a global error.
         err.addError("status", "Database constraint violation (e.g., duplicate active record)");
         return ResponseEntity.status(status).body(err);
     }
