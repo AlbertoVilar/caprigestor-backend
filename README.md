@@ -162,6 +162,7 @@ domain → application → infrastructure
 | Módulo | Descrição |
 |--------|-----------|
 | **goat** | Regras de negócio e acesso a dados de caprinos |
+| **reproduction** | Ciclo reprodutivo (coberturas, gestações, eventos reprodutivos) |
 | **milk** | Gestão de produção de leite e lactações |
 | **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
 | **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
@@ -285,6 +286,38 @@ erDiagram
     int goat_id FK
     int farm_id FK
   }
+  
+  PREGNANCY {
+    int id PK
+    int farm_id FK
+    string goat_id FK
+    string status
+    date breeding_date
+    date confirm_date
+    date expected_due_date
+    date closed_at
+    string close_reason
+  }
+
+  REPRODUCTIVE_EVENT {
+    int id PK
+    int farm_id FK
+    string goat_id FK
+    int pregnancy_id FK
+    string event_type
+    date event_date
+    string breeding_type
+    string breeder_ref
+    string notes
+    date check_scheduled_date
+    string check_result
+  }
+
+  GOAT ||--o{ PREGNANCY : has
+  GOAT ||--o{ REPRODUCTIVE_EVENT : has
+  GOAT_FARM ||--o{ PREGNANCY : hosts
+  GOAT_FARM ||--o{ REPRODUCTIVE_EVENT : hosts
+  PREGNANCY ||--o{ REPRODUCTIVE_EVENT : lifecycle
 ```
 
 ---
@@ -342,6 +375,56 @@ classDiagram
         FEMALE
     }
 
+    %% ========== MÓDULO REPRODUCTION ==========
+    class Pregnancy {
+        +Long id
+        +Long farmId
+        +String goatId
+        +PregnancyStatus status
+        +LocalDate breedingDate
+        +LocalDate confirmDate
+        +LocalDate expectedDueDate
+        +LocalDate closedAt
+        +PregnancyCloseReason closeReason
+    }
+
+    class ReproductiveEvent {
+        +Long id
+        +Long farmId
+        +String goatId
+        +Long pregnancyId
+        +ReproductiveEventType eventType
+        +LocalDate eventDate
+        +BreedingType breedingType
+    }
+
+    class PregnancyStatus {
+        <<enumeration>>
+        ACTIVE
+        CLOSED
+    }
+
+    class PregnancyCloseReason {
+        <<enumeration>>
+        BIRTH
+        LOST
+        ABORTED
+        DATA_FIX_DUPLICATED_ACTIVE
+    }
+
+    class ReproductiveEventType {
+        <<enumeration>>
+        COVERAGE
+        PREGNANCY_CHECK
+        PREGNANCY_CLOSE
+    }
+
+    class BreedingType {
+        <<enumeration>>
+        NATURAL
+        AI
+    }
+
     %% ========== MÓDULO MILK ==========
     class Lactation {
         +Long id
@@ -369,6 +452,9 @@ classDiagram
     GoatFarm "1" --> "0..*" Goat : gerencia
     Goat "1" --> "0..*" Lactation : possui
     Goat "1" --> "0..*" MilkProduction : produz
+    Goat "1" --> "0..*" Pregnancy : gestacoes
+    Goat "1" --> "0..*" ReproductiveEvent : eventosReprodutivos
+    Pregnancy "1" --> "0..*" ReproductiveEvent : eventos
     User "1" --> "0..*" GoatFarm : possui
 ```
 

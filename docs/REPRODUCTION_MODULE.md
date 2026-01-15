@@ -47,10 +47,12 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 {
   "checkDate": "2026-02-01",
   "checkResult": "POSITIVE",
-  "notes": "Ultrassom",
-  "expectedDueDate": "2026-06-01"
+  "notes": "Ultrassom"
 }
 ```
+
+> Regra de domínio: neste endpoint de confirmação, apenas `checkResult = POSITIVE` é aceito.  
+> Qualquer requisição com `checkResult = NEGATIVE` resulta em erro de validação (nenhum evento ou pregnancy é criado).
 
 ### PregnancyCloseRequestDTO
 ```json
