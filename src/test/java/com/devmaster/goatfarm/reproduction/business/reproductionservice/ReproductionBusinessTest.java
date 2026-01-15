@@ -295,6 +295,30 @@ class ReproductionBusinessTest {
         verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionMapper);
     }
 
+    @Test
+    void confirmPregnancy_shouldThrowValidation_whenMultipleActivePregnanciesExist_beforeWritingAnything() {
+        // Arrange
+        PregnancyConfirmRequestVO requestVO = validConfirmRequestVOPositive();
+
+        when(pregnancyPersistencePort.findAllActiveByFarmIdAndGoatIdOrdered(FARM_ID, GOAT_ID))
+                .thenReturn(java.util.List.of(activePregnancyEntity(), activePregnancyEntity()));
+
+        // Act
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
+
+        // Assert
+        ValidationError validationError = exception.getValidationError();
+        assertThat(validationError).isNotNull();
+        assertThat(validationError.getErrors()).anyMatch(err ->
+                "status".equals(err.getFieldName()) &&
+                        err.getMessage().contains("Multiple active pregnancies found")
+        );
+
+        verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper);
+        verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
+    }
+
     // ==================================================================================
     // GET ACTIVE PREGNANCY
     // ==================================================================================
@@ -315,6 +339,27 @@ class ReproductionBusinessTest {
 
         // Assert
         assertThat(result).isSameAs(responseVO);
+    }
+
+    @Test
+    void getActivePregnancy_shouldThrowValidation_whenMultipleActivePregnanciesExist() {
+        // Arrange
+        ValidationError validationError = new ValidationError(null, 409, "Data integrity error");
+        validationError.addError("status", "Multiple active pregnancies found for the same goat and farm");
+        ValidationException validationException = new ValidationException(validationError);
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenThrow(validationException);
+
+        // Act & Assert
+        ValidationException thrown = assertThrows(ValidationException.class,
+                () -> reproductionBusiness.getActivePregnancy(FARM_ID, GOAT_ID));
+
+        assertThat(thrown.getValidationError().getErrors()).anyMatch(err ->
+                "status".equals(err.getFieldName()) &&
+                        err.getMessage().contains("Multiple active pregnancies found")
+        );
+        verifyNoInteractions(reproductionMapper);
     }
 
     @Test
