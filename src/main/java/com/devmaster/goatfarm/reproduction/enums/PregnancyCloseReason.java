@@ -4,5 +4,6 @@ public enum PregnancyCloseReason {
     BIRTH,
     ABORTION,
     LOSS,
-    OTHER
+    OTHER,
+    DATA_FIX_DUPLICATED_ACTIVE
 }
