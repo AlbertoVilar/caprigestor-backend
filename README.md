@@ -496,6 +496,52 @@ O H2 é utilizado em dois cenários:
 1.  **Testes Unitários**: Execução rápida e isolada.
 2.  **Smoke Tests**: Validação rápida do build (`profile: smoke`), permitindo rodar a aplicação em memória sem depender do Docker.
 
+### Flyway V16 – banco sujo com ACTIVE duplicada
+
+A migration `V16` cria um índice único para garantir apenas **uma gestação ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falhará.
+
+O fluxo recomendado é totalmente manual e está documentado em:
+- `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`  
+  (contém **diagnóstico**, **fix seguro** e **verificação final**)
+
+**Procedimento de Correção (ambiente dev com PostgreSQL Docker):**
+
+1.  **Rodar diagnóstico (verificar se há duplicidades):**
+
+    ```sql
+    SELECT farm_id, goat_id, COUNT(*) AS active_count
+    FROM pregnancy
+    WHERE status = 'ACTIVE'
+    GROUP BY farm_id, goat_id
+    HAVING COUNT(*) > 1;
+    ```
+
+    - Se o resultado vier vazio, não há problema para a V16.
+    - Se houver linhas, existem gestações `ACTIVE` duplicadas que precisam ser corrigidas.
+
+    Exemplo usando o container padrão do projeto:
+
+    ```bash
+    docker exec -it caprigestor-postgres \
+      psql -U admin -d caprigestor_test \
+      -c "SELECT farm_id, goat_id, COUNT(*) AS active_count FROM pregnancy WHERE status = 'ACTIVE' GROUP BY farm_id, goat_id HAVING COUNT(*) > 1;"
+    ```
+
+2.  **Executar Data Fix (fechar gestações duplicadas mais antigas):**
+
+    - Execute o script manual em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`
+      diretamente no banco (via `psql`, PgAdmin ou outra ferramenta SQL).
+    - O script mantém apenas a gestação `ACTIVE` mais recente por `(farm_id, goat_id)` e fecha as demais.
+
+3.  **Rodar verificação final:**
+
+    - Reexecute o SELECT de diagnóstico (ou o bloco **C) Verificação final** do script manual).
+    - O resultado deve estar vazio antes de subir a aplicação.
+
+4.  **Subir aplicação normalmente:**
+
+    - Com o banco já corrigido, a aplicação subirá e o Flyway aplicará a `V16` com sucesso.
+
 ---
 
 ## 🔐 Segurança
