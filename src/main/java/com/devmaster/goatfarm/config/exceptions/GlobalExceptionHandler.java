@@ -108,5 +108,6 @@ public class GlobalExceptionHandler {
         err.addError("auth", e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
+
 }
-
+
