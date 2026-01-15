@@ -79,6 +79,13 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             throw buildValidationException("checkResult", "Check result is required");
         }
 
+        if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
+            var activeList = pregnancyPersistencePort.findAllActiveByFarmIdAndGoatIdOrdered(farmId, goatId);
+            if (activeList.size() > 1) {
+                throw buildValidationConflictException("status", "Multiple active pregnancies found for the same goat and farm");
+            }
+        }
+
         Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
                 .findLatestCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
 
@@ -186,7 +193,15 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     private ValidationException buildValidationException(String field, String message) {
-        ValidationError error = new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Validation error");
+        return buildValidationException(HttpStatus.BAD_REQUEST, field, message);
+    }
+
+    private ValidationException buildValidationConflictException(String field, String message) {
+        return buildValidationException(HttpStatus.CONFLICT, field, message);
+    }
+
+    private ValidationException buildValidationException(HttpStatus status, String field, String message) {
+        ValidationError error = new ValidationError(Instant.now(), status.value(), "Validation error");
         error.addError(field, message);
         return new ValidationException(error);
     }
