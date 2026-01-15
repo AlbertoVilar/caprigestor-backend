@@ -57,6 +57,16 @@ public class ReproductionController {
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
+    @GetMapping("/pregnancies/{pregnancyId}")
+    @Operation(summary = "Get pregnancy by ID")
+    public ResponseEntity<PregnancyResponseDTO> getPregnancyById(
+            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
+            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Pregnancy identifier") @PathVariable Long pregnancyId) {
+        PregnancyResponseVO responseVO = queryUseCase.getPregnancyById(farmId, pregnancyId);
+        return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
+    }
+
     @PatchMapping("/pregnancies/{pregnancyId}/close")
     @Operation(summary = "Close pregnancy (e.g., BORN, LOST, ABORTED)")
     public ResponseEntity<PregnancyResponseDTO> closePregnancy(
