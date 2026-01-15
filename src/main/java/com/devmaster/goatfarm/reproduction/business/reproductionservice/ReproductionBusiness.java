@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
@@ -181,11 +182,11 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
-    public PregnancyResponseVO getPregnancyById(Long farmId, Long pregnancyId) {
+    public PregnancyResponseVO getPregnancyById(Long farmId, String goatId, Long pregnancyId) {
         if (pregnancyId == null || pregnancyId <= 0) {
-            throw buildValidationException("pregnancyId", "Invalid pregnancy ID");
+            throw new InvalidArgumentException("Invalid pregnancy ID");
         }
-        Pregnancy pregnancy = pregnancyPersistencePort.findByFarmIdAndId(farmId, pregnancyId)
+        Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pregnancy not found with id: " + pregnancyId));
         return reproductionMapper.toPregnancyResponseVO(pregnancy);
     }

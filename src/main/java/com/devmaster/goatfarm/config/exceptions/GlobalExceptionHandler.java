@@ -106,7 +106,14 @@ public class GlobalExceptionHandler {
         String error = "Conflito de integridade de dados";
         HttpStatus status = HttpStatus.CONFLICT;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
-        err.addError("status", "Database constraint violation (e.g., duplicate active record)");
+        Throwable rootCause = e.getRootCause();
+        String message = rootCause != null ? rootCause.getMessage() : e.getMessage();
+
+        if (message != null && message.contains("ux_pregnancy_single_active_per_goat")) {
+            err.addError("status", "Duplicate active pregnancy for goat");
+        } else {
+            err.addError("integrity", "Database constraint violation");
+        }
         return ResponseEntity.status(status).body(err);
     }
 

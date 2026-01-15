@@ -119,7 +119,9 @@ Para garantir que a regra “apenas 1 gestação ativa por cabra” seja respeit
 
 1. **Unique Index Partial**: o banco de dados possui um índice único `(farm_id, goat_id) WHERE status = 'ACTIVE'`.  
 2. **Pre-check no Business**: a aplicação verifica duplicidade antes de salvar uma nova pregnancy ativa.  
-3. **Handler 409**: se ainda assim ocorrer uma race condition e o índice único for violado, a aplicação captura a `DataIntegrityViolationException` e retorna **HTTP 409 Conflict** com mensagem amigável, usando o campo `"status"` no payload de erro.
+3. **Handler 409**: se ainda assim ocorrer uma race condition e o índice único for violado:
+   - quando a violação vem do índice `ux_pregnancy_single_active_per_goat`, o handler retorna **HTTP 409 Conflict** com `field = "status"` e mensagem `"Duplicate active pregnancy for goat"`;  
+   - para outros constraints, o handler mantém **HTTP 409 Conflict**, mas utiliza `field = "integrity"` e mensagem genérica `"Database constraint violation"`.
 
 ## Flyway V16 – banco sujo (duplicated ACTIVE)
 

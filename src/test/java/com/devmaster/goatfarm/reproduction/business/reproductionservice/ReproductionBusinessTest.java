@@ -380,13 +380,13 @@ class ReproductionBusinessTest {
         Pregnancy pregnancy = activePregnancyEntity();
         PregnancyResponseVO responseVO = pregnancyResponseVO();
 
-        when(pregnancyPersistencePort.findByFarmIdAndId(FARM_ID, pregnancyId))
+        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(pregnancy));
         when(reproductionMapper.toPregnancyResponseVO(pregnancy))
                 .thenReturn(responseVO);
 
         // Act
-        PregnancyResponseVO result = reproductionBusiness.getPregnancyById(FARM_ID, pregnancyId);
+        PregnancyResponseVO result = reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, pregnancyId);
 
         // Assert
         assertThat(result).isSameAs(responseVO);
@@ -396,22 +396,22 @@ class ReproductionBusinessTest {
     void getPregnancyById_shouldThrowNotFound_whenNotExists() {
         // Arrange
         Long pregnancyId = 999L;
-        when(pregnancyPersistencePort.findByFarmIdAndId(FARM_ID, pregnancyId))
+        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class,
-                () -> reproductionBusiness.getPregnancyById(FARM_ID, pregnancyId));
+                () -> reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, pregnancyId));
         verifyNoInteractions(reproductionMapper);
     }
 
     @Test
-    void getPregnancyById_shouldThrowValidation_whenIdIsInvalid() {
+    void getPregnancyById_shouldThrowInvalidArgument_whenIdIsInvalid() {
         // Act & Assert
-        assertThrows(ValidationException.class,
-                () -> reproductionBusiness.getPregnancyById(FARM_ID, 0L));
-        assertThrows(ValidationException.class,
-                () -> reproductionBusiness.getPregnancyById(FARM_ID, null));
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException.class,
+                () -> reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, 0L));
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException.class,
+                () -> reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, null));
         verifyNoInteractions(pregnancyPersistencePort, reproductionMapper);
     }
 

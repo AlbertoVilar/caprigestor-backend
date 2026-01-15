@@ -63,7 +63,7 @@ public class ReproductionController {
             @Parameter(description = "Farm identifier") @PathVariable Long farmId,
             @Parameter(description = "Goat identifier") @PathVariable String goatId,
             @Parameter(description = "Pregnancy identifier") @PathVariable Long pregnancyId) {
-        PregnancyResponseVO responseVO = queryUseCase.getPregnancyById(farmId, pregnancyId);
+        PregnancyResponseVO responseVO = queryUseCase.getPregnancyById(farmId, goatId, pregnancyId);
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
