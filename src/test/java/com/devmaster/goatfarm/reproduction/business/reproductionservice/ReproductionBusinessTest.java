@@ -370,6 +370,52 @@ class ReproductionBusinessTest {
     }
 
     // ==================================================================================
+    // GET PREGNANCY BY ID
+    // ==================================================================================
+
+    @Test
+    void getPregnancyById_shouldReturnPregnancy_whenExists() {
+        // Arrange
+        Long pregnancyId = 1L;
+        Pregnancy pregnancy = activePregnancyEntity();
+        PregnancyResponseVO responseVO = pregnancyResponseVO();
+
+        when(pregnancyPersistencePort.findByFarmIdAndId(FARM_ID, pregnancyId))
+                .thenReturn(Optional.of(pregnancy));
+        when(reproductionMapper.toPregnancyResponseVO(pregnancy))
+                .thenReturn(responseVO);
+
+        // Act
+        PregnancyResponseVO result = reproductionBusiness.getPregnancyById(FARM_ID, pregnancyId);
+
+        // Assert
+        assertThat(result).isSameAs(responseVO);
+    }
+
+    @Test
+    void getPregnancyById_shouldThrowNotFound_whenNotExists() {
+        // Arrange
+        Long pregnancyId = 999L;
+        when(pregnancyPersistencePort.findByFarmIdAndId(FARM_ID, pregnancyId))
+                .thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class,
+                () -> reproductionBusiness.getPregnancyById(FARM_ID, pregnancyId));
+        verifyNoInteractions(reproductionMapper);
+    }
+
+    @Test
+    void getPregnancyById_shouldThrowValidation_whenIdIsInvalid() {
+        // Act & Assert
+        assertThrows(ValidationException.class,
+                () -> reproductionBusiness.getPregnancyById(FARM_ID, 0L));
+        assertThrows(ValidationException.class,
+                () -> reproductionBusiness.getPregnancyById(FARM_ID, null));
+        verifyNoInteractions(pregnancyPersistencePort, reproductionMapper);
+    }
+
+    // ==================================================================================
     // CLOSE PREGNANCY
     // ==================================================================================
 
