@@ -47,6 +47,11 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     }
 
     @Override
+    public Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long pregnancyId) {
+        return pregnancyRepository.findByFarmIdAndId(farmId, pregnancyId);
+    }
+
+    @Override
     public Page<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
         return pregnancyRepository.findAllByFarmIdAndGoatIdOrderByBreedingDateDesc(farmId, goatId, pageable);
     }
