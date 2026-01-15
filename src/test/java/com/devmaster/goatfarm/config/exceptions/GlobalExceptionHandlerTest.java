@@ -32,6 +32,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldHandleDataIntegrityViolationException() {
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Constraint violation");
+
+        ResponseEntity<ValidationError> response = globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+        assertEquals("Conflito de integridade de dados", body.getError());
+        assertTrue(body.getErrors().stream().anyMatch(e -> "status".equals(e.getFieldName())));
+    }
+
+    @Test
     void shouldHandleResourceNotFoundException() {
         String errorMessage = "Recurso não encontrado";
         ResourceNotFoundException exception = new ResourceNotFoundException(errorMessage);
