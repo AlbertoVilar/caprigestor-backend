@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface ReproductionQueryUseCase {
     PregnancyResponseVO getActivePregnancy(Long farmId, String goatId);
+    PregnancyResponseVO getPregnancyById(Long farmId, Long pregnancyId);
     Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable);
     Page<ReproductiveEventResponseVO> getReproductiveEvents(Long farmId, String goatId, Pageable pageable);
 }

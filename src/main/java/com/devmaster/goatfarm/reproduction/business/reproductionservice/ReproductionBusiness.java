@@ -181,6 +181,16 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
+    public PregnancyResponseVO getPregnancyById(Long farmId, Long pregnancyId) {
+        if (pregnancyId == null || pregnancyId <= 0) {
+            throw buildValidationException("pregnancyId", "Invalid pregnancy ID");
+        }
+        Pregnancy pregnancy = pregnancyPersistencePort.findByFarmIdAndId(farmId, pregnancyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pregnancy not found with id: " + pregnancyId));
+        return reproductionMapper.toPregnancyResponseVO(pregnancy);
+    }
+
+    @Override
     public Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable) {
         return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
                 .map(reproductionMapper::toPregnancyResponseVO);
