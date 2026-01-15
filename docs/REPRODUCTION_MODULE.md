@@ -72,3 +72,25 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 **ReproductiveEventResponseDTO**
 - `checkDate` removed.
 - `pregnancyId` added.
+
+## Flyway V16 – banco sujo (duplicated ACTIVE)
+
+Quando o banco PostgreSQL já possui dados antigos, a migration `V16__enforce_single_active_pregnancy.sql` pode falhar ao criar o índice único parcial se existirem 2+ pregnancies com `status = 'ACTIVE'` para o mesmo `(farm_id, goat_id)`.
+
+### Como detectar
+
+```sql
+SELECT farm_id, goat_id, COUNT(*) AS active_count
+FROM pregnancy
+WHERE status = 'ACTIVE'
+GROUP BY farm_id, goat_id
+HAVING COUNT(*) > 1;
+```
+
+### Como corrigir
+
+1. Rodar o script manual versionado em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql` no banco PostgreSQL alvo (dev/prod).
+2. Esse script mantém somente a pregnancy `ACTIVE` mais recente (critério: `breeding_date` e desempate por `id`) e fecha as demais como `CLOSED` com `close_reason = 'DATA_FIX_DUPLICATED_ACTIVE'`.
+3. Após executar o script manual, subir a aplicação normalmente para que o Flyway aplique a V16.
+
+Se a migration de verificação `V15_9__Assert_no_duplicate_active_pregnancy` encontrar duplicidades, ela falhará com uma mensagem explícita apontando para o script manual de data-fix.
