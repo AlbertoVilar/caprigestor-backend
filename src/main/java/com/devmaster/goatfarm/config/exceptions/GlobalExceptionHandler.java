@@ -100,6 +100,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(err);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ValidationError> handleDataIntegrityViolation(DataIntegrityViolationException e, HttpServletRequest request) {
+        String error = "Conflito de integridade de dados";
+        HttpStatus status = HttpStatus.CONFLICT;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        // We try to provide a generic message or extract something if possible, but keeping it safe.
+        // The user mentioned: field coerente (ex.: "status") e mensagem clara.
+        // For partial index violation, it's hard to know exactly which field without parsing.
+        // But for this specific case (active pregnancy), it's likely "status".
+        // I'll add a generic error on "status" or just a global error.
+        err.addError("status", "Database constraint violation (e.g., duplicate active record)");
+        return ResponseEntity.status(status).body(err);
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ValidationError> unauthorized(UnauthorizedException e, HttpServletRequest request) {
         String error = "Não autorizado";
