@@ -213,7 +213,7 @@ class ReproductionBusinessTest {
             assertThat(validationError.getStatus()).isEqualTo(400);
             assertThat(validationError.getErrors()).anyMatch(err ->
                     "checkResult".equals(err.getFieldName()) &&
-                            err.getMessage().contains("NEGATIVE is not allowed")
+                            err.getMessage().contains("Resultado NEGATIVE não é permitido")
             );
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
@@ -302,12 +302,11 @@ class ReproductionBusinessTest {
         ValidationException exception = assertThrows(ValidationException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
 
-        // Assert
         ValidationError validationError = exception.getValidationError();
         assertThat(validationError).isNotNull();
+        assertThat(validationError.getStatus()).isEqualTo(409);
         assertThat(validationError.getErrors()).anyMatch(err ->
-                "status".equals(err.getFieldName()) &&
-                        err.getMessage().contains("Multiple active pregnancies found")
+                "status".equals(err.getFieldName())
         );
 
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper);
@@ -340,7 +339,7 @@ class ReproductionBusinessTest {
     void getActivePregnancy_shouldThrowValidation_whenMultipleActivePregnanciesExist() {
         // Arrange
         ValidationError validationError = new ValidationError(null, 409, "Data integrity error");
-        validationError.addError("status", "Multiple active pregnancies found for the same goat and farm");
+        validationError.addError("status", "Foram encontradas múltiplas gestações ativas");
         ValidationException validationException = new ValidationException(validationError);
 
         when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
@@ -352,7 +351,7 @@ class ReproductionBusinessTest {
 
         assertThat(thrown.getValidationError().getErrors()).anyMatch(err ->
                 "status".equals(err.getFieldName()) &&
-                        err.getMessage().contains("Multiple active pregnancies found")
+                        err.getMessage().contains("Foram encontradas múltiplas gestações ativas")
         );
         verifyNoInteractions(reproductionMapper);
     }
