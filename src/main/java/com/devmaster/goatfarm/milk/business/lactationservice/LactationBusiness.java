@@ -33,15 +33,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
-        // Validar data futura
         if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
-             throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Start date cannot be in the future."));
+             throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Data de início da lactação não pode ser futura."));
         }
 
-        // Validar se já existe lactação ativa
         Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
         if (activeLactation.isPresent()) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "There is already an active lactation for this goat."));
+            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Já existe uma lactação ativa para esta cabra."));
         }
         
         Lactation entity = new Lactation();
@@ -58,18 +56,18 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     @Override
     public LactationResponseVO dryLactation(Long farmId, String goatId, Long lactationId, LactationDryRequestVO vo) {
         Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Lactation not found for this goat"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra"));
 
         if (lactation.getStatus() != LactationStatus.ACTIVE) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Lactation is not active."));
+            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Lactação não está ativa."));
         }
 
         if (vo.getEndDate() == null) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "End date is required."));
+            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Data de fim da lactação é obrigatória."));
         }
 
         if (vo.getEndDate().isBefore(lactation.getStartDate())) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "End date cannot be before start date."));
+            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Data de fim da lactação não pode ser anterior à data de início."));
         }
 
         lactation.setStatus(LactationStatus.CLOSED);
@@ -83,14 +81,14 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     @Override
     public LactationResponseVO getActiveLactation(Long farmId, String goatId) {
         Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("No active lactation found for this goat"));
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactação ativa encontrada para esta cabra"));
         return lactationMapper.toResponseVO(lactation);
     }
 
     @Override
     public LactationResponseVO getLactationById(Long farmId, String goatId, Long lactationId) {
         Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Lactation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada"));
         return lactationMapper.toResponseVO(lactation);
     }
 

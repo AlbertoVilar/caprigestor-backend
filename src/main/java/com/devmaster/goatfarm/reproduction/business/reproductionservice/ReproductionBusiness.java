@@ -44,13 +44,13 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional
     public ReproductiveEventResponseVO registerBreeding(Long farmId, String goatId, BreedingRequestVO vo) {
         if (vo.getEventDate() == null) {
-            throw buildValidationException("eventDate", "Event date is required");
+            throw buildValidationException("eventDate", "Data do evento é obrigatória");
         }
         if (vo.getBreedingType() == null) {
-            throw buildValidationException("breedingType", "Breeding type is required");
+            throw buildValidationException("breedingType", "Tipo de cobertura é obrigatório");
         }
         if (vo.getEventDate().isAfter(LocalDate.now())) {
-            throw buildValidationException("eventDate", "Event date cannot be in the future");
+            throw buildValidationException("eventDate", "Data do evento não pode ser futura");
         }
 
         ReproductiveEvent event = ReproductiveEvent.builder()
@@ -71,19 +71,19 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional(noRollbackFor = ValidationException.class)
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
         if (vo.getCheckDate() == null) {
-            throw buildValidationException("checkDate", "Check date is required");
+            throw buildValidationException("checkDate", "Data do exame de gestação é obrigatória");
         }
         if (vo.getCheckDate().isAfter(LocalDate.now())) {
-            throw buildValidationException("checkDate", "Check date cannot be in the future");
+            throw buildValidationException("checkDate", "Data do exame de gestação não pode ser futura");
         }
         if (vo.getCheckResult() == null) {
-            throw buildValidationException("checkResult", "Check result is required");
+            throw buildValidationException("checkResult", "Resultado do exame de gestação é obrigatório");
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             var activeList = pregnancyPersistencePort.findAllActiveByFarmIdAndGoatIdOrdered(farmId, goatId);
             if (activeList.size() > 1) {
-                throw buildValidationConflictException("status", "Multiple active pregnancies found for the same goat and farm");
+                throw buildValidationConflictException("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
             }
         }
 
@@ -91,18 +91,18 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .findLatestCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
 
         if (latestCoverage.isEmpty()) {
-            throw buildValidationException("checkDate", "No coverage found before check date");
+            throw buildValidationException("checkDate", "Não foi encontrada cobertura anterior à data do exame de gestação");
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
             if (activePregnancy.isPresent()) {
-                throw buildValidationException("checkResult", "Active pregnancy already exists");
+                throw buildValidationException("checkResult", "Já existe uma gestação ativa para esta cabra nesta fazenda");
             }
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
-            throw buildValidationException("checkResult", "NEGATIVE is not allowed for confirm. Use pregnancy check registration endpoint in the future.");
+            throw buildValidationException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o fluxo específico de registro de exame de gestação quando disponível.");
         }
 
         ReproductiveEvent checkEvent = ReproductiveEvent.builder()
@@ -139,19 +139,19 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional
     public PregnancyResponseVO closePregnancy(Long farmId, String goatId, Long pregnancyId, PregnancyCloseRequestVO vo) {
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pregnancy not found with id: " + pregnancyId));
+                .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
 
         if (pregnancy.getStatus() != PregnancyStatus.ACTIVE) {
-            throw buildValidationException("status", "Pregnancy is not active");
+            throw buildValidationException("status", "Gestação não está ativa");
         }
         if (vo.getCloseDate() == null) {
-            throw buildValidationException("closeDate", "Close date is required");
+            throw buildValidationException("closeDate", "Data de encerramento é obrigatória");
         }
         if (vo.getCloseReason() == null) {
-            throw buildValidationException("closeReason", "Close reason is required");
+            throw buildValidationException("closeReason", "Motivo de encerramento é obrigatório");
         }
         if (pregnancy.getBreedingDate() != null && vo.getCloseDate().isBefore(pregnancy.getBreedingDate())) {
-            throw buildValidationException("closeDate", "Close date cannot be before breeding date");
+            throw buildValidationException("closeDate", "Data de encerramento não pode ser anterior à data de cobertura");
         }
 
         pregnancy.setStatus(PregnancyStatus.CLOSED);
@@ -177,17 +177,17 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     public PregnancyResponseVO getActivePregnancy(Long farmId, String goatId) {
         Pregnancy pregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Active pregnancy not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma gestação ativa encontrada para esta cabra"));
         return reproductionMapper.toPregnancyResponseVO(pregnancy);
     }
 
     @Override
     public PregnancyResponseVO getPregnancyById(Long farmId, String goatId, Long pregnancyId) {
         if (pregnancyId == null || pregnancyId <= 0) {
-            throw new InvalidArgumentException("Invalid pregnancy ID");
+            throw new InvalidArgumentException("Identificador de gestação inválido");
         }
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pregnancy not found with id: " + pregnancyId));
+                .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
         return reproductionMapper.toPregnancyResponseVO(pregnancy);
     }
 
@@ -212,7 +212,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     private ValidationException buildValidationException(HttpStatus status, String field, String message) {
-        ValidationError error = new ValidationError(Instant.now(), status.value(), "Validation error");
+        ValidationError error = new ValidationError(Instant.now(), status.value(), "Erro de validação");
         error.addError(field, message);
         return new ValidationException(error);
     }
