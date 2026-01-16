@@ -27,10 +27,10 @@ public class ReproductionController {
     private final ReproductionMapper mapper;
 
     @PostMapping("/breeding")
-    @Operation(summary = "Register a breeding event (coverage)")
+    @Operation(summary = "Registrar um evento de cobertura")
     public ResponseEntity<ReproductiveEventResponseDTO> registerBreeding(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody BreedingRequestDTO request) {
         BreedingRequestVO vo = mapper.toBreedingRequestVO(request);
         ReproductiveEventResponseVO responseVO = commandUseCase.registerBreeding(farmId, goatId, vo);
@@ -38,10 +38,10 @@ public class ReproductionController {
     }
 
     @PatchMapping("/pregnancies/confirm")
-    @Operation(summary = "Confirm pregnancy and create/activate it")
+    @Operation(summary = "Confirmar gestação e ativar")
     public ResponseEntity<PregnancyResponseDTO> confirmPregnancy(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody PregnancyConfirmRequestDTO request) {
         PregnancyConfirmRequestVO vo = mapper.toPregnancyConfirmRequestVO(request);
         PregnancyResponseVO responseVO = commandUseCase.confirmPregnancy(farmId, goatId, vo);
@@ -49,30 +49,30 @@ public class ReproductionController {
     }
 
     @GetMapping("/pregnancies/active")
-    @Operation(summary = "Get active pregnancy (if exists)")
+    @Operation(summary = "Buscar gestação ativa da cabra (se existir)")
     public ResponseEntity<PregnancyResponseDTO> getActivePregnancy(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId) {
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId) {
         PregnancyResponseVO responseVO = queryUseCase.getActivePregnancy(farmId, goatId);
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
     @GetMapping("/pregnancies/{pregnancyId}")
-    @Operation(summary = "Get pregnancy by ID")
+    @Operation(summary = "Buscar gestação por identificador")
     public ResponseEntity<PregnancyResponseDTO> getPregnancyById(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Pregnancy identifier") @PathVariable Long pregnancyId) {
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da gestação") @PathVariable Long pregnancyId) {
         PregnancyResponseVO responseVO = queryUseCase.getPregnancyById(farmId, goatId, pregnancyId);
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
     @PatchMapping("/pregnancies/{pregnancyId}/close")
-    @Operation(summary = "Close pregnancy (e.g., BORN, LOST, ABORTED)")
+    @Operation(summary = "Encerrar gestação (parto, perda, aborto, etc.)")
     public ResponseEntity<PregnancyResponseDTO> closePregnancy(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Pregnancy identifier") @PathVariable Long pregnancyId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da gestação") @PathVariable Long pregnancyId,
             @Valid @RequestBody PregnancyCloseRequestDTO request) {
         PregnancyCloseRequestVO vo = mapper.toPregnancyCloseRequestVO(request);
         PregnancyResponseVO responseVO = commandUseCase.closePregnancy(farmId, goatId, pregnancyId, vo);
@@ -80,10 +80,10 @@ public class ReproductionController {
     }
 
     @GetMapping("/events")
-    @Operation(summary = "Get reproductive events history (paginated)")
+    @Operation(summary = "Listar histórico de eventos reprodutivos (paginado)")
     public ResponseEntity<Page<ReproductiveEventResponseDTO>> getReproductiveEvents(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "eventDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<ReproductiveEventResponseVO> pageVO = queryUseCase.getReproductiveEvents(farmId, goatId, pageable);
         Page<ReproductiveEventResponseDTO> pageDTO = pageVO.map(mapper::toReproductiveEventResponseDTO);
@@ -91,10 +91,10 @@ public class ReproductionController {
     }
 
     @GetMapping("/pregnancies")
-    @Operation(summary = "Get pregnancy history (paginated)")
+    @Operation(summary = "Listar histórico de gestações da cabra (paginado)")
     public ResponseEntity<Page<PregnancyResponseDTO>> getPregnancies(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "breedingDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<PregnancyResponseVO> pageVO = queryUseCase.getPregnancies(farmId, goatId, pageable);
         Page<PregnancyResponseDTO> pageDTO = pageVO.map(mapper::toPregnancyResponseDTO);
