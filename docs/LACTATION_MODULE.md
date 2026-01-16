@@ -46,3 +46,8 @@ O módulo expõe uma API RESTful completa para gerenciamento das lactações.
 
 ## Integração com Milk Production
 O módulo de Produção de Leite (`MilkProduction`) depende diretamente deste módulo. O registro de produção leiteira geralmente requer uma lactação ativa (embora a validação estrita possa variar conforme a configuração da fazenda, a regra de negócio sugere vínculo).
+
+## Recomendações de Manejo
+
+- Em muitos manejos, a **secagem** é planejada aproximadamente **90 dias após a cobertura** ou cerca de **60 dias antes da data prevista de parto**.
+- Essas referências de 90/60 dias são **recomendações de manejo** e não bloqueios da API: o sistema apenas valida consistência básica de datas (não futuras, `endDate` não anterior a `startDate`) e permite que a fazenda ajuste as datas conforme sua realidade.
