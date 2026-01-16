@@ -50,6 +50,21 @@ public class OwnershipService {
         return current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
     }
 
+    public boolean isFarmOwner(Long farmId) {
+        try {
+            var current = getAuthenticatedEntity();
+            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            if (isAdmin) return true;
+            var farmOpt = goatFarmPort.findById(farmId);
+            if (farmOpt.isEmpty() || farmOpt.get().getUser() == null) {
+                return false;
+            }
+            return farmOpt.get().getUser().getId().equals(current.getId());
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
     private User getAuthenticatedEntity() {
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
@@ -60,4 +75,4 @@ public class OwnershipService {
         throw new UnauthorizedException("Usuário não autenticado");
     }
 }
-
+

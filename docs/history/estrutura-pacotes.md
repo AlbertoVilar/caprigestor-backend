@@ -1,5 +1,6 @@
-> **NOTA HISTÓRICA**: Este arquivo é mantido para fins de registro histórico. Seu conteúdo pode não refletir o estado atual do código ou da arquitetura.
-> Última verificação: 2026-01-11
+> ⚠️ DOCUMENTO HISTÓRICO
+> Este arquivo reflete decisões ou análises de fases anteriores do projeto.
+> **Não representa o estado atual da arquitetura ou do código.**
 
 # Estrutura de Empacotamento e Distribuição de Pacotes (GoatFarm)
 

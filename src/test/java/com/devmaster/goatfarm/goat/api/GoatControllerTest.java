@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,9 @@ class GoatControllerTest {
     @MockBean
     private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
 
+    @MockBean
+    private OwnershipService ownershipService;
+
     private GoatResponseDTO goatResponseDTO;
     private GoatResponseVO goatResponseVO;
     private GoatRequestDTO goatRequestDTO;
@@ -69,6 +73,7 @@ class GoatControllerTest {
             objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
             objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         }
+        when(ownershipService.isFarmOwner(eq(1L))).thenReturn(true);
         goatResponseDTO = new GoatResponseDTO();
         goatResponseDTO.setRegistrationNumber("001");
         goatResponseDTO.setName("Cabra Teste");
@@ -100,14 +105,6 @@ class GoatControllerTest {
     @Test
     void contextLoads() {
         Assertions.assertNotNull(goatController, "GoatController não foi carregado no contexto de teste");
-    }
-
-    @Test
-    @org.junit.jupiter.api.Disabled("Teste diagnóstico desativado após correções de mapeamento")
-    void listRegisteredMappings() {
-        var methods = handlerMapping.getHandlerMethods();
-        System.out.println("Mappings registrados:");
-        methods.keySet().forEach(info -> System.out.println(info.toString()));
     }
 
     @Test
@@ -200,6 +197,66 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.breed").value("ANGLO_NUBIANA"))
                 .andExpect(jsonPath("$.gender").value("MACHO"))
                 .andExpect(jsonPath("$.status").value("ATIVO"));
+
+        verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "FARM_OWNER")
+    void shouldForbidCreateGoatWhenNotOwnerOfFarm() throws Exception {
+        // Arrange
+        when(ownershipService.isFarmOwner(eq(2L))).thenReturn(false);
+        GoatRequestDTO newGoatRequestDTO = new GoatRequestDTO();
+        newGoatRequestDTO.setRegistrationNumber("004");
+        newGoatRequestDTO.setName("Cabra Fora");
+        newGoatRequestDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
+        newGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
+        newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
+        newGoatRequestDTO.setColor("Branca");
+        newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/goatfarms/2/goats")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
+                .andExpect(status().isForbidden());
+
+        verify(goatUseCase, never()).createGoat(eq(2L), any(GoatRequestVO.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "FARM_OWNER")
+    void shouldAllowCreateGoatWhenOwnerOfFarm() throws Exception {
+        // Arrange
+        when(ownershipService.isFarmOwner(eq(1L))).thenReturn(true);
+        GoatRequestDTO newGoatRequestDTO = new GoatRequestDTO();
+        newGoatRequestDTO.setRegistrationNumber("005");
+        newGoatRequestDTO.setName("Cabra Da Fazenda");
+        newGoatRequestDTO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
+        newGoatRequestDTO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
+        newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
+        newGoatRequestDTO.setColor("Branca");
+        newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+
+        GoatResponseVO createdGoatResponseVO = new GoatResponseVO();
+        createdGoatResponseVO.setRegistrationNumber("005");
+        createdGoatResponseVO.setName("Cabra Da Fazenda");
+        createdGoatResponseVO.setBreed(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
+        createdGoatResponseVO.setGender(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
+        createdGoatResponseVO.setBirthDate(LocalDate.of(2020, 1, 15));
+        createdGoatResponseVO.setColor("Branca");
+        createdGoatResponseVO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+
+        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(createdGoatResponseVO);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/goatfarms/1/goats")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.registrationNumber").value("005"));
 
         verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class));
     }

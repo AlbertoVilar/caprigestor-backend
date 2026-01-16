@@ -20,20 +20,22 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/lactations")
 @RequiredArgsConstructor
-@Tag(name = "Lactation API", description = "Gestão de lactações")
+@Tag(name = "Lactation API", description = "Gestão de lactações de cabras na fazenda")
 public class LactationController {
 
     private final LactationQueryUseCase lactationQueryUseCase;
     private final LactationCommandUseCase lactationCommandUseCase;
     private final LactationMapper lactationMapper;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
-    @Operation(summary = "Iniciar nova lactação")
+    @Operation(summary = "Abre uma nova lactação para uma cabra")
     public ResponseEntity<LactationResponseDTO> openLactation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -43,8 +45,9 @@ public class LactationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/active")
-    @Operation(summary = "Buscar lactação ativa")
+    @Operation(summary = "Busca lactação ativa de uma cabra")
     public ResponseEntity<LactationResponseDTO> getActiveLactation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId) {
@@ -52,8 +55,9 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/{lactationId}/dry")
-    @Operation(summary = "Encerrar lactação (secagem)")
+    @Operation(summary = "Marca uma lactação como seca")
     public ResponseEntity<LactationResponseDTO> dryLactation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -64,18 +68,20 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/{lactationId}")
-    @Operation(summary = "Get lactation by ID")
+    @Operation(summary = "Busca lactação por ID")
     public ResponseEntity<LactationResponseDTO> getLactationById(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Lactation identifier") @PathVariable Long lactationId) {
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da lactação") @PathVariable Long lactationId) {
         LactationResponseVO responseVO = lactationQueryUseCase.getLactationById(farmId, goatId, lactationId);
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping
-    @Operation(summary = "Listar todas as lactações (histórico)")
+    @Operation(summary = "Lista histórico de lactações de uma cabra")
     public ResponseEntity<Page<LactationResponseDTO>> getAllLactations(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,

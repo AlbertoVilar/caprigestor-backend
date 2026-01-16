@@ -1,17 +1,28 @@
 # Módulo Lactation
 
-## Sumário
-1. [Overview](#overview)
-2. [Regras de Domínio](#regras-de-domínio)
-3. [Endpoints](#endpoints)
-4. [DTOs, VOs e Entidades](#dtos-vos-e-entidades)
-5. [Fluxo Hexagonal](#fluxo-hexagonal)
-6. [Erros e Exceções](#erros-e-exceções)
-7. [Como testar](#como-testar)
-8. [Próximos Passos](#próximos-passos)
+## Visão Geral
+Este módulo é responsável pelo ciclo de vida produtivo das cabras, gerenciando a abertura e o encerramento de lactações (períodos em que o animal está produzindo leite). É fundamental para garantir a consistência dos registros de produção leiteira.
 
-## Overview
-Este módulo gerencia o ciclo de vida produtivo das cabras, controlando a abertura e o encerramento de lactações (períodos em que o animal está produzindo leite). É essencial para garantir a consistência dos registros de produção leiteira e o histórico reprodutivo do animal.
+## Endpoints do CRUD
+
+O módulo expõe uma API RESTful completa para gerenciamento das lactações.
+**Base Path:** `/api/goatfarms/{farmId}/goats/{goatId}/lactations`
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| **POST** | `/` | Abre uma nova lactação (Início do ciclo produtivo). |
+| **PATCH** | `/{id}/dry` | Encerra uma lactação ativa (Secagem do animal). |
+| **GET** | `/active` | Busca a lactação atualmente ativa para a cabra. |
+| **GET** | `/{id}` | Busca os detalhes de uma lactação específica por ID. |
+| **GET** | `/` | Lista o histórico de lactações de forma paginada. |
+
+## Segurança e Autorização
+
+- Todos os endpoints de lactação são privados e exigem token JWT válido.
+- Chamadas sem token para qualquer rota de lactação retornam **401 Unauthorized**.
+- Usuários com **ROLE_ADMIN** têm acesso total, em qualquer fazenda.
+- Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam dados da fazenda se forem proprietários (`ownershipService.isFarmOwner(farmId)`).
+- Quando o token é válido mas o usuário não é proprietário da fazenda, a API retorna **403 Forbidden**.
 
 ## Regras de Domínio
 
@@ -29,9 +40,17 @@ Este módulo gerencia o ciclo de vida produtivo das cabras, controlando a abertu
 *   **Data de Fim (`endDate`):** Obrigatória, não pode ser nula, e deve ser posterior ou igual à `startDate`.
 *   **Consistência:** Apenas lactações ativas podem ser encerradas.
 
-## Endpoints
+## Estrutura de Dados
 
-**Base Path:** `/api/goatfarms/{farmId}/goats/{goatId}/lactations`
+### Lactation (Entity)
+*   `id`: Identificador único.
+*   `farmId`: Identificador da fazenda (Multi-tenancy).
+*   `goatId`: Identificador da cabra.
+*   `status`: `ACTIVE` ou `CLOSED`.
+*   `startDate`: Data de início da lactação.
+*   `endDate`: Data de fim (secagem).
+*   `pregnancyStartDate`: (Opcional) Data de início de prenhez associada.
+*   `dryStartDate`: (Opcional) Data prevista ou efetiva de secagem.
 
 | Método | Rota | Descrição | Status Codes | DTOs (Request/Response) |
 |--------|------|-----------|--------------|-------------------------|
@@ -94,8 +113,8 @@ Sequência sugerida para testes manuais (Postman):
 
 ## Próximos Passos
 
-*   Implementar endpoint de "Sumário de Lactação" com totais de leite produzido (dependência do módulo `MilkProduction`).
-*   Adicionar validações de consistência com datas de parto (módulo `Genealogy` ou `Reproduction`).
+- Implementar endpoint de "Sumário de Lactação" com totais de leite produzido (dependência do módulo `MilkProduction`).
+- Adicionar validações de consistência com datas de parto (módulo `Genealogy` ou `Reproduction`).
 
 ## Integração com Milk Production
 
@@ -103,5 +122,5 @@ O módulo de Produção de Leite (`MilkProduction`) depende diretamente deste m�
 
 ## Recomendações de Manejo
 
-* Em muitos manejos, a **secagem** é planejada aproximadamente **90 dias após a cobertura** ou cerca de **60 dias antes da data prevista de parto**.
-* Essas referências de 90/60 dias são **recomendações de manejo** e não bloqueios da API: o sistema apenas valida consistência básica de datas (não futuras, `endDate` não anterior a `startDate`) e permite que a fazenda ajuste as datas conforme sua realidade.
+- Em muitos manejos, a **secagem** é planejada aproximadamente **90 dias após a cobertura** ou cerca de **60 dias antes da data prevista de parto**.
+- Essas referências de 90/60 dias são **recomendações de manejo** e não bloqueios da API: o sistema apenas valida consistência básica de datas (não futuras, `endDate` não anterior a `startDate`) e permite que a fazenda ajuste as datas conforme sua realidade.

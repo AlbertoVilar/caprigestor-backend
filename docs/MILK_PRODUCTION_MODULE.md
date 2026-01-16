@@ -1,90 +1,49 @@
 # Módulo Milk Production
 
-## Sumário
-1. [Overview](#overview)
-2. [Regras de Domínio](#regras-de-domínio)
-3. [Endpoints](#endpoints)
-4. [DTOs, VOs e Entidades](#dtos-vos-e-entidades)
-5. [Fluxo Hexagonal](#fluxo-hexagonal)
-6. [Erros e Exceções](#erros-e-exceções)
-7. [Como testar](#como-testar)
-8. [Próximos Passos](#próximos-passos)
+## Visão Geral
+Este módulo é responsável pelo gerenciamento da produção leiteira das cabras, permitindo o registro diário de ordenhas, controle de lactações e análise de produtividade.
 
-## Overview
-Este módulo gerencia a produção diária de leite, permitindo o registro de ordenhas, controle de volume e atualizações. É fortemente acoplado ao conceito de "Cabra" e "Lactação", embora possa operar de forma independente em termos de CRUD básico.
+## Endpoints do CRUD
 
-## Regras de Domínio
-
-### 1. Imutabilidade de Identificadores
-*   Uma vez criada, uma produção de leite não pode ter sua data ou turno (`shift`) alterados via PATCH, para garantir a integridade de registros históricos.
-*   Para corrigir data/turno, deve-se excluir e recriar o registro.
-
-### 2. Validação de Escopo (Tenancy)
-*   Todas as operações exigem `farmId` e `goatId`.
-*   Não é possível manipular produções apenas pelo ID global; o sistema valida se o ID pertence à cabra e fazenda informadas.
-
-### 3. Edição Parcial
-*   Apenas o volume (`volumeLiters`) e observações (`notes`) são editáveis após a criação.
-
-## Endpoints
-
+O módulo expõe uma API RESTful completa para gerenciamento das produções.
 **Base Path:** `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions`
 
-| Método | Rota | Descrição | Status Codes | DTOs (Request/Response) |
-|--------|------|-----------|--------------|-------------------------|
-| **POST** | `/` | Cria registro de produção. | `201 Created` | `MilkProductionRequestDTO` -> `MilkProductionResponseDTO` |
-| **GET** | `/` | Lista produções (filtros: `from`, `to`). | `200 OK` | N/A -> `Page<MilkProductionResponseDTO>` |
-| **GET** | `/{id}` | Busca detalhes de uma produção. | `200 OK` | N/A -> `MilkProductionResponseDTO` |
-| **PATCH** | `/{id}` | Atualiza volume/notas. | `200 OK` | `MilkProductionUpdateRequestDTO` -> `MilkProductionResponseDTO` |
-| **DELETE** | `/{id}` | Remove um registro. | `204 No Content` | N/A |
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| **POST** | `/` | Cria um novo registro de produção de leite. |
+| **GET** | `/` | Lista as produções de forma paginada (suporta filtros de data). |
+| **GET** | `/{id}` | Busca os detalhes de uma produção específica por ID. |
+| **PATCH** | `/{id}` | Atualiza parcialmente uma produção (apenas volume e observações). |
+| **DELETE** | `/{id}` | Remove um registro de produção existente. |
 
-## DTOs, VOs e Entidades
+## Segurança e Autorização
 
-### DTOs
-*   **MilkProductionRequestDTO**: Criação (`date`, `shift`, `volumeLiters`).
-*   **MilkProductionUpdateRequestDTO**: Atualização (`volumeLiters`, `notes`).
-*   **MilkProductionResponseDTO**: Leitura completa.
+- Todos os endpoints de produção de leite são privados e exigem token JWT válido.
+- Chamadas sem token retornam **401 Unauthorized** para qualquer rota de produção.
+- Usuários com **ROLE_ADMIN** têm acesso total, independentemente do `farmId`.
+- Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam produções da fazenda se forem proprietários (`ownershipService.isFarmOwner(farmId)`).
+- Quando o token é válido mas o usuário não é proprietário da fazenda, a API retorna **403 Forbidden**.
 
-### VOs (Business Layer)
-*   **MilkProductionRequestVO**: Dados de entrada normalizados.
-*   **MilkProductionResponseVO**: Dados de saída enriquecidos.
+## Fluxo de Atualização (PATCH)
 
-### Entity
-*   **MilkProduction**:
-    *   `id`: Long (PK)
-    *   `date`: LocalDate
-    *   `shift`: Enum (`MORNING`, `AFTERNOON`, `EVENING`)
-    *   `volumeLiters`: Double
-    *   `goatId`: String
-    *   `farmId`: Long
+A operação de atualização permite modificar dados mutáveis de uma produção existente:
 
-## Fluxo Hexagonal
+1.  **Campos Mutáveis**: Apenas `volumeLiters` e `notes` podem ser alterados.
+2.  **Imutabilidade**: `date` e `shift` não podem ser alterados via PATCH para garantir a integridade das validações de duplicidade.
+3.  **Validação de Escopo**: Assim como no DELETE, o sistema verifica se o registro pertence ao `farmId` e `goatId` informados.
 
-```mermaid
-graph LR
-    Client --> Controller
-    Controller -- DTO -> VO --> UseCase
-    UseCase -- VO --> Business
-    Business -- Entity --> Repository
-    Repository --> Database
-```
+## Fluxo de Exclusão (DELETE)
 
-## Erros e Exceções
+A operação de exclusão segue estritamente a arquitetura Hexagonal e as regras de segurança do projeto:
 
-*   **404 Not Found**: Registro não encontrado ou não pertence à cabra/fazenda informada.
-*   **400 Bad Request**: Volume negativo, data inválida.
-*   **409 Conflict** (Potencial): Se houver restrição de unicidade por data/turno (depende da configuração).
+1.  **Validação de Escopo**: O sistema verifica se o ID da produção pertence à Cabra (`goatId`) e à Fazenda (`farmId`) informadas na URL.
+2.  **Busca Segura**: Utiliza o método `findById(farmId, goatId, id)` no Business para garantir que o registro existe dentro do contexto autorizado.
+3.  **Persistência**: Se encontrado, o registro é removido fisicamente do banco de dados via JPA.
+4.  **Retorno**:
+    *   **204 No Content**: Exclusão realizada com sucesso.
+    *   **404 Not Found**: Se o registro não existir ou não pertencer ao escopo (Fazenda/Cabra) informado.
 
-## Como testar
+## Segurança e Consistência
 
-Sequência sugerida para testes manuais (Postman):
-
-1.  **Registrar Ordenha**: `POST .../milk-productions` com `{ "date": "2023-10-01", "shift": "MORNING", "volumeLiters": 2.5 }`.
-2.  **Listar**: `GET .../milk-productions?from=2023-10-01`.
-3.  **Corrigir Volume**: `PATCH .../milk-productions/{id}` com `{ "volumeLiters": 2.8 }`.
-4.  **Verificar Detalhe**: `GET .../milk-productions/{id}`.
-5.  **Excluir**: `DELETE .../milk-productions/{id}`.
-
-## Próximos Passos
-*   Relatórios de produtividade (soma mensal, média diária).
-*   Integração automática com o status de lactação (impedir registro se lactação fechada).
+*   **Escopo Obrigatório**: Todas as operações exigem `farmId` e `goatId`. Não é possível manipular produções apenas pelo ID global.
+*   **Isolamento**: A arquitetura garante que um usuário não consiga excluir produções de outras fazendas, mesmo que adivinhe o ID sequencial, pois a validação de escopo falhará.

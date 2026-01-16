@@ -22,6 +22,7 @@ import org.springframework.data.web.SortDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -35,6 +36,7 @@ public class MilkProductionController {
     private final MilkProductionUseCase milkProductionUseCase;
     private final MilkProductionMapper milkProductionMapper;
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
     @Operation(summary = "Registrar produção de leite diária")
     public ResponseEntity<MilkProductionResponseDTO> createMilkProduction(
@@ -46,6 +48,7 @@ public class MilkProductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(milkProductionMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/{id}")
     @Operation(summary = "Update a milk production entry (partial update)")
     public ResponseEntity<MilkProductionResponseDTO> update(
@@ -62,6 +65,7 @@ public class MilkProductionController {
 
 
     @Operation(summary = "Buscar produção de leite por identificador")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/{id}")
     public ResponseEntity<MilkProductionResponseDTO> findById(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -76,6 +80,7 @@ public class MilkProductionController {
     }
 
     @Operation(summary = "Listar produções de leite (filtro opcional por data)")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping
     public ResponseEntity<Page<MilkProductionResponseDTO>> getMilkProductions(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -109,6 +114,7 @@ public class MilkProductionController {
         return ResponseEntity.ok(dtoPage);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a milk production entry")
     public ResponseEntity<Void> delete(
