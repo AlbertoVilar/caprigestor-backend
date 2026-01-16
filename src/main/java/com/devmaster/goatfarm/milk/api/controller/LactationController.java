@@ -33,7 +33,7 @@ public class LactationController {
     private final LactationCommandUseCase lactationCommandUseCase;
     private final LactationMapper lactationMapper;
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
     @Operation(summary = "Abre uma nova lactação para uma cabra")
     public ResponseEntity<LactationResponseDTO> openLactation(
@@ -45,6 +45,7 @@ public class LactationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/active")
     @Operation(summary = "Busca lactação ativa de uma cabra")
     public ResponseEntity<LactationResponseDTO> getActiveLactation(
@@ -54,7 +55,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/{lactationId}/dry")
     @Operation(summary = "Marca uma lactação como seca")
     public ResponseEntity<LactationResponseDTO> dryLactation(
@@ -67,6 +68,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/{lactationId}")
     @Operation(summary = "Busca lactação por ID")
     public ResponseEntity<LactationResponseDTO> getLactationById(
@@ -77,6 +79,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping
     @Operation(summary = "Lista histórico de lactações de uma cabra")
     public ResponseEntity<Page<LactationResponseDTO>> getAllLactations(
