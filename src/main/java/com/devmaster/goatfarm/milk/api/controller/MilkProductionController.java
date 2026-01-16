@@ -29,17 +29,17 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions")
 @RequiredArgsConstructor
-@Tag(name = "Milk Production API", description = "Milk production management for goats")
+@Tag(name = "Milk Production API", description = "Gestão de produção de leite")
 public class MilkProductionController {
 
     private final MilkProductionUseCase milkProductionUseCase;
     private final MilkProductionMapper milkProductionMapper;
 
     @PostMapping
-    @Operation(summary = "Create a daily milk production entry for a goat")
+    @Operation(summary = "Registrar produção de leite diária")
     public ResponseEntity<MilkProductionResponseDTO> createMilkProduction(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody MilkProductionRequestDTO request) {
         MilkProductionRequestVO requestVO = milkProductionMapper.toRequestVO(request);
         MilkProductionResponseVO responseVO = milkProductionUseCase.createMilkProduction(farmId, goatId, requestVO);
@@ -61,12 +61,12 @@ public class MilkProductionController {
 
 
 
-    @Operation(summary = "Get milk production by ID")
+    @Operation(summary = "Buscar produção de leite por identificador")
     @GetMapping("/{id}")
     public ResponseEntity<MilkProductionResponseDTO> findById(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Milk production identifier") @PathVariable Long id
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da produção de leite") @PathVariable Long id
     ) {
         return ResponseEntity.ok(
                 milkProductionMapper.toResponseDTO(
@@ -75,18 +75,18 @@ public class MilkProductionController {
         );
     }
 
-    @Operation(summary = "List milk productions (optional date filter)")
+    @Operation(summary = "Listar produções de leite (filtro opcional por data)")
     @GetMapping
     public ResponseEntity<Page<MilkProductionResponseDTO>> getMilkProductions(
-            @Parameter(description = "Farm id") @PathVariable Long farmId,
-            @Parameter(description = "Goat id") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
 
-            @Parameter(description = "Start date (inclusive) in ISO format yyyy-MM-dd")
+            @Parameter(description = "Data inicial (inclusiva) no formato ISO yyyy-MM-dd")
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate from,
 
-            @Parameter(description = "End date (inclusive) in ISO format yyyy-MM-dd")
+            @Parameter(description = "Data final (inclusiva) no formato ISO yyyy-MM-dd")
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate to,
