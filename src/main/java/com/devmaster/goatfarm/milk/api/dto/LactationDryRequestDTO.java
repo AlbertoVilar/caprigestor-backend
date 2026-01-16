@@ -17,7 +17,7 @@ import java.time.LocalDate;
 @Builder
 public class LactationDryRequestDTO {
 
-    @NotNull(message = "End date is required")
+    @NotNull(message = "Data de encerramento é obrigatória")
     @Schema(description = "Date when lactation ended (dry date)", example = "2026-10-01", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate endDate;
 }

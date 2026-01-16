@@ -44,3 +44,7 @@ logs/
 docker/.env
 ### Static Content ###
 /src/main/resources/static/
+
+### Trae / Shell Integration Garbage ###
+criptsshellIntegration.ps1*
+*Shell integration is not enabled*

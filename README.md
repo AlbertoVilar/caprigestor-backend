@@ -162,6 +162,7 @@ domain → application → infrastructure
 | Módulo | Descrição |
 |--------|-----------|
 | **goat** | Regras de negócio e acesso a dados de caprinos |
+| **reproduction** | Ciclo reprodutivo (coberturas, gestações, eventos reprodutivos) |
 | **milk** | Gestão de produção de leite e lactações |
 | **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
 | **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
@@ -285,6 +286,38 @@ erDiagram
     int goat_id FK
     int farm_id FK
   }
+  
+  PREGNANCY {
+    int id PK
+    int farm_id FK
+    string goat_id FK
+    string status
+    date breeding_date
+    date confirm_date
+    date expected_due_date
+    date closed_at
+    string close_reason
+  }
+
+  REPRODUCTIVE_EVENT {
+    int id PK
+    int farm_id FK
+    string goat_id FK
+    int pregnancy_id FK
+    string event_type
+    date event_date
+    string breeding_type
+    string breeder_ref
+    string notes
+    date check_scheduled_date
+    string check_result
+  }
+
+  GOAT ||--o{ PREGNANCY : has
+  GOAT ||--o{ REPRODUCTIVE_EVENT : has
+  GOAT_FARM ||--o{ PREGNANCY : hosts
+  GOAT_FARM ||--o{ REPRODUCTIVE_EVENT : hosts
+  PREGNANCY ||--o{ REPRODUCTIVE_EVENT : lifecycle
 ```
 
 ---
@@ -342,6 +375,56 @@ classDiagram
         FEMALE
     }
 
+    %% ========== MÓDULO REPRODUCTION ==========
+    class Pregnancy {
+        +Long id
+        +Long farmId
+        +String goatId
+        +PregnancyStatus status
+        +LocalDate breedingDate
+        +LocalDate confirmDate
+        +LocalDate expectedDueDate
+        +LocalDate closedAt
+        +PregnancyCloseReason closeReason
+    }
+
+    class ReproductiveEvent {
+        +Long id
+        +Long farmId
+        +String goatId
+        +Long pregnancyId
+        +ReproductiveEventType eventType
+        +LocalDate eventDate
+        +BreedingType breedingType
+    }
+
+    class PregnancyStatus {
+        <<enumeration>>
+        ACTIVE
+        CLOSED
+    }
+
+    class PregnancyCloseReason {
+        <<enumeration>>
+        BIRTH
+        LOST
+        ABORTED
+        DATA_FIX_DUPLICATED_ACTIVE
+    }
+
+    class ReproductiveEventType {
+        <<enumeration>>
+        COVERAGE
+        PREGNANCY_CHECK
+        PREGNANCY_CLOSE
+    }
+
+    class BreedingType {
+        <<enumeration>>
+        NATURAL
+        AI
+    }
+
     %% ========== MÓDULO MILK ==========
     class Lactation {
         +Long id
@@ -369,6 +452,9 @@ classDiagram
     GoatFarm "1" --> "0..*" Goat : gerencia
     Goat "1" --> "0..*" Lactation : possui
     Goat "1" --> "0..*" MilkProduction : produz
+    Goat "1" --> "0..*" Pregnancy : gestacoes
+    Goat "1" --> "0..*" ReproductiveEvent : eventosReprodutivos
+    Pregnancy "1" --> "0..*" ReproductiveEvent : eventos
     User "1" --> "0..*" GoatFarm : possui
 ```
 
@@ -492,7 +578,55 @@ Todo o schema do banco é gerenciado pelo **Flyway**.
 - O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
 
 ### H2 Database
-O H2 **não é usado** como banco de desenvolvimento para evitar divergências de SQL. Ele é reservado estritamente para testes unitários muito específicos, se necessário.
+O H2 é utilizado em dois cenários:
+1.  **Testes Unitários**: Execução rápida e isolada.
+2.  **Smoke Tests**: Validação rápida do build (`profile: smoke`), permitindo rodar a aplicação em memória sem depender do Docker.
+
+### Flyway V16 – banco sujo com ACTIVE duplicada
+
+A migration `V16` cria um índice único para garantir apenas **uma gestação ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falhará.
+
+O fluxo recomendado é totalmente manual e está documentado em:
+- `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`  
+  (contém **diagnóstico**, **fix seguro** e **verificação final**)
+
+**Procedimento de Correção (ambiente dev com PostgreSQL Docker):**
+
+1.  **Rodar diagnóstico (verificar se há duplicidades):**
+
+    ```sql
+    SELECT farm_id, goat_id, COUNT(*) AS active_count
+    FROM pregnancy
+    WHERE status = 'ACTIVE'
+    GROUP BY farm_id, goat_id
+    HAVING COUNT(*) > 1;
+    ```
+
+    - Se o resultado vier vazio, não há problema para a V16.
+    - Se houver linhas, existem gestações `ACTIVE` duplicadas que precisam ser corrigidas.
+
+    Exemplo usando o container padrão do projeto:
+
+    ```bash
+    docker exec -it caprigestor-postgres \
+      psql -U admin -d caprigestor_test \
+      -c "SELECT farm_id, goat_id, COUNT(*) AS active_count FROM pregnancy WHERE status = 'ACTIVE' GROUP BY farm_id, goat_id HAVING COUNT(*) > 1;"
+    ```
+
+2.  **Executar Data Fix (fechar gestações duplicadas mais antigas):**
+
+    - Execute o script manual em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`
+      diretamente no banco (via `psql`, PgAdmin ou outra ferramenta SQL).
+    - O script mantém apenas a gestação `ACTIVE` mais recente por `(farm_id, goat_id)` e fecha as demais.
+
+3.  **Rodar verificação final:**
+
+    - Reexecute o SELECT de diagnóstico (ou o bloco **C) Verificação final** do script manual).
+    - O resultado deve estar vazio antes de subir a aplicação.
+
+4.  **Subir aplicação normalmente:**
+
+    - Com o banco já corrigido, a aplicação subirá e o Flyway aplicará a `V16` com sucesso.
 
 ---
 
