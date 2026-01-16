@@ -43,6 +43,8 @@ public class AdminUserInitializer implements CommandLineRunner {
         
                 Role adminRole = ensureRoleExists("ROLE_ADMIN");
         Role operatorRole = ensureRoleExists("ROLE_OPERATOR");
+        Role farmOwnerRole = ensureRoleExists("ROLE_FARM_OWNER");
+        ensureRoleExists("ROLE_VIEWER");
         
                 Optional<User> adminUserOptional = userRepository.findByEmail("albertovilar1@gmail.com");
         

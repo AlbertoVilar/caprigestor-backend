@@ -16,6 +16,14 @@ O módulo expõe uma API RESTful completa para gerenciamento das lactações.
 | **GET** | `/{id}` | Busca os detalhes de uma lactação específica por ID. |
 | **GET** | `/` | Lista o histórico de lactações de forma paginada. |
 
+## Segurança e Autorização
+
+- Todos os endpoints de lactação são privados e exigem token JWT válido.
+- Chamadas sem token para qualquer rota de lactação retornam **401 Unauthorized**.
+- Usuários com **ROLE_ADMIN** têm acesso total, em qualquer fazenda.
+- Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam dados da fazenda se forem proprietários (`ownershipService.isFarmOwner(farmId)`).
+- Quando o token é válido mas o usuário não é proprietário da fazenda, a API retorna **403 Forbidden**.
+
 ## Regras de Domínio
 
 ### 1. Unicidade de Lactação Ativa

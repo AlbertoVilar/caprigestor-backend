@@ -211,8 +211,8 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
 
         if (vo.getRoles() != null) {
             for (String role : vo.getRoles()) {
-                if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR") && !role.equals("ROLE_USER")) {
-                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR, ROLE_USER");
+                if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR") && !role.equals("ROLE_FARM_OWNER") && !role.equals("ROLE_VIEWER")) {
+                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR, ROLE_FARM_OWNER, ROLE_VIEWER");
                 }
             }
         }

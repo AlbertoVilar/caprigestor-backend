@@ -16,6 +16,14 @@ O módulo expõe uma API RESTful completa para gerenciamento das produções.
 | **PATCH** | `/{id}` | Atualiza parcialmente uma produção (apenas volume e observações). |
 | **DELETE** | `/{id}` | Remove um registro de produção existente. |
 
+## Segurança e Autorização
+
+- Todos os endpoints de produção de leite são privados e exigem token JWT válido.
+- Chamadas sem token retornam **401 Unauthorized** para qualquer rota de produção.
+- Usuários com **ROLE_ADMIN** têm acesso total, independentemente do `farmId`.
+- Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam produções da fazenda se forem proprietários (`ownershipService.isFarmOwner(farmId)`).
+- Quando o token é válido mas o usuário não é proprietário da fazenda, a API retorna **403 Forbidden**.
+
 ## Fluxo de Atualização (PATCH)
 
 A operação de atualização permite modificar dados mutáveis de uma produção existente:
