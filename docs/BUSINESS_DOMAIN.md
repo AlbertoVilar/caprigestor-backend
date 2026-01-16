@@ -1,9 +1,5 @@
 # Domínio de Negócio - GoatFarm
 
-## Sumário
-1. [Entidades e Agregados](#1-entidades-e-agregados)
-2. [Requisitos Não Funcionais](#2-requisitos-não-funcionais)
-
 Este documento descreve as entidades principais, regras de negócio e requisitos não funcionais do sistema.
 
 ## 1. Entidades e Agregados

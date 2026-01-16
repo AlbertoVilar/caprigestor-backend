@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/lactations")
 @RequiredArgsConstructor
-@Tag(name = "Lactation API", description = "Lactation management for goats")
+@Tag(name = "Lactation API", description = "Gestão de lactações de cabras na fazenda")
 public class LactationController {
 
     private final LactationQueryUseCase lactationQueryUseCase;
@@ -35,10 +35,10 @@ public class LactationController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping
-    @Operation(summary = "Open a new lactation for a goat")
+    @Operation(summary = "Abre uma nova lactação para uma cabra")
     public ResponseEntity<LactationResponseDTO> openLactation(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody LactationRequestDTO request) {
         LactationRequestVO requestVO = lactationMapper.toRequestVO(request);
         LactationResponseVO responseVO = lactationCommandUseCase.openLactation(farmId, goatId, requestVO);
@@ -46,21 +46,21 @@ public class LactationController {
     }
 
     @GetMapping("/active")
-    @Operation(summary = "Get active lactation for a goat")
+    @Operation(summary = "Busca lactação ativa de uma cabra")
     public ResponseEntity<LactationResponseDTO> getActiveLactation(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId) {
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId) {
         LactationResponseVO responseVO = lactationQueryUseCase.getActiveLactation(farmId, goatId);
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PatchMapping("/{lactationId}/dry")
-    @Operation(summary = "Mark a lactation as dry")
+    @Operation(summary = "Marca uma lactação como seca")
     public ResponseEntity<LactationResponseDTO> dryLactation(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Lactation identifier") @PathVariable Long lactationId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da lactação") @PathVariable Long lactationId,
             @Valid @RequestBody LactationDryRequestDTO request) {
         LactationDryRequestVO requestVO = lactationMapper.toDryRequestVO(request);
         LactationResponseVO responseVO = lactationCommandUseCase.dryLactation(farmId, goatId, lactationId, requestVO);
@@ -68,20 +68,20 @@ public class LactationController {
     }
 
     @GetMapping("/{lactationId}")
-    @Operation(summary = "Get lactation by ID")
+    @Operation(summary = "Busca lactação por ID")
     public ResponseEntity<LactationResponseDTO> getLactationById(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
-            @Parameter(description = "Lactation identifier") @PathVariable Long lactationId) {
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da lactação") @PathVariable Long lactationId) {
         LactationResponseVO responseVO = lactationQueryUseCase.getLactationById(farmId, goatId, lactationId);
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
     @GetMapping
-    @Operation(summary = "List all lactations for a goat (history)")
+    @Operation(summary = "Lista histórico de lactações de uma cabra")
     public ResponseEntity<Page<LactationResponseDTO>> getAllLactations(
-            @Parameter(description = "Farm identifier") @PathVariable Long farmId,
-            @Parameter(description = "Goat identifier") @PathVariable String goatId,
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "startDate", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<LactationResponseVO> pageVO = lactationQueryUseCase.getAllLactations(farmId, goatId, pageable);
         // Map Page<VO> to Page<DTO> manually since MapStruct doesn't support Page mapping out of the box easily without wrapper
