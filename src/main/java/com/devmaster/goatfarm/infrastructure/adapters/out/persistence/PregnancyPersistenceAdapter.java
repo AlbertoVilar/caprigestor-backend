@@ -34,8 +34,8 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
             return Optional.empty();
         }
         if (pregnancies.size() > 1) {
-            ValidationError error = new ValidationError(Instant.now(), HttpStatus.CONFLICT.value(), "Data integrity error");
-            error.addError("status", "Multiple active pregnancies found for the same goat and farm");
+            ValidationError error = new ValidationError(Instant.now(), HttpStatus.CONFLICT.value(), "Erro de integridade de dados");
+            error.addError("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
             throw new ValidationException(error);
         }
         return Optional.of(pregnancies.get(0));
