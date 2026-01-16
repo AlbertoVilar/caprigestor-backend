@@ -14,10 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PregnancyConfirmRequestDTO {
-    @NotNull(message = "Check date is required")
+    @NotNull(message = "Data da confirmação é obrigatória")
     private LocalDate checkDate;
 
-    @NotNull(message = "Check result is required")
+    @NotNull(message = "Resultado da confirmação é obrigatório")
     private PregnancyCheckResult checkResult;
     private String notes;
 }

@@ -15,10 +15,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PregnancyCloseRequestDTO {
-    @NotNull(message = "Close date is required")
+    @NotNull(message = "Data de fechamento é obrigatória")
     private LocalDate closeDate;
 
-    @NotNull(message = "Status is required (e.g. CLOSED, LOST)")
+    @NotNull(message = "Motivo/Status de fechamento é obrigatório (ex.: ENCERRADA, PERDIDA)")
     private PregnancyStatus status;
 
     private PregnancyCloseReason closeReason;

@@ -14,10 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BreedingRequestDTO {
-    @NotNull(message = "Date is required")
+    @NotNull(message = "Data da cobertura é obrigatória")
     private LocalDate eventDate;
 
-    @NotNull(message = "Breeding type is required")
+    @NotNull(message = "Tipo de cobertura é obrigatório")
     private BreedingType breedingType;
 
     private String breederRef;
