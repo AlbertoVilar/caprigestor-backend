@@ -54,10 +54,10 @@ Este módulo gerencia o ciclo de vida produtivo das cabras, controlando a abertu
 
 ### Entity (Persistência)
 *   **Lactation**: Entidade JPA mapeada para a tabela `lactation`.
-    *   `id`: Long (PK)
-    *   `farmId`: Long (Tenant)
-    *   `goatId`: String (FK lógica)
-    *   `status`: Enum (`ACTIVE`, `CLOSED`)
+*   `id`: Long (PK)
+*   `farmId`: Long (Tenant)
+*   `goatId`: String (FK lógica)
+*   `status`: Enum (`ACTIVE`, `CLOSED`)
 
 ## Fluxo Hexagonal
 
@@ -93,5 +93,15 @@ Sequência sugerida para testes manuais (Postman):
 5.  **Verificar Histórico**: `GET /api/goatfarms/1/goats/G001/lactations`.
 
 ## Próximos Passos
+
 *   Implementar endpoint de "Sumário de Lactação" com totais de leite produzido (dependência do módulo `MilkProduction`).
 *   Adicionar validações de consistência com datas de parto (módulo `Genealogy` ou `Reproduction`).
+
+## Integração com Milk Production
+
+O módulo de Produção de Leite (`MilkProduction`) depende diretamente deste módulo. O registro de produção leiteira geralmente requer uma lactação ativa (embora a validação estrita possa variar conforme a configuração da fazenda, a regra de negócio sugere vínculo).
+
+## Recomendações de Manejo
+
+* Em muitos manejos, a **secagem** é planejada aproximadamente **90 dias após a cobertura** ou cerca de **60 dias antes da data prevista de parto**.
+* Essas referências de 90/60 dias são **recomendações de manejo** e não bloqueios da API: o sistema apenas valida consistência básica de datas (não futuras, `endDate` não anterior a `startDate`) e permite que a fazenda ajuste as datas conforme sua realidade.

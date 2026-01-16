@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -100,6 +101,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(err);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ValidationError> handleDataIntegrityViolation(DataIntegrityViolationException e, HttpServletRequest request) {
+        String error = "Conflito de integridade de dados";
+        HttpStatus status = HttpStatus.CONFLICT;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        Throwable rootCause = e.getRootCause();
+        String message = rootCause != null ? rootCause.getMessage() : e.getMessage();
+
+        if (message != null && message.contains("ux_pregnancy_single_active_per_goat")) {
+            err.addError("status", "Duplicate active pregnancy for goat");
+        } else {
+            err.addError("integrity", "Database constraint violation");
+        }
+        return ResponseEntity.status(status).body(err);
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ValidationError> unauthorized(UnauthorizedException e, HttpServletRequest request) {
         String error = "Não autorizado";
@@ -108,5 +125,6 @@ public class GlobalExceptionHandler {
         err.addError("auth", e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
+
 }
-
+

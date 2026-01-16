@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -29,6 +30,37 @@ class GlobalExceptionHandlerTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(httpServletRequest.getRequestURI()).thenReturn("/api/test");
+    }
+
+    @Test
+    void shouldHandleDataIntegrityViolationException_forDuplicateActivePregnancy() {
+        Throwable rootCause = new RuntimeException("duplicate key value violates unique constraint \"ux_pregnancy_single_active_per_goat\"");
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Constraint violation", rootCause);
+
+        ResponseEntity<ValidationError> response = globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+        assertEquals("Conflito de integridade de dados", body.getError());
+        assertTrue(body.getErrors().stream().anyMatch(e ->
+                "status".equals(e.getFieldName()) && "Duplicate active pregnancy for goat".equals(e.getMessage())));
+    }
+
+    @Test
+    void shouldHandleDataIntegrityViolationException_genericCase() {
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Some other constraint violation");
+
+        ResponseEntity<ValidationError> response = globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+        assertEquals("Conflito de integridade de dados", body.getError());
+        assertTrue(body.getErrors().stream().anyMatch(e ->
+                "integrity".equals(e.getFieldName()) && "Database constraint violation".equals(e.getMessage())));
     }
 
     @Test
