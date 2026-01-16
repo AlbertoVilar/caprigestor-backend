@@ -144,3 +144,8 @@ HAVING COUNT(*) > 1;
 3. Após executar o script manual, subir a aplicação normalmente para que o Flyway aplique a V16.
 
 Se a migration de verificação `V15_9__Assert_no_duplicate_active_pregnancy` encontrar duplicidades, ela falhará com uma mensagem explícita apontando para o script manual de data-fix.
+
+## Recomendações de Manejo
+
+- O exame de gestação (ultrassom ou outro método) é geralmente recomendado por volta de **45 dias após a cobertura**.
+- Essa janela de 45 dias é uma **recomendação de manejo**, não uma regra rígida da API: qualquer `checkDate` não futura e com cobertura anterior válida é aceita pelo sistema.
