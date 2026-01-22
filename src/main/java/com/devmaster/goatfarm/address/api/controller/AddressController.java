@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -23,7 +22,6 @@ public class AddressController {
     private final AddressManagementUseCase addressUseCase;
     private final AddressMapper addressMapper;
 
-    @Autowired
     public AddressController(AddressManagementUseCase addressUseCase, AddressMapper addressMapper) {
         this.addressUseCase = addressUseCase;
         this.addressMapper = addressMapper;

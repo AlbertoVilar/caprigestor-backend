@@ -4,7 +4,6 @@ import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistence
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.model.entity.ReproductiveEvent;
 import com.devmaster.goatfarm.reproduction.model.repository.ReproductiveEventRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -13,10 +12,13 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor
 public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPersistencePort {
 
     private final ReproductiveEventRepository repository;
+
+    public ReproductiveEventPersistenceAdapter(ReproductiveEventRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public ReproductiveEvent save(ReproductiveEvent entity) {

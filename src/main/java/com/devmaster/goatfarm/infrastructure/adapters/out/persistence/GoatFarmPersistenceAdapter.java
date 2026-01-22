@@ -3,7 +3,6 @@ package com.devmaster.goatfarm.infrastructure.adapters.out.persistence;
 import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -15,7 +14,6 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort {
 
     private final GoatFarmRepository repository;
 
-    @Autowired
     public GoatFarmPersistenceAdapter(GoatFarmRepository repository) {
         this.repository = repository;
     }

@@ -24,7 +24,6 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,7 +47,6 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
     private final PhoneMapper phoneMapper;
     private final OwnershipService ownershipService;
 
-    @Autowired
     public GoatFarmBusiness(
             GoatFarmPersistencePort goatFarmPort,
             AddressBusiness addressBusiness,

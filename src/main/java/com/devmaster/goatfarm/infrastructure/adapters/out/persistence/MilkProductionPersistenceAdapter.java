@@ -4,7 +4,6 @@ import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePor
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.model.repository.MilkProductionRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -13,10 +12,13 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor
 public class MilkProductionPersistenceAdapter implements MilkProductionPersistencePort {
 
     private final MilkProductionRepository milkProductionRepository;
+
+    public MilkProductionPersistenceAdapter(MilkProductionRepository milkProductionRepository) {
+        this.milkProductionRepository = milkProductionRepository;
+    }
 
     @Override
     public MilkProduction save(MilkProduction milkProduction) {

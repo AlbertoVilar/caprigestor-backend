@@ -7,7 +7,6 @@ import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -24,7 +23,6 @@ public class GoatController {
     private final GoatManagementUseCase goatUseCase;
     private final GoatMapper goatMapper;
 
-    @Autowired
     public GoatController(GoatManagementUseCase goatUseCase, GoatMapper goatMapper) {
         this.goatUseCase = goatUseCase;
         this.goatMapper = goatMapper;

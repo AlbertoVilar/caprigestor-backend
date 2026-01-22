@@ -7,7 +7,6 @@ import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.mapper.LactationMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,11 +24,15 @@ import java.util.Optional;
 import org.springframework.http.HttpStatus;
 
 @Service
-@RequiredArgsConstructor
 public class LactationBusiness implements LactationCommandUseCase, LactationQueryUseCase {
 
     private final LactationPersistencePort lactationPersistencePort;
     private final LactationMapper lactationMapper;
+
+    public LactationBusiness(LactationPersistencePort lactationPersistencePort, LactationMapper lactationMapper) {
+        this.lactationPersistencePort = lactationPersistencePort;
+        this.lactationMapper = lactationMapper;
+    }
 
     @Override
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {

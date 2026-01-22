@@ -10,7 +10,6 @@ import com.devmaster.goatfarm.events.mapper.EventMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -30,7 +29,6 @@ public class EventController {
     private final EventManagementUseCase eventUseCase;
     private final EventMapper eventMapper;
 
-    @Autowired
     public EventController(EventManagementUseCase eventUseCase, EventMapper eventMapper) {
         this.eventUseCase = eventUseCase;
         this.eventMapper = eventMapper;

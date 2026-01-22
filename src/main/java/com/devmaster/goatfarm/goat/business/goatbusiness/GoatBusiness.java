@@ -12,7 +12,6 @@ import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,6 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final OwnershipService ownershipService;
     private final GoatMapper goatMapper;
 
-    @Autowired
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
                         OwnershipService ownershipService, GoatMapper goatMapper) {
         this.goatPort = goatPort;

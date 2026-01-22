@@ -13,7 +13,6 @@ import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.model.entity.Phone;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -32,7 +31,6 @@ public class PhoneBusiness implements com.devmaster.goatfarm.application.ports.i
     private final GoatFarmPersistencePort goatFarmPort;
     private final OwnershipService ownershipService;
 
-    @Autowired
     public PhoneBusiness(PhonePersistencePort phonePort, PhoneMapper phoneMapper, @Lazy GoatFarmPersistencePort goatFarmPort, OwnershipService ownershipService) {
         this.phonePort = phonePort;
         this.phoneMapper = phoneMapper;

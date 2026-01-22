@@ -3,7 +3,6 @@ package com.devmaster.goatfarm.infrastructure.adapters.out.persistence;
 import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -12,7 +11,6 @@ import java.util.Optional;
 public class UserPersistenceAdapter implements UserPersistencePort {
     private final UserRepository repository;
 
-    @Autowired
     public UserPersistenceAdapter(UserRepository repository) {
         this.repository = repository;
     }

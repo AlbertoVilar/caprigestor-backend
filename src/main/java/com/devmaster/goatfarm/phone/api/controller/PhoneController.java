@@ -7,7 +7,6 @@ import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +20,6 @@ public class PhoneController {
     private final PhoneManagementUseCase phoneUseCase;
     private final PhoneMapper phoneMapper;
 
-    @Autowired
     public PhoneController(PhoneManagementUseCase phoneUseCase, PhoneMapper phoneMapper) {
         this.phoneUseCase = phoneUseCase;
         this.phoneMapper = phoneMapper;
