@@ -199,8 +199,10 @@ public class UserBusiness implements com.devmaster.goatfarm.application.ports.in
             }
         }
 
-        if (vo.getPassword() != null && !vo.getPassword().isEmpty() && vo.getConfirmPassword() != null) {
-            if (!vo.getPassword().equals(vo.getConfirmPassword())) {
+        if (vo.getPassword() != null && !vo.getPassword().isEmpty()) {
+            if (vo.getConfirmPassword() == null || vo.getConfirmPassword().trim().isEmpty()) {
+                validationError.addError("confirmPassword", "Confirmação de senha é obrigatória");
+            } else if (!vo.getPassword().equals(vo.getConfirmPassword())) {
                 validationError.addError("confirmPassword", "As senhas não coincidem");
             }
         }

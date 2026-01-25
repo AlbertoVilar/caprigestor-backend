@@ -165,10 +165,14 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
             goatFarmMapper.updateEntity(farmEntity, farmVO);
         }
 
-        // Atualiza/associa usuário
+        // Atualiza dados do usuário owner (não permite trocar owner neste fluxo)
         if (userVO != null) {
-            User owner = userBusiness.findOrCreateUser(userVO);
-            farmEntity.setUser(owner);
+            if (farmEntity.getUser() == null || farmEntity.getUser().getId() == null) {
+                ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
+                ve.addError("user", "Usuário proprietário não encontrado para esta fazenda.");
+                throw new ValidationException(ve);
+            }
+            userBusiness.updateUser(farmEntity.getUser().getId(), userVO);
         }
 
         // Atualiza/associa endereço
@@ -177,10 +181,14 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
             farmEntity.setAddress(addressEntity);
         }
 
-        // Observação: atualização de telefones pode ser orquestrada no PhoneBusiness.
-        // Para manter escopo enxuto e compilar, persistimos alterações básicas.
+        if (phoneVOs == null || phoneVOs.isEmpty()) {
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
+            ve.addError("phones", "É obrigatório informar ao menos um telefone.");
+            throw new ValidationException(ve);
+        }
 
         GoatFarm saved = goatFarmPort.save(farmEntity);
+        phoneBusiness.replacePhones(id, phoneVOs);
         // Recarrega para garantir relacionamentos atualizados
         GoatFarm reloaded = goatFarmPort.findById(saved.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + saved.getId()));
