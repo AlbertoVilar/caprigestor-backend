@@ -48,3 +48,6 @@ docker/.env
 ### Trae / Shell Integration Garbage ###
 criptsshellIntegration.ps1*
 *Shell integration is not enabled*
+
+### Docs ###
+docs/UX_UPDATE_GUIDE.md

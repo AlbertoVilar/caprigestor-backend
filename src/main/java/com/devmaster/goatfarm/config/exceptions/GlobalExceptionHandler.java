@@ -14,6 +14,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -121,6 +122,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ValidationError> unauthorized(UnauthorizedException e, HttpServletRequest request) {
         String error = "Não autorizado";
         HttpStatus status = HttpStatus.UNAUTHORIZED;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("auth", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ValidationError> accessDenied(AccessDeniedException e, HttpServletRequest request) {
+        String error = "Acesso negado";
+        HttpStatus status = HttpStatus.FORBIDDEN;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
         err.addError("auth", e.getMessage());
         return ResponseEntity.status(status).body(err);

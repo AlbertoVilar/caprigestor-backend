@@ -49,7 +49,7 @@ public class GoatFarmController {
         return new ResponseEntity<>(farmMapper.toFullDTO(responseVO), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PutMapping("/{id}")
     public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(@PathVariable Long id, @RequestBody @Valid GoatFarmUpdateRequestDTO requestDTO) {
         var responseVO = farmUseCase.updateGoatFarm(
@@ -79,7 +79,7 @@ public class GoatFarmController {
         return ResponseEntity.ok(farmUseCase.findAllGoatFarm(pageable).map(farmMapper::toFullDTO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteGoatFarm(@PathVariable Long id) {
         farmUseCase.deleteGoatFarm(id);

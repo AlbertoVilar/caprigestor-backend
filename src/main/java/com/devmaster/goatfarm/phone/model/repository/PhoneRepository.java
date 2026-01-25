@@ -25,4 +25,6 @@ public interface PhoneRepository extends JpaRepository<Phone, Long> {
 
     // NOVO: Busca todos os telefones de uma fazenda
     List<Phone> findAllByGoatFarmId(Long goatFarmId);
+
+    long countByGoatFarmId(Long goatFarmId);
 }

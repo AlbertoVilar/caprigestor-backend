@@ -38,6 +38,11 @@ public class PhonePersistenceAdapter implements PhonePersistencePort {
     }
 
     @Override
+    public long countByFarmId(Long farmId) {
+        return phoneRepository.countByGoatFarmId(farmId);
+    }
+
+    @Override
     public void deleteById(Long id) {
         phoneRepository.deleteById(id);
     }
