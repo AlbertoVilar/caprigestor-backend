@@ -177,8 +177,13 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
 
         // Atualiza/associa endereço
         if (addressVO != null) {
-            var addressEntity = addressBusiness.findOrCreateAddressEntity(addressVO);
-            farmEntity.setAddress(addressEntity);
+            if (addressVO.getId() != null) {
+                var addressEntity = addressBusiness.updateAddressEntity(id, addressVO.getId(), addressVO);
+                farmEntity.setAddress(addressEntity);
+            } else {
+                var addressEntity = addressBusiness.findOrCreateAddressEntity(addressVO);
+                farmEntity.setAddress(addressEntity);
+            }
         }
 
         if (phoneVOs == null || phoneVOs.isEmpty()) {
