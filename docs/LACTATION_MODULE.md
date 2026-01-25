@@ -124,3 +124,7 @@ O módulo de Produção de Leite (`MilkProduction`) depende diretamente deste m�
 
 - Em muitos manejos, a **secagem** é planejada aproximadamente **90 dias após a cobertura** ou cerca de **60 dias antes da data prevista de parto**.
 - Essas referências de 90/60 dias são **recomendações de manejo** e não bloqueios da API: o sistema apenas valida consistência básica de datas (não futuras, `endDate` não anterior a `startDate`) e permite que a fazenda ajuste as datas conforme sua realidade.
+
+### 4. Secagem manual (nao automatizada)
+*   A secagem e uma decisao do proprietario. O sistema **nao** encerra lactacao automaticamente com base na confirmacao de prenhez.
+*   A confirmacao de prenhez pode orientar o manejo, mas a data de secagem continua sendo informada manualmente via PATCH.

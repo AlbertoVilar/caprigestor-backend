@@ -16,6 +16,11 @@ O módulo expõe uma API RESTful completa para gerenciamento das produções.
 | **PATCH** | `/{id}` | Atualiza parcialmente uma produção (apenas volume e observações). |
 | **DELETE** | `/{id}` | Remove um registro de produção existente. |
 
+
+## Regras de Dominio
+- A producao de leite e registrada via **POST** e nunca e iniciada automaticamente por PATCH de lactacao.
+- Para registrar producao, e obrigatorio informar `date`, `shift` e `volumeLiters`.
+- A producao exige lactacao ativa para a cabra no momento do registro.
 ## Segurança e Autorização
 
 - Todos os endpoints de produção de leite são privados e exigem token JWT válido.
@@ -43,7 +48,3 @@ A operação de exclusão segue estritamente a arquitetura Hexagonal e as regras
     *   **204 No Content**: Exclusão realizada com sucesso.
     *   **404 Not Found**: Se o registro não existir ou não pertencer ao escopo (Fazenda/Cabra) informado.
 
-## Segurança e Consistência
-
-*   **Escopo Obrigatório**: Todas as operações exigem `farmId` e `goatId`. Não é possível manipular produções apenas pelo ID global.
-*   **Isolamento**: A arquitetura garante que um usuário não consiga excluir produções de outras fazendas, mesmo que adivinhe o ID sequencial, pois a validação de escopo falhará.
