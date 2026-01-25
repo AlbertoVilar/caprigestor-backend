@@ -19,8 +19,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,7 +109,77 @@ public class PhoneBusiness implements com.devmaster.goatfarm.application.ports.i
         ownershipService.verifyFarmOwnership(farmId);
         phonePort.findByIdAndFarmId(phoneId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
+        long total = phonePort.countByFarmId(farmId);
+        if (total <= 1) {
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
+            ve.addError("phones", "A fazenda deve possuir ao menos um telefone.");
+            throw new ValidationException(ve);
+        }
         phonePort.deleteById(phoneId);
+    }
+
+    /**
+     * Sincroniza a lista de telefones da fazenda com a lista informada.
+     * Atualiza existentes, cria novos e remove os ausentes.
+     */
+    @Transactional
+    public void replacePhones(Long farmId, List<PhoneRequestVO> requests) {
+        ownershipService.verifyFarmOwnership(farmId);
+        if (requests == null || requests.isEmpty()) {
+            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
+            ve.addError("phones", "É obrigatório informar ao menos um telefone.");
+            throw new ValidationException(ve);
+        }
+
+        GoatFarm farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada: " + farmId));
+
+        List<Phone> existingPhones = phonePort.findAllByFarmId(farmId);
+        Map<Long, Phone> existingById = new HashMap<>();
+        for (Phone phone : existingPhones) {
+            if (phone.getId() != null) {
+                existingById.put(phone.getId(), phone);
+            }
+        }
+
+        Set<Long> retainedIds = new HashSet<>();
+        for (PhoneRequestVO requestVO : requests) {
+            if (requestVO == null) {
+                throw new IllegalArgumentException("Os dados do telefone para atualização não podem ser nulos.");
+            }
+            validatePhoneData(requestVO);
+
+            Long requestId = requestVO.getId();
+            if (requestId != null) {
+                Phone current = existingById.get(requestId);
+                if (current == null) {
+                    throw new ResourceNotFoundException("Telefone com ID " + requestId + " não encontrado na fazenda " + farmId);
+                }
+                Optional<Phone> existing = phonePort.findByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
+                if (existing.isPresent() && !existing.get().getId().equals(requestId)) {
+                    throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
+                }
+                phoneMapper.updatePhone(current, requestVO);
+                phonePort.save(current);
+                retainedIds.add(requestId);
+            } else {
+                if (phonePort.existsByDddAndNumber(requestVO.getDdd(), requestVO.getNumber())) {
+                    throw new DatabaseException("Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
+                }
+                Phone phone = phoneMapper.toEntity(requestVO);
+                phone.setGoatFarm(farm);
+                Phone saved = phonePort.save(phone);
+                if (saved.getId() != null) {
+                    retainedIds.add(saved.getId());
+                }
+            }
+        }
+
+        for (Phone phone : existingPhones) {
+            if (phone.getId() != null && !retainedIds.contains(phone.getId())) {
+                phonePort.deleteById(phone.getId());
+            }
+        }
     }
 
     private void validatePhoneData(PhoneRequestVO requestVO) {
