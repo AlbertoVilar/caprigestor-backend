@@ -18,6 +18,8 @@ public interface PhonePersistencePort {
 
     List<Phone> findAllByFarmId(Long farmId);
 
+    long countByFarmId(Long farmId);
+
     void deleteById(Long id);
 
     boolean existsByDddAndNumber(String ddd, String number);

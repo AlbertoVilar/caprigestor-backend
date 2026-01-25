@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
 import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
+import com.devmaster.goatfarm.authority.api.dto.UserUpdateRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
@@ -69,7 +70,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody @Valid UserRequestDTO dto) {
+    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody @Valid UserUpdateRequestDTO dto) {
         logger.info("Iniciando atualização do usuário com ID: {}", id);
         return ResponseEntity.ok(
                 userMapper.toResponseDTO(userUseCase.updateUser(id, userMapper.toRequestVO(dto)))

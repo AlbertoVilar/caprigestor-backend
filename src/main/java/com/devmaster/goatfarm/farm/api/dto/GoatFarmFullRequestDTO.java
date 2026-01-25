@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.farm.api.dto;
 import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public class GoatFarmFullRequestDTO {
     @NotNull(message = "Os dados do endereço são obrigatórios.")
     private AddressRequestDTO address;
 
-    @NotNull(message = "A lista de telefones não pode ser nula.")
+    @NotEmpty(message = "É obrigatório informar ao menos um telefone.")
     private List<PhoneRequestDTO> phones;
 
     public GoatFarmFullRequestDTO() {

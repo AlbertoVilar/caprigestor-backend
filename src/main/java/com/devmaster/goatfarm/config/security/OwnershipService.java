@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
+import org.springframework.security.access.AccessDeniedException;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
@@ -27,7 +28,7 @@ public class OwnershipService {
         var farm = goatFarmPort.findById(farmId)
                 .orElseThrow(() -> new UnauthorizedException("Fazenda não encontrada: " + farmId));
         if (farm.getUser() == null || !farm.getUser().getId().equals(current.getId())) {
-            throw new UnauthorizedException("Usuário não é proprietário desta fazenda.");
+            throw new AccessDeniedException("Usuário não é proprietário desta fazenda.");
         }
     }
 
@@ -37,7 +38,7 @@ public class OwnershipService {
         // Depois, garante que a cabra pertence à fazenda informada
         var goatOpt = goatPort.findByIdAndFarmId(goatId, farmId);
         if (goatOpt.isEmpty()) {
-            throw new UnauthorizedException("Cabra não pertence à fazenda informada.");
+            throw new AccessDeniedException("Cabra não pertence à fazenda informada.");
         }
     }
 

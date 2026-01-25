@@ -22,6 +22,7 @@ import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
+import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -296,5 +297,41 @@ class GoatFarmBusinessTest {
         assertThrows(DatabaseException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
+    }
+
+    @Test
+    @DisplayName("Should update farm without requiring password and without changing owner")
+    void updateGoatFarm_success_withoutPassword() {
+        mockFarm.setUser(mockUser);
+
+        when(goatFarmPort.findById(100L)).thenReturn(Optional.of(mockFarm));
+        when(goatFarmPort.save(any())).thenReturn(mockFarm);
+        when(goatFarmPort.findById(mockFarm.getId())).thenReturn(Optional.of(mockFarm));
+        when(goatFarmMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
+        when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
+        when(userBusiness.updateUser(eq(1L), any(UserRequestVO.class)))
+                .thenReturn(new UserResponseVO(1L, "Owner", "owner@example.com", "00000000001", java.util.List.of()));
+
+        GoatFarmFullResponseVO result = goatFarmBusiness.updateGoatFarm(100L, farmVO, userVO, addressVO, phoneVOs);
+
+        assertNotNull(result);
+        verify(userBusiness).updateUser(eq(1L), any(UserRequestVO.class));
+        verify(userBusiness, never()).findOrCreateUser(any());
+        verify(phoneBusiness).replacePhones(eq(100L), eq(phoneVOs));
+    }
+
+    @Test
+    @DisplayName("Should fail when trying to update farm without an existing owner")
+    void updateGoatFarm_fail_withoutOwner() {
+        mockFarm.setUser(null);
+
+        when(goatFarmPort.findById(100L)).thenReturn(Optional.of(mockFarm));
+
+        assertThrows(ValidationException.class, () ->
+                goatFarmBusiness.updateGoatFarm(100L, farmVO, userVO, addressVO, phoneVOs)
+        );
+
+        verify(userBusiness, never()).findOrCreateUser(any());
+        verify(userBusiness, never()).updateUser(anyLong(), any());
     }
 }
