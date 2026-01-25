@@ -177,6 +177,37 @@ public class SecurityOwnershipIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 
+    private String buildGoatFarmUpdatePayload() throws Exception {
+        java.util.Map<String, Object> farm = new java.util.HashMap<>();
+        farm.put("name", "Owner Farm");
+        farm.put("tod", "ABCDE");
+
+        java.util.Map<String, Object> user = new java.util.HashMap<>();
+        user.put("name", "Owner");
+        user.put("email", "owner@example.com");
+        user.put("cpf", "00000000001");
+
+        java.util.Map<String, Object> address = new java.util.HashMap<>();
+        address.put("street", "Rua A");
+        address.put("neighborhood", "Centro");
+        address.put("city", "São Paulo");
+        address.put("state", "SP");
+        address.put("zipCode", "01000-000");
+        address.put("country", "Brasil");
+
+        java.util.Map<String, Object> phone = new java.util.HashMap<>();
+        phone.put("ddd", "11");
+        phone.put("number", "99999999");
+
+        java.util.Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("farm", farm);
+        payload.put("user", user);
+        payload.put("address", address);
+        payload.put("phones", java.util.List.of(phone));
+
+        return objectMapper.writeValueAsString(payload);
+    }
+
     @Test
     void publicEndpoints_shouldBeAccessibleWithoutToken() throws Exception {
         mockMvc.perform(get("/api/goatfarms")).andExpect(status().isOk());
@@ -266,5 +297,26 @@ public class SecurityOwnershipIntegrationTest {
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/milk-productions")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void goatFarmUpdate_shouldReturn401WithoutToken() throws Exception {
+        String payload = buildGoatFarmUpdatePayload();
+        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void goatFarmUpdate_shouldReturn403ForNonOwnerUser() throws Exception {
+        String token = loginAndGetToken("other@example.com", "password");
+        String payload = buildGoatFarmUpdatePayload();
+
+        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isForbidden());
     }
 }
