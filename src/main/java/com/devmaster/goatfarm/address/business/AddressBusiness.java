@@ -47,6 +47,15 @@ public class AddressBusiness implements com.devmaster.goatfarm.application.ports
         return addressMapper.toResponseVO(updated);
     }
 
+    public Address updateAddressEntity(Long farmId, Long addressId, AddressRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
+        validateAddressData(requestVO);
+        Address current = addressPort.findByIdAndFarmId(addressId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        addressMapper.toEntity(current, requestVO);
+        return addressPort.save(current);
+    }
+
     public AddressResponseVO findAddressById(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
         Address found = addressPort.findByIdAndFarmId(addressId, farmId)
