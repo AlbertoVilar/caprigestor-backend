@@ -38,6 +38,10 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 - Usuários com **ROLE_ADMIN** possuem acesso total, independentemente do `farmId`.
 - Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam dados se forem proprietários da fazenda (`ownershipService.isFarmOwner(farmId)`).
 - Quando o token é válido mas o usuário não é proprietário da fazenda da URL, a API retorna **403 Forbidden**.
+
+## Integracao com Lactacao
+- A confirmacao de prenhez **nao** encerra lactacao automaticamente.
+- A secagem e uma decisao do proprietario e deve ser feita via PATCH no modulo de lactacao.
 ## Payloads (Resumo)
 
 ### BreedingRequestDTO

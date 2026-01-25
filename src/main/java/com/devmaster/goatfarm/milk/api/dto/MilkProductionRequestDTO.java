@@ -23,7 +23,9 @@ public class MilkProductionRequestDTO {
     @Schema(description = "Data da ordenha (obrigatória)", example = "2026-01-30", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate date;
 
+    @NotNull(message = "Turno da ordenha e obrigatorio")
     private MilkingShift shift;
+    @NotNull(message = "Volume produzido e obrigatorio")
     private BigDecimal volumeLiters;
     private String notes;
 }
