@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.security;
 
+import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.events.model.repository.EventRepository;
@@ -19,6 +21,8 @@ import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
+import com.devmaster.goatfarm.phone.model.entity.Phone;
+import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +67,12 @@ public class SecurityOwnershipIntegrationTest {
     private GoatRepository goatRepository;
 
     @Autowired
+    private AddressRepository addressRepository;
+
+    @Autowired
+    private PhoneRepository phoneRepository;
+
+    @Autowired
     private LactationRepository lactationRepository;
 
     @Autowired
@@ -80,6 +90,8 @@ public class SecurityOwnershipIntegrationTest {
     private GoatFarm ownerFarm;
     private Goat ownerGoat;
     private Goat anotherGoat;
+    private Phone ownerPhone;
+    private Address ownerAddress;
 
     @BeforeEach
     void setUp() {
@@ -87,7 +99,9 @@ public class SecurityOwnershipIntegrationTest {
         lactationRepository.deleteAll();
         eventRepository.deleteAll();
         goatRepository.deleteAll();
+        phoneRepository.deleteAll();
         goatFarmRepository.deleteAll();
+        addressRepository.deleteAll();
         userRepository.deleteAll();
         roleRepository.deleteAll();
 
@@ -123,6 +137,23 @@ public class SecurityOwnershipIntegrationTest {
         ownerFarm.setName("Owner Farm");
         ownerFarm.setUser(ownerUser);
         goatFarmRepository.save(ownerFarm);
+
+        ownerAddress = new Address();
+        ownerAddress.setStreet("Rua Antiga");
+        ownerAddress.setNeighborhood("Centro");
+        ownerAddress.setCity("Sao Paulo");
+        ownerAddress.setState("SP");
+        ownerAddress.setZipCode("01000-000");
+        ownerAddress.setCountry("Brasil");
+        ownerAddress = addressRepository.save(ownerAddress);
+        ownerFarm.setAddress(ownerAddress);
+        ownerFarm = goatFarmRepository.save(ownerFarm);
+
+        ownerPhone = new Phone();
+        ownerPhone.setDdd("11");
+        ownerPhone.setNumber("99999999");
+        ownerPhone.setGoatFarm(ownerFarm);
+        ownerPhone = phoneRepository.save(ownerPhone);
 
         ownerGoat = new Goat();
         ownerGoat.setName("Goat 1");
@@ -176,8 +207,7 @@ public class SecurityOwnershipIntegrationTest {
         String response = result.getResponse().getContentAsString();
         return objectMapper.readTree(response).get("accessToken").asText();
     }
-
-    private String buildGoatFarmUpdatePayload() throws Exception {
+    private String buildGoatFarmUpdatePayload(Long addressId, java.util.List<java.util.Map<String, Object>> phones) throws Exception {
         java.util.Map<String, Object> farm = new java.util.HashMap<>();
         farm.put("name", "Owner Farm");
         farm.put("tod", "ABCDE");
@@ -188,24 +218,44 @@ public class SecurityOwnershipIntegrationTest {
         user.put("cpf", "00000000001");
 
         java.util.Map<String, Object> address = new java.util.HashMap<>();
+        if (addressId != null) {
+            address.put("id", addressId);
+        }
         address.put("street", "Rua A");
         address.put("neighborhood", "Centro");
-        address.put("city", "São Paulo");
+        address.put("city", "Sao Paulo");
         address.put("state", "SP");
         address.put("zipCode", "01000-000");
         address.put("country", "Brasil");
-
-        java.util.Map<String, Object> phone = new java.util.HashMap<>();
-        phone.put("ddd", "11");
-        phone.put("number", "99999999");
 
         java.util.Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("farm", farm);
         payload.put("user", user);
         payload.put("address", address);
-        payload.put("phones", java.util.List.of(phone));
+        payload.put("phones", phones);
 
         return objectMapper.writeValueAsString(payload);
+    }
+
+    private java.util.List<java.util.Map<String, Object>> buildPhonesPayloadWithId() {
+        java.util.Map<String, Object> phone = new java.util.HashMap<>();
+        phone.put("id", ownerPhone.getId());
+        phone.put("ddd", ownerPhone.getDdd());
+        phone.put("number", ownerPhone.getNumber());
+        return java.util.List.of(phone);
+    }
+
+    private java.util.List<java.util.Map<String, Object>> buildPhonesPayloadWithIdAndNew() {
+        java.util.Map<String, Object> existing = new java.util.HashMap<>();
+        existing.put("id", ownerPhone.getId());
+        existing.put("ddd", ownerPhone.getDdd());
+        existing.put("number", ownerPhone.getNumber());
+
+        java.util.Map<String, Object> newPhone = new java.util.HashMap<>();
+        newPhone.put("ddd", "11");
+        newPhone.put("number", "98888888");
+
+        return java.util.List.of(existing, newPhone);
     }
 
     @Test
@@ -301,7 +351,7 @@ public class SecurityOwnershipIntegrationTest {
 
     @Test
     void goatFarmUpdate_shouldReturn401WithoutToken() throws Exception {
-        String payload = buildGoatFarmUpdatePayload();
+        String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithId());
         mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -311,12 +361,101 @@ public class SecurityOwnershipIntegrationTest {
     @Test
     void goatFarmUpdate_shouldReturn403ForNonOwnerUser() throws Exception {
         String token = loginAndGetToken("other@example.com", "password");
-        String payload = buildGoatFarmUpdatePayload();
+        String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithId());
 
         mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void goatFarmUpdate_shouldAllowOwnerUpdateAddressOnly() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        long usersBefore = userRepository.count();
+        Long ownerIdBefore = ownerFarm.getUser().getId();
+
+        String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithId());
+
+        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk());
+
+        GoatFarm updated = goatFarmRepository.findByIdWithDetails(ownerFarm.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertNotNull(updated.getAddress());
+        org.junit.jupiter.api.Assertions.assertEquals("Rua A", updated.getAddress().getStreet());
+        org.junit.jupiter.api.Assertions.assertEquals("Centro", updated.getAddress().getNeighborhood());
+        org.junit.jupiter.api.Assertions.assertEquals("Sao Paulo", updated.getAddress().getCity());
+        org.junit.jupiter.api.Assertions.assertEquals("SP", updated.getAddress().getState());
+        org.junit.jupiter.api.Assertions.assertEquals("01000-000", updated.getAddress().getZipCode());
+        org.junit.jupiter.api.Assertions.assertEquals("Brasil", updated.getAddress().getCountry());
+
+        org.junit.jupiter.api.Assertions.assertEquals(ownerIdBefore, updated.getUser().getId());
+        org.junit.jupiter.api.Assertions.assertEquals(usersBefore, userRepository.count());
+        org.junit.jupiter.api.Assertions.assertTrue(phoneRepository.countByGoatFarmId(ownerFarm.getId()) >= 1);
+    }
+
+    @Test
+    void goatFarmUpdate_shouldReuseAddressIdWhenProvided() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        long addressesBefore = addressRepository.count();
+        Long addressIdBefore = ownerAddress.getId();
+
+        String payload = buildGoatFarmUpdatePayload(addressIdBefore, buildPhonesPayloadWithId());
+
+        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk());
+
+        GoatFarm updated = goatFarmRepository.findByIdWithDetails(ownerFarm.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(addressIdBefore, updated.getAddress().getId());
+        org.junit.jupiter.api.Assertions.assertEquals(addressesBefore, addressRepository.count());
+    }
+
+    @Test
+    void goatFarmUpdate_shouldSyncMixedPhonesList() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+
+        String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithIdAndNew());
+
+        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk());
+
+        java.util.List<Phone> phones = phoneRepository.findAllByGoatFarmId(ownerFarm.getId());
+        org.junit.jupiter.api.Assertions.assertEquals(2, phones.size());
+        boolean hasExisting = phones.stream().anyMatch(p -> p.getId().equals(ownerPhone.getId()));
+        boolean hasNew = phones.stream().anyMatch(p -> "98888888".equals(p.getNumber()));
+        org.junit.jupiter.api.Assertions.assertTrue(hasExisting);
+        org.junit.jupiter.api.Assertions.assertTrue(hasNew);
+    }
+    @Test
+    void goatFarmUpdate_shouldReturn422WhenPhonesEmpty() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), java.util.Collections.emptyList());
+
+        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void phoneDelete_shouldReturn422WhenDeletingLastPhone() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(delete("/api/goatfarms/" + ownerFarm.getId() + "/phones/" + ownerPhone.getId())
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnprocessableEntity());
+
+        org.junit.jupiter.api.Assertions.assertEquals(1L, phoneRepository.countByGoatFarmId(ownerFarm.getId()));
     }
 }
