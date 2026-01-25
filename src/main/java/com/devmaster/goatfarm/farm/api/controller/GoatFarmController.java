@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 import com.devmaster.goatfarm.address.mapper.AddressMapper;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -30,7 +30,6 @@ public class GoatFarmController {
     private final AddressMapper addressMapper;
     private final PhoneMapper phoneMapper;
 
-    @Autowired
     public GoatFarmController(GoatFarmManagementUseCase farmUseCase,
                               GoatFarmMapper farmMapper,
                               UserMapper userMapper,

@@ -4,7 +4,6 @@ import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.model.entity.Lactation;
 import com.devmaster.goatfarm.milk.model.repository.LactationRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -12,10 +11,13 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor
 public class LactationPersistenceAdapter implements LactationPersistencePort {
 
     private final LactationRepository lactationRepository;
+
+    public LactationPersistenceAdapter(LactationRepository lactationRepository) {
+        this.lactationRepository = lactationRepository;
+    }
 
     @Override
     public Lactation save(Lactation lactation) {

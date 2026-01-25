@@ -6,7 +6,6 @@ import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.model.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.model.repository.PregnancyRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,10 +16,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-@RequiredArgsConstructor
 public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
 
     private final PregnancyRepository pregnancyRepository;
+
+    public PregnancyPersistenceAdapter(PregnancyRepository pregnancyRepository) {
+        this.pregnancyRepository = pregnancyRepository;
+    }
 
     @Override
     public Pregnancy save(Pregnancy entity) {

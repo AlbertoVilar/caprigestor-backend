@@ -19,7 +19,6 @@ import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.model.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.model.entity.ReproductiveEvent;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -31,12 +30,17 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class ReproductionBusiness implements ReproductionCommandUseCase, ReproductionQueryUseCase {
 
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
     private final ReproductionMapper reproductionMapper;
+
+    public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort, ReproductiveEventPersistencePort reproductiveEventPersistencePort, ReproductionMapper reproductionMapper) {
+        this.pregnancyPersistencePort = pregnancyPersistencePort;
+        this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
+        this.reproductionMapper = reproductionMapper;
+    }
 
     private static final int GESTATION_DAYS = 150;
 

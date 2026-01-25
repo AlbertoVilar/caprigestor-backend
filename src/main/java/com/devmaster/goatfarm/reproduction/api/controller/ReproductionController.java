@@ -8,7 +8,6 @@ import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,13 +19,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/reproduction")
-@RequiredArgsConstructor
 @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
 public class ReproductionController {
 
     private final ReproductionCommandUseCase commandUseCase;
     private final ReproductionQueryUseCase queryUseCase;
     private final ReproductionMapper mapper;
+
+    public ReproductionController(ReproductionCommandUseCase commandUseCase, ReproductionQueryUseCase queryUseCase, ReproductionMapper mapper) {
+        this.commandUseCase = commandUseCase;
+        this.queryUseCase = queryUseCase;
+        this.mapper = mapper;
+    }
 
     @PostMapping("/breeding")
     @Operation(summary = "Registrar um evento de cobertura")

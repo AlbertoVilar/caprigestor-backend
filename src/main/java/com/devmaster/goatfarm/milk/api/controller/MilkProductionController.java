@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,12 +28,16 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions")
-@RequiredArgsConstructor
 @Tag(name = "Milk Production API", description = "Gestão de produção de leite")
 public class MilkProductionController {
 
     private final MilkProductionUseCase milkProductionUseCase;
     private final MilkProductionMapper milkProductionMapper;
+
+    public MilkProductionController(MilkProductionUseCase milkProductionUseCase, MilkProductionMapper milkProductionMapper) {
+        this.milkProductionUseCase = milkProductionUseCase;
+        this.milkProductionMapper = milkProductionMapper;
+    }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
