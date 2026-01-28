@@ -62,7 +62,7 @@ public class SecurityConfig {
         http
             // Torna públicos apenas os endpoints de autenticação explícitos (login/register/refresh)
             // Exclui "/api/auth/me" para que ele seja tratado pelo filtro JWT e exija autenticação
-            .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/api/goatfarms/full", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/api/goatfarms/full", "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions().disable())
@@ -90,6 +90,7 @@ public class SecurityConfig {
                 // Genealogias públicas (apenas leitura)
                 .requestMatchers(HttpMethod.GET,
                         "/api/goatfarms/*/goats/*/genealogies").permitAll()
+                .requestMatchers("/api/articles/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
                 .requestMatchers(HttpMethod.POST, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
