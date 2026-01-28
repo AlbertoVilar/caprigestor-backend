@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.farm.api;
 
 import com.devmaster.goatfarm.address.model.repository.AddressRepository;
 import com.devmaster.goatfarm.authority.model.entity.Role;
+import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;
 import com.devmaster.goatfarm.authority.repository.RoleRepository;
 import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -49,6 +51,9 @@ class GoatFarmLogoIntegrationTest {
     @Autowired
     private PhoneRepository phoneRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @BeforeEach
     void setUp() {
         phoneRepository.deleteAll();
@@ -58,10 +63,21 @@ class GoatFarmLogoIntegrationTest {
         roleRepository.deleteAll();
 
         roleRepository.save(new Role("ROLE_FARM_OWNER", "Farm owner"));
+        Role adminRole = roleRepository.save(new Role("ROLE_ADMIN", "Admin"));
+
+        User admin = new User();
+        admin.setName("Admin");
+        admin.setEmail("admin.logo@example.com");
+        admin.setCpf("90000000000");
+        admin.setPassword(passwordEncoder.encode("password"));
+        admin.addRole(adminRole);
+        userRepository.save(admin);
     }
 
     @Test
     void createFarmWithLogoUrlShouldAppearInDetailAndList() throws Exception {
+        String token = loginAndGetToken("admin.logo@example.com", "password");
+
         String payload = """
                 {
                   "farm": {
@@ -80,7 +96,7 @@ class GoatFarmLogoIntegrationTest {
                     "street": "Rua A",
                     "neighborhood": "Centro",
                     "city": "Cidade",
-                    "state": "ST",
+                    "state": "SP",
                     "zipCode": "12345-678",
                     "country": "Brasil"
                   },
@@ -91,6 +107,7 @@ class GoatFarmLogoIntegrationTest {
                 """;
 
         MvcResult createResult = mockMvc.perform(post("/api/goatfarms")
+                        .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated())
@@ -100,12 +117,26 @@ class GoatFarmLogoIntegrationTest {
         JsonNode created = objectMapper.readTree(createResult.getResponse().getContentAsString());
         long farmId = created.get("id").asLong();
 
-        mockMvc.perform(get("/api/goatfarms/" + farmId))
+        mockMvc.perform(get("/api/goatfarms/" + farmId)
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.logoUrl").value("https://cdn.example.com/logo.png"));
 
-        mockMvc.perform(get("/api/goatfarms"))
+        mockMvc.perform(get("/api/goatfarms")
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].logoUrl").value("https://cdn.example.com/logo.png"));
+    }
+
+    private String loginAndGetToken(String email, String password) throws Exception {
+        String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginPayload))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
