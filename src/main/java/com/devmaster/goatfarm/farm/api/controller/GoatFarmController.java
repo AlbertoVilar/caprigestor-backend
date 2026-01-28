@@ -85,7 +85,7 @@ public class GoatFarmController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @GetMapping("/{farmId}/permissions")
     public ResponseEntity<FarmPermissionsDTO> getFarmPermissions(@PathVariable Long farmId) {
         var vo = farmUseCase.getFarmPermissions(farmId);

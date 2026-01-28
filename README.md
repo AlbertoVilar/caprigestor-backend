@@ -107,6 +107,14 @@ O sistema valida a genealogia com base na classificação do animal:
 - ✅ Proteção de endpoints sensíveis
 - ✅ Integração OAuth2
 
+**Permissões por perfil (resumo):**
+- `ROLE_FARM_OWNER` (proprietário) pode criar/editar/excluir cabras da própria fazenda.
+- `ROLE_OPERATOR` pode criar/editar/excluir cabras da fazenda do proprietário.
+- `ROLE_ADMIN` tem acesso total.
+
+**Endpoint de permissões da fazenda:**
+- `GET /api/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
+
 ### 📅 Eventos e Rastreabilidade
 - ✅ Registro de nascimentos, coberturas e partos
 - ✅ Controle de vacinações e tratamentos

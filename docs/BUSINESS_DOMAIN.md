@@ -27,6 +27,7 @@ Este documento descreve as entidades principais, regras de negócio e requisitos
 *   **Roles**:
     *   `ROLE_ADMIN`: Acesso total e manutenção.
     *   `ROLE_OPERATOR`: Gestão da própria fazenda.
+    *   `ROLE_FARM_OWNER`: Proprietário da fazenda (criação/edição/remoção de cabras da própria fazenda).
 *   **Ownership**: Um usuário só pode manipular dados da sua própria fazenda (validado via `OwnershipService`).
 
 ### Event (Eventos de Manejo)
