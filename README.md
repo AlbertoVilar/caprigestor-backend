@@ -495,7 +495,13 @@ cd caprigestor-backend
 
 2️⃣ **Subir infraestrutura (PostgreSQL + RabbitMQ)**
 ```bash
+cd docker
+docker compose up -d
+```
+
 ## 🧪 Testes
+
+> **Nota sobre Warnings:** É comum ver avisos do "Mockito inline agent" (Byte Buddy) durante a execução dos testes em Java 21+. Isso não afeta o resultado. Para suprimir, use a flag `-XX:+EnableDynamicAgentLoading`.
 
 O projeto possui uma suíte robusta de testes:
 
