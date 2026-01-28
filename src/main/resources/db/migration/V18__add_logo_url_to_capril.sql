@@ -1,0 +1,2 @@
+ALTER TABLE capril
+ADD COLUMN logo_url TEXT;
