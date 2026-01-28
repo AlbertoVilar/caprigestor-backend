@@ -43,6 +43,12 @@
 - [Contato](#contato)
 - [Mensageria](#-mensageria-de-eventos-rabbitmq)
 
+## ✨ Atualizações Recentes
+
+- ✅ **Blog/Article module:** endpoints públicos (`/public/articles`) e administrativos com `ROLE_ADMIN` (detalhes em `docs/ARTICLE_BLOG_MODULE.md`).
+- ✅ **Logo do Capril:** campo `logoUrl` válido (http/https) em cadastros e atualizações de fazenda.
+- ✅ **Sumário de Lactação:** novos endpoints `/active/summary` e `/lactations/{id}/summary` (veja `docs/TRAE_FRONTEND_MILK_REPRO_GUIDE.md` para os contratos).
+
 ---
 
 ## 📖 Sobre o Projeto
@@ -62,6 +68,7 @@ Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todo
 - ✅ Controle de propriedade e ownership
 - ✅ Listagem e busca paginadas
 - ✅ Gerenciamento de estábulos e locais
+- ✅ Captura e retorno do `logoUrl` da fazenda para exibir identidade visual
 
 ### 🛡️ GoatFarm Atomic Registration
 O sistema implementa um fluxo de registro estrito e atômico para garantir consistência e segurança:
