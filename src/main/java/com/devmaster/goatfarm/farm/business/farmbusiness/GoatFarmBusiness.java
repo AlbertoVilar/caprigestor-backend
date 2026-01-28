@@ -219,7 +219,7 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
         
         // Validação estrita: Não pode definir roles
         if (userVO.getRoles() != null && !userVO.getRoles().isEmpty()) {
-            throw new ValidationException(new ValidationError(Instant.now(), 400, "Não é permitido definir permissões (roles) no cadastro público.", null));
+            throw new ValidationException(new ValidationError(Instant.now(), 422, "Não é permitido definir permissões (roles) no cadastro público.", null));
         }
 
         // Garante que não estamos vinculando a um usuário existente (Segurança/IDOR)
