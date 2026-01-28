@@ -15,6 +15,8 @@ O módulo expõe uma API RESTful completa para gerenciamento das lactações.
 | **GET** | `/active` | Busca a lactação atualmente ativa para a cabra. |
 | **GET** | `/{id}` | Busca os detalhes de uma lactação específica por ID. |
 | **GET** | `/` | Lista o histórico de lactações de forma paginada. |
+| **GET** | `/{id}/summary` | Retorna o sumário da lactação (produção e recomendação). |
+| **GET** | `/active/summary` | Retorna o sumário da lactação ativa. |
 
 ## Segurança e Autorização
 
@@ -40,6 +42,14 @@ O módulo expõe uma API RESTful completa para gerenciamento das lactações.
 *   **Data de Fim (`endDate`):** Obrigatória, não pode ser nula, e deve ser posterior ou igual à `startDate`.
 *   **Consistência:** Apenas lactações ativas podem ser encerradas.
 
+### 4. Regra "Somente Fêmeas"
+*   Apenas cabras **fêmeas** podem ter lactação ativa, registrar produção e operar endpoints de lactação.
+*   Tentativas com cabras macho retornam **422 Unprocessable Entity** com mensagem: "Apenas fêmeas podem ter lactação.".
+
+### 5. Recomendações de Manejo (Sumário)
+*   Se houver prenhez ativa e a lactação estiver **ACTIVE**, o sumário calcula `gestationDays`.
+*   Quando `gestationDays >= 90`, o sumário marca `dryOffRecommendation = true` e informa `recommendedDryOffDate`.
+
 ## Estrutura de Dados
 
 ### Lactation (Entity)
@@ -59,6 +69,36 @@ O módulo expõe uma API RESTful completa para gerenciamento das lactações.
 | **GET** | `/active` | Busca a lactação atualmente ativa. | `200 OK` | N/A -> `LactationResponseDTO` |
 | **GET** | `/{id}` | Busca detalhes de uma lactação por ID. | `200 OK` | N/A -> `LactationResponseDTO` |
 | **GET** | `/` | Lista histórico de lactações (paginado). | `200 OK` | N/A -> `Page<LactationResponseDTO>` |
+| **GET** | `/{id}/summary` | Sumário da lactação. | `200 OK` | N/A -> `LactationSummaryResponseDTO` |
+| **GET** | `/active/summary` | Sumário da lactação ativa. | `200 OK` | N/A -> `LactationSummaryResponseDTO` |
+
+### Exemplo de resposta do Sumário
+
+```json
+{
+  "lactation": {
+    "lactationId": 10,
+    "goatId": "GOAT-001",
+    "startDate": "2026-01-01",
+    "endDate": null,
+    "status": "ACTIVE"
+  },
+  "production": {
+    "totalLiters": 25.5,
+    "daysInLactation": 30,
+    "daysMeasured": 12,
+    "averagePerDay": 2.13,
+    "peakLiters": 3.8,
+    "peakDate": "2026-01-12"
+  },
+  "pregnancy": {
+    "gestationDays": 95,
+    "dryOffRecommendation": true,
+    "recommendedDryOffDate": "2026-01-15",
+    "message": "Prenhez confirmada com 95 dias. Recomenda-se secagem."
+  }
+}
+```
 
 ## DTOs, VOs e Entidades
 
@@ -66,6 +106,7 @@ O módulo expõe uma API RESTful completa para gerenciamento das lactações.
 *   **LactationRequestDTO**: Usado para abrir lactação (`startDate`, `pregnancyStartDate`).
 *   **LactationDryRequestDTO**: Usado para secagem (`endDate`, `dryReason`).
 *   **LactationResponseDTO**: Retorno padrão para clientes da API.
+*   **LactationSummaryResponseDTO**: Retorno do sumário (lactation + production + pregnancy).
 
 ### VOs (Value Objects - Business Layer)
 *   **LactationRequestVO**: Objeto de negócio para criação.
@@ -100,6 +141,7 @@ graph LR
 *   **404 Not Found**: Se a cabra ou a lactação não forem encontradas.
 *   **400 Bad Request**: Erros de validação (ex: data futura, campos nulos).
 *   **422 Unprocessable Entity** (ou 400 mapeado): Regras de negócio violadas (ex: já existe lactação ativa, data de fim anterior ao início).
+*   **403 Forbidden**: Usuário autenticado sem ownership da fazenda.
 
 ## Como testar
 
@@ -110,11 +152,6 @@ Sequência sugerida para testes manuais (Postman):
 3.  **Tentar Criar Duplicada**: Repetir o passo 1 (deve falhar).
 4.  **Encerrar (Secar)**: `PATCH /api/goatfarms/1/goats/G001/lactations/{id}/dry` com corpo `{ "endDate": "2023-10-01" }`.
 5.  **Verificar Histórico**: `GET /api/goatfarms/1/goats/G001/lactations`.
-
-## Próximos Passos
-
-- Implementar endpoint de "Sumário de Lactação" com totais de leite produzido (dependência do módulo `MilkProduction`).
-- Adicionar validações de consistência com datas de parto (módulo `Genealogy` ou `Reproduction`).
 
 ## Integração com Milk Production
 
