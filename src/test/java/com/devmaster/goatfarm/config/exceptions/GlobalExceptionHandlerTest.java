@@ -45,7 +45,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
         assertEquals("Conflito de integridade de dados", body.getError());
         assertTrue(body.getErrors().stream().anyMatch(e ->
-                "status".equals(e.getFieldName()) && "Duplicate active pregnancy for goat".equals(e.getMessage())));
+                "status".equals(e.getFieldName()) && "Já existe uma gestação ativa para esta cabra".equals(e.getMessage())));
     }
 
     @Test
@@ -60,7 +60,7 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
         assertEquals("Conflito de integridade de dados", body.getError());
         assertTrue(body.getErrors().stream().anyMatch(e ->
-                "integrity".equals(e.getFieldName()) && "Database constraint violation".equals(e.getMessage())));
+                "integrity".equals(e.getFieldName()) && "Violação de integridade no banco de dados".equals(e.getMessage())));
     }
 
     @Test

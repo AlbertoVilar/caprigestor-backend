@@ -110,10 +110,10 @@ public class GlobalExceptionHandler {
         Throwable rootCause = e.getRootCause();
         String message = rootCause != null ? rootCause.getMessage() : e.getMessage();
 
-        if (message != null && message.contains("ux_pregnancy_single_active_per_goat")) {
-            err.addError("status", "Duplicate active pregnancy for goat");
+        if (message != null && message.toLowerCase().contains("ux_pregnancy_single_active_per_goat")) {
+            err.addError("status", "Já existe uma gestação ativa para esta cabra");
         } else {
-            err.addError("integrity", "Database constraint violation");
+            err.addError("integrity", "Violação de integridade no banco de dados");
         }
         return ResponseEntity.status(status).body(err);
     }
