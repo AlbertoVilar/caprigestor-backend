@@ -28,6 +28,9 @@ public class GoatFarm {
     @Column(unique = true, length = 5)
     private String tod;
 
+    @Column(name = "logo_url")
+    private String logoUrl;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

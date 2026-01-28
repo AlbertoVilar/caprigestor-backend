@@ -8,20 +8,26 @@ public class GoatFarmResponseVO {
     private Long id;
     private String name;
     private String tod;
+    private String logoUrl;
 
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
 
+    public GoatFarmResponseVO() {
+    }
+
     public GoatFarmResponseVO(Long id,
                               String name,
                               String tod,
+                              String logoUrl,
                               LocalDateTime createdAt,
                               LocalDateTime updatedAt) {
 
         this.id = id;
         this.name = name;
         this.tod = tod;
+        this.logoUrl = logoUrl;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -49,6 +55,14 @@ public class GoatFarmResponseVO {
 
     public void setTod(String tod) {
         this.tod = tod;
+    }
+
+    public String getLogoUrl() {
+        return logoUrl;
+    }
+
+    public void setLogoUrl(String logoUrl) {
+        this.logoUrl = logoUrl;
     }
 
     public LocalDateTime getCreatedAt() {

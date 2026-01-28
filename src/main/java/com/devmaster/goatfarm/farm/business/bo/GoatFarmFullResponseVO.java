@@ -16,6 +16,7 @@ public class GoatFarmFullResponseVO {
     private Long id;
     private String name;
     private String tod;
+    private String logoUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -48,6 +49,9 @@ public class GoatFarmFullResponseVO {
     
     public String getTod() { return tod; }
     public void setTod(String tod) { this.tod = tod; }
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

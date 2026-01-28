@@ -11,6 +11,7 @@ public class GoatFarmRequestVO {
     private Long id;
     private String name;
     private String tod;
+    private String logoUrl;
     private Long addressId;
     private Long userId;
     private List<Long> phoneIds;

@@ -107,6 +107,7 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
         validateGoatFarmCreation(fullRequestVO, currentUser);
 
         GoatFarmRequestVO farmVO = fullRequestVO.getFarm();
+        validateLogoUrl(farmVO != null ? farmVO.getLogoUrl() : null);
         UserRequestVO userVO = fullRequestVO.getUser();
         AddressRequestVO addressVO = fullRequestVO.getAddress();
         List<PhoneRequestVO> phoneVOs = fullRequestVO.getPhones();
@@ -160,6 +161,7 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
             if (farmVO.getTod() != null && !farmVO.getTod().equals(farmEntity.getTod()) && goatFarmPort.existsByTod(farmVO.getTod())) {
                 throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
             }
+            validateLogoUrl(farmVO.getLogoUrl());
             goatFarmMapper.updateEntity(farmEntity, farmVO);
         }
 
@@ -260,5 +262,24 @@ public class GoatFarmBusiness implements com.devmaster.goatfarm.application.port
         if (!validationError.getErrors().isEmpty()) {
             throw new ValidationException(validationError);
         }
+    }
+
+    private void validateLogoUrl(String logoUrl) {
+        if (logoUrl == null) {
+            return;
+        }
+        if (logoUrl.isBlank() || logoUrl.length() > 1000) {
+            throwInvalidLogoUrl();
+        }
+        String normalized = logoUrl.trim().toLowerCase();
+        if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+            throwInvalidLogoUrl();
+        }
+    }
+
+    private void throwInvalidLogoUrl() {
+        ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validaÃ§Ã£o");
+        ve.addError("logoUrl", "URL do logo invÃ¡lida.");
+        throw new ValidationException(ve);
     }
 }

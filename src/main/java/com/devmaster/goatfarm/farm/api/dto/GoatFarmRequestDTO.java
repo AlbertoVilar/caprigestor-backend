@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.farm.api.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,6 +19,9 @@ public class GoatFarmRequestDTO {
 
     @Size(min = 5, max = 5, message = "TOD deve ter 5 caracteres")
     private String tod;
+
+    @Schema(description = "URL do logo do capril (http/https)", example = "https://example.com/logo.png")
+    private String logoUrl;
 
     @NotNull(message = "ID do usuário precisa ser passado")
     private Long userId;
