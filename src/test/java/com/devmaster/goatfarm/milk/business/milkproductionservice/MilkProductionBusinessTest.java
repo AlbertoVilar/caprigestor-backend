@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.business.milkproductionservice;
 
 import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -13,6 +14,7 @@ import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
 import com.devmaster.goatfarm.milk.model.entity.Lactation;
 import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
+import com.devmaster.goatfarm.goat.model.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,9 @@ class MilkProductionBusinessTest {
     private LactationPersistencePort lactationPersistencePort;
 
     @Mock
+    private GoatGenderValidator goatGenderValidator;
+
+    @Mock
     private MilkProductionMapper milkProductionMapper;
 
     @InjectMocks
@@ -49,6 +54,7 @@ class MilkProductionBusinessTest {
     void setUp() {
         // Método executado antes de cada teste.
         // Útil para resetar mocks ou configurar comportamento padrão se necessário.
+        lenient().when(goatGenderValidator.requireFemale(anyLong(), anyString())).thenReturn(new Goat());
     }
 
     // ==================================================================================

@@ -2,9 +2,11 @@ package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
 import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
@@ -48,6 +50,9 @@ class ReproductionBusinessTest {
     private ReproductiveEventPersistencePort reproductiveEventPersistencePort;
 
     @Mock
+    private GoatGenderValidator goatGenderValidator;
+
+    @Mock
     private ReproductionMapper reproductionMapper;
 
     @InjectMocks
@@ -59,6 +64,8 @@ class ReproductionBusinessTest {
     @BeforeEach
     void setUp() {
         // Maintained to follow Milk module test style.
+        org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemale(any(Long.class), any(String.class)))
+                .thenReturn(new Goat());
     }
 
     // ==================================================================================

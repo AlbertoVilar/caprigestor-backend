@@ -92,6 +92,7 @@ public class SecurityOwnershipIntegrationTest {
     private Goat anotherGoat;
     private Phone ownerPhone;
     private Address ownerAddress;
+    private Lactation ownerLactation;
 
     @BeforeEach
     void setUp() {
@@ -178,7 +179,7 @@ public class SecurityOwnershipIntegrationTest {
         lactation.setGoatId(ownerGoat.getRegistrationNumber());
         lactation.setStartDate(LocalDate.now().minusDays(10));
         lactation.setStatus(LactationStatus.ACTIVE);
-        lactationRepository.save(lactation);
+        ownerLactation = lactationRepository.save(lactation);
 
         Event event = new Event();
         event.setGoat(ownerGoat);
@@ -272,6 +273,9 @@ public class SecurityOwnershipIntegrationTest {
         mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active"))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+                + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/" + ownerLactation.getId() + "/summary"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -294,6 +298,10 @@ public class SecurityOwnershipIntegrationTest {
 
         mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+                + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/" + ownerLactation.getId() + "/summary")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
 
