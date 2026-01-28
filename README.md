@@ -43,12 +43,6 @@
 - [Contato](#contato)
 - [Mensageria](#-mensageria-de-eventos-rabbitmq)
 
-## ✨ Atualizações Recentes
-
-- ✅ **Blog/Article module:** endpoints públicos (`/public/articles`) e administrativos com `ROLE_ADMIN` (detalhes em `docs/ARTICLE_BLOG_MODULE.md`).
-- ✅ **Logo do Capril:** campo `logoUrl` válido (http/https) em cadastros e atualizações de fazenda.
-- ✅ **Sumário de Lactação:** novos endpoints `/active/summary` e `/lactations/{id}/summary` (veja `docs/TRAE_FRONTEND_MILK_REPRO_GUIDE.md` para os contratos).
-
 ---
 
 ## 📖 Sobre o Projeto
@@ -68,7 +62,11 @@ Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todo
 - ✅ Controle de propriedade e ownership
 - ✅ Listagem e busca paginadas
 - ✅ Gerenciamento de estábulos e locais
-- ✅ Captura e retorno do `logoUrl` da fazenda para exibir identidade visual
+- ✅ **Logo do Capril:** campo `logoUrl` válido (http/https) em cadastros e atualizações de fazenda para exibir identidade visual
+
+### 📰 Blog e Artigos
+- ✅ **Módulo de Artigos:** endpoints públicos (`/public/articles`) para listagem de notícias e dicas
+- ✅ Gestão administrativa completa com `ROLE_ADMIN` (detalhes em `docs/ARTICLE_BLOG_MODULE.md`)
 
 ### 🛡️ GoatFarm Atomic Registration
 O sistema implementa um fluxo de registro estrito e atômico para garantir consistência e segurança:
@@ -91,6 +89,7 @@ O sistema implementa um fluxo de registro estrito e atômico para garantir consi
 
 ### 🥛 Gestão de Produção Leiteira e Lactação
 - ✅ **Lactação:** Ciclo de vida produtivo (abertura, secagem, status ativo/fechado)
+- ✅ **Sumário de Lactação:** novos endpoints `/active/summary` e `/lactations/{id}/summary` para visão consolidada
 - ✅ **Produção Diária:** Registro de ordenhas por turno (Manhã/Tarde)
 - ✅ Controle de volume e observações
 - ✅ Histórico completo de lactações e produções
