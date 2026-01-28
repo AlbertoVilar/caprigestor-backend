@@ -26,6 +26,18 @@ public interface LactationMapper {
 
     LactationSummaryResponseDTO toSummaryResponseDTO(LactationSummaryResponseVO vo);
 
+    LactationSummaryResponseDTO.LactationSummaryLactationDTO toSummaryLactationDTO(
+            LactationSummaryResponseVO.LactationSummaryLactationVO vo
+    );
+
+    LactationSummaryResponseDTO.LactationSummaryProductionDTO toSummaryProductionDTO(
+            LactationSummaryResponseVO.LactationSummaryProductionVO vo
+    );
+
+    LactationSummaryResponseDTO.LactationSummaryPregnancyDTO toSummaryPregnancyDTO(
+            LactationSummaryResponseVO.LactationSummaryPregnancyVO vo
+    );
+
     LactationResponseVO toResponseVO(Lactation entity);
 
     List<LactationResponseVO> toResponseVOList(List<Lactation> entities);

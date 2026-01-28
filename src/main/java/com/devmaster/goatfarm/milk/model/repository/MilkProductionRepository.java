@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -37,6 +38,20 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             Pageable pageable
+    );
+
+    @Query("""
+    select mp from MilkProduction mp
+    where mp.farmId = :farmId
+      and mp.goatId = :goatId
+      and mp.date >= :from
+      and mp.date <= :to
+    """)
+    List<MilkProduction> findByFarmIdAndGoatIdAndDateBetween(
+            @Param("farmId") Long farmId,
+            @Param("goatId") String goatId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to
     );
 
 

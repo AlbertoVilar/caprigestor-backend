@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface MilkProductionPersistencePort {
@@ -27,6 +28,13 @@ public interface MilkProductionPersistencePort {
             LocalDate from,
             LocalDate to,
             Pageable pageable
+    );
+
+    List<MilkProduction> findByFarmIdAndGoatIdAndDateBetween(
+            Long farmId,
+            String goatId,
+            LocalDate from,
+            LocalDate to
     );
 
     void delete(MilkProduction milkProduction);

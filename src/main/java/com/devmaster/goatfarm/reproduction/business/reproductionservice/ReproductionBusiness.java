@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.application.ports.in.ReproductionCommandUseCase;
 import com.devmaster.goatfarm.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
@@ -34,11 +35,16 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
+    private final GoatGenderValidator goatGenderValidator;
     private final ReproductionMapper reproductionMapper;
 
-    public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort, ReproductiveEventPersistencePort reproductiveEventPersistencePort, ReproductionMapper reproductionMapper) {
+    public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
+                                ReproductiveEventPersistencePort reproductiveEventPersistencePort,
+                                GoatGenderValidator goatGenderValidator,
+                                ReproductionMapper reproductionMapper) {
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
+        this.goatGenderValidator = goatGenderValidator;
         this.reproductionMapper = reproductionMapper;
     }
 
@@ -47,6 +53,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional
     public ReproductiveEventResponseVO registerBreeding(Long farmId, String goatId, BreedingRequestVO vo) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         if (vo.getEventDate() == null) {
             throw buildValidationException("eventDate", "Data do evento é obrigatória");
         }
@@ -74,6 +81,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional(noRollbackFor = ValidationException.class)
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         if (vo.getCheckDate() == null) {
             throw buildValidationException("checkDate", "Data do exame de gestação é obrigatória");
         }
@@ -142,6 +150,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional
     public PregnancyResponseVO closePregnancy(Long farmId, String goatId, Long pregnancyId, PregnancyCloseRequestVO vo) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
 
@@ -180,6 +189,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     @Override
     public PregnancyResponseVO getActivePregnancy(Long farmId, String goatId) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nenhuma gestação ativa encontrada para esta cabra"));
         return reproductionMapper.toPregnancyResponseVO(pregnancy);
@@ -187,6 +197,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     @Override
     public PregnancyResponseVO getPregnancyById(Long farmId, String goatId, Long pregnancyId) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         if (pregnancyId == null || pregnancyId <= 0) {
             throw new InvalidArgumentException("Identificador de gestação inválido");
         }
@@ -197,12 +208,14 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     @Override
     public Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
                 .map(reproductionMapper::toPregnancyResponseVO);
     }
 
     @Override
     public Page<ReproductiveEventResponseVO> getReproductiveEvents(Long farmId, String goatId, Pageable pageable) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
                 .map(reproductionMapper::toReproductiveEventResponseVO);
     }

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -65,6 +66,16 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
                 to,
                 pageable
         );
+    }
+
+    @Override
+    public List<MilkProduction> findByFarmIdAndGoatIdAndDateBetween(
+            Long farmId,
+            String goatId,
+            LocalDate from,
+            LocalDate to
+    ) {
+        return milkProductionRepository.findByFarmIdAndGoatIdAndDateBetween(farmId, goatId, from, to);
     }
 
 }

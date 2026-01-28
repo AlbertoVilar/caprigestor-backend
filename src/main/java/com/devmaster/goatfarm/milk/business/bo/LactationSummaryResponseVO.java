@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.milk.business.bo;
 
-import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,23 +15,46 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class LactationSummaryResponseVO {
+    private LactationSummaryLactationVO lactation;
+    private LactationSummaryProductionVO production;
+    private LactationSummaryPregnancyVO pregnancy;
 
-    /** Identificadores de contexto */
-    private Long lactationId;
-    private String goatId;
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LactationSummaryLactationVO {
+        private Long lactationId;
+        private String goatId;
+        private LocalDate startDate;
+        private LocalDate endDate;
+        private com.devmaster.goatfarm.milk.enums.LactationStatus status;
+    }
 
-    /** Período da lactação */
-    private LocalDate startDate;
-    private LocalDate endDate;
-    private LactationStatus status;
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LactationSummaryProductionVO {
+        private BigDecimal totalLiters;
+        private Integer daysInLactation;
+        private Integer daysMeasured;
+        private BigDecimal averagePerDay;
+        private BigDecimal peakLiters;
+        private LocalDate peakDate;
+    }
 
-    /** Métricas de produção */
-    private BigDecimal totalLiters;
-    private Integer daysInLactation;
-    private Integer daysMeasured;
-    private BigDecimal averagePerDay;
-
-    /** Pico de produção */
-    private BigDecimal peakLiters;
-    private LocalDate peakDate;
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LactationSummaryPregnancyVO {
+        private Integer gestationDays;
+        private Boolean dryOffRecommendation;
+        private LocalDate recommendedDryOffDate;
+        private String message;
+    }
 }

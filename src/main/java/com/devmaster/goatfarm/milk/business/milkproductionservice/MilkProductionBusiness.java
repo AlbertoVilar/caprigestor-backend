@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.milk.business.milkproductionservice;
 import com.devmaster.goatfarm.application.ports.in.MilkProductionUseCase;
 import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
@@ -30,13 +31,18 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     /** Ports (infra abstraída) */
     private final MilkProductionPersistencePort milkProductionPersistencePort;
     private final LactationPersistencePort lactationPersistencePort;
+    private final GoatGenderValidator goatGenderValidator;
 
     /** Mapper de domínio */
     private final MilkProductionMapper milkProductionMapper;
 
-    public MilkProductionBusiness(MilkProductionPersistencePort milkProductionPersistencePort, LactationPersistencePort lactationPersistencePort, MilkProductionMapper milkProductionMapper) {
+    public MilkProductionBusiness(MilkProductionPersistencePort milkProductionPersistencePort,
+                                  LactationPersistencePort lactationPersistencePort,
+                                  GoatGenderValidator goatGenderValidator,
+                                  MilkProductionMapper milkProductionMapper) {
         this.milkProductionPersistencePort = milkProductionPersistencePort;
         this.lactationPersistencePort = lactationPersistencePort;
+        this.goatGenderValidator = goatGenderValidator;
         this.milkProductionMapper = milkProductionMapper;
     }
 
@@ -49,6 +55,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             String goatId,
             MilkProductionRequestVO requestVO
     ) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         //=======================
         // *** VALIDAÇÃO *** //
         //=======================
@@ -83,6 +90,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             Long id,
             MilkProductionUpdateRequestVO request
     ) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
 
@@ -99,6 +107,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     @Override
     public MilkProductionResponseVO findById(Long farmId, String goatId, Long id) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
@@ -112,6 +121,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     @Override
     public void delete(Long farmId, String goatId, Long id) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
 
@@ -129,6 +139,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             LocalDate to,
             Pageable pageable
     ) {
+        goatGenderValidator.requireFemale(farmId, goatId);
         Page<MilkProduction> productions =
                 milkProductionPersistencePort.search(
                         farmId,

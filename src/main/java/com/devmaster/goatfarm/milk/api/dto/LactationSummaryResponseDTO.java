@@ -15,9 +15,46 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class LactationSummaryResponseDTO {
-    private BigDecimal totalLiters;
-    private Integer daysInLactation;
-    private BigDecimal averagePerDay;
-    private BigDecimal peakLiters;
-    private LocalDate peakDate;
+    private LactationSummaryLactationDTO lactation;
+    private LactationSummaryProductionDTO production;
+    private LactationSummaryPregnancyDTO pregnancy;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LactationSummaryLactationDTO {
+        private Long lactationId;
+        private String goatId;
+        private LocalDate startDate;
+        private LocalDate endDate;
+        private com.devmaster.goatfarm.milk.enums.LactationStatus status;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LactationSummaryProductionDTO {
+        private BigDecimal totalLiters;
+        private Integer daysInLactation;
+        private Integer daysMeasured;
+        private BigDecimal averagePerDay;
+        private BigDecimal peakLiters;
+        private LocalDate peakDate;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LactationSummaryPregnancyDTO {
+        private Integer gestationDays;
+        private Boolean dryOffRecommendation;
+        private LocalDate recommendedDryOffDate;
+        private String message;
+    }
 }
