@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.goat.api.controller;
 
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
-import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
-import com.devmaster.goatfarm.goat.mapper.GoatMapper;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

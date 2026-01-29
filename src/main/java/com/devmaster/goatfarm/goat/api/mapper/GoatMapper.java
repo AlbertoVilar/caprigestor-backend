@@ -1,10 +1,10 @@
-package com.devmaster.goatfarm.goat.mapper;
+package com.devmaster.goatfarm.goat.api.mapper;
 
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm; // CORRIGIDO: Importação correta para GoatFarm
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.mapstruct.Mapper;

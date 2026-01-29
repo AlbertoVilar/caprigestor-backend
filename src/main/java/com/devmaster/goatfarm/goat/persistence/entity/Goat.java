@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.goat.model.entity;
+package com.devmaster.goatfarm.goat.persistence.entity;
 
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 

@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.events.model.entity;
 
 import com.devmaster.goatfarm.events.enuns.EventType;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

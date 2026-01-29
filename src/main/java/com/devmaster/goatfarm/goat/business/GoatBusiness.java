@@ -1,17 +1,19 @@
-package com.devmaster.goatfarm.goat.business.goatbusiness;
+package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.goat.mapper.GoatMapper;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;

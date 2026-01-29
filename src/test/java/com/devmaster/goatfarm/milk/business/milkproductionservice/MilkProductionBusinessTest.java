@@ -14,7 +14,7 @@ import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
 import com.devmaster.goatfarm.milk.model.entity.Lactation;
 import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

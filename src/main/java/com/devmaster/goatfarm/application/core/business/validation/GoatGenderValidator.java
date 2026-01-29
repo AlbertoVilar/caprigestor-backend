@@ -1,11 +1,11 @@
 package com.devmaster.goatfarm.application.core.business.validation;
 
-import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.goat.enums.Gender;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
