@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

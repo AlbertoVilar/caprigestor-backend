@@ -1,9 +1,9 @@
 package com.devmaster.goatfarm.authority.business;
 
-import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;

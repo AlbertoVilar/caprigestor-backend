@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.authority.model.entity;
+package com.devmaster.goatfarm.authority.persistence.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;

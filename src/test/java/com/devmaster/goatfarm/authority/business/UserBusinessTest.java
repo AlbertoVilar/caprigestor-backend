@@ -9,11 +9,11 @@ import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.mapper.UserMapper;
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import org.junit.jupiter.api.BeforeEach;

@@ -2,11 +2,11 @@ package com.devmaster.goatfarm.authority.business.usersbusiness;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.mapper.UserMapper;
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class UserBusiness implements com.devmaster.goatfarm.application.ports.in.UserManagementUseCase {
+public class UserBusiness implements com.devmaster.goatfarm.authority.application.ports.in.UserManagementUseCase {
     private final UserPersistencePort userPort;
     private final RolePersistencePort rolePort;
     private final UserMapper userMapper;

@@ -1,9 +1,9 @@
 package com.devmaster.goatfarm.reproduction.api;
 
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.repository.UserRepository;
-import com.devmaster.goatfarm.authority.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
+import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;

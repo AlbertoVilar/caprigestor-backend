@@ -2,10 +2,10 @@ package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import org.springframework.security.access.AccessDeniedException;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import org.springframework.stereotype.Service;
 
 @Service

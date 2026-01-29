@@ -1,8 +1,8 @@
-package com.devmaster.goatfarm.infrastructure.adapters.out.persistence;
+package com.devmaster.goatfarm.authority.persistence.adapter;
 
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.repository.UserRepository;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;

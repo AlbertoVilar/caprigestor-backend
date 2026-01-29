@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;

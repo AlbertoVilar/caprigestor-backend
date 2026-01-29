@@ -1,9 +1,9 @@
 package com.devmaster.goatfarm.config;
 
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.repository.UserRepository;
-import com.devmaster.goatfarm.authority.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
+import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;

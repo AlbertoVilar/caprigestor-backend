@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.FarmPermissionsDTO;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
-import com.devmaster.goatfarm.authority.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
 import lombok.RequiredArgsConstructor;

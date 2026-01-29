@@ -1,8 +1,8 @@
-package com.devmaster.goatfarm.infrastructure.adapters.out.persistence;
+package com.devmaster.goatfarm.authority.persistence.adapter;
 
-import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;

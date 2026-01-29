@@ -1,11 +1,11 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
 import com.devmaster.goatfarm.authority.api.dto.*;
-import com.devmaster.goatfarm.application.ports.in.AuthManagementUseCase;
-import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.AuthManagementUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.UserManagementUseCase;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
-import com.devmaster.goatfarm.authority.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;

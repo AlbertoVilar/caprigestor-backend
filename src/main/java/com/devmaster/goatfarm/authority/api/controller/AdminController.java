@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.authority.controller;
+package com.devmaster.goatfarm.authority.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.AdminMaintenanceUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.AdminMaintenanceUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;

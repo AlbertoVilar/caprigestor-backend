@@ -1,7 +1,7 @@
-package com.devmaster.goatfarm.authority.model.repository;
+package com.devmaster.goatfarm.authority.persistence.repository;
 
 import com.devmaster.goatfarm.authority.api.projection.UserDetailsProjection;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

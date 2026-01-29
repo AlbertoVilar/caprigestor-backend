@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.application.ports.in;
+package com.devmaster.goatfarm.authority.application.ports.in;
 
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;

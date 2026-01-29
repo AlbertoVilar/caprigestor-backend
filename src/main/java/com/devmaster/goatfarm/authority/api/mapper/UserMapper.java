@@ -1,12 +1,12 @@
-package com.devmaster.goatfarm.authority.mapper;
+package com.devmaster.goatfarm.authority.api.mapper;
 
 import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserUpdateRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.authority.model.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

@@ -3,9 +3,9 @@ package com.devmaster.goatfarm.authority.business;
 import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
 import com.devmaster.goatfarm.authority.api.dto.RefreshTokenRequestDTO;
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.mapper.AuthMapper;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.api.mapper.AuthMapper;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.JwtService;
 import org.slf4j.Logger;
@@ -18,7 +18,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthBusiness implements com.devmaster.goatfarm.application.ports.in.AuthManagementUseCase {
+public class AuthBusiness implements com.devmaster.goatfarm.authority.application.ports.in.AuthManagementUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthBusiness.class);
 

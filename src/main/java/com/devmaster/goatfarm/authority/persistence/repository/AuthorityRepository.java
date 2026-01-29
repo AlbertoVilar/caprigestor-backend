@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.authority.model.repository;
+package com.devmaster.goatfarm.authority.persistence.repository;
 
-import com.devmaster.goatfarm.authority.model.entity.Authority;
+import com.devmaster.goatfarm.authority.persistence.entity.Authority;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

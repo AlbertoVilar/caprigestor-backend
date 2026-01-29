@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.application.ports.in;
+package com.devmaster.goatfarm.authority.application.ports.in;
 
 /**
  * Porta de entrada para manutenção administrativa (limpeza e configuração de admin).

@@ -1,8 +1,8 @@
-package com.devmaster.goatfarm.authority.mapper;
+package com.devmaster.goatfarm.authority.api.mapper;
 
 import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

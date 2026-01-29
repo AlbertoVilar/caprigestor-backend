@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.application.ports.out;
+package com.devmaster.goatfarm.authority.application.ports.out;
 
-import com.devmaster.goatfarm.authority.model.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
 
 import java.util.Optional;
 

@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.authority.business;
 
-import com.devmaster.goatfarm.application.ports.in.AdminMaintenanceUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.AdminMaintenanceUseCase;
 import org.springframework.stereotype.Service;
 
 @Service

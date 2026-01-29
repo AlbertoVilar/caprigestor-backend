@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.application.ports.in;
+package com.devmaster.goatfarm.authority.application.ports.in;
 
 import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;

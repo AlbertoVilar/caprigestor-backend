@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.authority.api;
 
 import com.devmaster.goatfarm.authority.api.controller.UserController;
-import com.devmaster.goatfarm.application.ports.in.UserManagementUseCase;
-import com.devmaster.goatfarm.authority.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.application.ports.in.UserManagementUseCase;
+import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.authority.mapper;
+package com.devmaster.goatfarm.authority.api.mapper;
 
-import com.devmaster.goatfarm.authority.model.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
