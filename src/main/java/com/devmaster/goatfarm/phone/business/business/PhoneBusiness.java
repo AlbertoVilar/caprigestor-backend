@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.phone.business.business;
 
 import com.devmaster.goatfarm.config.exceptions.custom.*;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.application.ports.out.PhonePersistencePort;

@@ -1,8 +1,8 @@
-package com.devmaster.goatfarm.infrastructure.adapters.out.persistence;
+package com.devmaster.goatfarm.farm.persistence.adapter;
 
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.farm.model.repository.GoatFarmRepository;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;

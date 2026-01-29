@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.phone.business;
 
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.application.ports.out.PhonePersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;

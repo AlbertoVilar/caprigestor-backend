@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.farm.business;
 
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.model.entity.Address;
@@ -16,9 +16,9 @@ import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
-import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
-import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.business.GoatFarmBusiness;
+import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;

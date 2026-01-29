@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.farm.business.farmbusiness;
+package com.devmaster.goatfarm.farm.business;
 
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
@@ -15,9 +15,9 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
 import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
@@ -35,9 +35,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 
 @Service
-public class GoatFarmBusiness implements com.devmaster.goatfarm.application.ports.in.GoatFarmManagementUseCase {
+public class GoatFarmBusiness implements GoatFarmManagementUseCase {
 
     private final GoatFarmPersistencePort goatFarmPort;
     private final AddressBusiness addressBusiness;

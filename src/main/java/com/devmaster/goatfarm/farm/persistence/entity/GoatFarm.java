@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.farm.model.entity;
+package com.devmaster.goatfarm.farm.persistence.entity;
 
 import com.devmaster.goatfarm.address.model.entity.Address;
 import com.devmaster.goatfarm.authority.model.entity.User;

@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.goat.model.entity;
 
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;

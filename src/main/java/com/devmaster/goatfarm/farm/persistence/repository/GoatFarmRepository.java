@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.farm.model.repository;
+package com.devmaster.goatfarm.farm.persistence.repository;
 
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

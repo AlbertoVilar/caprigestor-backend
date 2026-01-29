@@ -12,6 +12,8 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
@@ -49,7 +51,7 @@ public class User implements UserDetails {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
-    private List<com.devmaster.goatfarm.farm.model.entity.GoatFarm> goatFarms = new ArrayList<>();
+    private List<com.devmaster.goatfarm.farm.persistence.entity.GoatFarm> goatFarms = new ArrayList<>();
 
 
 
@@ -123,11 +125,11 @@ public class User implements UserDetails {
         return roles.stream().anyMatch(role -> role.getAuthority().equals(roleName));
     }
 
-    public List<com.devmaster.goatfarm.farm.model.entity.GoatFarm> getGoatFarms() {
+    public List<com.devmaster.goatfarm.farm.persistence.entity.GoatFarm> getGoatFarms() {
         return goatFarms;
     }
 
-    public void setGoatFarms(List<com.devmaster.goatfarm.farm.model.entity.GoatFarm> goatFarms) {
+    public void setGoatFarms(List<com.devmaster.goatfarm.farm.persistence.entity.GoatFarm> goatFarms) {
         this.goatFarms = goatFarms;
     }
 

@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.phone.model.entity;
 
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import jakarta.persistence.*;
 import lombok.EqualsAndHashCode;
 

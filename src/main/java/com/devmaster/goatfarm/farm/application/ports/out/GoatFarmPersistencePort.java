@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.application.ports.out;
+package com.devmaster.goatfarm.farm.application.ports.out;
 
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
