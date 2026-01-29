@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
-import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
@@ -17,9 +17,9 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
-import com.devmaster.goatfarm.reproduction.model.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.model.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

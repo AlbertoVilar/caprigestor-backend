@@ -19,10 +19,10 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
-import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
+import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
-import com.devmaster.goatfarm.phone.model.entity.Phone;
+import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
+import com.devmaster.goatfarm.phone.persistence.entity.Phone;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;

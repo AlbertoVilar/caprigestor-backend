@@ -1,9 +1,9 @@
 package com.devmaster.goatfarm.genealogy.business.genealogyservice;
 
-import com.devmaster.goatfarm.application.ports.out.GoatGenealogyQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.genealogy.mapper.GenealogyMapper;
+import com.devmaster.goatfarm.genealogy.api.mapper.GenealogyMapper;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

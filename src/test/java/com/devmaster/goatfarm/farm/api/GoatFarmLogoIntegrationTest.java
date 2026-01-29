@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
-import com.devmaster.goatfarm.phone.model.repository.PhoneRepository;
+import com.devmaster.goatfarm.phone.persistence.repository.PhoneRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;

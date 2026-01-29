@@ -179,8 +179,12 @@ domain → application → infrastructure
 | **reproduction** | Ciclo reprodutivo (coberturas, gestações, eventos reprodutivos) |
 | **milk** | Gestão de produção de leite e lactações |
 | **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
+| **health** | Gestão sanitária e veterinária (vacinas, tratamentos) |
 | **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
 | **farm** | Entidades e serviços de fazendas/estábulos/locais |
+| **address** | Gestão de endereços e localizações |
+| **phone** | Gestão de contatos telefônicos |
+| **article** | Blog e gerenciamento de conteúdo informativo |
 | **authority** | Autenticação, autorização, usuários e papéis |
 | **shared** | Utilitários, DTOs comuns, exceções e infra compartilhada |
 

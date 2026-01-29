@@ -1,13 +1,13 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.ReproductionCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.ReproductionQueryUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyResponseDTO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
-import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

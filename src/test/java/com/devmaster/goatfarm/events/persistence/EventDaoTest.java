@@ -1,10 +1,10 @@
 package com.devmaster.goatfarm.events.persistence;
 
-import com.devmaster.goatfarm.events.enuns.EventType;
-import com.devmaster.goatfarm.events.model.entity.Event;
-import com.devmaster.goatfarm.events.model.repository.EventRepository;
+import com.devmaster.goatfarm.events.enums.EventType;
+import com.devmaster.goatfarm.events.persistence.entity.Event;
+import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
-import com.devmaster.goatfarm.infrastructure.adapters.out.persistence.EventPersistenceAdapter;
+import com.devmaster.goatfarm.events.persistence.adapter.EventPersistenceAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

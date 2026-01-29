@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.article;
 
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
-import com.devmaster.goatfarm.article.model.entity.Article;
-import com.devmaster.goatfarm.article.model.repository.ArticleRepository;
+import com.devmaster.goatfarm.article.persistence.entity.Article;
+import com.devmaster.goatfarm.article.persistence.repository.ArticleRepository;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;

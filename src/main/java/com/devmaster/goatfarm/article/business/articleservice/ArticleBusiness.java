@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.article.business.articleservice;
 
-import com.devmaster.goatfarm.application.ports.in.ArticleCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.ArticleQueryUseCase;
-import com.devmaster.goatfarm.application.ports.out.ArticlePersistencePort;
+import com.devmaster.goatfarm.article.application.ports.in.ArticleCommandUseCase;
+import com.devmaster.goatfarm.article.application.ports.in.ArticleQueryUseCase;
+import com.devmaster.goatfarm.article.application.ports.out.ArticlePersistencePort;
 import com.devmaster.goatfarm.article.business.bo.ArticleHighlightRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublishRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicDetailResponseVO;
@@ -10,8 +10,8 @@ import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
-import com.devmaster.goatfarm.article.mapper.ArticleMapper;
-import com.devmaster.goatfarm.article.model.entity.Article;
+import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
+import com.devmaster.goatfarm.article.persistence.entity.Article;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;

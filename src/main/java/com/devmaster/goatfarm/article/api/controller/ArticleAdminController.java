@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.article.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.ArticleCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.ArticleQueryUseCase;
+import com.devmaster.goatfarm.article.application.ports.in.ArticleCommandUseCase;
+import com.devmaster.goatfarm.article.application.ports.in.ArticleQueryUseCase;
 import com.devmaster.goatfarm.article.api.dto.ArticleHighlightRequestDTO;
 import com.devmaster.goatfarm.article.api.dto.ArticlePublishRequestDTO;
 import com.devmaster.goatfarm.article.api.dto.ArticleRequestDTO;
@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.article.business.bo.ArticleHighlightRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublishRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
-import com.devmaster.goatfarm.article.mapper.ArticleMapper;
+import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

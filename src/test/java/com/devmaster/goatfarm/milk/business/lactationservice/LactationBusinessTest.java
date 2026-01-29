@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.milk.business.lactationservice;
 
-import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
@@ -10,8 +10,8 @@ import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.mapper.LactationMapper;
-import com.devmaster.goatfarm.milk.model.entity.Lactation;
+import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
+import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

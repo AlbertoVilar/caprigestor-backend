@@ -1,13 +1,13 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.MilkProductionUseCase;
+import com.devmaster.goatfarm.milk.application.ports.in.MilkProductionUseCase;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionUpdateRequestDTO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
-import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
+import com.devmaster.goatfarm.milk.api.mapper.MilkProductionMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

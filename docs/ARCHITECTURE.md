@@ -43,14 +43,17 @@ graph TD
 O projeto é modularizado por domínio funcional:
 
 *   `address`: Gestão de endereços.
+*   `article`: Blog e gestão de conteúdo.
 *   `authority`: Gestão de usuários, roles e autenticação.
 *   `events`: Sistema de eventos (nascimento, vacinação, etc.) e mensageria.
 *   `farm`: Agregado raiz da Fazenda (`GoatFarm`).
-*   `goat`: Gestão de animais (`Goat`).
 *   `genealogy`: Projeção de árvore genealógica (Read-Only).
+*   `goat`: Gestão de animais (`Goat`).
+*   `health`: Gestão sanitária e veterinária.
 *   `milk`: Gestão de produção de leite.
 *   `phone`: Gestão de telefones.
-*   `infrastructure`: Configurações globais e adaptadores genéricos.
+*   `reproduction`: Gestão do ciclo reprodutivo.
+*   `config`: Configurações globais (Security, CORS, Exceptions).
 
 ## 3. Padrões de Implementação
 

@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.events.business.bo;
 
-import com.devmaster.goatfarm.events.enuns.EventType;
+import com.devmaster.goatfarm.events.enums.EventType;
 
 import java.time.LocalDate;
 

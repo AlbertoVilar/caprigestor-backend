@@ -1,9 +1,9 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
-import com.devmaster.goatfarm.application.ports.in.ReproductionCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.ReproductionQueryUseCase;
-import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -17,9 +17,9 @@ import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponse
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
-import com.devmaster.goatfarm.reproduction.model.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.model.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;

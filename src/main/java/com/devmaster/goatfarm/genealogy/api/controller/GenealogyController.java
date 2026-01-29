@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.genealogy.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.GenealogyQueryUseCase;
+import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCase;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
