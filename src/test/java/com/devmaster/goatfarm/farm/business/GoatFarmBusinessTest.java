@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.farm.business;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
-import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.model.entity.User;

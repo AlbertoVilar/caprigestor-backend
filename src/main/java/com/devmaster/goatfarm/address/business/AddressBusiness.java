@@ -2,9 +2,10 @@ package com.devmaster.goatfarm.address.business;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
-import com.devmaster.goatfarm.address.model.entity.Address;
-import com.devmaster.goatfarm.application.ports.out.AddressPersistencePort;
+import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
+import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
+import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
@@ -17,7 +18,7 @@ import java.util.Set;
 
 @Service
 @Transactional
-public class AddressBusiness implements com.devmaster.goatfarm.application.ports.in.AddressManagementUseCase {
+public class AddressBusiness implements AddressManagementUseCase {
 
     private final AddressPersistencePort addressPort;
     private final AddressMapper addressMapper;

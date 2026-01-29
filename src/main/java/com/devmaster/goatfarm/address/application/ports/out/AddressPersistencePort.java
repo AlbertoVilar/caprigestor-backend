@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.application.ports.out;
+package com.devmaster.goatfarm.address.application.ports.out;
 
-import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
 
 import java.util.Optional;
 

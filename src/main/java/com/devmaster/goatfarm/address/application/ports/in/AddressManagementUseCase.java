@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.application.ports.in;
+package com.devmaster.goatfarm.address.application.ports.in;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;

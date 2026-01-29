@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.security;
 
-import com.devmaster.goatfarm.address.model.entity.Address;
-import com.devmaster.goatfarm.address.model.repository.AddressRepository;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
+import com.devmaster.goatfarm.address.persistence.repository.AddressRepository;
 import com.devmaster.goatfarm.events.enuns.EventType;
 import com.devmaster.goatfarm.events.model.entity.Event;
 import com.devmaster.goatfarm.events.model.repository.EventRepository;

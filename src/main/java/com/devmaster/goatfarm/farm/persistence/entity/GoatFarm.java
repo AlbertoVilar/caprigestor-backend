@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.farm.persistence.entity;
 
-import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.goat.model.entity.Goat;
 import com.devmaster.goatfarm.phone.model.entity.Phone;

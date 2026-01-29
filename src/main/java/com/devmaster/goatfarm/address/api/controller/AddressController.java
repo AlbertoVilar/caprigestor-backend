@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.address.api.controller;
 
 import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
-import com.devmaster.goatfarm.application.ports.in.AddressManagementUseCase;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 

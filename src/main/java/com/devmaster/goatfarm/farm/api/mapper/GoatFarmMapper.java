@@ -19,7 +19,7 @@ import java.time.ZoneId;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.authority.mapper.UserMapper;
 
 @Mapper(componentModel = "spring", uses = {PhoneMapper.class, UserMapper.class, AddressMapper.class})

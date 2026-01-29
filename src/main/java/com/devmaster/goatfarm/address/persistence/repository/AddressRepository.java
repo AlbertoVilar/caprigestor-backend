@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.address.model.repository;
+package com.devmaster.goatfarm.address.persistence.repository;
 
-import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

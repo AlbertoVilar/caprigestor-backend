@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.farm.api;
 
-import com.devmaster.goatfarm.address.model.repository.AddressRepository;
+import com.devmaster.goatfarm.address.persistence.repository.AddressRepository;
 import com.devmaster.goatfarm.authority.model.entity.Role;
 import com.devmaster.goatfarm.authority.model.entity.User;
 import com.devmaster.goatfarm.authority.model.repository.UserRepository;

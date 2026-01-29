@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.address.model.entity;
+package com.devmaster.goatfarm.address.persistence.entity;
 
 
 import jakarta.persistence.*;
