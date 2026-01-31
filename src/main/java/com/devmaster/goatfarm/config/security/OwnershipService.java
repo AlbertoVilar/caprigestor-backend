@@ -66,6 +66,36 @@ public class OwnershipService {
         }
     }
 
+    /**
+     * Verifica se o usuário pode gerenciar a fazenda.
+     * Retorna true se:
+     * - OWNER (dono da fazenda)
+     * - ADMIN (administrador do sistema)
+     * - OPERATOR (operador com permissão)
+     */
+    public boolean canManageFarm(Long farmId) {
+        try {
+            var current = getAuthenticatedEntity();
+            
+            // 1. ADMIN tem acesso total
+            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            if (isAdmin) return true;
+
+            // 2. OPERATOR tem acesso (por enquanto global, futuro: por fazenda)
+            boolean isOperator = current.getRoles().stream().anyMatch(r -> "ROLE_OPERATOR".equals(r.getAuthority()));
+            if (isOperator) return true;
+
+            // 3. OWNER deve ser dono da fazenda
+            var farmOpt = goatFarmPort.findById(farmId);
+            if (farmOpt.isEmpty() || farmOpt.get().getUser() == null) {
+                return false;
+            }
+            return farmOpt.get().getUser().getId().equals(current.getId());
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
     private User getAuthenticatedEntity() {
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {

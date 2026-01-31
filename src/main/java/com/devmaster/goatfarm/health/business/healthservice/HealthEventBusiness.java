@@ -45,6 +45,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
+        // Controle de acesso deve ser feito no Controller via OwnershipService.canManageFarm(farmId)
 
         entityFinder.findOrThrow(
                 () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
