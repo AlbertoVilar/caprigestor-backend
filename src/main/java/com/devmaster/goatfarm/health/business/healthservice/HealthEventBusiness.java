@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
@@ -28,21 +29,27 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     private final HealthEventPersistencePort persistencePort;
     private final GoatPersistencePort goatPersistencePort;
     private final HealthEventBusinessMapper mapper;
+    private final EntityFinder entityFinder;
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
             GoatPersistencePort goatPersistencePort,
-            HealthEventBusinessMapper mapper
+            HealthEventBusinessMapper mapper, EntityFinder entityFinder
     ) {
         this.persistencePort = persistencePort;
         this.goatPersistencePort = goatPersistencePort;
         this.mapper = mapper;
+        this.entityFinder = entityFinder;
     }
 
     @Override
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
-        verifyGoatExists(farmId, goatId);
+
+        entityFinder.findOrThrow(
+                () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
+                "Cabra não encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
+        );
 
         var entity = mapper.toEntity(request);
         entity.setFarmId(farmId);
@@ -55,7 +62,12 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO update(Long farmId, String goatId, Long eventId, HealthEventUpdateRequestVO request) {
-        var healthEvent = findOrThrow(farmId, goatId, eventId);
+
+        var healthEvent = entityFinder.findOrThrow(
+                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
+                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
+        );
+
 
         // Regra de negócio: só pode editar enquanto estiver AGENDADO
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
@@ -71,7 +83,11 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO markAsDone(Long farmId, String goatId, Long eventId, HealthEventDoneRequestVO request) {
-        var healthEvent = findOrThrow(farmId, goatId, eventId);
+        var healthEvent = entityFinder.findOrThrow(
+                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
+                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
+        );
+
 
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
             throw new BusinessRuleException("Apenas eventos agendados podem ser marcados como realizados.");
@@ -87,7 +103,10 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO cancel(Long farmId, String goatId, Long eventId, HealthEventCancelRequestVO request) {
-        var healthEvent = findOrThrow(farmId, goatId, eventId);
+        var healthEvent = entityFinder.findOrThrow(
+                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
+                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
+        );
 
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
             throw new BusinessRuleException("Apenas eventos agendados podem ser cancelados.");
@@ -102,7 +121,11 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional(readOnly = true)
     public HealthEventResponseVO getById(Long farmId, String goatId, Long eventId) {
-        var healthEvent = findOrThrow(farmId, goatId, eventId);
+        var healthEvent = entityFinder.findOrThrow(
+                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
+                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
+        );
+
         return mapper.toResponseVO(healthEvent);
     }
 
@@ -117,7 +140,10 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
             HealthEventStatus status,
             Pageable pageable
     ) {
-        verifyGoatExists(farmId, goatId);
+        entityFinder.findOrThrow(
+                () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
+                "Cabra não encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
+        );
         // TODO: Implement logic with filters
         return Page.empty(pageable);
     }
@@ -136,17 +162,4 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
         return Page.empty(pageable);
     }
 
-    private void verifyGoatExists(Long farmId, String goatId) {
-        goatPersistencePort.findByIdAndFarmId(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Cabra não encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
-                ));
-    }
-
-    private HealthEvent findOrThrow(Long farmId, String goatId, Long eventId) {
-        return persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
-                ));
-    }
 }

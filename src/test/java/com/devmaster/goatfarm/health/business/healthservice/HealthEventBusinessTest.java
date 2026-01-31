@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
@@ -47,7 +48,8 @@ class HealthEventBusinessTest {
 
     @BeforeEach
     void setUp() {
-        healthEventBusiness = new HealthEventBusiness(persistencePort, goatPersistencePort, mapper);
+        EntityFinder entityFinder = new EntityFinder();
+        healthEventBusiness = new HealthEventBusiness(persistencePort, goatPersistencePort, mapper, entityFinder);
 
         healthEvent = new HealthEvent();
         healthEvent.setId(eventId);
