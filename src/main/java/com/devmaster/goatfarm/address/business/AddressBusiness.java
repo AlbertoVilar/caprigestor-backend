@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.address.business;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
@@ -22,11 +23,13 @@ public class AddressBusiness implements AddressManagementUseCase {
     private final AddressPersistencePort addressPort;
     private final AddressMapper addressMapper;
     private final OwnershipService ownershipService;
+    private final EntityFinder entityFinder;
 
-    public AddressBusiness(AddressPersistencePort addressPort, AddressMapper addressMapper, OwnershipService ownershipService) {
+    public AddressBusiness(AddressPersistencePort addressPort, AddressMapper addressMapper, OwnershipService ownershipService, EntityFinder entityFinder) {
         this.addressPort = addressPort;
         this.addressMapper = addressMapper;
         this.ownershipService = ownershipService;
+        this.entityFinder = entityFinder;
     }
 
     public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
@@ -40,8 +43,10 @@ public class AddressBusiness implements AddressManagementUseCase {
     public AddressResponseVO updateAddress(Long farmId, Long addressId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateAddressData(requestVO);
-        Address current = addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        Address current = entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         addressMapper.toEntity(current, requestVO);
         Address updated = addressPort.save(current);
         return addressMapper.toResponseVO(updated);
@@ -50,24 +55,30 @@ public class AddressBusiness implements AddressManagementUseCase {
     public Address updateAddressEntity(Long farmId, Long addressId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateAddressData(requestVO);
-        Address current = addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        Address current = entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         addressMapper.toEntity(current, requestVO);
         return addressPort.save(current);
     }
 
     public AddressResponseVO findAddressById(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Address found = addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        Address found = entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         return addressMapper.toResponseVO(found);
     }
 
     public String deleteAddress(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
         // Garante que o endereço pertence à fazenda antes de deletar
-        addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         addressPort.deleteById(addressId);
         return "Endereço com ID " + addressId + " foi deletado com sucesso.";
     }

@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.phone.business.phoneservice;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -34,6 +35,7 @@ public class PhoneBusiness implements PhoneManagementUseCase {
     private final PhoneMapper phoneMapper;
     private final GoatFarmPersistencePort goatFarmPort;
     private final OwnershipService ownershipService;
+    private final EntityFinder entityFinder;
 
     @Transactional
     public PhoneResponseVO createPhone(Long farmId, PhoneRequestVO requestVO) {
@@ -47,8 +49,10 @@ public class PhoneBusiness implements PhoneManagementUseCase {
             throw new DuplicateEntityException("phone", "Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
         }
 
-        GoatFarm farm = goatFarmPort.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada: " + farmId));
+        GoatFarm farm = entityFinder.findOrThrow(
+                () -> goatFarmPort.findById(farmId),
+                "Fazenda não encontrada: " + farmId
+        );
         Phone phone = phoneMapper.toEntity(requestVO);
         phone.setGoatFarm(farm);
         
@@ -61,8 +65,10 @@ public class PhoneBusiness implements PhoneManagementUseCase {
         ownershipService.verifyFarmOwnership(farmId);
         validatePhoneData(requestVO);
 
-        Phone phoneToUpdate = phonePort.findByIdAndFarmId(phoneId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
+        Phone phoneToUpdate = entityFinder.findOrThrow(
+                () -> phonePort.findByIdAndFarmId(phoneId, farmId),
+                "Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId
+        );
 
         Optional<Phone> existing = phonePort.findByDddAndNumber(requestVO.getDdd(), requestVO.getNumber());
         if (existing.isPresent() && !existing.get().getId().equals(phoneId)) {
@@ -78,8 +84,10 @@ public class PhoneBusiness implements PhoneManagementUseCase {
     @Transactional(readOnly = true)
     public PhoneResponseVO findPhoneById(Long farmId, Long phoneId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Phone phone = phonePort.findByIdAndFarmId(phoneId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
+        Phone phone = entityFinder.findOrThrow(
+                () -> phonePort.findByIdAndFarmId(phoneId, farmId),
+                "Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId
+        );
         return phoneMapper.toResponseVO(phone);
     }
 
@@ -94,8 +102,10 @@ public class PhoneBusiness implements PhoneManagementUseCase {
     @Transactional
     public void deletePhone(Long farmId, Long phoneId) {
         ownershipService.verifyFarmOwnership(farmId);
-        phonePort.findByIdAndFarmId(phoneId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId));
+        entityFinder.findOrThrow(
+                () -> phonePort.findByIdAndFarmId(phoneId, farmId),
+                "Telefone com ID " + phoneId + " não encontrado na fazenda " + farmId
+        );
         long total = phonePort.countByFarmId(farmId);
         if (total <= 1) {
             throw new BusinessRuleException("A fazenda deve possuir ao menos um telefone.");

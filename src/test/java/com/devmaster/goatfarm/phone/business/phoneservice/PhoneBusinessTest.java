@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.phone.business.phoneservice;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
@@ -29,12 +30,14 @@ class PhoneBusinessTest {
     private GoatFarmPersistencePort goatFarmPort;
     @Mock
     private OwnershipService ownershipService;
+    @Mock
+    private EntityFinder entityFinder;
 
     private PhoneBusiness phoneBusiness;
 
     @BeforeEach
     void setUp() {
-        phoneBusiness = new PhoneBusiness(phonePort, phoneMapper, goatFarmPort, ownershipService);
+        phoneBusiness = new PhoneBusiness(phonePort, phoneMapper, goatFarmPort, ownershipService, entityFinder);
     }
 
     @Test
@@ -45,6 +48,11 @@ class PhoneBusinessTest {
 
         when(phonePort.findByIdAndFarmId(phoneId, farmId)).thenReturn(Optional.of(new Phone()));
         when(phonePort.countByFarmId(farmId)).thenReturn(1L);
+        // Mock EntityFinder to return the phone
+        when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+             java.util.function.Supplier<Optional<Phone>> supplier = invocation.getArgument(0);
+             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Mocked Ex"));
+        });
 
         assertThrows(BusinessRuleException.class, () -> phoneBusiness.deletePhone(farmId, phoneId));
 
@@ -59,6 +67,11 @@ class PhoneBusinessTest {
 
         when(phonePort.findByIdAndFarmId(phoneId, farmId)).thenReturn(Optional.of(new Phone()));
         when(phonePort.countByFarmId(farmId)).thenReturn(2L);
+        // Mock EntityFinder to return the phone
+        when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+             java.util.function.Supplier<Optional<Phone>> supplier = invocation.getArgument(0);
+             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Mocked Ex"));
+        });
 
         phoneBusiness.deletePhone(farmId, phoneId);
 

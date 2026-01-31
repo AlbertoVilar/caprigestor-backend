@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.goat.business;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -27,13 +28,15 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final GoatFarmPersistencePort goatFarmPort;
     private final OwnershipService ownershipService;
     private final GoatMapper goatMapper;
+    private final EntityFinder entityFinder;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
-                        OwnershipService ownershipService, GoatMapper goatMapper) {
+                        OwnershipService ownershipService, GoatMapper goatMapper, EntityFinder entityFinder) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
         this.goatMapper = goatMapper;
+        this.entityFinder = entityFinder;
     }
 
     @Transactional
@@ -44,8 +47,10 @@ public class GoatBusiness implements GoatManagementUseCase {
             throw new DuplicateEntityException("Número de registro já existe.");
         }
 
-        GoatFarm farm = goatFarmPort.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada."));
+        GoatFarm farm = entityFinder.findOrThrow(
+                () -> goatFarmPort.findById(farmId),
+                "Fazenda não encontrada."
+        );
         Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
         Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
 
@@ -65,8 +70,10 @@ public class GoatBusiness implements GoatManagementUseCase {
     public GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
 
-        Goat goatToUpdate = goatPort.findByIdAndFarmId(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        Goat goatToUpdate = entityFinder.findOrThrow(
+                () -> goatPort.findByIdAndFarmId(goatId, farmId),
+                "Cabra não encontrada nesta fazenda."
+        );
 
         Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
         Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
@@ -80,15 +87,19 @@ public class GoatBusiness implements GoatManagementUseCase {
     @Transactional
     public void deleteGoat(Long farmId, String goatId) {
         ownershipService.verifyGoatOwnership(farmId, goatId);
-        Goat goat = goatPort.findByIdAndFarmId(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        entityFinder.findOrThrow(
+                () -> goatPort.findByIdAndFarmId(goatId, farmId),
+                "Cabra não encontrada nesta fazenda."
+        );
         goatPort.deleteById(goatId);
     }
 
     @Transactional(readOnly = true)
     public GoatResponseVO findGoatById(Long farmId, String goatId) {
-        Goat goat = goatPort.findByIdAndFarmId(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        Goat goat = entityFinder.findOrThrow(
+                () -> goatPort.findByIdAndFarmId(goatId, farmId),
+                "Cabra não encontrada nesta fazenda."
+        );
         return goatMapper.toResponseVO(goat);
     }
 

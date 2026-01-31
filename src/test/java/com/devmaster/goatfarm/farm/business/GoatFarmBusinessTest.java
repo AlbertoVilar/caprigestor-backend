@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.farm.business;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
@@ -60,6 +61,8 @@ class GoatFarmBusinessTest {
     private PhoneBusiness phoneBusiness;
     @Mock
     private PhoneMapper phoneMapper;
+    @Mock
+    private EntityFinder entityFinder;
 
     private GoatFarmRequestVO farmVO;
     private UserRequestVO userVO;
@@ -79,8 +82,16 @@ class GoatFarmBusinessTest {
                 phoneBusiness,
                 goatFarmMapper,
                 phoneMapper,
-                ownershipService
+                ownershipService,
+                entityFinder
         );
+        
+        // Default behavior for EntityFinder: execute the supplier
+        lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+             java.util.function.Supplier<Optional<?>> supplier = invocation.getArgument(0);
+             String errorMsg = invocation.getArgument(1);
+             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(errorMsg));
+        });
 
         farmVO = new GoatFarmRequestVO();
         farmVO.setName("Test Farm");
@@ -311,7 +322,7 @@ class GoatFarmBusinessTest {
 
         when(goatFarmPort.findById(100L)).thenReturn(Optional.of(mockFarm));
         when(goatFarmPort.save(any())).thenReturn(mockFarm);
-        when(goatFarmPort.findById(mockFarm.getId())).thenReturn(Optional.of(mockFarm));
+        
         when(goatFarmMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
         when(userBusiness.updateUser(eq(1L), any(UserRequestVO.class)))

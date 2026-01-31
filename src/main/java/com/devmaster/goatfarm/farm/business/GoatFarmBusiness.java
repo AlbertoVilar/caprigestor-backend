@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.farm.business;
 
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -46,6 +47,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     private final GoatFarmMapper goatFarmMapper;
     private final PhoneMapper phoneMapper;
     private final OwnershipService ownershipService;
+    private final EntityFinder entityFinder;
 
     public GoatFarmBusiness(
             GoatFarmPersistencePort goatFarmPort,
@@ -54,7 +56,8 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
             PhoneBusiness phoneBusiness,
             GoatFarmMapper goatFarmMapper,
             PhoneMapper phoneMapper,
-            OwnershipService ownershipService
+            OwnershipService ownershipService,
+            EntityFinder entityFinder
     ) {
         this.goatFarmPort = goatFarmPort;
         this.addressBusiness = addressBusiness;
@@ -63,12 +66,15 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         this.goatFarmMapper = goatFarmMapper;
         this.phoneMapper = phoneMapper;
         this.ownershipService = ownershipService;
+        this.entityFinder = entityFinder;
     }
 
     @Transactional(readOnly = true)
     public GoatFarmFullResponseVO findGoatFarmById(Long id) {
-        GoatFarm farm = goatFarmPort.findByIdWithDetails(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id));
+        GoatFarm farm = entityFinder.findOrThrow(
+                () -> goatFarmPort.findByIdWithDetails(id),
+                "Fazenda não encontrada com ID: " + id
+        );
         return goatFarmMapper.toFullResponseVO(farm);
     }
 
@@ -84,9 +90,13 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
 
     @Transactional
     public void deleteGoatFarm(Long id) {
-        if (goatFarmPort.findById(id).isEmpty()) {
-            throw new ResourceNotFoundException("Fazenda com ID " + id + " não encontrada.");
-        }
+        // Verifica propriedade da fazenda
+        ownershipService.verifyFarmOwnership(id);
+
+        entityFinder.findOrThrow(
+                () -> goatFarmPort.findById(id),
+                "Fazenda com ID " + id + " não encontrada."
+        );
         goatFarmPort.deleteById(id);
     }
 
@@ -131,8 +141,10 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
             phoneBusiness.createPhones(savedFarm.getId(), phoneVOs);
             
             // Recarrega para garantir relacionamentos atualizados
-            GoatFarm reloaded = goatFarmPort.findById(savedFarm.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + savedFarm.getId()));
+            GoatFarm reloaded = entityFinder.findOrThrow(
+                    () -> goatFarmPort.findById(savedFarm.getId()),
+                    "Fazenda não encontrada com ID: " + savedFarm.getId()
+            );
             return goatFarmMapper.toFullResponseVO(reloaded);
         } catch (DataIntegrityViolationException e) {
             // Mensagem genérica para o cliente, detalhe na causa (logs)
@@ -149,8 +161,10 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         // Verifica propriedade da fazenda
         ownershipService.verifyFarmOwnership(id);
 
-        GoatFarm farmEntity = goatFarmPort.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id));
+        GoatFarm farmEntity = entityFinder.findOrThrow(
+                () -> goatFarmPort.findById(id),
+                "Fazenda não encontrada com ID: " + id
+        );
 
         // Atualiza dados básicos da fazenda
         if (farmVO != null) {

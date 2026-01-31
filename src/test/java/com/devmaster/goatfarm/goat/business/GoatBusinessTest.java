@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.goat.business;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.goat.business.GoatBusiness;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -36,8 +37,9 @@ public class GoatBusinessTest {
     @Mock private GoatFarmPersistencePort goatFarmPort;
     @Mock private OwnershipService ownershipService;
     @Mock private GoatMapper goatMapper;
+    @Mock private EntityFinder entityFinder;
 
-    @InjectMocks private GoatBusiness goatBusiness;
+    private GoatBusiness goatBusiness;
 
     private GoatRequestVO requestVO;
     private GoatResponseVO responseVO;
@@ -47,6 +49,15 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
+        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatMapper, entityFinder);
+
+        // Configure default EntityFinder behavior
+        lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+             java.util.function.Supplier<Optional<?>> supplier = invocation.getArgument(0);
+             String errorMsg = invocation.getArgument(1);
+             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(errorMsg));
+        });
+
         // Dados base
         goatFarm = new GoatFarm();
         goatFarm.setId(1L);
