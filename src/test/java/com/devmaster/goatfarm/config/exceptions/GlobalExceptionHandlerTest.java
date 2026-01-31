@@ -1,9 +1,9 @@
 package com.devmaster.goatfarm.config.exceptions;
 
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -112,20 +112,18 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void shouldHandleValidationException() {
-        // Create ValidationError with NULL path (simulating Business layer output)
-        ValidationError validationError = new ValidationError(java.time.Instant.now(), 422, "Erro de validação", null);
-        validationError.addError("field", "mensagem de erro");
-        ValidationException exception = new ValidationException(validationError);
+    void shouldHandleBusinessRuleException() {
+        String errorMessage = "Regra de negócio violada";
+        BusinessRuleException exception = new BusinessRuleException("business_rule", errorMessage);
 
-        ResponseEntity<ValidationError> response = globalExceptionHandler.validation(exception, httpServletRequest);
+        ResponseEntity<ValidationError> response = globalExceptionHandler.businessRule(exception, httpServletRequest);
 
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
         assertNotNull(response.getBody());
         ValidationError body = response.getBody();
-        assertEquals(422, body.getStatus());
-        assertEquals("Erro de validação", body.getError());
-        assertEquals("/api/test", body.getPath()); // Verify path is populated from request
-        assertTrue(body.getErrors().stream().anyMatch(e -> "field".equals(e.getFieldName()) && "mensagem de erro".equals(e.getMessage())));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY.value(), body.getStatus());
+        assertEquals("Regra de negócio violada", body.getError());
+        assertEquals("/api/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(e -> "business_rule".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 }

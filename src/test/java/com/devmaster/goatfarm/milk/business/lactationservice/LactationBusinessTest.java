@@ -4,8 +4,9 @@ import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePor
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
 import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
@@ -115,7 +116,7 @@ class LactationBusinessTest {
     @Test
     void openLactation_shouldThrowValidationException_whenActiveLactationAlreadyExists() {
         // given: findActive retorna lactação ACTIVE
-        // then: lança ValidationException e não chama save
+        // then: lança BusinessRuleException e não chama save
 
         // Arrange
         Long farmId = 1L;
@@ -128,7 +129,7 @@ class LactationBusinessTest {
                 .thenReturn(Optional.of(activeEntity));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, requestVO));
 
         // Verify
@@ -140,7 +141,7 @@ class LactationBusinessTest {
     @Test
     void openLactation_shouldThrowValidationException_whenStartDateIsInFuture() {
         // given: request com data futura
-        // then: lança ValidationException e não chama banco
+        // then: lança InvalidArgumentException e não chama banco
 
         // Arrange
         Long farmId = 1L;
@@ -151,8 +152,10 @@ class LactationBusinessTest {
         futureRequest.setStartDate(LocalDate.now().plusDays(1));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, futureRequest));
+        
+        assertEquals("startDate", ex.getFieldName());
 
         // Verify
         verifyNoInteractions(lactationPersistencePort);
@@ -250,7 +253,7 @@ class LactationBusinessTest {
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.dryLactation(farmId, goatId, lactationId, dryRequestVO));
     }
 
@@ -273,7 +276,7 @@ class LactationBusinessTest {
         dryRequestVO.setEndDate(startDate.minusDays(1)); // Data anterior ao início
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.dryLactation(farmId, goatId, lactationId, dryRequestVO));
     }
 

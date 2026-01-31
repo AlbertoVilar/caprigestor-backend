@@ -1,17 +1,14 @@
 package com.devmaster.goatfarm.reproduction.persistence.adapter;
 
 import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,9 +33,7 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
             return Optional.empty();
         }
         if (pregnancies.size() > 1) {
-            ValidationError error = new ValidationError(Instant.now(), HttpStatus.CONFLICT.value(), "Erro de integridade de dados");
-            error.addError("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
-            throw new ValidationException(error);
+            throw new DuplicateEntityException("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
         }
         return Optional.of(pregnancies.get(0));
     }

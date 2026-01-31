@@ -8,9 +8,9 @@ import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -130,9 +130,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     @Transactional
     public void updatePassword(Long userId, String newPassword) {
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
-            ve.addError("password", "Senha é obrigatória e não pode estar em branco");
-            throw new ValidationException(ve);
+            throw new InvalidArgumentException("password", "Senha é obrigatória e não pode estar em branco");
         }
         String encrypted = passwordEncoder.encode(newPassword);
 
@@ -148,9 +146,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     @Transactional
     public UserResponseVO updateRoles(Long userId, java.util.List<String> roles) {
         if (roles == null || roles.isEmpty()) {
-            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
-            ve.addError("roles", "É necessário informar ao menos uma role");
-            throw new ValidationException(ve);
+            throw new InvalidArgumentException("roles", "É necessário informar ao menos uma role");
         }
         java.util.Set<Role> resolved = roles.stream()
                 .map(roleName -> rolePort.findByAuthority(roleName)
@@ -182,45 +178,39 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     }
 
     private void validateUserData(UserRequestVO vo, boolean isCreation) {
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação");
-
         if (isCreation) {
             if (vo.getName() == null || vo.getName().trim().isEmpty()) {
-                validationError.addError("name", "Nome é obrigatório e não pode estar em branco");
+                throw new InvalidArgumentException("name", "Nome é obrigatório e não pode estar em branco");
             }
             if (vo.getEmail() == null || vo.getEmail().trim().isEmpty()) {
-                validationError.addError("email", "Email é obrigatório e não pode estar em branco");
+                throw new InvalidArgumentException("email", "Email é obrigatório e não pode estar em branco");
             }
             if (vo.getCpf() == null || vo.getCpf().trim().isEmpty()) {
-                validationError.addError("cpf", "CPF é obrigatório e não pode estar em branco");
+                throw new InvalidArgumentException("cpf", "CPF é obrigatório e não pode estar em branco");
             }
             if (vo.getPassword() == null || vo.getPassword().trim().isEmpty()) {
-                validationError.addError("password", "Senha é obrigatória e não pode estar em branco");
+                throw new InvalidArgumentException("password", "Senha é obrigatória e não pode estar em branco");
             }
         }
 
         if (vo.getPassword() != null && !vo.getPassword().isEmpty()) {
             if (vo.getConfirmPassword() == null || vo.getConfirmPassword().trim().isEmpty()) {
-                validationError.addError("confirmPassword", "Confirmação de senha é obrigatória");
+                throw new InvalidArgumentException("confirmPassword", "Confirmação de senha é obrigatória");
             } else if (!vo.getPassword().equals(vo.getConfirmPassword())) {
-                validationError.addError("confirmPassword", "As senhas não coincidem");
+                throw new InvalidArgumentException("confirmPassword", "As senhas não coincidem");
             }
         }
 
         if (vo.getCpf() != null && !vo.getCpf().matches("^\\d{11}$")) {
-            validationError.addError("cpf", "CPF deve conter exatamente 11 dígitos numéricos");
+            throw new InvalidArgumentException("cpf", "CPF deve conter exatamente 11 dígitos numéricos");
         }
 
         if (vo.getRoles() != null) {
             for (String role : vo.getRoles()) {
                 if (!role.equals("ROLE_ADMIN") && !role.equals("ROLE_OPERATOR") && !role.equals("ROLE_FARM_OWNER") && !role.equals("ROLE_VIEWER")) {
-                    validationError.addError("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR, ROLE_FARM_OWNER, ROLE_VIEWER");
+                    throw new BusinessRuleException("roles", "Role inválida: " + role + ". Roles válidas: ROLE_ADMIN, ROLE_OPERATOR, ROLE_FARM_OWNER, ROLE_VIEWER");
                 }
             }
-        }
-
-        if (!validationError.getErrors().isEmpty()) {
-            throw new ValidationException(validationError);
         }
     }
 
@@ -265,4 +255,3 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         throw new UnauthorizedException("Usuário não autenticado");
     }
 }
-

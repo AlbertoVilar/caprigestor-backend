@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> {
+    java.util.Optional<HealthEvent> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
 }

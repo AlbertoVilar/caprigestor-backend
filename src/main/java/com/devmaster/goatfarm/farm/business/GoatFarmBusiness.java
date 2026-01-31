@@ -5,11 +5,10 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
@@ -137,7 +136,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
             return goatFarmMapper.toFullResponseVO(reloaded);
         } catch (DataIntegrityViolationException e) {
             // Mensagem genérica para o cliente, detalhe na causa (logs)
-            throw new com.devmaster.goatfarm.config.exceptions.custom.DatabaseException("Não foi possível processar a solicitação devido a conflito de dados.", e);
+            throw new DuplicateEntityException("Não foi possível processar a solicitação devido a conflito de dados.");
         }
     }
 
@@ -169,9 +168,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         // Atualiza dados do usuário owner (não permite trocar owner neste fluxo)
         if (userVO != null) {
             if (farmEntity.getUser() == null || farmEntity.getUser().getId() == null) {
-                ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
-                ve.addError("user", "Usuário proprietário não encontrado para esta fazenda.");
-                throw new ValidationException(ve);
+                throw new InvalidArgumentException("user", "Usuário proprietário não encontrado para esta fazenda.");
             }
             userBusiness.updateUser(farmEntity.getUser().getId(), userVO);
         }
@@ -188,9 +185,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         }
 
         if (phoneVOs == null || phoneVOs.isEmpty()) {
-            ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validação");
-            ve.addError("phones", "É obrigatório informar ao menos um telefone.");
-            throw new ValidationException(ve);
+            throw new InvalidArgumentException("phones", "É obrigatório informar ao menos um telefone.");
         }
 
         GoatFarm saved = goatFarmPort.save(farmEntity);
@@ -222,7 +217,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         
         // Validação estrita: Não pode definir roles
         if (userVO.getRoles() != null && !userVO.getRoles().isEmpty()) {
-            throw new ValidationException(new ValidationError(Instant.now(), 422, "Não é permitido definir permissões (roles) no cadastro público.", null));
+            throw new BusinessRuleException("Não é permitido definir permissões (roles) no cadastro público.");
         }
 
         // Garante que não estamos vinculando a um usuário existente (Segurança/IDOR)
@@ -239,29 +234,23 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     }
 
     private void validateGoatFarmCreation(GoatFarmFullRequestVO fullRequestVO, User currentUser) {
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação", null);
-
         if (fullRequestVO.getFarm() == null) {
-            validationError.addError("farm", "Dados da fazenda são obrigatórios.");
+            throw new InvalidArgumentException("farm", "Dados da fazenda são obrigatórios.");
         }
         
         // Validação condicional do usuário
         if (currentUser == null) {
             // Anônimo: userVO é obrigatório
             if (fullRequestVO.getUser() == null) {
-                validationError.addError("user", "Dados do usuário são obrigatórios para cadastro público.");
+                throw new InvalidArgumentException("user", "Dados do usuário são obrigatórios para cadastro público.");
             }
         }
 
         if (fullRequestVO.getAddress() == null) {
-            validationError.addError("address", "Dados de endereço são obrigatórios.");
+            throw new InvalidArgumentException("address", "Dados de endereço são obrigatórios.");
         }
         if (fullRequestVO.getPhones() == null || fullRequestVO.getPhones().isEmpty()) {
-            validationError.addError("phones", "É obrigatório informar ao menos um telefone.");
-        }
-
-        if (!validationError.getErrors().isEmpty()) {
-            throw new ValidationException(validationError);
+            throw new InvalidArgumentException("phones", "É obrigatório informar ao menos um telefone.");
         }
     }
 
@@ -279,8 +268,6 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     }
 
     private void throwInvalidLogoUrl() {
-        ValidationError ve = new ValidationError(Instant.now(), 422, "Erro de validaÃ§Ã£o");
-        ve.addError("logoUrl", "URL do logo invÃ¡lida.");
-        throw new ValidationException(ve);
+        throw new InvalidArgumentException("logoUrl", "URL do logo inválida.");
     }
 }

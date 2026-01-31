@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePo
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,7 +59,7 @@ public class AddressBusinessTest {
         AddressRequestVO vo = validRequestVO();
         vo.setState("FF");
 
-        assertThrows(ValidationException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> addressBusiness.createAddress(1L, vo)); // Changed from findOrCreateAddressEntity to createAddress because findOrCreate is private or not main entry point here
 
         verifyNoInteractions(addressPort);
@@ -101,7 +101,7 @@ public class AddressBusinessTest {
         AddressRequestVO vo = validRequestVO();
         vo.setState("FF");
 
-        assertThrows(ValidationException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> addressBusiness.createAddress(farmId, vo));
 
         // Validation is likely before ownership check or right after.
