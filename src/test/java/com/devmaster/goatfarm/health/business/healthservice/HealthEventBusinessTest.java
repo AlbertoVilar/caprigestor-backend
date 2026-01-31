@@ -66,12 +66,12 @@ class HealthEventBusinessTest {
     @Test
     @DisplayName("Should create health event successfully")
     void create_success() {
-        HealthEventCreateRequestVO request = new HealthEventCreateRequestVO();
+        HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
 
         when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.of(goat));
         when(mapper.toEntity(request)).thenReturn(healthEvent);
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
-        when(mapper.toResponseVO(healthEvent)).thenReturn(new HealthEventResponseVO());
+        when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.create(farmId, goatId, request);
 
@@ -83,7 +83,7 @@ class HealthEventBusinessTest {
     @Test
     @DisplayName("Should fail to create when goat not found")
     void create_fail_goatNotFound() {
-        HealthEventCreateRequestVO request = new HealthEventCreateRequestVO();
+        HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
 
         when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.empty());
 
@@ -97,11 +97,11 @@ class HealthEventBusinessTest {
     @Test
     @DisplayName("Should update health event successfully")
     void update_success() {
-        HealthEventUpdateRequestVO request = new HealthEventUpdateRequestVO();
+        HealthEventUpdateRequestVO request = HealthEventUpdateRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
-        when(mapper.toResponseVO(healthEvent)).thenReturn(new HealthEventResponseVO());
+        when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.update(farmId, goatId, eventId, request);
 
@@ -114,7 +114,7 @@ class HealthEventBusinessTest {
     @DisplayName("Should fail to update when event status is not AGENDADO")
     void update_fail_wrongStatus() {
         healthEvent.setStatus(HealthEventStatus.REALIZADO);
-        HealthEventUpdateRequestVO request = new HealthEventUpdateRequestVO();
+        HealthEventUpdateRequestVO request = HealthEventUpdateRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
 
@@ -128,7 +128,7 @@ class HealthEventBusinessTest {
     @Test
     @DisplayName("Should fail to update when event not found")
     void update_fail_notFound() {
-        HealthEventUpdateRequestVO request = new HealthEventUpdateRequestVO();
+        HealthEventUpdateRequestVO request = HealthEventUpdateRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.empty());
 
@@ -140,11 +140,11 @@ class HealthEventBusinessTest {
     @Test
     @DisplayName("Should mark health event as done successfully")
     void markAsDone_success() {
-        HealthEventDoneRequestVO request = new HealthEventDoneRequestVO();
+        HealthEventDoneRequestVO request = HealthEventDoneRequestVO.builder().build();
         
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
-        when(mapper.toResponseVO(healthEvent)).thenReturn(new HealthEventResponseVO());
+        when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.markAsDone(farmId, goatId, eventId, request);
 
@@ -156,7 +156,7 @@ class HealthEventBusinessTest {
     @DisplayName("Should fail to mark as done when event status is not AGENDADO")
     void markAsDone_fail_wrongStatus() {
         healthEvent.setStatus(HealthEventStatus.CANCELADO);
-        HealthEventDoneRequestVO request = new HealthEventDoneRequestVO();
+        HealthEventDoneRequestVO request = HealthEventDoneRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
 
@@ -170,11 +170,11 @@ class HealthEventBusinessTest {
     @Test
     @DisplayName("Should cancel health event successfully")
     void cancel_success() {
-        HealthEventCancelRequestVO request = new HealthEventCancelRequestVO();
+        HealthEventCancelRequestVO request = HealthEventCancelRequestVO.builder().build();
         
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
-        when(mapper.toResponseVO(healthEvent)).thenReturn(new HealthEventResponseVO());
+        when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.cancel(farmId, goatId, eventId, request);
 

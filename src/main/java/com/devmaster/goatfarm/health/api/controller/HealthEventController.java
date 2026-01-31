@@ -4,11 +4,14 @@ import com.devmaster.goatfarm.health.api.dto.*;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -38,9 +41,11 @@ public class HealthEventController {
     public ResponseEntity<HealthEventResponseDTO> create(
             @PathVariable Long farmId,
             @PathVariable String goatId,
-            @RequestBody HealthEventCreateRequestDTO request
+            @RequestBody @Valid HealthEventCreateRequestDTO request
     ) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        var vo = apiMapper.toCreateVO(request);
+        HealthEventResponseVO created = commandUseCase.create(farmId, goatId, vo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(apiMapper.toDTO(created));
     }
 
     @PutMapping("/{eventId}")
@@ -49,9 +54,11 @@ public class HealthEventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId,
-            @RequestBody HealthEventUpdateRequestDTO request
+            @RequestBody @Valid HealthEventUpdateRequestDTO request
     ) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        var vo = apiMapper.toUpdateVO(request);
+        HealthEventResponseVO updated = commandUseCase.update(farmId, goatId, eventId, vo);
+        return ResponseEntity.ok(apiMapper.toDTO(updated));
     }
 
     @PatchMapping("/{eventId}/done")
@@ -60,9 +67,11 @@ public class HealthEventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId,
-            @RequestBody HealthEventDoneRequestDTO request
+            @RequestBody @Valid HealthEventDoneRequestDTO request
     ) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        var vo = apiMapper.toDoneVO(request);
+        HealthEventResponseVO done = commandUseCase.markAsDone(farmId, goatId, eventId, vo);
+        return ResponseEntity.ok(apiMapper.toDTO(done));
     }
 
     @PatchMapping("/{eventId}/cancel")
@@ -71,9 +80,11 @@ public class HealthEventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId,
-            @RequestBody HealthEventCancelRequestDTO request
+            @RequestBody @Valid HealthEventCancelRequestDTO request
     ) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        var vo = apiMapper.toCancelVO(request);
+        HealthEventResponseVO canceled = commandUseCase.cancel(farmId, goatId, eventId, vo);
+        return ResponseEntity.ok(apiMapper.toDTO(canceled));
     }
 
     @GetMapping("/{eventId}")
@@ -83,7 +94,8 @@ public class HealthEventController {
             @PathVariable String goatId,
             @PathVariable Long eventId
     ) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        HealthEventResponseVO found = queryUseCase.getById(farmId, goatId, eventId);
+        return ResponseEntity.ok(apiMapper.toDTO(found));
     }
 
     @GetMapping
@@ -97,6 +109,7 @@ public class HealthEventController {
             @RequestParam(required = false) HealthEventStatus status,
             Pageable pageable
     ) {
-        throw new UnsupportedOperationException("Not implemented yet");
+        Page<HealthEventResponseVO> page = queryUseCase.listByGoat(farmId, goatId, from, to, type, status, pageable);
+        return ResponseEntity.ok(page.map(apiMapper::toDTO));
     }
 }
