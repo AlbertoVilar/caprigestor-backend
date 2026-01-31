@@ -2,7 +2,6 @@ package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
@@ -34,7 +33,8 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
             GoatPersistencePort goatPersistencePort,
-            HealthEventBusinessMapper mapper, EntityFinder entityFinder
+            HealthEventBusinessMapper mapper,
+            EntityFinder entityFinder
     ) {
         this.persistencePort = persistencePort;
         this.goatPersistencePort = goatPersistencePort;
@@ -45,6 +45,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
+        // Controle de acesso deve ser feito no Controller via OwnershipService.canManageFarm(farmId)
 
         entityFinder.findOrThrow(
                 () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
@@ -55,6 +56,9 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
         entity.setFarmId(farmId);
         entity.setGoatId(goatId);
 
+        // Invariável de domínio: criação é sempre AGENDADO
+        entity.setStatus(HealthEventStatus.AGENDADO);
+
         var saved = persistencePort.save(entity);
         return mapper.toResponseVO(saved);
     }
@@ -62,12 +66,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO update(Long farmId, String goatId, Long eventId, HealthEventUpdateRequestVO request) {
-
-        var healthEvent = entityFinder.findOrThrow(
-                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
-                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
-        );
-
+        var healthEvent = findEventOrThrow(farmId, goatId, eventId);
 
         // Regra de negócio: só pode editar enquanto estiver AGENDADO
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
@@ -83,19 +82,19 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO markAsDone(Long farmId, String goatId, Long eventId, HealthEventDoneRequestVO request) {
-        var healthEvent = entityFinder.findOrThrow(
-                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
-                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
-        );
-
+        var healthEvent = findEventOrThrow(farmId, goatId, eventId);
 
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
             throw new BusinessRuleException("Apenas eventos agendados podem ser marcados como realizados.");
         }
 
+        // Aplicar dados do request
+        healthEvent.setPerformedAt(request.performedAt());
+        healthEvent.setResponsible(request.responsible());
+        healthEvent.setNotes(request.notes());
+
         healthEvent.setStatus(HealthEventStatus.REALIZADO);
-        // Assumindo mapeamento simplificado por enquanto
-        
+
         var saved = persistencePort.save(healthEvent);
         return mapper.toResponseVO(saved);
     }
@@ -103,17 +102,17 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO cancel(Long farmId, String goatId, Long eventId, HealthEventCancelRequestVO request) {
-        var healthEvent = entityFinder.findOrThrow(
-                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
-                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
-        );
+        var healthEvent = findEventOrThrow(farmId, goatId, eventId);
 
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
             throw new BusinessRuleException("Apenas eventos agendados podem ser cancelados.");
         }
 
+        // Aplicar motivo do cancelamento
+        healthEvent.setNotes(request.notes());
+
         healthEvent.setStatus(HealthEventStatus.CANCELADO);
-        
+
         var saved = persistencePort.save(healthEvent);
         return mapper.toResponseVO(saved);
     }
@@ -121,12 +120,30 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional(readOnly = true)
     public HealthEventResponseVO getById(Long farmId, String goatId, Long eventId) {
-        var healthEvent = entityFinder.findOrThrow(
-                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
-                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
+        var healthEvent = findEventOrThrow(farmId, goatId, eventId);
+        return mapper.toResponseVO(healthEvent);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<HealthEventResponseVO> listCalendar(
+            Long farmId,
+            LocalDate from,
+            LocalDate to,
+            HealthEventType type,
+            HealthEventStatus status,
+            Pageable pageable
+    ) {
+        var healthEvents = persistencePort.findByFarmIdAndPeriod(
+                farmId,
+                from,
+                to,
+                type,
+                status,
+                pageable
         );
 
-        return mapper.toResponseVO(healthEvent);
+        return healthEvents.map(mapper::toResponseVO);
     }
 
     @Override
@@ -144,22 +161,24 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
                 () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
                 "Cabra não encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
         );
-        // TODO: Implement logic with filters
-        return Page.empty(pageable);
+
+        var healthEvents = persistencePort.findByFarmIdAndGoatId(
+                farmId,
+                goatId,
+                from,
+                to,
+                type,
+                status,
+                pageable
+        );
+
+        return healthEvents.map(mapper::toResponseVO);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<HealthEventResponseVO> listCalendar(
-            Long farmId,
-            LocalDate from,
-            LocalDate to,
-            HealthEventType type,
-            HealthEventStatus status,
-            Pageable pageable
-    ) {
-        // TODO: Implement logic with filters
-        return Page.empty(pageable);
+    private HealthEvent findEventOrThrow(Long farmId, String goatId, Long eventId) {
+        return entityFinder.findOrThrow(
+                () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
+                "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
+        );
     }
-
 }

@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
+import com.devmaster.goatfarm.authority.persistence.repository.FarmOperatorRepository;
 import org.springframework.security.access.AccessDeniedException;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
@@ -14,11 +15,13 @@ public class OwnershipService {
     private final GoatFarmPersistencePort goatFarmPort;
     private final UserPersistencePort userPort;
     private final GoatPersistencePort goatPort;
+    private final FarmOperatorRepository farmOperatorRepository;
 
-    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort) {
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort, FarmOperatorRepository farmOperatorRepository) {
         this.goatFarmPort = goatFarmPort;
         this.userPort = userPort;
         this.goatPort = goatPort;
+        this.farmOperatorRepository = farmOperatorRepository;
     }
 
     public void verifyFarmOwnership(Long farmId) {
@@ -56,6 +59,38 @@ public class OwnershipService {
             var current = getAuthenticatedEntity();
             boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
             if (isAdmin) return true;
+            var farmOpt = goatFarmPort.findById(farmId);
+            if (farmOpt.isEmpty() || farmOpt.get().getUser() == null) {
+                return false;
+            }
+            return farmOpt.get().getUser().getId().equals(current.getId());
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Verifica se o usuário pode gerenciar a fazenda.
+     * Retorna true se:
+     * - OWNER (dono da fazenda)
+     * - ADMIN (administrador do sistema)
+     * - OPERATOR (operador com permissão)
+     */
+    public boolean canManageFarm(Long farmId) {
+        try {
+            var current = getAuthenticatedEntity();
+            
+            // 1. ADMIN tem acesso total
+            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            if (isAdmin) return true;
+
+            // 2. OPERATOR tem acesso (validado por vínculo)
+            boolean isOperator = current.getRoles().stream().anyMatch(r -> "ROLE_OPERATOR".equals(r.getAuthority()));
+            if (isOperator && farmOperatorRepository.existsByFarmIdAndUserId(farmId, current.getId())) {
+                return true;
+            }
+
+            // 3. OWNER deve ser dono da fazenda
             var farmOpt = goatFarmPort.findById(farmId);
             if (farmOpt.isEmpty() || farmOpt.get().getUser() == null) {
                 return false;
