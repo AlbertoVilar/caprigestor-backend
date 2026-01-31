@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.integration;
 
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -25,10 +25,8 @@ class ValidationPathIntegrationTest {
     static class TestController {
         @GetMapping("/test/validation-exception")
         public void throwValidationException() {
-            // Simulate Business Layer throwing ValidationException with NULL path
-            ValidationError error = new ValidationError(Instant.now(), 422, "Business Error", null);
-            error.addError("field", "Must be valid");
-            throw new ValidationException(error);
+            // Simulate Business Layer throwing BusinessRuleException (which replaces ValidationException usage)
+            throw new BusinessRuleException("business_rule", "Business Error");
         }
     }
 
@@ -45,9 +43,9 @@ class ValidationPathIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.status").value(422))
-                .andExpect(jsonPath("$.error").value("Business Error"))
+                .andExpect(jsonPath("$.error").value("Regra de negócio violada"))
                 .andExpect(jsonPath("$.path").value("/test/validation-exception")) // This verifies GlobalExceptionHandler populated the path
-                .andExpect(jsonPath("$.errors[0].fieldName").value("field"))
-                .andExpect(jsonPath("$.errors[0].message").value("Must be valid"));
+                .andExpect(jsonPath("$.errors[0].fieldName").value("business_rule"))
+                .andExpect(jsonPath("$.errors[0].message").value("Business Error"));
     }
 }

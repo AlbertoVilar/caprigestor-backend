@@ -5,9 +5,8 @@ import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersisten
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
@@ -112,21 +111,13 @@ class MilkProductionBusinessTest {
         MilkProductionRequestVO request = createVOWithFutureDate();
 
         // Act & Assert
-        ValidationException ex = assertThrows(
-                ValidationException.class,
+        InvalidArgumentException ex = assertThrows(
+                InvalidArgumentException.class,
                 () -> milkProductionBusiness.createMilkProduction(farmId, goatId, request)
         );
 
-        ValidationError validationError = ex.getValidationError();
-
-        assertNotNull(validationError);
-        assertNotNull(validationError.getErrors());
-
-        assertTrue(
-                validationError.getErrors().stream()
-                        .anyMatch(err -> "date".equals(err.getFieldName())),
-                "Expected validation error to contain fieldName='date'"
-        );
+        assertEquals("date", ex.getFieldName());
+        assertNotNull(ex.getMessage());
 
         // Verify
         verifyNoInteractions(milkProductionPersistencePort);

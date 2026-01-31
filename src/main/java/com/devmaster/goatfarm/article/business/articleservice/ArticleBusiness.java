@@ -13,14 +13,12 @@ import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
 import com.devmaster.goatfarm.article.persistence.entity.Article;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
@@ -181,28 +179,17 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
     }
 
     private void validateArticleContent(ArticleRequestVO requestVO) {
-        ValidationError error = new ValidationError(Instant.now(), HttpStatus.UNPROCESSABLE_ENTITY.value(), "Erro de validação");
-        boolean hasError = false;
-
         if (requestVO.getTitle() == null || requestVO.getTitle().isBlank()) {
-            error.addError("title", "Título é obrigatório");
-            hasError = true;
+            throw new BusinessRuleException("title", "Título é obrigatório");
         }
         if (requestVO.getExcerpt() == null || requestVO.getExcerpt().isBlank()) {
-            error.addError("excerpt", "Resumo é obrigatório");
-            hasError = true;
+            throw new BusinessRuleException("excerpt", "Resumo é obrigatório");
         }
         if (requestVO.getContentMarkdown() == null || requestVO.getContentMarkdown().isBlank()) {
-            error.addError("contentMarkdown", "Conteúdo é obrigatório");
-            hasError = true;
+            throw new BusinessRuleException("contentMarkdown", "Conteúdo é obrigatório");
         }
         if (requestVO.getCategory() == null) {
-            error.addError("category", "Categoria é obrigatória");
-            hasError = true;
-        }
-
-        if (hasError) {
-            throw new ValidationException(error);
+            throw new BusinessRuleException("category", "Categoria é obrigatória");
         }
     }
 

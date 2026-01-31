@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePor
 import com.devmaster.goatfarm.authority.api.mapper.AuthMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.security.JwtService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,11 +71,11 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             String scope = jwt.getClaimAsString("scope");
 
             if (!"REFRESH".equals(scope)) {
-                throw new RuntimeException("Token inválido - não é um refresh token");
+                throw new UnauthorizedException("Token inválido - não é um refresh token");
             }
 
             User user = userPort.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado para refresh: " + email));
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado para refresh: " + email));
 
             String newAccessToken = jwtService.generateToken(user);
             String newRefreshToken = jwtService.generateRefreshToken(user);
@@ -82,7 +84,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
 
         } catch (Exception e) {
             logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
-            throw new RuntimeException("Token inválido ou expirado");
+            throw new UnauthorizedException("Token inválido ou expirado");
         }
     }
 

@@ -15,9 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
@@ -32,8 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import org.springframework.http.HttpStatus;
 
 @Service
 public class LactationBusiness implements LactationCommandUseCase, LactationQueryUseCase {
@@ -60,12 +58,12 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
         goatGenderValidator.requireFemale(farmId, goatId);
         if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
-             throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Data de início da lactação não pode ser futura."));
+             throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
         }
 
         Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
         if (activeLactation.isPresent()) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Já existe uma lactação ativa para esta cabra."));
+            throw new BusinessRuleException("Já existe uma lactação ativa para esta cabra.");
         }
         
         Lactation entity = new Lactation();
@@ -86,15 +84,15 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                 .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra"));
 
         if (lactation.getStatus() != LactationStatus.ACTIVE) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Lactação não está ativa."));
+            throw new BusinessRuleException("Lactação não está ativa.");
         }
 
         if (vo.getEndDate() == null) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Data de fim da lactação é obrigatória."));
+            throw new BusinessRuleException("Data de fim da lactação é obrigatória.");
         }
 
         if (vo.getEndDate().isBefore(lactation.getStartDate())) {
-            throw new ValidationException(new ValidationError(Instant.now(), HttpStatus.BAD_REQUEST.value(), "Data de fim da lactação não pode ser anterior à data de início."));
+            throw new BusinessRuleException("Data de fim da lactação não pode ser anterior à data de início.");
         }
 
         lactation.setStatus(LactationStatus.CLOSED);

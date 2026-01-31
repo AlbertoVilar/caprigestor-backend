@@ -6,9 +6,8 @@ import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
 import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,27 +74,21 @@ public class AddressBusiness implements AddressManagementUseCase {
 
 
     private void validateAddressData(AddressRequestVO requestVO) {
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação");
-
         if (requestVO.getZipCode() != null) {
             String cep = requestVO.getZipCode().replaceAll("[^0-9]", "");
             if (!cep.matches("^\\d{8}$")) {
-                validationError.addError("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
+                throw new BusinessRuleException("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
             }
         }
         if (requestVO.getState() != null) {
             if (!isValidBrazilianState(requestVO.getState())) {
-                validationError.addError("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
+                throw new BusinessRuleException("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
             }
         }
         if (requestVO.getCountry() != null &&
                 !requestVO.getCountry().trim().equalsIgnoreCase("Brasil") &&
                 !requestVO.getCountry().trim().equalsIgnoreCase("Brazil")) {
-            validationError.addError("country", "Por enquanto, apenas endereços do Brasil são aceitos");
-        }
-
-        if (!validationError.getErrors().isEmpty()) {
-            throw new ValidationException(validationError);
+            throw new BusinessRuleException("country", "Por enquanto, apenas endereços do Brasil são aceitos");
         }
     }
 

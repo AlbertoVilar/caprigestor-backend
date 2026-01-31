@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.phone.business.phoneservice;
 
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
 import com.devmaster.goatfarm.phone.persistence.entity.Phone;
@@ -46,7 +46,7 @@ class PhoneBusinessTest {
         when(phonePort.findByIdAndFarmId(phoneId, farmId)).thenReturn(Optional.of(new Phone()));
         when(phonePort.countByFarmId(farmId)).thenReturn(1L);
 
-        assertThrows(ValidationException.class, () -> phoneBusiness.deletePhone(farmId, phoneId));
+        assertThrows(BusinessRuleException.class, () -> phoneBusiness.deletePhone(farmId, phoneId));
 
         verify(phonePort, never()).deleteById(anyLong());
     }
