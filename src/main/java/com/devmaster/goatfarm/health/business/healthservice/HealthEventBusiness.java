@@ -121,12 +121,35 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional(readOnly = true)
     public HealthEventResponseVO getById(Long farmId, String goatId, Long eventId) {
+
         var healthEvent = entityFinder.findOrThrow(
                 () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
                 "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId
         );
 
         return mapper.toResponseVO(healthEvent);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<HealthEventResponseVO> listCalendar(
+            Long farmId,
+            LocalDate from,
+            LocalDate to,
+            HealthEventType type,
+            HealthEventStatus status,
+            Pageable pageable
+    ) {
+        var healthEvents = persistencePort.findByFarmIdAndPeriod(
+                farmId,
+                from,
+                to,
+                type,
+                status,
+                pageable
+        );
+
+        return healthEvents.map(mapper::toResponseVO);
     }
 
     @Override
@@ -144,22 +167,19 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
                 () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
                 "Cabra não encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
         );
-        // TODO: Implement logic with filters
-        return Page.empty(pageable);
+
+        var healthEvents = persistencePort.findByFarmIdAndGoatId(
+                farmId,
+                goatId,
+                from,
+                to,
+                type,
+                status,
+                pageable
+        );
+
+        return healthEvents.map(mapper::toResponseVO);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<HealthEventResponseVO> listCalendar(
-            Long farmId,
-            LocalDate from,
-            LocalDate to,
-            HealthEventType type,
-            HealthEventStatus status,
-            Pageable pageable
-    ) {
-        // TODO: Implement logic with filters
-        return Page.empty(pageable);
-    }
 
 }
