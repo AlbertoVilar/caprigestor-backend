@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.health.api.controller;
 
-import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.health.api.dto.*;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
@@ -23,22 +22,19 @@ public class HealthEventController {
     private final HealthEventCommandUseCase commandUseCase;
     private final HealthEventQueryUseCase queryUseCase;
     private final HealthEventApiMapper apiMapper;
-    private final OwnershipService ownershipService;
 
     public HealthEventController(
             HealthEventCommandUseCase commandUseCase,
             HealthEventQueryUseCase queryUseCase,
-            HealthEventApiMapper apiMapper,
-            OwnershipService ownershipService
+            HealthEventApiMapper apiMapper
     ) {
         this.commandUseCase = commandUseCase;
         this.queryUseCase = queryUseCase;
         this.apiMapper = apiMapper;
-        this.ownershipService = ownershipService;
     }
 
     @PostMapping
-    @PreAuthorize("@ownershipService.isFarmOwner(#farmId)")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     public ResponseEntity<HealthEventResponseDTO> create(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -48,7 +44,7 @@ public class HealthEventController {
     }
 
     @PutMapping("/{eventId}")
-    @PreAuthorize("@ownershipService.isFarmOwner(#farmId)")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     public ResponseEntity<HealthEventResponseDTO> update(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -59,7 +55,7 @@ public class HealthEventController {
     }
 
     @PatchMapping("/{eventId}/done")
-    @PreAuthorize("@ownershipService.isFarmOwner(#farmId)")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     public ResponseEntity<HealthEventResponseDTO> markAsDone(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -70,7 +66,7 @@ public class HealthEventController {
     }
 
     @PatchMapping("/{eventId}/cancel")
-    @PreAuthorize("@ownershipService.isFarmOwner(#farmId)")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     public ResponseEntity<HealthEventResponseDTO> cancel(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -81,7 +77,7 @@ public class HealthEventController {
     }
 
     @GetMapping("/{eventId}")
-    @PreAuthorize("@ownershipService.isFarmOwner(#farmId)")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     public ResponseEntity<HealthEventResponseDTO> getById(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -91,7 +87,7 @@ public class HealthEventController {
     }
 
     @GetMapping
-    @PreAuthorize("@ownershipService.isFarmOwner(#farmId)")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     public ResponseEntity<Page<HealthEventResponseDTO>> listByGoat(
             @PathVariable Long farmId,
             @PathVariable String goatId,
