@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.LactationCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.LactationQueryUseCase;
+import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
+import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
 import com.devmaster.goatfarm.milk.api.dto.LactationRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationDryRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationResponseDTO;
@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
-import com.devmaster.goatfarm.milk.mapper.LactationMapper;
+import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

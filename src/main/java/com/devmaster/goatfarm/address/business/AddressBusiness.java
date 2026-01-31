@@ -1,13 +1,14 @@
 package com.devmaster.goatfarm.address.business;
 
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
-import com.devmaster.goatfarm.address.model.entity.Address;
-import com.devmaster.goatfarm.application.ports.out.AddressPersistencePort;
+import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
+import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
+import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,16 +18,18 @@ import java.util.Set;
 
 @Service
 @Transactional
-public class AddressBusiness implements com.devmaster.goatfarm.application.ports.in.AddressManagementUseCase {
+public class AddressBusiness implements AddressManagementUseCase {
 
     private final AddressPersistencePort addressPort;
     private final AddressMapper addressMapper;
     private final OwnershipService ownershipService;
+    private final EntityFinder entityFinder;
 
-    public AddressBusiness(AddressPersistencePort addressPort, AddressMapper addressMapper, OwnershipService ownershipService) {
+    public AddressBusiness(AddressPersistencePort addressPort, AddressMapper addressMapper, OwnershipService ownershipService, EntityFinder entityFinder) {
         this.addressPort = addressPort;
         this.addressMapper = addressMapper;
         this.ownershipService = ownershipService;
+        this.entityFinder = entityFinder;
     }
 
     public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
@@ -40,8 +43,10 @@ public class AddressBusiness implements com.devmaster.goatfarm.application.ports
     public AddressResponseVO updateAddress(Long farmId, Long addressId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateAddressData(requestVO);
-        Address current = addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        Address current = entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         addressMapper.toEntity(current, requestVO);
         Address updated = addressPort.save(current);
         return addressMapper.toResponseVO(updated);
@@ -50,51 +55,51 @@ public class AddressBusiness implements com.devmaster.goatfarm.application.ports
     public Address updateAddressEntity(Long farmId, Long addressId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateAddressData(requestVO);
-        Address current = addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        Address current = entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         addressMapper.toEntity(current, requestVO);
         return addressPort.save(current);
     }
 
     public AddressResponseVO findAddressById(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Address found = addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        Address found = entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         return addressMapper.toResponseVO(found);
     }
 
     public String deleteAddress(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
         // Garante que o endereço pertence à fazenda antes de deletar
-        addressPort.findByIdAndFarmId(addressId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Endereço com ID " + addressId + " não encontrado na fazenda " + farmId));
+        entityFinder.findOrThrow(
+                () -> addressPort.findByIdAndFarmId(addressId, farmId),
+                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
+        );
         addressPort.deleteById(addressId);
         return "Endereço com ID " + addressId + " foi deletado com sucesso.";
     }
 
 
     private void validateAddressData(AddressRequestVO requestVO) {
-        ValidationError validationError = new ValidationError(Instant.now(), 422, "Erro de validação");
-
         if (requestVO.getZipCode() != null) {
             String cep = requestVO.getZipCode().replaceAll("[^0-9]", "");
             if (!cep.matches("^\\d{8}$")) {
-                validationError.addError("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
+                throw new BusinessRuleException("zipCode", "CEP deve conter exatamente 8 dígitos numéricos");
             }
         }
         if (requestVO.getState() != null) {
             if (!isValidBrazilianState(requestVO.getState())) {
-                validationError.addError("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
+                throw new BusinessRuleException("state", "Estado deve ser uma sigla válida (ex: SP, RJ, MG) ou nome completo (ex: São Paulo, Rio de Janeiro, Minas Gerais)");
             }
         }
         if (requestVO.getCountry() != null &&
                 !requestVO.getCountry().trim().equalsIgnoreCase("Brasil") &&
                 !requestVO.getCountry().trim().equalsIgnoreCase("Brazil")) {
-            validationError.addError("country", "Por enquanto, apenas endereços do Brasil são aceitos");
-        }
-
-        if (!validationError.getErrors().isEmpty()) {
-            throw new ValidationException(validationError);
+            throw new BusinessRuleException("country", "Por enquanto, apenas endereços do Brasil são aceitos");
         }
     }
 

@@ -1,19 +1,20 @@
 package com.devmaster.goatfarm.goat.business;
 
-import com.devmaster.goatfarm.goat.business.goatbusiness.GoatBusiness;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.goat.business.GoatBusiness;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.mapper.GoatMapper;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,8 +37,9 @@ public class GoatBusinessTest {
     @Mock private GoatFarmPersistencePort goatFarmPort;
     @Mock private OwnershipService ownershipService;
     @Mock private GoatMapper goatMapper;
+    @Mock private EntityFinder entityFinder;
 
-    @InjectMocks private GoatBusiness goatBusiness;
+    private GoatBusiness goatBusiness;
 
     private GoatRequestVO requestVO;
     private GoatResponseVO responseVO;
@@ -47,6 +49,15 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
+        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatMapper, entityFinder);
+
+        // Configure default EntityFinder behavior
+        lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+             java.util.function.Supplier<Optional<?>> supplier = invocation.getArgument(0);
+             String errorMsg = invocation.getArgument(1);
+             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(errorMsg));
+        });
+
         // Dados base
         goatFarm = new GoatFarm();
         goatFarm.setId(1L);

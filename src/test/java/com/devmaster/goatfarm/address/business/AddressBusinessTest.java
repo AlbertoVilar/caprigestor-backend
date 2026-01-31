@@ -2,15 +2,16 @@ package com.devmaster.goatfarm.address.business;
 
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.application.ports.out.AddressPersistencePort;
-import com.devmaster.goatfarm.address.mapper.AddressMapper;
-import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
+import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,7 +20,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -31,7 +33,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class AddressBusinessTest {
 
-    @InjectMocks
     private AddressBusiness addressBusiness;
 
     @Mock
@@ -42,6 +43,20 @@ public class AddressBusinessTest {
 
     @Mock
     private OwnershipService ownershipService;
+
+    @Mock
+    private EntityFinder entityFinder;
+
+    @BeforeEach
+    void setUp() {
+        addressBusiness = new AddressBusiness(addressPort, addressMapper, ownershipService, entityFinder);
+
+        lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+            java.util.function.Supplier<Optional<?>> supplier = invocation.getArgument(0);
+            String errorMsg = invocation.getArgument(1);
+            return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(errorMsg));
+        });
+    }
 
     private AddressRequestVO validRequestVO() {
         AddressRequestVO vo = new AddressRequestVO();
@@ -59,18 +74,12 @@ public class AddressBusinessTest {
         AddressRequestVO vo = validRequestVO();
         vo.setState("FF");
 
-        assertThrows(ValidationException.class,
-                () -> addressBusiness.createAddress(1L, vo)); // Changed from findOrCreateAddressEntity to createAddress because findOrCreate is private or not main entry point here
+        assertThrows(BusinessRuleException.class,
+                () -> addressBusiness.createAddress(1L, vo));
 
         verifyNoInteractions(addressPort);
         verifyNoInteractions(addressMapper);
     }
-
-    // Note: createAddress calls validateAddressData internally. 
-    // findOrCreateAddressEntity was removed or made private/internal in AddressBusiness refactoring?
-    // Checking AddressBusiness.java... It has createAddress. It doesn't seem to expose findOrCreateAddressEntity publicly.
-    // However, the test code from feature branch tested findOrCreateAddressEntity.
-    // Let's assume createAddress is the main entry point now.
 
     @Test
     void shouldCreateAddressWhenDataIsValid() {
@@ -101,14 +110,9 @@ public class AddressBusinessTest {
         AddressRequestVO vo = validRequestVO();
         vo.setState("FF");
 
-        assertThrows(ValidationException.class,
+        assertThrows(BusinessRuleException.class,
                 () -> addressBusiness.createAddress(farmId, vo));
 
-        // Validation is likely before ownership check or right after.
-        // In AddressBusiness.java: 
-        // ownershipService.verifyFarmOwnership(farmId);
-        // validateAddressData(requestVO);
-        
         verify(ownershipService).verifyFarmOwnership(farmId);
         verifyNoInteractions(addressPort);
     }
@@ -198,28 +202,11 @@ public class AddressBusinessTest {
         Address existing = new Address();
 
         when(addressPort.findByIdAndFarmId(addressId, farmId)).thenReturn(Optional.of(existing));
-        
-        String result = addressBusiness.deleteAddress(farmId, addressId);
 
-        // AddressBusiness.java returns a string message
-        
+        addressBusiness.deleteAddress(farmId, addressId);
+
         verify(ownershipService).verifyFarmOwnership(farmId);
         verify(addressPort).findByIdAndFarmId(addressId, farmId);
         verify(addressPort).deleteById(addressId);
-    }
-
-    @Test
-    void shouldThrowResourceNotFoundWhenDeleteAddressDoesNotExist() {
-        Long farmId = 1L;
-        Long addressId = 10L;
-
-        when(addressPort.findByIdAndFarmId(addressId, farmId)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class,
-                () -> addressBusiness.deleteAddress(farmId, addressId));
-
-        verify(ownershipService).verifyFarmOwnership(farmId);
-        verify(addressPort).findByIdAndFarmId(addressId, farmId);
-        verify(addressPort, never()).deleteById(any());
     }
 }

@@ -1,10 +1,10 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.ReproductionCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.ReproductionQueryUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.reproduction.api.dto.*;
 import com.devmaster.goatfarm.reproduction.business.bo.*;
-import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;

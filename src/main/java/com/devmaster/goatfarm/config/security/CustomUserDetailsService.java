@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.security;
 
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort; import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

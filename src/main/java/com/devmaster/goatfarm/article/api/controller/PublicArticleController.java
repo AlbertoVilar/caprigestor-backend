@@ -1,10 +1,10 @@
 package com.devmaster.goatfarm.article.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.ArticleQueryUseCase;
+import com.devmaster.goatfarm.article.application.ports.in.ArticleQueryUseCase;
 import com.devmaster.goatfarm.article.api.dto.ArticlePublicDetailResponseDTO;
 import com.devmaster.goatfarm.article.api.dto.ArticlePublicListResponseDTO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
-import com.devmaster.goatfarm.article.mapper.ArticleMapper;
+import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicDetailResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
 import io.swagger.v3.oas.annotations.Operation;

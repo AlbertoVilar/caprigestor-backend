@@ -1,11 +1,10 @@
 package com.devmaster.goatfarm.config.exceptions;
 
-import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -24,6 +23,16 @@ import java.time.Instant;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ValidationError> businessRule(BusinessRuleException e, HttpServletRequest request) {
+        String error = "Regra de negócio violada";
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        String field = e.getFieldName() != null ? e.getFieldName() : "business_error";
+        err.addError(field, e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ValidationError> resourceNotFound(ResourceNotFoundException e, HttpServletRequest request) {
         String error = "Recurso não encontrado";
@@ -33,21 +42,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(err);
     }
 
-    @ExceptionHandler(DatabaseException.class)
-    public ResponseEntity<ValidationError> database(DatabaseException e, HttpServletRequest request) {
-        String error = "Erro de banco de dados";
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
-        err.addError("database", e.getMessage());
-        return ResponseEntity.status(status).body(err);
-    }
-
     @ExceptionHandler(InvalidArgumentException.class)
     public ResponseEntity<ValidationError> invalidArgument(InvalidArgumentException e, HttpServletRequest request) {
         String error = "Argumento inválido";
         HttpStatus status = HttpStatus.BAD_REQUEST;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
-        err.addError("argument", e.getMessage());
+        String field = e.getFieldName() != null ? e.getFieldName() : "argument";
+        err.addError(field, e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
 
@@ -86,19 +87,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(err);
     }
 
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ValidationError> validation(ValidationException e, HttpServletRequest request) {
-        ValidationError error = e.getValidationError();
-        error.setPath(request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error);
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ValidationError> illegalArgument(IllegalArgumentException e, HttpServletRequest request) {
+        String error = "Argumento inválido";
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("argument", e.getMessage());
+        return ResponseEntity.status(status).body(err);
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ValidationError> handleAll(Exception e, HttpServletRequest request) {
+        String error = "Erro interno do servidor";
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("server", "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.");
+        // Logar o erro original seria importante aqui, mas o handler já é chamado pelo Spring que loga
+        return ResponseEntity.status(status).body(err);
+    }
+
+
 
     @ExceptionHandler(DuplicateEntityException.class)
     public ResponseEntity<ValidationError> duplicate(DuplicateEntityException e, HttpServletRequest request) {
         String error = "Conflito de dados";
         HttpStatus status = HttpStatus.CONFLICT;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
-        err.addError("duplicate", e.getMessage());
+        String field = e.getFieldName() != null ? e.getFieldName() : "duplicate";
+        err.addError(field, e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
 

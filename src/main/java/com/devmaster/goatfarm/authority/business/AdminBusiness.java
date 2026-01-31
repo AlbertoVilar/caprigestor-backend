@@ -1,9 +1,10 @@
 package com.devmaster.goatfarm.authority.business;
 
-import com.devmaster.goatfarm.application.ports.out.RolePersistencePort;
-import com.devmaster.goatfarm.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.model.entity.Role;
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -84,7 +85,7 @@ public class AdminBusiness {
                 .orElseGet(() -> {
                     // Se a role não existir, não a cria aqui, apenas loga e lança erro
                     logger.error("Role {} não encontrada e criação automática não suportada nesta camada", authority);
-                    throw new RuntimeException("Role não encontrada: " + authority);
+                    throw new ResourceNotFoundException("Role não encontrada: " + authority);
                 });
     }
 }

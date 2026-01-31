@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.genealogy.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.GenealogyQueryUseCase;
+import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import org.junit.jupiter.api.Test;

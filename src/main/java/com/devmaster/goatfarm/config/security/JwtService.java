@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.config.security;
 
-import com.devmaster.goatfarm.authority.model.entity.User;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;

@@ -1,14 +1,13 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
-import com.devmaster.goatfarm.application.ports.in.ReproductionCommandUseCase;
-import com.devmaster.goatfarm.application.ports.in.ReproductionQueryUseCase;
-import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
@@ -17,16 +16,14 @@ import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponse
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
-import com.devmaster.goatfarm.reproduction.model.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.model.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -55,13 +52,13 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public ReproductiveEventResponseVO registerBreeding(Long farmId, String goatId, BreedingRequestVO vo) {
         goatGenderValidator.requireFemale(farmId, goatId);
         if (vo.getEventDate() == null) {
-            throw buildValidationException("eventDate", "Data do evento é obrigatória");
+            throw new InvalidArgumentException("eventDate", "Data do evento é obrigatória");
         }
         if (vo.getBreedingType() == null) {
-            throw buildValidationException("breedingType", "Tipo de cobertura é obrigatório");
+            throw new InvalidArgumentException("breedingType", "Tipo de cobertura é obrigatório");
         }
         if (vo.getEventDate().isAfter(LocalDate.now())) {
-            throw buildValidationException("eventDate", "Data do evento não pode ser futura");
+            throw new InvalidArgumentException("eventDate", "Data do evento não pode ser futura");
         }
 
         ReproductiveEvent event = ReproductiveEvent.builder()
@@ -79,23 +76,23 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
-    @Transactional(noRollbackFor = ValidationException.class)
+    @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
         goatGenderValidator.requireFemale(farmId, goatId);
         if (vo.getCheckDate() == null) {
-            throw buildValidationException("checkDate", "Data do exame de gestação é obrigatória");
+            throw new InvalidArgumentException("checkDate", "Data do exame de gestação é obrigatória");
         }
         if (vo.getCheckDate().isAfter(LocalDate.now())) {
-            throw buildValidationException("checkDate", "Data do exame de gestação não pode ser futura");
+            throw new InvalidArgumentException("checkDate", "Data do exame de gestação não pode ser futura");
         }
         if (vo.getCheckResult() == null) {
-            throw buildValidationException("checkResult", "Resultado do exame de gestação é obrigatório");
+            throw new InvalidArgumentException("checkResult", "Resultado do exame de gestação é obrigatório");
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             var activeList = pregnancyPersistencePort.findAllActiveByFarmIdAndGoatIdOrdered(farmId, goatId);
             if (activeList.size() > 1) {
-                throw buildValidationConflictException("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
+                throw new DuplicateEntityException("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
             }
         }
 
@@ -103,18 +100,18 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .findLatestCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
 
         if (latestCoverage.isEmpty()) {
-            throw buildValidationException("checkDate", "Não foi encontrada cobertura anterior à data do exame de gestação");
+            throw new InvalidArgumentException("checkDate", "Não foi encontrada cobertura anterior à data do exame de gestação");
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
             if (activePregnancy.isPresent()) {
-                throw buildValidationException("checkResult", "Já existe uma gestação ativa para esta cabra nesta fazenda");
+                throw new InvalidArgumentException("checkResult", "Já existe uma gestação ativa para esta cabra nesta fazenda");
             }
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
-            throw buildValidationException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o fluxo específico de registro de exame de gestação quando disponível.");
+            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o fluxo específico de registro de exame de gestação quando disponível.");
         }
 
         ReproductiveEvent checkEvent = ReproductiveEvent.builder()
@@ -148,23 +145,23 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
     public PregnancyResponseVO closePregnancy(Long farmId, String goatId, Long pregnancyId, PregnancyCloseRequestVO vo) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
 
         if (pregnancy.getStatus() != PregnancyStatus.ACTIVE) {
-            throw buildValidationException("status", "Gestação não está ativa");
+            throw new InvalidArgumentException("status", "Gestação não está ativa");
         }
         if (vo.getCloseDate() == null) {
-            throw buildValidationException("closeDate", "Data de encerramento é obrigatória");
+            throw new InvalidArgumentException("closeDate", "Data de encerramento é obrigatória");
         }
         if (vo.getCloseReason() == null) {
-            throw buildValidationException("closeReason", "Motivo de encerramento é obrigatório");
+            throw new InvalidArgumentException("closeReason", "Motivo de encerramento é obrigatório");
         }
         if (pregnancy.getBreedingDate() != null && vo.getCloseDate().isBefore(pregnancy.getBreedingDate())) {
-            throw buildValidationException("closeDate", "Data de encerramento não pode ser anterior à data de cobertura");
+            throw new InvalidArgumentException("closeDate", "Data de encerramento não pode ser anterior à data de cobertura");
         }
 
         pregnancy.setStatus(PregnancyStatus.CLOSED);
@@ -218,19 +215,5 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         goatGenderValidator.requireFemale(farmId, goatId);
         return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
                 .map(reproductionMapper::toReproductiveEventResponseVO);
-    }
-
-    private ValidationException buildValidationException(String field, String message) {
-        return buildValidationException(HttpStatus.BAD_REQUEST, field, message);
-    }
-
-    private ValidationException buildValidationConflictException(String field, String message) {
-        return buildValidationException(HttpStatus.CONFLICT, field, message);
-    }
-
-    private ValidationException buildValidationException(HttpStatus status, String field, String message) {
-        ValidationError error = new ValidationError(Instant.now(), status.value(), "Erro de validação");
-        error.addError(field, message);
-        return new ValidationException(error);
     }
 }

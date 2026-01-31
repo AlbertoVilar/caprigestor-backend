@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.events.api.dto;
 
-import com.devmaster.goatfarm.events.enuns.EventType;
+import com.devmaster.goatfarm.events.enums.EventType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

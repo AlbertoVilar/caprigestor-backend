@@ -1,21 +1,20 @@
 package com.devmaster.goatfarm.milk.business.milkproductionservice;
 
-import com.devmaster.goatfarm.application.ports.in.MilkProductionUseCase;
-import com.devmaster.goatfarm.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.in.MilkProductionUseCase;
+import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.mapper.MilkProductionMapper;
-import com.devmaster.goatfarm.milk.model.entity.Lactation;
-import com.devmaster.goatfarm.milk.model.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.api.mapper.MilkProductionMapper;
+import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -61,14 +60,10 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         //=======================
         
         if (requestVO.getDate() == null) {
-            ValidationError err = new ValidationError(Instant.now(), 422, "Erro de validação", null);
-            err.addError("date", "Data da ordenha é obrigatória");
-            throw new ValidationException(err);
+            throw new InvalidArgumentException("date", "Data da ordenha é obrigatória");
         }
         if (requestVO.getDate().isAfter(LocalDate.now())) {
-            ValidationError err = new ValidationError(Instant.now(), 422, "Erro de validação", null);
-            err.addError("date", "Data da ordenha não pode ser futura");
-            throw new ValidationException(err);
+            throw new InvalidArgumentException("date", "Data da ordenha não pode ser futura");
         }
 
         // Regra 1: Não permitir produção duplicada para a mesma data e turno

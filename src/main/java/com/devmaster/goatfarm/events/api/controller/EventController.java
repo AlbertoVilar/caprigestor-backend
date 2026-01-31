@@ -1,12 +1,12 @@
 package com.devmaster.goatfarm.events.api.controller;
 
-import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
+import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
-import com.devmaster.goatfarm.events.enuns.EventType;
-import com.devmaster.goatfarm.events.mapper.EventMapper;
+import com.devmaster.goatfarm.events.enums.EventType;
+import com.devmaster.goatfarm.events.api.mapper.EventMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;

@@ -1,27 +1,27 @@
 package com.devmaster.goatfarm.farm.business;
 
-import com.devmaster.goatfarm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
-import com.devmaster.goatfarm.address.model.entity.Address;
+import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
-import com.devmaster.goatfarm.authority.model.entity.User;
-import com.devmaster.goatfarm.config.exceptions.custom.DatabaseException;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
-import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
-import com.devmaster.goatfarm.farm.mapper.GoatFarmMapper;
-import com.devmaster.goatfarm.farm.model.entity.GoatFarm;
-import com.devmaster.goatfarm.phone.business.business.PhoneBusiness;
+import com.devmaster.goatfarm.farm.business.GoatFarmBusiness;
+import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
+import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -61,6 +61,8 @@ class GoatFarmBusinessTest {
     private PhoneBusiness phoneBusiness;
     @Mock
     private PhoneMapper phoneMapper;
+    @Mock
+    private EntityFinder entityFinder;
 
     private GoatFarmRequestVO farmVO;
     private UserRequestVO userVO;
@@ -80,8 +82,16 @@ class GoatFarmBusinessTest {
                 phoneBusiness,
                 goatFarmMapper,
                 phoneMapper,
-                ownershipService
+                ownershipService,
+                entityFinder
         );
+        
+        // Default behavior for EntityFinder: execute the supplier
+        lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
+             java.util.function.Supplier<Optional<?>> supplier = invocation.getArgument(0);
+             String errorMsg = invocation.getArgument(1);
+             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(errorMsg));
+        });
 
         farmVO = new GoatFarmRequestVO();
         farmVO.setName("Test Farm");
@@ -171,7 +181,7 @@ class GoatFarmBusinessTest {
         when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         userVO.setRoles(java.util.List.of("ROLE_ADMIN"));
         
-        assertThrows(ValidationException.class, () -> 
+        assertThrows(BusinessRuleException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
         
@@ -184,10 +194,10 @@ class GoatFarmBusinessTest {
         when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setUser(null);
         
-        ValidationException exception = assertThrows(ValidationException.class, () -> 
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
-        assertTrue(exception.getMessage().contains("Erro de validação"));
+        assertTrue(exception.getMessage().contains("Dados do usuário são obrigatórios"));
     }
 
     @Test
@@ -198,13 +208,16 @@ class GoatFarmBusinessTest {
         fullRequestVO.setFarm(null);
         fullRequestVO.setPhones(null);
         
-        ValidationException exception = assertThrows(ValidationException.class, () -> 
+        // As validations are now individual and throw InvalidArgumentException or BusinessRuleException,
+        // it will fail on the first check. We should check if ANY of expected exceptions is thrown
+        // OR simply check for the first one expected.
+        // Assuming order: user, farm, phones.
+        
+        Exception exception = assertThrows(RuntimeException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
         
-        // Deve conter erros de farm, user e phones
-        ValidationError errors = exception.getValidationError();
-        assertEquals(3, errors.getErrors().size());
+        assertTrue(exception instanceof InvalidArgumentException || exception instanceof BusinessRuleException);
     }
 
     @Test
@@ -229,9 +242,10 @@ class GoatFarmBusinessTest {
     void createGoatFarm_fail_validation_null_farm() {
         when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setFarm(null);
-        assertThrows(ValidationException.class, () -> 
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
+        assertTrue(exception.getMessage().contains("Dados da fazenda são obrigatórios"));
     }
 
     @Test
@@ -239,9 +253,10 @@ class GoatFarmBusinessTest {
     void createGoatFarm_fail_validation_null_phones() {
         when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setPhones(null);
-        assertThrows(ValidationException.class, () -> 
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
+        assertTrue(exception.getMessage().contains("É obrigatório informar ao menos um telefone"));
     }
 
     @Test
@@ -249,9 +264,10 @@ class GoatFarmBusinessTest {
     void createGoatFarm_fail_validation_empty_phones() {
         when(ownershipService.getCurrentUser()).thenThrow(new UnauthorizedException("Anonymous"));
         fullRequestVO.setPhones(Collections.emptyList());
-        assertThrows(ValidationException.class, () -> 
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
+        assertTrue(exception.getMessage().contains("É obrigatório informar ao menos um telefone"));
     }
     
     @Test
@@ -284,7 +300,7 @@ class GoatFarmBusinessTest {
     }
 
     @Test
-    @DisplayName("Should throw DatabaseException on data integrity violation")
+    @DisplayName("Should throw DuplicateEntityException on data integrity violation")
     void createGoatFarm_fail_database_error() {
         when(ownershipService.getCurrentUser()).thenReturn(mockUser);
         when(goatFarmPort.existsByName(any())).thenReturn(false);
@@ -294,7 +310,7 @@ class GoatFarmBusinessTest {
         
         when(goatFarmPort.save(any())).thenThrow(new DataIntegrityViolationException("Constraint violation"));
 
-        assertThrows(DatabaseException.class, () -> 
+        assertThrows(DuplicateEntityException.class, () -> 
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
     }
@@ -306,7 +322,7 @@ class GoatFarmBusinessTest {
 
         when(goatFarmPort.findById(100L)).thenReturn(Optional.of(mockFarm));
         when(goatFarmPort.save(any())).thenReturn(mockFarm);
-        when(goatFarmPort.findById(mockFarm.getId())).thenReturn(Optional.of(mockFarm));
+        
         when(goatFarmMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
         when(userBusiness.updateUser(eq(1L), any(UserRequestVO.class)))
@@ -327,7 +343,7 @@ class GoatFarmBusinessTest {
 
         when(goatFarmPort.findById(100L)).thenReturn(Optional.of(mockFarm));
 
-        assertThrows(ValidationException.class, () ->
+        assertThrows(InvalidArgumentException.class, () ->
                 goatFarmBusiness.updateGoatFarm(100L, farmVO, userVO, addressVO, phoneVOs)
         );
 

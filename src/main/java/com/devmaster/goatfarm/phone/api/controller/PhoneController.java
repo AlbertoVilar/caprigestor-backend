@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.phone.api.controller;
 
 import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
-import com.devmaster.goatfarm.application.ports.in.PhoneManagementUseCase;
-import com.devmaster.goatfarm.phone.mapper.PhoneMapper;
+import com.devmaster.goatfarm.phone.application.ports.in.PhoneManagementUseCase;
+import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;

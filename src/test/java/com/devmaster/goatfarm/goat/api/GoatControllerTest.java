@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.config.security.OwnershipService;

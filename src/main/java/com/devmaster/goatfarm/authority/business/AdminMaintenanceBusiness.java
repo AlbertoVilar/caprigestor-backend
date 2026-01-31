@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.authority.business;
 
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
-import com.devmaster.goatfarm.application.ports.in.EventManagementUseCase;
-import com.devmaster.goatfarm.farm.business.farmbusiness.GoatFarmBusiness;
+import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
+import com.devmaster.goatfarm.farm.business.GoatFarmBusiness;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

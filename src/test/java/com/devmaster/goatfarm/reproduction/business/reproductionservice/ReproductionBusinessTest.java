@@ -1,12 +1,13 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
-import com.devmaster.goatfarm.application.ports.out.PregnancyPersistencePort;
-import com.devmaster.goatfarm.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationException;
-import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
-import com.devmaster.goatfarm.goat.model.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
@@ -17,9 +18,9 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.mapper.ReproductionMapper;
-import com.devmaster.goatfarm.reproduction.model.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.model.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -110,7 +111,7 @@ class ReproductionBusinessTest {
                 .build();
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
     }
@@ -124,7 +125,7 @@ class ReproductionBusinessTest {
                 .build();
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
     }
@@ -138,7 +139,7 @@ class ReproductionBusinessTest {
                 .build();
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
     }
@@ -211,17 +212,12 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(coverageEvent));
 
         // Act & Assert
-        ValidationException exception = assertThrows(ValidationException.class,
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
 
-        // Validate exception content (audit requirement)
-        ValidationError validationError = exception.getValidationError();
-        assertThat(validationError).isNotNull();
-            assertThat(validationError.getStatus()).isEqualTo(400);
-            assertThat(validationError.getErrors()).anyMatch(err ->
-                    "checkResult".equals(err.getFieldName()) &&
-                            err.getMessage().contains("Resultado NEGATIVE não é permitido")
-            );
+        // Validate exception content
+        assertThat(exception.getFieldName()).isEqualTo("checkResult");
+        assertThat(exception.getMessage()).contains("Resultado NEGATIVE não é permitido");
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
@@ -238,7 +234,7 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
@@ -261,7 +257,7 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(activePregnancy));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
@@ -278,7 +274,7 @@ class ReproductionBusinessTest {
                 .build();
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
         verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionMapper);
     }
@@ -292,7 +288,7 @@ class ReproductionBusinessTest {
                 .build();
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
         verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionMapper);
     }
@@ -306,15 +302,10 @@ class ReproductionBusinessTest {
                 .thenReturn(java.util.List.of(activePregnancyEntity(), activePregnancyEntity()));
 
         // Act
-        ValidationException exception = assertThrows(ValidationException.class,
+        DuplicateEntityException exception = assertThrows(DuplicateEntityException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
 
-        ValidationError validationError = exception.getValidationError();
-        assertThat(validationError).isNotNull();
-        assertThat(validationError.getStatus()).isEqualTo(409);
-        assertThat(validationError.getErrors()).anyMatch(err ->
-                "status".equals(err.getFieldName())
-        );
+        assertThat(exception.getMessage()).contains("Foram encontradas múltiplas gestações ativas");
 
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper);
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
@@ -345,21 +336,16 @@ class ReproductionBusinessTest {
     @Test
     void getActivePregnancy_shouldThrowValidation_whenMultipleActivePregnanciesExist() {
         // Arrange
-        ValidationError validationError = new ValidationError(null, 409, "Data integrity error");
-        validationError.addError("status", "Foram encontradas múltiplas gestações ativas");
-        ValidationException validationException = new ValidationException(validationError);
+        DuplicateEntityException duplicateException = new DuplicateEntityException("Foram encontradas múltiplas gestações ativas");
 
         when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
-                .thenThrow(validationException);
+                .thenThrow(duplicateException);
 
         // Act & Assert
-        ValidationException thrown = assertThrows(ValidationException.class,
+        DuplicateEntityException thrown = assertThrows(DuplicateEntityException.class,
                 () -> reproductionBusiness.getActivePregnancy(FARM_ID, GOAT_ID));
 
-        assertThat(thrown.getValidationError().getErrors()).anyMatch(err ->
-                "status".equals(err.getFieldName()) &&
-                        err.getMessage().contains("Foram encontradas múltiplas gestações ativas")
-        );
+        assertThat(thrown.getMessage()).contains("Foram encontradas múltiplas gestações ativas");
         verifyNoInteractions(reproductionMapper);
     }
 
@@ -499,7 +485,7 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(closedPregnancy));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.closePregnancy(FARM_ID, GOAT_ID, pregnancyId, requestVO));
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
@@ -521,8 +507,10 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(activePregnancy));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.closePregnancy(FARM_ID, GOAT_ID, pregnancyId, requestVO));
+        
+        assertThat(ex.getFieldName()).isEqualTo("closeDate");
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
@@ -543,8 +531,10 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(activePregnancy));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.closePregnancy(FARM_ID, GOAT_ID, pregnancyId, requestVO));
+
+        assertThat(ex.getFieldName()).isEqualTo("closeDate");
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
@@ -565,8 +555,10 @@ class ReproductionBusinessTest {
                 .thenReturn(Optional.of(activePregnancy));
 
         // Act & Assert
-        assertThrows(ValidationException.class,
+        InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.closePregnancy(FARM_ID, GOAT_ID, pregnancyId, requestVO));
+
+        assertThat(ex.getFieldName()).isEqualTo("closeReason");
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
