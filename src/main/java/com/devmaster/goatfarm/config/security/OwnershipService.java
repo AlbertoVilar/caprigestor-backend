@@ -65,6 +65,7 @@ public class OwnershipService {
             }
             return farmOpt.get().getUser().getId().equals(current.getId());
         } catch (RuntimeException ex) {
+            ex.printStackTrace(); // Logar erro para debug
             return false;
         }
     }
@@ -92,10 +93,17 @@ public class OwnershipService {
 
             // 3. OWNER deve ser dono da fazenda
             var farmOpt = goatFarmPort.findById(farmId);
-            if (farmOpt.isEmpty() || farmOpt.get().getUser() == null) {
+            if (farmOpt.isEmpty()) {
+                System.out.println("DEBUG: Fazenda nao encontrada ID " + farmId);
                 return false;
             }
-            return farmOpt.get().getUser().getId().equals(current.getId());
+            if (farmOpt.get().getUser() == null) {
+                System.out.println("DEBUG: Fazenda ID " + farmId + " sem usuario dono vinculado");
+                return false;
+            }
+            boolean isOwner = farmOpt.get().getUser().getId().equals(current.getId());
+            System.out.println("DEBUG: User " + current.getId() + " isOwner of Farm " + farmId + "? " + isOwner + " (Owner ID: " + farmOpt.get().getUser().getId() + ")");
+            return isOwner;
         } catch (RuntimeException ex) {
             return false;
         }
