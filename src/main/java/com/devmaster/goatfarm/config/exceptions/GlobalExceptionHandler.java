@@ -9,6 +9,8 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,8 @@ import java.time.Instant;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ValidationError> businessRule(BusinessRuleException e, HttpServletRequest request) {
@@ -96,8 +100,37 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(err);
     }
 
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ValidationError> methodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException e, HttpServletRequest request) {
+        String error = "Método não permitido";
+        HttpStatus status = HttpStatus.METHOD_NOT_ALLOWED;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("method", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ValidationError> mediaTypeNotSupported(org.springframework.web.HttpMediaTypeNotSupportedException e, HttpServletRequest request) {
+        String error = "Tipo de mídia não suportado";
+        HttpStatus status = HttpStatus.UNSUPPORTED_MEDIA_TYPE;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("content_type", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ValidationError> noResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException e, HttpServletRequest request) {
+        String error = "Recurso não encontrado";
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("path", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ValidationError> handleAll(Exception e, HttpServletRequest request) {
+        logger.error("Erro interno do servidor: ", e); // LOG THE ERROR
+        e.printStackTrace(); // KEEP PRINT STACK TRACE FOR CONSOLE DEBUGGING
         String error = "Erro interno do servidor";
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());

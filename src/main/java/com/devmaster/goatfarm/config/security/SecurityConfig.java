@@ -46,9 +46,13 @@ public class SecurityConfig {
     private RSAPrivateKey rsaPrivateKey;
 
     private final UserDetailsService userDetailsService;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
-    public SecurityConfig(UserDetailsService userDetailsService) {
+    public SecurityConfig(UserDetailsService userDetailsService, CustomAuthenticationEntryPoint customAuthenticationEntryPoint, CustomAccessDeniedHandler customAccessDeniedHandler) {
         this.userDetailsService = userDetailsService;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
+        this.customAccessDeniedHandler = customAccessDeniedHandler;
     }
 
     @Bean
@@ -66,7 +70,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions().disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .cors(Customizer.withDefaults());
 
         return http.build();
     }
@@ -100,6 +105,10 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .csrf(csrf -> csrf.disable())
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(customAuthenticationEntryPoint)
+                .accessDeniedHandler(customAccessDeniedHandler)
+            )
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt
                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
             ))
