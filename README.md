@@ -107,26 +107,40 @@ O sistema valida a genealogia com base na classificação do animal:
 
 > **Nota:** Os genitores (pai/mãe) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminação externa.
 
+### 📅 Eventos e Rastreabilidade
+- ✅ Registro de nascimentos, coberturas e partos
+- ✅ Histórico de pesagens
+- ✅ Histórico completo por animal
+- ✅ Filtros avançados por tipo e período
+
+### 🩺 Gestão de Saúde (Health Module)
+- ✅ **Vacinas e Tratamentos:** Registro completo de eventos sanitários.
+- ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
+- ✅ **Status:** Controle de fluxo (SCHEDULED, DONE, CANCELED, LATE).
+- ✅ **Endpoints:**
+  - `POST /api/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
+  - `PUT /.../health-events/{eventId}` (Editar dados)
+  - `PATCH /.../health-events/{eventId}/done` (Marcar como realizado)
+  - `PATCH /.../health-events/{eventId}/cancel` (Cancelar evento)
+  - `GET /.../health-events/{eventId}` (Detalhes)
+  - `GET /.../health-events` (Listagem por animal com filtros de data/status)
+  - *Planejado:* Endpoint de calendário geral da fazenda (`listCalendar`).
+
 ### 🔐 Controle de Acesso
 - ✅ Autenticação JWT stateless
-- ✅ Autorização baseada em roles (ADMIN, OPERATOR)
+- ✅ Autorização baseada em roles (ADMIN, FARM_OWNER, OPERATOR)
 - ✅ Proteção de endpoints sensíveis
 - ✅ Integração OAuth2
 
 **Permissões por perfil (resumo):**
-- `ROLE_FARM_OWNER` (proprietário) pode criar/editar/excluir cabras da própria fazenda.
-- `ROLE_OPERATOR` pode criar/editar/excluir cabras da fazenda do proprietário.
-- `ROLE_ADMIN` tem acesso total.
+- `ROLE_ADMIN`: Acesso total ao sistema.
+- `ROLE_FARM_OWNER`: Acesso total aos recursos da **própria fazenda** (`farmId`).
+- `ROLE_OPERATOR`: Acesso operacional restrito às fazendas onde possui vínculo explícito.
+  - O vínculo é persistido na tabela `tb_farm_operator`.
+  - A validação é feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador só acesse fazendas permitidas.
 
 **Endpoint de permissões da fazenda:**
 - `GET /api/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
-
-### 📅 Eventos e Rastreabilidade
-- ✅ Registro de nascimentos, coberturas e partos
-- ✅ Controle de vacinações e tratamentos
-- ✅ Histórico de pesagens
-- ✅ Histórico completo por animal
-- ✅ Filtros avançados por tipo e período
 
 ---
 
@@ -331,11 +345,34 @@ erDiagram
     string check_result
   }
 
+  FARM_OPERATOR {
+    int id PK
+    int farm_id FK
+    int user_id FK
+    datetime created_at
+  }
+
+  HEALTH_EVENT {
+    int id PK
+    int farm_id FK
+    string goat_id FK
+    string event_type
+    date date
+    string status
+    string notes
+    string cost
+  }
+
   GOAT ||--o{ PREGNANCY : has
   GOAT ||--o{ REPRODUCTIVE_EVENT : has
   GOAT_FARM ||--o{ PREGNANCY : hosts
   GOAT_FARM ||--o{ REPRODUCTIVE_EVENT : hosts
   PREGNANCY ||--o{ REPRODUCTIVE_EVENT : lifecycle
+  
+  GOAT_FARM ||--o{ FARM_OPERATOR : has_operators
+  USER ||--o{ FARM_OPERATOR : is_operator_at
+  GOAT ||--o{ HEALTH_EVENT : has
+  GOAT_FARM ||--o{ HEALTH_EVENT : records
 ```
 
 ---
