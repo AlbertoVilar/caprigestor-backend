@@ -116,7 +116,7 @@ O sistema valida a genealogia com base na classificação do animal:
 ### 🩺 Gestão de Saúde (Health Module)
 - ✅ **Vacinas e Tratamentos:** Registro completo de eventos sanitários.
 - ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
-- ✅ **Status:** Controle de fluxo (SCHEDULED, DONE, CANCELED, LATE).
+- ✅ **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
 - ✅ **Endpoints:**
   - `POST /api/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
   - `PUT /.../health-events/{eventId}` (Editar dados)
