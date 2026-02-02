@@ -396,6 +396,54 @@ public class SecurityOwnershipIntegrationTest {
     }
 
     @Test
+    void farmCalendarEndpoint_shouldReturn200WhenNoDateFilters() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldHandleFromOnlyFilter() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+        LocalDate from = LocalDate.now().minusDays(1);
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("from", from.toString())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldHandleToOnlyFilter() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+        LocalDate to = LocalDate.now().plusDays(1);
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("to", to.toString())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldHandleFromAndToFilter() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now().plusDays(1);
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("from", from.toString())
+                .param("to", to.toString())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
     void farmAlertsEndpoint_shouldRespectOwnership() throws Exception {
         String alertsPath = "/api/goatfarms/" + ownerFarm.getId() + "/health-events/alerts";
 
