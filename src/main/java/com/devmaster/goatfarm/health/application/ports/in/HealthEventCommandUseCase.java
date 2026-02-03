@@ -7,4 +7,5 @@ public interface HealthEventCommandUseCase {
     HealthEventResponseVO update(Long farmId, String goatId, Long eventId, HealthEventUpdateRequestVO request);
     HealthEventResponseVO markAsDone(Long farmId, String goatId, Long eventId, HealthEventDoneRequestVO request);
     HealthEventResponseVO cancel(Long farmId, String goatId, Long eventId, HealthEventCancelRequestVO request);
+    HealthEventResponseVO reopen(Long farmId, String goatId, Long eventId);
 }

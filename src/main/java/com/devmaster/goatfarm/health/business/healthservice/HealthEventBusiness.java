@@ -118,6 +118,26 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     }
 
     @Override
+    @Transactional
+    public HealthEventResponseVO reopen(Long farmId, String goatId, Long eventId) {
+        var healthEvent = findEventOrThrow(farmId, goatId, eventId);
+        HealthEventStatus currentStatus = healthEvent.getStatus();
+
+        if (currentStatus == HealthEventStatus.AGENDADO) {
+            throw new BusinessRuleException("O evento já está agendado.");
+        }
+        if (currentStatus != HealthEventStatus.REALIZADO && currentStatus != HealthEventStatus.CANCELADO) {
+            throw new BusinessRuleException("Não é possível reabrir um evento neste status.");
+        }
+
+        healthEvent.setStatus(HealthEventStatus.AGENDADO);
+        healthEvent.setPerformedAt(null);
+
+        var saved = persistencePort.save(healthEvent);
+        return mapper.toResponseVO(saved);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public HealthEventResponseVO getById(Long farmId, String goatId, Long eventId) {
         var healthEvent = findEventOrThrow(farmId, goatId, eventId);
