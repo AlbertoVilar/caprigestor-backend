@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.health.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
+import com.devmaster.goatfarm.validation.PastOrPresentBrazil;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 public record HealthEventDoneRequestDTO(
     @NotNull(message = "A data de realização é obrigatória")
-    @PastOrPresent(message = "A data de realização não pode ser futura")
+    @PastOrPresentBrazil
     LocalDateTime performedAt,
 
     @NotBlank(message = "O responsável é obrigatório")
