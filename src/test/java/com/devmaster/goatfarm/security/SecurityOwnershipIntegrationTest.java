@@ -17,8 +17,10 @@ import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
+import com.devmaster.goatfarm.authority.persistence.entity.FarmOperator;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.repository.FarmOperatorRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import com.devmaster.goatfarm.phone.persistence.entity.Phone;
@@ -41,6 +43,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Set;
 
@@ -87,6 +90,9 @@ public class SecurityOwnershipIntegrationTest {
     private HealthEventRepository healthEventRepository;
 
     @Autowired
+    private FarmOperatorRepository farmOperatorRepository;
+
+    @Autowired
     private MilkProductionRepository milkProductionRepository;
 
     @Autowired
@@ -95,6 +101,7 @@ public class SecurityOwnershipIntegrationTest {
     private User adminUser;
     private User ownerUser;
     private User otherUser;
+    private User operatorUser;
     private GoatFarm ownerFarm;
     private Goat ownerGoat;
     private Goat anotherGoat;
@@ -108,6 +115,7 @@ public class SecurityOwnershipIntegrationTest {
         lactationRepository.deleteAll();
         eventRepository.deleteAll();
         healthEventRepository.deleteAll();
+        farmOperatorRepository.deleteAll();
         goatRepository.deleteAll();
         phoneRepository.deleteAll();
         goatFarmRepository.deleteAll();
@@ -143,6 +151,14 @@ public class SecurityOwnershipIntegrationTest {
         otherUser.addRole(roleOwner);
         userRepository.save(otherUser);
 
+        operatorUser = new User();
+        operatorUser.setName("Operator");
+        operatorUser.setEmail("operator@example.com");
+        operatorUser.setCpf("00000000003");
+        operatorUser.setPassword(passwordEncoder.encode("password"));
+        operatorUser.addRole(roleOperator);
+        userRepository.save(operatorUser);
+
         ownerFarm = new GoatFarm();
         ownerFarm.setName("Owner Farm");
         ownerFarm.setUser(ownerUser);
@@ -158,6 +174,11 @@ public class SecurityOwnershipIntegrationTest {
         ownerAddress = addressRepository.save(ownerAddress);
         ownerFarm.setAddress(ownerAddress);
         ownerFarm = goatFarmRepository.save(ownerFarm);
+
+        FarmOperator farmOperator = new FarmOperator();
+        farmOperator.setFarm(ownerFarm);
+        farmOperator.setUser(operatorUser);
+        farmOperatorRepository.save(farmOperator);
 
         ownerPhone = new Phone();
         ownerPhone.setDdd("11");
@@ -268,15 +289,19 @@ public class SecurityOwnershipIntegrationTest {
         return java.util.List.of(existing, newPhone);
     }
 
-    private void createHealthEvent(LocalDate scheduledDate, String title) {
+    private HealthEvent createHealthEvent(LocalDate scheduledDate, String title) {
+        return createHealthEvent(scheduledDate, title, HealthEventStatus.AGENDADO);
+    }
+
+    private HealthEvent createHealthEvent(LocalDate scheduledDate, String title, HealthEventStatus status) {
         HealthEvent event = new HealthEvent();
         event.setFarmId(ownerFarm.getId());
         event.setGoatId(ownerGoat.getRegistrationNumber());
         event.setType(HealthEventType.VACINA);
-        event.setStatus(HealthEventStatus.AGENDADO);
+        event.setStatus(status);
         event.setTitle(title);
         event.setScheduledDate(scheduledDate);
-        healthEventRepository.save(event);
+        return healthEventRepository.save(event);
     }
 
     @Test
@@ -393,6 +418,156 @@ public class SecurityOwnershipIntegrationTest {
         mockMvc.perform(get(calendarPath)
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldReturn200WhenNoDateFilters() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldHandleFromOnlyFilter() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+        LocalDate from = LocalDate.now().minusDays(1);
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("from", from.toString())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldHandleToOnlyFilter() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+        LocalDate to = LocalDate.now().plusDays(1);
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("to", to.toString())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldHandleFromAndToFilter() throws Exception {
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+        LocalDate from = LocalDate.now().minusDays(1);
+        LocalDate to = LocalDate.now().plusDays(1);
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("from", from.toString())
+                .param("to", to.toString())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void reopenEndpoint_ownerCanReopenRealizado() throws Exception {
+        HealthEvent event = createHealthEvent(LocalDate.now().minusDays(3), "Evento Realizado", HealthEventStatus.REALIZADO);
+        event.setPerformedAt(LocalDateTime.now().minusDays(2));
+        healthEventRepository.save(event);
+
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+                        + "/goats/" + ownerGoat.getRegistrationNumber()
+                        + "/health-events/" + event.getId() + "/reopen")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk());
+
+        HealthEvent reopened = healthEventRepository.findById(event.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(HealthEventStatus.AGENDADO, reopened.getStatus());
+        org.junit.jupiter.api.Assertions.assertNull(reopened.getPerformedAt());
+    }
+
+    @Test
+    void reopenEndpoint_adminCanReopenCancelled() throws Exception {
+        HealthEvent event = createHealthEvent(LocalDate.now().minusDays(4), "Evento Cancelado", HealthEventStatus.CANCELADO);
+
+        String adminToken = loginAndGetToken("admin@example.com", "password");
+
+        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+                        + "/goats/" + ownerGoat.getRegistrationNumber()
+                        + "/health-events/" + event.getId() + "/reopen")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        HealthEvent reopened = healthEventRepository.findById(event.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(HealthEventStatus.AGENDADO, reopened.getStatus());
+        org.junit.jupiter.api.Assertions.assertNull(reopened.getPerformedAt());
+    }
+
+    @Test
+    void reopenEndpoint_shouldReturn422WhenAlreadyScheduled() throws Exception {
+        HealthEvent event = createHealthEvent(LocalDate.now(), "Evento Agendado", HealthEventStatus.AGENDADO);
+
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+                        + "/goats/" + ownerGoat.getRegistrationNumber()
+                        + "/health-events/" + event.getId() + "/reopen")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].message").value("O evento já está agendado."));
+
+        HealthEvent unchanged = healthEventRepository.findById(event.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(HealthEventStatus.AGENDADO, unchanged.getStatus());
+    }
+
+    @Test
+    void reopenEndpoint_operatorIsForbidden() throws Exception {
+        HealthEvent event = createHealthEvent(LocalDate.now(), "Evento Cancelado", HealthEventStatus.CANCELADO);
+
+        String operatorToken = loginAndGetToken("operator@example.com", "password");
+
+        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+                        + "/goats/" + ownerGoat.getRegistrationNumber()
+                        + "/health-events/" + event.getId() + "/reopen")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+                .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldExcludeCancelledByDefault() throws Exception {
+        createHealthEvent(LocalDate.now(), "Agendado Padrão", HealthEventStatus.AGENDADO);
+        createHealthEvent(LocalDate.now(), "Cancelado Padrão", HealthEventStatus.CANCELADO);
+
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("AGENDADO"));
+    }
+
+    @Test
+    void farmCalendarEndpoint_shouldReturnCancelledWhenFiltered() throws Exception {
+        createHealthEvent(LocalDate.now(), "Cancelado Filtro", HealthEventStatus.CANCELADO);
+
+        String ownerToken = loginAndGetToken("owner@example.com", "password");
+
+        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+                .param("status", HealthEventStatus.CANCELADO.name())
+                .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("CANCELADO"));
     }
 
     @Test

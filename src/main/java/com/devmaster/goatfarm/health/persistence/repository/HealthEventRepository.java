@@ -42,10 +42,11 @@ public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> 
         select e
         from HealthEvent e
         where e.farmId = :farmId
-          and (:from is null or e.scheduledDate >= :from)
-          and (:to is null or e.scheduledDate <= :to)
+          and e.scheduledDate >= coalesce(:from, e.scheduledDate)
+          and e.scheduledDate <= coalesce(:to, e.scheduledDate)
           and (:type is null or e.type = :type)
           and (:status is null or e.status = :status)
+          and (:status is not null or e.status <> com.devmaster.goatfarm.health.domain.enums.HealthEventStatus.CANCELADO)
         """)
     Page<HealthEvent> searchCalendar(
             @Param("farmId") Long farmId,

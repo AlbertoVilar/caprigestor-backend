@@ -1,11 +1,13 @@
 package com.devmaster.goatfarm.health.api.controller;
 
+import com.devmaster.goatfarm.health.api.dto.HealthEventCancelRequestDTO;
 import com.devmaster.goatfarm.health.api.dto.HealthEventCreateRequestDTO;
 import com.devmaster.goatfarm.health.api.dto.HealthEventDoneRequestDTO;
-import com.devmaster.goatfarm.health.api.dto.HealthEventCancelRequestDTO;
+import com.devmaster.goatfarm.health.api.dto.HealthEventResponseDTO;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,9 @@ import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -132,5 +137,18 @@ class HealthEventControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[?(@.fieldName=='notes')].message").value("O motivo do cancelamento é obrigatório"));
+    }
+
+    @Test
+    void reopen_shouldReturn200_whenEventCanBeReopened() throws Exception {
+        when(commandUseCase.reopen(1L, "GOAT-001", 100L)).thenReturn(HealthEventResponseVO.builder().build());
+        when(apiMapper.toDTO(any(HealthEventResponseVO.class))).thenReturn(HealthEventResponseDTO.builder().build());
+
+        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/reopen", 1L, "GOAT-001", 100L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        verify(commandUseCase).reopen(1L, "GOAT-001", 100L);
     }
 }

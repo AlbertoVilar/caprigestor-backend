@@ -111,6 +111,24 @@ public class HealthEventController {
         return ResponseEntity.ok(apiMapper.toDTO(canceled));
     }
 
+    @Operation(summary = "Reabrir evento", description = "Retorna um evento realizado ou cancelado para o status agendado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Evento reaberto com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Regras de negócio violadas")
+    })
+    @PatchMapping(value = "/{eventId}/reopen")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId) and (hasRole('ADMIN') or hasRole('FARM_OWNER'))")
+    public ResponseEntity<HealthEventResponseDTO> reopen(
+            @PathVariable Long farmId,
+            @PathVariable String goatId,
+            @PathVariable Long eventId
+    ) {
+        HealthEventResponseVO reopened = commandUseCase.reopen(farmId, goatId, eventId);
+        return ResponseEntity.ok(apiMapper.toDTO(reopened));
+    }
+
     @Operation(summary = "Detalhar evento de saúde", description = "Retorna os dados do evento solicitado da cabra informada.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Evento encontrado"),

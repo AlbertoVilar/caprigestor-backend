@@ -23,7 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -180,5 +184,55 @@ class HealthEventBusinessTest {
 
         assertNotNull(response);
         verify(persistencePort).save(healthEvent);
+    }
+
+    @Test
+    @DisplayName("Should reopen health event marked as performed")
+    void reopen_success_fromRealizado() {
+        healthEvent.setStatus(HealthEventStatus.REALIZADO);
+        healthEvent.setPerformedAt(LocalDateTime.now().minusDays(1));
+
+        when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
+        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
+
+        HealthEventResponseVO response = healthEventBusiness.reopen(farmId, goatId, eventId);
+
+        assertNotNull(response);
+        assertEquals(HealthEventStatus.AGENDADO, healthEvent.getStatus());
+        assertNull(healthEvent.getPerformedAt());
+        verify(persistencePort).save(healthEvent);
+    }
+
+    @Test
+    @DisplayName("Should reopen health event marked as cancelled")
+    void reopen_success_fromCancelled() {
+        healthEvent.setStatus(HealthEventStatus.CANCELADO);
+        healthEvent.setPerformedAt(LocalDateTime.now().minusDays(2));
+
+        when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
+        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
+
+        HealthEventResponseVO response = healthEventBusiness.reopen(farmId, goatId, eventId);
+
+        assertNotNull(response);
+        assertEquals(HealthEventStatus.AGENDADO, healthEvent.getStatus());
+        assertNull(healthEvent.getPerformedAt());
+        verify(persistencePort).save(healthEvent);
+    }
+
+    @Test
+    @DisplayName("Should fail to reopen health event already scheduled")
+    void reopen_fail_alreadyScheduled() {
+        healthEvent.setStatus(HealthEventStatus.AGENDADO);
+
+        when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
+
+        assertThrows(BusinessRuleException.class, () ->
+            healthEventBusiness.reopen(farmId, goatId, eventId)
+        );
+
+        verify(persistencePort, never()).save(any());
     }
 }
