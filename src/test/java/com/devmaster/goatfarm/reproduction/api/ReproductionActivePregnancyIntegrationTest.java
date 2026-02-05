@@ -152,7 +152,7 @@ class ReproductionActivePregnancyIntegrationTest {
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .eventType(ReproductiveEventType.COVERAGE)
-                .eventDate(LocalDate.now().minusDays(30))
+                .eventDate(LocalDate.now().minusDays(60))
                 .breedingType(BreedingType.NATURAL)
                 .build();
         reproductiveEventRepository.save(coverage);
