@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEve
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
@@ -46,6 +47,8 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     private static final int GESTATION_DAYS = 150;
+    private static final int MIN_CONFIRMATION_DAYS = 45;
+    private static final String CONFIRMATION_MIN_DAYS_MESSAGE = "O exame de gestação só pode ser realizado %d dias após a cobertura";
 
     @Override
     @Transactional
@@ -103,7 +106,12 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             throw new InvalidArgumentException("checkDate", "Não foi encontrada cobertura anterior à data do exame de gestação");
         }
 
+        LocalDate breedingDate = latestCoverage.get().getEventDate();
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
+            if (vo.getCheckDate().isBefore(breedingDate.plusDays(MIN_CONFIRMATION_DAYS))) {
+                throw new BusinessRuleException("checkDate",
+                        String.format(CONFIRMATION_MIN_DAYS_MESSAGE, MIN_CONFIRMATION_DAYS));
+            }
             Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
             if (activePregnancy.isPresent()) {
                 throw new InvalidArgumentException("checkResult", "Já existe uma gestação ativa para esta cabra nesta fazenda");
@@ -124,8 +132,8 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
 
         reproductiveEventPersistencePort.save(checkEvent);
-
-        LocalDate breedingDate = latestCoverage.get().getEventDate();
+        
+        // breedingDate already defined above
         LocalDate expectedDueDate = breedingDate.plusDays(GESTATION_DAYS); // Domain rule: gestation = 150 days
 
         Pregnancy pregnancy = Pregnancy.builder()
