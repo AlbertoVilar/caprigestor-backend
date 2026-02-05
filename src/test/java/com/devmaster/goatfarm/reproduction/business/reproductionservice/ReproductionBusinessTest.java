@@ -571,7 +571,7 @@ class ReproductionBusinessTest {
 
     private BreedingRequestVO validBreedingRequestVO() {
         return BreedingRequestVO.builder()
-                .eventDate(LocalDate.of(2026, 1, 1))
+                .eventDate(LocalDate.now().minusDays(60))
                 .breedingType(BreedingType.NATURAL)
                 .breederRef("MALE_01")
                 .notes("Natural breeding request")
@@ -580,7 +580,7 @@ class ReproductionBusinessTest {
 
     private PregnancyConfirmRequestVO validConfirmRequestVOPositive() {
         return PregnancyConfirmRequestVO.builder()
-                .checkDate(LocalDate.of(2026, 1, 10))
+                .checkDate(LocalDate.now())
                 .checkResult(PregnancyCheckResult.POSITIVE)
                 .notes("Pregnancy confirmed positive")
                 .build();
@@ -588,7 +588,7 @@ class ReproductionBusinessTest {
 
     private PregnancyConfirmRequestVO validConfirmRequestVONegative() {
         return PregnancyConfirmRequestVO.builder()
-                .checkDate(LocalDate.of(2026, 1, 10))
+                .checkDate(LocalDate.now())
                 .checkResult(PregnancyCheckResult.NEGATIVE)
                 .notes("Pregnancy confirmed negative")
                 .build();
@@ -596,7 +596,7 @@ class ReproductionBusinessTest {
 
     private PregnancyCloseRequestVO validCloseRequestVO() {
         return PregnancyCloseRequestVO.builder()
-                .closeDate(LocalDate.of(2026, 1, 12))
+                .closeDate(LocalDate.now().plusDays(5))
                 .status(PregnancyStatus.CLOSED)
                 .closeReason(PregnancyCloseReason.BIRTH)
                 .notes("Pregnancy closed successfully")
@@ -609,9 +609,9 @@ class ReproductionBusinessTest {
                 .farmId(FARM_ID)
                 .goatId(GOAT_ID)
                 .status(PregnancyStatus.ACTIVE)
-                .breedingDate(LocalDate.of(2026, 1, 1))
-                .confirmDate(LocalDate.of(2026, 1, 10))
-                .expectedDueDate(LocalDate.of(2026, 5, 31))
+                .breedingDate(LocalDate.now().minusDays(60))
+                .confirmDate(LocalDate.now())
+                .expectedDueDate(LocalDate.now().minusDays(60).plusDays(150))
                 .closedAt(null)
                 .closeReason(null)
                 .notes("Active pregnancy fixture")
@@ -624,10 +624,10 @@ class ReproductionBusinessTest {
                 .farmId(FARM_ID)
                 .goatId(GOAT_ID)
                 .status(PregnancyStatus.CLOSED)
-                .breedingDate(LocalDate.of(2026, 1, 1))
-                .confirmDate(LocalDate.of(2026, 1, 10))
-                .expectedDueDate(LocalDate.of(2026, 5, 31))
-                .closedAt(LocalDate.of(2026, 1, 12))
+                .breedingDate(LocalDate.now().minusDays(60))
+                .confirmDate(LocalDate.now())
+                .expectedDueDate(LocalDate.now().minusDays(60).plusDays(150))
+                .closedAt(LocalDate.now().plusDays(5))
                 .closeReason(PregnancyCloseReason.BIRTH)
                 .notes("Closed pregnancy fixture")
                 .build();
@@ -639,7 +639,7 @@ class ReproductionBusinessTest {
                 .farmId(FARM_ID)
                 .goatId(GOAT_ID)
                 .eventType(ReproductiveEventType.COVERAGE)
-                .eventDate(LocalDate.of(2026, 1, 1))
+                .eventDate(LocalDate.now().minusDays(60))
                 .breedingType(BreedingType.NATURAL)
                 .breederRef("MALE_01")
                 .notes("Coverage fixture")
@@ -652,7 +652,7 @@ class ReproductionBusinessTest {
                 .farmId(FARM_ID)
                 .goatId(GOAT_ID)
                 .eventType(ReproductiveEventType.PREGNANCY_CHECK)
-                .eventDate(LocalDate.of(2026, 1, 10))
+                .eventDate(LocalDate.now())
                 .checkResult(PregnancyCheckResult.POSITIVE)
                 .notes("Check fixture")
                 .build();
@@ -665,7 +665,7 @@ class ReproductionBusinessTest {
                 .goatId(GOAT_ID)
                 .pregnancyId(pregnancyId)
                 .eventType(ReproductiveEventType.PREGNANCY_CLOSE)
-                .eventDate(LocalDate.of(2026, 1, 12))
+                .eventDate(LocalDate.now().plusDays(5))
                 .notes("Close fixture")
                 .build();
     }
