@@ -17,6 +17,8 @@ public interface ReproductiveEventRepository extends JpaRepository<ReproductiveE
 
     Page<ReproductiveEvent> findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
 
+    Optional<ReproductiveEvent> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+
     Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
             Long farmId,
             String goatId,

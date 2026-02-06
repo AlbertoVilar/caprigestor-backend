@@ -46,6 +46,18 @@ public class ReproductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toReproductiveEventResponseDTO(responseVO));
     }
 
+    @PostMapping("/breeding/{coverageEventId}/corrections")
+    @Operation(summary = "Registrar correção de cobertura")
+    public ResponseEntity<ReproductiveEventResponseDTO> correctCoverage(
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador do evento de cobertura") @PathVariable Long coverageEventId,
+            @Valid @RequestBody CoverageCorrectionRequestDTO request) {
+        CoverageCorrectionRequestVO vo = mapper.toCoverageCorrectionRequestVO(request);
+        ReproductiveEventResponseVO responseVO = commandUseCase.correctCoverage(farmId, goatId, coverageEventId, vo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toReproductiveEventResponseDTO(responseVO));
+    }
+
     @PatchMapping("/pregnancies/confirm")
     @Operation(summary = "Confirmar gestação e ativar")
     public ResponseEntity<PregnancyResponseDTO> confirmPregnancy(

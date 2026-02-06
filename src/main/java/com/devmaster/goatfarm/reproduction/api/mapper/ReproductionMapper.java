@@ -14,6 +14,7 @@ public interface ReproductionMapper {
     BreedingRequestVO toBreedingRequestVO(BreedingRequestDTO dto);
     PregnancyConfirmRequestVO toPregnancyConfirmRequestVO(PregnancyConfirmRequestDTO dto);
     PregnancyCloseRequestVO toPregnancyCloseRequestVO(PregnancyCloseRequestDTO dto);
+    CoverageCorrectionRequestVO toCoverageCorrectionRequestVO(CoverageCorrectionRequestDTO dto);
 
     // Entity -> VO (Responses)
     PregnancyResponseVO toPregnancyResponseVO(Pregnancy entity);
