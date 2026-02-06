@@ -24,7 +24,9 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 | Método | Rota | Descrição | Payload (Request) | Response |
 |---|---|---|---|---|
 | POST | `/breeding` | Registra uma cobertura | `BreedingRequestDTO` | `ReproductiveEventResponseDTO` |
+| POST | `/breeding/{coverageEventId}/corrections` | Corrige data de cobertura | `CoverageCorrectionRequestDTO` | `ReproductiveEventResponseDTO` |
 | PATCH | `/pregnancies/confirm` | Confirma prenhez | `PregnancyConfirmRequestDTO` | `PregnancyResponseDTO` |
+| GET | `/pregnancies/diagnosis-recommendation` | Recomendação de diagnóstico | - | `DiagnosisRecommendationResponseDTO` |
 | GET | /pregnancies/active | Busca gestação ativa | - | `PregnancyResponseDTO` |
 | GET | /pregnancies/{pregnancyId} | Busca gestação por ID | - | `PregnancyResponseDTO` |
 | PATCH | /pregnancies/{pregnancyId}/close | Encerra gestação | `PregnancyCloseRequestDTO` | `PregnancyResponseDTO` |
@@ -76,6 +78,31 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 }
 ```
 
+### CoverageCorrectionRequestDTO
+```json
+{
+  "correctedDate": "2026-01-05",
+  "notes": "Cobertura registrada com data incorreta"
+}
+```
+
+### DiagnosisRecommendationResponseDTO
+```json
+{
+  "status": "ELIGIBLE_PENDING",
+  "eligibleDate": "2026-03-01",
+  "lastCoverage": {
+    "id": 10,
+    "eventDate": "2026-01-01",
+    "effectiveDate": "2026-01-01",
+    "breedingType": "NATURAL",
+    "breederRef": "Bode Alpha"
+  },
+  "lastCheck": null,
+  "warnings": []
+}
+```
+
 ### Response Objects
 **PregnancyResponseDTO**
 - `confirmedAt` renamed to `confirmDate`.
@@ -86,6 +113,7 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 **ReproductiveEventResponseDTO**
 - `checkDate` removed.
 - `pregnancyId` added.
+- `relatedEventId` and `correctedEventDate` added for corrections.
 
 ## GET /pregnancies/{pregnancyId}
 
@@ -158,5 +186,6 @@ Se a migration de verificação `V15_9__Assert_no_duplicate_active_pregnancy` en
 
 ## Recomendações de Manejo
 
-- O exame de gestação (ultrassom ou outro método) é geralmente recomendado por volta de **45 dias após a cobertura**.
+- O diagnóstico de prenhez só pode ser registrado a partir de **60 dias após a última cobertura efetiva**.
+- A recomendação de diagnóstico pode ser consultada no endpoint `/pregnancies/diagnosis-recommendation`.
 - Essa janela de 45 dias é uma **recomendação de manejo**, não uma regra rígida da API: qualquer `checkDate` não futura e com cobertura anterior válida é aceita pelo sistema.
