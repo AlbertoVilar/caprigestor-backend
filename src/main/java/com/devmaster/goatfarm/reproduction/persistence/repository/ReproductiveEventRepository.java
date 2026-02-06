@@ -13,9 +13,9 @@ import java.util.Optional;
 @Repository
 public interface ReproductiveEventRepository extends JpaRepository<ReproductiveEvent, Long> {
 
-    Page<ReproductiveEvent> findAllByFarmIdAndGoatIdOrderByEventDateDesc(Long farmId, String goatId, Pageable pageable);
+    Page<ReproductiveEvent> findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDesc(
+    Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
             Long farmId,
             String goatId,
             ReproductiveEventType eventType,

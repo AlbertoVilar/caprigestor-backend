@@ -50,6 +50,9 @@ public class Pregnancy {
     @Column(name = "notes", length = 1000)
     private String notes;
 
+    @Column(name = "coverage_event_id")
+    private Long coverageEventId;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

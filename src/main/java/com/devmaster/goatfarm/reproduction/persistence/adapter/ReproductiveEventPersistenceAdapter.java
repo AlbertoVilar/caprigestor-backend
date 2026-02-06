@@ -27,12 +27,12 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
 
     @Override
     public Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
-        return repository.findAllByFarmIdAndGoatIdOrderByEventDateDesc(farmId, goatId, pageable);
+        return repository.findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(farmId, goatId, pageable);
     }
 
     @Override
     public Optional<ReproductiveEvent> findLatestCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
-        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDesc(
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
                 farmId,
                 goatId,
                 ReproductiveEventType.COVERAGE,

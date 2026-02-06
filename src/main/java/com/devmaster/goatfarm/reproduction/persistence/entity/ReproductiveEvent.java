@@ -48,6 +48,12 @@ public class ReproductiveEvent {
     @Column(name = "pregnancy_id")
     private Long pregnancyId;
 
+    @Column(name = "related_event_id")
+    private Long relatedEventId;
+
+    @Column(name = "corrected_event_date")
+    private LocalDate correctedEventDate;
+
     @Column(name = "check_scheduled_date")
     private LocalDate checkScheduledDate;
 
