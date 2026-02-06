@@ -29,6 +29,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -55,6 +56,9 @@ class ReproductionBusinessTest {
 
     @Mock
     private ReproductionMapper reproductionMapper;
+
+    @Mock
+    private Clock clock;
 
     @InjectMocks
     private ReproductionBusiness reproductionBusiness;

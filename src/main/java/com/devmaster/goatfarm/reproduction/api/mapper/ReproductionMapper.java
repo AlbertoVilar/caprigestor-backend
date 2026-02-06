@@ -22,6 +22,10 @@ public interface ReproductionMapper {
     // VO -> DTO (Responses)
     PregnancyResponseDTO toPregnancyResponseDTO(PregnancyResponseVO vo);
     ReproductiveEventResponseDTO toReproductiveEventResponseDTO(ReproductiveEventResponseVO vo);
+
+    DiagnosisRecommendationResponseDTO toDiagnosisRecommendationResponseDTO(DiagnosisRecommendationResponseVO vo);
+    DiagnosisRecommendationCoverageDTO toDiagnosisRecommendationCoverageDTO(DiagnosisRecommendationCoverageVO vo);
+    DiagnosisRecommendationCheckDTO toDiagnosisRecommendationCheckDTO(DiagnosisRecommendationCheckVO vo);
     
     // VO -> Entity (Optional, usually handled in Business manually or via Mapper)
     // For skeleton, strictly following "RequestDTO→RequestVO, Entity→ResponseVO, ResponseVO→ResponseDTO" as per prompt.

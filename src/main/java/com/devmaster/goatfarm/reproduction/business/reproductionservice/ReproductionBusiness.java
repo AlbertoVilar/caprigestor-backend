@@ -10,10 +10,14 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCheckVO;
+import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCoverageVO;
+import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
+import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
@@ -25,7 +29,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -35,20 +42,25 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
     private final ReproductionMapper reproductionMapper;
+    private final Clock clock;
 
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
                                 GoatGenderValidator goatGenderValidator,
-                                ReproductionMapper reproductionMapper) {
+                                ReproductionMapper reproductionMapper,
+                                Clock clock) {
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
         this.goatGenderValidator = goatGenderValidator;
         this.reproductionMapper = reproductionMapper;
+        this.clock = clock;
     }
 
     private static final int GESTATION_DAYS = 150;
-    private static final int MIN_CONFIRMATION_DAYS = 45;
-    private static final String CONFIRMATION_MIN_DAYS_MESSAGE = "O exame de gestação só pode ser realizado %d dias após a cobertura";
+    private static final int MIN_CONFIRMATION_DAYS = 60;
+    private static final String CONFIRMATION_MIN_DAYS_MESSAGE =
+            "Diagnóstico de prenhez só pode ser registrado a partir de 60 dias após a última cobertura.";
+    private static final String WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK = "GESTACAO_ATIVA_SEM_CHECK_VALIDO";
 
     @Override
     @Transactional
@@ -109,8 +121,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         LocalDate breedingDate = latestCoverage.get().getEventDate();
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             if (vo.getCheckDate().isBefore(breedingDate.plusDays(MIN_CONFIRMATION_DAYS))) {
-                throw new BusinessRuleException("checkDate",
-                        String.format(CONFIRMATION_MIN_DAYS_MESSAGE, MIN_CONFIRMATION_DAYS));
+                throw new BusinessRuleException("checkDate", CONFIRMATION_MIN_DAYS_MESSAGE);
             }
             Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
             if (activePregnancy.isPresent()) {
@@ -223,5 +234,117 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         goatGenderValidator.requireFemale(farmId, goatId);
         return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
                 .map(reproductionMapper::toReproductiveEventResponseVO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DiagnosisRecommendationResponseVO getDiagnosisRecommendation(Long farmId, String goatId, LocalDate referenceDate) {
+        goatGenderValidator.requireFemale(farmId, goatId);
+        LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now(clock);
+
+        Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
+                .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, reference);
+        Optional<ReproductiveEvent> latestCheck = reproductiveEventPersistencePort
+                .findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(farmId, goatId, reference);
+
+        DiagnosisRecommendationStatus status = DiagnosisRecommendationStatus.NOT_ELIGIBLE;
+        LocalDate eligibleDate = null;
+        DiagnosisRecommendationCoverageVO lastCoverage = null;
+
+        if (latestCoverage.isPresent()) {
+            ReproductiveEvent coverage = latestCoverage.get();
+            LocalDate effectiveCoverageDate = resolveEffectiveCoverageDate(farmId, goatId, coverage);
+            eligibleDate = effectiveCoverageDate.plusDays(MIN_CONFIRMATION_DAYS);
+            lastCoverage = toCoverageVO(coverage, effectiveCoverageDate);
+
+            if (!reference.isBefore(eligibleDate)) {
+                boolean hasValidCheck = isValidCheck(latestCheck.orElse(null), effectiveCoverageDate, eligibleDate);
+                status = hasValidCheck ? DiagnosisRecommendationStatus.RESOLVED : DiagnosisRecommendationStatus.ELIGIBLE_PENDING;
+            }
+        }
+
+        DiagnosisRecommendationCheckVO lastCheck = latestCheck
+                .map(this::toCheckVO)
+                .orElse(null);
+
+        List<String> warnings = new ArrayList<>();
+        Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        if (activePregnancy.isPresent()) {
+            LocalDate effectiveCoverageDate = lastCoverage != null ? lastCoverage.getEffectiveDate() : null;
+            boolean hasValidPositiveCheck = isValidPositiveCheck(latestCheck.orElse(null), effectiveCoverageDate, eligibleDate);
+            if (!hasValidPositiveCheck) {
+                warnings.add(WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK);
+                status = DiagnosisRecommendationStatus.ELIGIBLE_PENDING;
+            }
+        }
+
+        return DiagnosisRecommendationResponseVO.builder()
+                .status(status)
+                .eligibleDate(eligibleDate)
+                .lastCoverage(lastCoverage)
+                .lastCheck(lastCheck)
+                .warnings(warnings)
+                .build();
+    }
+
+    private DiagnosisRecommendationCoverageVO toCoverageVO(ReproductiveEvent coverage, LocalDate effectiveCoverageDate) {
+        return DiagnosisRecommendationCoverageVO.builder()
+                .id(coverage.getId())
+                .eventDate(coverage.getEventDate())
+                .effectiveDate(effectiveCoverageDate)
+                .breedingType(coverage.getBreedingType())
+                .breederRef(coverage.getBreederRef())
+                .notes(coverage.getNotes())
+                .build();
+    }
+
+    private DiagnosisRecommendationCheckVO toCheckVO(ReproductiveEvent checkEvent) {
+        return DiagnosisRecommendationCheckVO.builder()
+                .id(checkEvent.getId())
+                .checkDate(checkEvent.getEventDate())
+                .checkResult(checkEvent.getCheckResult())
+                .notes(checkEvent.getNotes())
+                .build();
+    }
+
+    private LocalDate resolveEffectiveCoverageDate(Long farmId, String goatId, ReproductiveEvent coverage) {
+        Optional<ReproductiveEvent> correction = reproductiveEventPersistencePort
+                .findCoverageCorrectionByRelatedEventId(farmId, goatId, coverage.getId());
+        if (correction.isPresent() && correction.get().getCorrectedEventDate() != null) {
+            return correction.get().getCorrectedEventDate();
+        }
+        return coverage.getEventDate();
+    }
+
+    private boolean isValidCheck(ReproductiveEvent checkEvent, LocalDate effectiveCoverageDate, LocalDate eligibleDate) {
+        if (checkEvent == null || checkEvent.getEventDate() == null) {
+            return false;
+        }
+        if (checkEvent.getCheckResult() == null || checkEvent.getCheckResult() == PregnancyCheckResult.PENDING) {
+            return false;
+        }
+        if (effectiveCoverageDate != null && checkEvent.getEventDate().isBefore(effectiveCoverageDate)) {
+            return false;
+        }
+        if (eligibleDate != null && checkEvent.getEventDate().isBefore(eligibleDate)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isValidPositiveCheck(ReproductiveEvent checkEvent, LocalDate effectiveCoverageDate, LocalDate eligibleDate) {
+        if (checkEvent == null || checkEvent.getEventDate() == null) {
+            return false;
+        }
+        if (checkEvent.getCheckResult() != PregnancyCheckResult.POSITIVE) {
+            return false;
+        }
+        if (effectiveCoverageDate != null && checkEvent.getEventDate().isBefore(effectiveCoverageDate)) {
+            return false;
+        }
+        if (eligibleDate != null && checkEvent.getEventDate().isBefore(eligibleDate)) {
+            return false;
+        }
+        return true;
     }
 }

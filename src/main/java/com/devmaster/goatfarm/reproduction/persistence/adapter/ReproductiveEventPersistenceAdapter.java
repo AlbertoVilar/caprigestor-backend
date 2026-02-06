@@ -39,4 +39,29 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 date
         );
     }
+
+    @Override
+    public Optional<ReproductiveEvent> findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
+        return repository.findLatestEffectiveCoverageOnOrBefore(farmId, goatId, date);
+    }
+
+    @Override
+    public Optional<ReproductiveEvent> findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
+                farmId,
+                goatId,
+                ReproductiveEventType.PREGNANCY_CHECK,
+                date
+        );
+    }
+
+    @Override
+    public Optional<ReproductiveEvent> findCoverageCorrectionByRelatedEventId(Long farmId, String goatId, Long relatedEventId) {
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
+                farmId,
+                goatId,
+                ReproductiveEventType.COVERAGE_CORRECTION,
+                relatedEventId
+        );
+    }
 }

@@ -12,10 +12,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/reproduction")
@@ -105,5 +108,16 @@ public class ReproductionController {
         Page<PregnancyResponseVO> pageVO = queryUseCase.getPregnancies(farmId, goatId, pageable);
         Page<PregnancyResponseDTO> pageDTO = pageVO.map(mapper::toPregnancyResponseDTO);
         return ResponseEntity.ok(pageDTO);
+    }
+
+    @GetMapping("/pregnancies/diagnosis-recommendation")
+    @Operation(summary = "Obter recomendação para diagnóstico de prenhez")
+    public ResponseEntity<DiagnosisRecommendationResponseDTO> getDiagnosisRecommendation(
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Data de referência (ISO)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate referenceDate) {
+        DiagnosisRecommendationResponseVO responseVO = queryUseCase.getDiagnosisRecommendation(farmId, goatId, referenceDate);
+        return ResponseEntity.ok(mapper.toDiagnosisRecommendationResponseDTO(responseVO));
     }
 }
