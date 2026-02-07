@@ -11,16 +11,18 @@ O módulo expõe uma API RESTful completa para gerenciamento das produções.
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | **POST** | `/` | Cria um novo registro de produção de leite. |
-| **GET** | `/` | Lista as produções de forma paginada (suporta filtros de data). |
+| **GET** | `/` | Lista as produções de forma paginada (por padrão apenas ACTIVE; use includeCanceled=true para incluir canceladas). |
 | **GET** | `/{id}` | Busca os detalhes de uma produção específica por ID. |
 | **PATCH** | `/{id}` | Atualiza parcialmente uma produção (apenas volume e observações). |
-| **DELETE** | `/{id}` | Remove um registro de produção existente. |
+| **DELETE** | `/{id}` | Cancela um registro de produção (soft delete). |
 
 
-## Regras de Dominio
-- A producao de leite e registrada via **POST** e nunca e iniciada automaticamente por PATCH de lactacao.
-- Para registrar producao, e obrigatorio informar `date`, `shift` e `volumeLiters`.
-- A producao exige lactacao ativa para a cabra no momento do registro.
+## Regras de Domínio
+- A produção de leite é registrada via **POST** e nunca é iniciada automaticamente por PATCH de lactação.
+- Para registrar produção, é obrigatório informar `date`, `shift` e `volumeLiters`.
+- A produção exige lactação ativa para a cabra no momento do registro.
+- Registros cancelados não aparecem em GET / por padrão (use includeCanceled=true para incluir).
+
 ## Segurança e Autorização
 
 - Todos os endpoints de produção de leite são privados e exigem token JWT válido.
@@ -36,15 +38,21 @@ A operação de atualização permite modificar dados mutáveis de uma produçã
 1.  **Campos Mutáveis**: Apenas `volumeLiters` e `notes` podem ser alterados.
 2.  **Imutabilidade**: `date` e `shift` não podem ser alterados via PATCH para garantir a integridade das validações de duplicidade.
 3.  **Validação de Escopo**: Assim como no DELETE, o sistema verifica se o registro pertence ao `farmId` e `goatId` informados.
+4.  **Bloqueio**: Registros cancelados não podem ser alterados (422).
 
 ## Fluxo de Exclusão (DELETE)
 
-A operação de exclusão segue estritamente a arquitetura Hexagonal e as regras de segurança do projeto:
+A exclusão é um **cancelamento lógico** para preservar auditoria:
 
 1.  **Validação de Escopo**: O sistema verifica se o ID da produção pertence à Cabra (`goatId`) e à Fazenda (`farmId`) informadas na URL.
 2.  **Busca Segura**: Utiliza o método `findById(farmId, goatId, id)` no Business para garantir que o registro existe dentro do contexto autorizado.
-3.  **Persistência**: Se encontrado, o registro é removido fisicamente do banco de dados via JPA.
+3.  **Persistência**: O registro **não é removido fisicamente**. Ele é marcado como `status = CANCELED`, com `canceledAt` preenchido e `canceledReason` nulo (v1).
 4.  **Retorno**:
-    *   **204 No Content**: Exclusão realizada com sucesso.
+    *   **204 No Content**: Cancelamento realizado com sucesso.
     *   **404 Not Found**: Se o registro não existir ou não pertencer ao escopo (Fazenda/Cabra) informado.
 
+## Observações de Cancelamento
+
+- `GET /{id}` retorna **200 OK** mesmo para registros cancelados, com `status = CANCELED`.
+- `GET /` lista apenas `ACTIVE` por padrão. Para incluir cancelados, usar `includeCanceled=true`.
+- `PATCH /{id}` em registro cancelado retorna **422** com mensagem: "Registro cancelado nao pode ser alterado."
