@@ -16,6 +16,7 @@ import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.authority.persistence.entity.FarmOperator;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
@@ -223,6 +224,7 @@ public class SecurityOwnershipIntegrationTest {
         production.setLactation(lactation);
         production.setDate(LocalDate.now());
         production.setVolumeLiters(new BigDecimal("2.5"));
+        production.setStatus(MilkProductionStatus.ACTIVE);
         production.setShift(MilkingShift.MORNING);
         milkProductionRepository.save(production);
     }

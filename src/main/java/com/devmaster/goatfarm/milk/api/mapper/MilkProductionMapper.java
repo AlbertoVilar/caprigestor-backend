@@ -31,6 +31,9 @@ public interface MilkProductionMapper {
     @Mapping(target = "farmId", ignore = true)
     @Mapping(target = "goatId", ignore = true)
     @Mapping(target = "lactation", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "canceledAt", ignore = true)
+    @Mapping(target = "canceledReason", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     MilkProduction toEntity(MilkProductionRequestVO vo);

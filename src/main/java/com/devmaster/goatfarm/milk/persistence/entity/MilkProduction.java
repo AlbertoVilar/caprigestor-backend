@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 
 @Entity
@@ -44,6 +45,16 @@ public class MilkProduction {
 
     @Column(name = "notes")
     private String notes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private MilkProductionStatus status = MilkProductionStatus.ACTIVE;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
+    @Column(name = "canceled_reason", length = 500)
+    private String canceledReason;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

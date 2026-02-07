@@ -16,11 +16,19 @@ import java.util.Optional;
 @Repository
 public interface MilkProductionRepository extends JpaRepository<MilkProduction, Long> {
 
+    @Query("""
+    select case when count(mp) > 0 then true else false end from MilkProduction mp
+    where mp.farmId = :farmId
+      and mp.goatId = :goatId
+      and mp.date = :date
+      and mp.shift = :shift
+      and mp.status = com.devmaster.goatfarm.milk.enums.MilkProductionStatus.ACTIVE
+    """)
     boolean existsByFarmIdAndGoatIdAndDateAndShift(
-            Long farmId,
-            String goatId,
-            LocalDate date,
-            MilkingShift shift
+            @Param("farmId") Long farmId,
+            @Param("goatId") String goatId,
+            @Param("date") LocalDate date,
+            @Param("shift") MilkingShift shift
     );
 
     Optional<MilkProduction> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
@@ -29,6 +37,7 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
     select mp from MilkProduction mp
     where mp.farmId = :farmId
       and mp.goatId = :goatId
+      and (:includeCanceled = true or mp.status = com.devmaster.goatfarm.milk.enums.MilkProductionStatus.ACTIVE)
       and mp.date >= coalesce(:from, mp.date)
       and mp.date <= coalesce(:to, mp.date)
     """)
@@ -37,13 +46,15 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
             @Param("goatId") String goatId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
-            Pageable pageable
+            Pageable pageable,
+            @Param("includeCanceled") boolean includeCanceled
     );
 
     @Query("""
     select mp from MilkProduction mp
     where mp.farmId = :farmId
       and mp.goatId = :goatId
+      and mp.status = com.devmaster.goatfarm.milk.enums.MilkProductionStatus.ACTIVE
       and mp.date >= :from
       and mp.date <= :to
     """)
