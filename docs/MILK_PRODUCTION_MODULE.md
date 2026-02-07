@@ -22,6 +22,7 @@ O módulo expõe uma API RESTful completa para gerenciamento das produções.
 - Para registrar produção, é obrigatório informar `date`, `shift` e `volumeLiters`.
 - A produção exige lactação ativa para a cabra no momento do registro.
 - Registros cancelados não aparecem em GET / por padrão (use includeCanceled=true para incluir).
+- `includeCanceled=true` retorna registros **ACTIVE** + **CANCELED** na listagem paginada.
 
 ## Segurança e Autorização
 
@@ -55,4 +56,8 @@ A exclusão é um **cancelamento lógico** para preservar auditoria:
 
 - `GET /{id}` retorna **200 OK** mesmo para registros cancelados, com `status = CANCELED`.
 - `GET /` lista apenas `ACTIVE` por padrão. Para incluir cancelados, usar `includeCanceled=true`.
-- `PATCH /{id}` em registro cancelado retorna **422** com mensagem: "Registro cancelado nao pode ser alterado."
+- `PATCH /{id}` em registro cancelado retorna **422** com mensagem: "Registro cancelado não pode ser alterado."
+
+### Erros comuns (status codes)
+- **422 Unprocessable Entity**: sem lactação ativa no momento do registro; ou tentativa de PATCH em registro cancelado ("Registro cancelado não pode ser alterado.").
+- **409 Conflict**: já existe produção **ACTIVE** para a mesma combinação (`date`, `shift`) (unicidade parcial para ACTIVE).
