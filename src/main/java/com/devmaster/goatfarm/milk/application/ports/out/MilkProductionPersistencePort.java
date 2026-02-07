@@ -27,7 +27,8 @@ public interface MilkProductionPersistencePort {
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable
+            Pageable pageable,
+            boolean includeCanceled
     );
 
     List<MilkProduction> findByFarmIdAndGoatIdAndDateBetween(

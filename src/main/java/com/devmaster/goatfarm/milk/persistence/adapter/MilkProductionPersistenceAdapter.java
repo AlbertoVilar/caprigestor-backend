@@ -57,14 +57,16 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable
+            Pageable pageable,
+            boolean includeCanceled
     ) {
         return milkProductionRepository.search(
                 farmId,
                 goatId,
                 from,
                 to,
-                pageable
+                pageable,
+                includeCanceled
         );
     }
 

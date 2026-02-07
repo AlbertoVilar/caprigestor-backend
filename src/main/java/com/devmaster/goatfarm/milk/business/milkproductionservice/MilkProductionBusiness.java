@@ -149,7 +149,8 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable
+            Pageable pageable,
+            boolean includeCanceled
     ) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Page<MilkProduction> productions =
@@ -158,7 +159,8 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
                         goatId,
                         from,
                         to,
-                        pageable
+                        pageable,
+                        includeCanceled
                 );
         return productions.map(milkProductionMapper::toResponseVO);
     }
