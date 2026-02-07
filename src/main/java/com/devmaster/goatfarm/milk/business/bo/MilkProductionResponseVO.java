@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.milk.business.bo;
 
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -21,4 +23,7 @@ public class MilkProductionResponseVO {
     private MilkingShift shift;
     private BigDecimal volumeLiters;
     private String notes;
+    private MilkProductionStatus status;
+    private LocalDateTime canceledAt;
+    private String canceledReason;
 }
