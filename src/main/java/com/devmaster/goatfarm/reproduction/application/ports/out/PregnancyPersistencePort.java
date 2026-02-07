@@ -13,6 +13,7 @@ public interface PregnancyPersistencePort {
     Optional<Pregnancy> findActiveByFarmIdAndGoatId(Long farmId, String goatId);
     Optional<Pregnancy> findByIdAndFarmIdAndGoatId(Long pregnancyId, Long farmId, String goatId);
     Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long pregnancyId);
+    Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     Page<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
     List<Pregnancy> findAllActiveByFarmIdAndGoatIdOrdered(Long farmId, String goatId);
 }

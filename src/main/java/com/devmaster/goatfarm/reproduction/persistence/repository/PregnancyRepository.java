@@ -12,8 +12,9 @@ import java.util.Optional;
 
 @Repository
 public interface PregnancyRepository extends JpaRepository<Pregnancy, Long> {
-    List<Pregnancy> findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDesc(Long farmId, String goatId, PregnancyStatus status);
+    List<Pregnancy> findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, String goatId, PregnancyStatus status);
     Optional<Pregnancy> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
     Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long id);
-    Page<Pregnancy> findAllByFarmIdAndGoatIdOrderByBreedingDateDesc(Long farmId, String goatId, Pageable pageable);
+    Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
+    Page<Pregnancy> findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
 }

@@ -24,7 +24,9 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 | MÃ©todo | Rota | DescriÃ§Ã£o | Payload (Request) | Response |
 |---|---|---|---|---|
 | POST | `/breeding` | Registra uma cobertura | `BreedingRequestDTO` | `ReproductiveEventResponseDTO` |
+| POST | `/breeding/{coverageEventId}/corrections` | Corrige data de cobertura | `CoverageCorrectionRequestDTO` | `ReproductiveEventResponseDTO` |
 | PATCH | `/pregnancies/confirm` | Confirma prenhez | `PregnancyConfirmRequestDTO` | `PregnancyResponseDTO` |
+| GET | `/pregnancies/diagnosis-recommendation` | RecomendaÃ§Ã£o de diagnÃ³stico | - | `DiagnosisRecommendationResponseDTO` |
 | GET | /pregnancies/active | Busca gestaÃ§Ã£o ativa | - | `PregnancyResponseDTO` |
 | GET | /pregnancies/{pregnancyId} | Busca gestaÃ§Ã£o por ID | - | `PregnancyResponseDTO` |
 | PATCH | /pregnancies/{pregnancyId}/close | Encerra gestaÃ§Ã£o | `PregnancyCloseRequestDTO` | `PregnancyResponseDTO` |
@@ -63,8 +65,20 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 }
 ```
 
-> Regra de domÃ­nio: neste endpoint de confirmaÃ§Ã£o, apenas `checkResult = POSITIVE` Ã© aceito.  
-> Qualquer requisiÃ§Ã£o com `checkResult = NEGATIVE` resulta em erro de validaÃ§Ã£o (nenhum evento ou pregnancy Ã© criado).
+> Regra de domínio: neste endpoint de confirmação, apenas `checkResult = POSITIVE` é aceito.
+> Para diagnóstico `NEGATIVE`, utilize `/pregnancies/checks` (nenhum evento ou gestação é criada aqui).
+
+### PregnancyCheckRequestDTO
+```json
+{
+  "checkDate": "2026-02-01",
+  "checkResult": "NEGATIVE",
+  "notes": "Sem evidências de gestação"
+}
+```
+
+> Regra de domínio: neste endpoint apenas `checkResult = NEGATIVE` é aceito.
+> A API valida a janela mínima de 60 dias após a última cobertura efetiva (retorna 422 quando violada).
 
 ### PregnancyCloseRequestDTO
 ```json
@@ -76,9 +90,37 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 }
 ```
 
+### CoverageCorrectionRequestDTO
+```json
+{
+  "correctedDate": "2026-01-05",
+  "notes": "Cobertura registrada com data incorreta"
+}
+```
+
+### DiagnosisRecommendationResponseDTO
+```json
+{
+  "status": "ELIGIBLE_PENDING",
+  "eligibleDate": "2026-03-01",
+  "lastCoverage": {
+    "id": 10,
+    "eventDate": "2026-01-01",
+    "effectiveDate": "2026-01-01",
+    "breedingType": "NATURAL",
+    "breederRef": "Bode Alpha"
+  },
+  "lastCheck": null,
+  "warnings": []
+}
+```
+
+> Parâmetro opcional: `referenceDate=YYYY-MM-DD` (default: data atual do servidor).
+
 ### Response Objects
 **PregnancyResponseDTO**
 - `confirmedAt` renamed to `confirmDate`.
+- `closedAt` é o campo de data de encerramento no response (não `closeDate`).
 - `recommendedDryDate` removed.
 - `closeReason` added.
 - `notes` added.
@@ -86,6 +128,38 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 **ReproductiveEventResponseDTO**
 - `checkDate` removed.
 - `pregnancyId` added.
+- `relatedEventId` and `correctedEventDate` added for corrections.
+
+## POST /pregnancies/checks
+
+Endpoint para registrar diagnóstico `NEGATIVE` de prenhez e corrigir falso positivo quando existir gestação ativa.
+
+- **Método**: POST
+- **Rota completa**:
+  `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks`
+
+### Payload (PregnancyCheckRequestDTO)
+```json
+{
+  "checkDate": "2026-02-01",
+  "checkResult": "NEGATIVE",
+  "notes": "Sem evidências de gestação"
+}
+```
+
+### Regras
+- Apenas `checkResult = NEGATIVE` é aceito (resultado POSITIVE deve usar `/pregnancies/confirm`).
+- `checkDate` não pode ser futura.
+- `checkDate` deve ser >= 60 dias após a última cobertura efetiva.
+- Se existir gestação ativa, ela é encerrada como `FALSE_POSITIVE` e um evento `PREGNANCY_CLOSE` é registrado.
+- Após o fechamento, `/pregnancies/active` retorna 404.
+
+### Status codes
+- **201 Created** - diagnóstico registrado com sucesso.
+- **200 OK** - não utilizado no fluxo atual; reservado para respostas idempotentes.
+- **422 Unprocessable Entity** - regra de 60 dias violada ou cobertura válida inexistente.
+- **409 Conflict** - conflito de integridade (ex.: constraint de unicidade).
+- **404 Not Found** - cabra ou fazenda não encontrada.
 
 ## GET /pregnancies/{pregnancyId}
 
@@ -108,13 +182,15 @@ Accept: application/json
 ```json
 {
   "id": 10,
+  "farmId": 1,
   "goatId": "GOAT-001",
+  "status": "ACTIVE",
   "breedingDate": "2026-01-01",
   "confirmDate": "2026-02-01",
-  "status": "ACTIVE",
-  "closeDate": null,
+  "expectedDueDate": "2026-05-31",
+  "closedAt": null,
   "closeReason": null,
-  "notes": "GestaÃ§Ã£o confirmada por ultrassom"
+  "notes": "Gestação confirmada por ultrassom"
 }
 ```
 
@@ -124,6 +200,11 @@ Accept: application/json
 - **400 Bad Request** â€“ `pregnancyId` invÃ¡lido (null ou <= 0).  
 - **404 Not Found** â€“ gestaÃ§Ã£o nÃ£o encontrada ou nÃ£o pertence ao `farmId` informado.
 
+## Paginação e Ordenação
+
+- `/events`: ordenado por `eventDate` DESC e `id` DESC (desempate estável).
+- `/pregnancies`: ordenado por `breedingDate` DESC e `id` DESC (desempate estável).
+
 ## Concurrency Safety (Blindagem)
 
 Para garantir que a regra â€œapenas 1 gestaÃ§Ã£o ativa por cabraâ€ seja respeitada mesmo em cenÃ¡rios de concorrÃªncia extrema:
@@ -131,8 +212,8 @@ Para garantir que a regra â€œapenas 1 gestaÃ§Ã£o ativa por cabraâ€ seja respeit
 1. **Unique Index Partial**: o banco de dados possui um Ã­ndice Ãºnico `(farm_id, goat_id) WHERE status = 'ACTIVE'`.  
 2. **Pre-check no Business**: a aplicaÃ§Ã£o verifica duplicidade antes de salvar uma nova pregnancy ativa.  
 3. **Handler 409**: se ainda assim ocorrer uma race condition e o Ã­ndice Ãºnico for violado:
-   - quando a violaÃ§Ã£o vem do Ã­ndice `ux_pregnancy_single_active_per_goat`, o handler retorna **HTTP 409 Conflict** com `field = "status"` e mensagem `"Duplicate active pregnancy for goat"`;  
-   - para outros constraints, o handler mantÃ©m **HTTP 409 Conflict**, mas utiliza `field = "integrity"` e mensagem genÃ©rica `"Database constraint violation"`.
+   - quando a violaÃ§Ã£o vem do Ã­ndice `ux_pregnancy_single_active_per_goat`, o handler retorna **HTTP 409 Conflict** com `field = "status"` e mensagem `"Já existe uma gestação ativa para esta cabra"`;  
+   - para outros constraints, o handler mantÃ©m **HTTP 409 Conflict**, mas utiliza `field = "integrity"` e mensagem genÃ©rica `"Violação de integridade no banco de dados"`.
 
 ## Flyway V16 â€“ banco sujo (duplicated ACTIVE)
 
@@ -158,5 +239,6 @@ Se a migration de verificaÃ§Ã£o `V15_9__Assert_no_duplicate_active_pregnancy` en
 
 ## RecomendaÃ§Ãµes de Manejo
 
-- O exame de gestaÃ§Ã£o (ultrassom ou outro mÃ©todo) Ã© geralmente recomendado por volta de **45 dias apÃ³s a cobertura**.
-- Essa janela de 45 dias Ã© uma **recomendaÃ§Ã£o de manejo**, nÃ£o uma regra rÃ­gida da API: qualquer `checkDate` nÃ£o futura e com cobertura anterior vÃ¡lida Ã© aceita pelo sistema.
+- O diagnÃ³stico de prenhez sÃ³ pode ser registrado a partir de **60 dias apÃ³s a Ãºltima cobertura efetiva**.
+- A recomendaÃ§Ã£o de diagnÃ³stico pode ser consultada no endpoint `/pregnancies/diagnosis-recommendation`.
+- A janela de 45 dias é uma recomendação de manejo; a API continua exigindo 60 dias e retorna 422 para checks antes desse prazo.

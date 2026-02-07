@@ -10,22 +10,34 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCheckVO;
+import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCoverageVO;
+import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
+import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -35,20 +47,25 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
     private final ReproductionMapper reproductionMapper;
+    private final Clock clock;
 
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
                                 GoatGenderValidator goatGenderValidator,
-                                ReproductionMapper reproductionMapper) {
+                                ReproductionMapper reproductionMapper,
+                                Clock clock) {
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
         this.goatGenderValidator = goatGenderValidator;
         this.reproductionMapper = reproductionMapper;
+        this.clock = clock;
     }
 
     private static final int GESTATION_DAYS = 150;
-    private static final int MIN_CONFIRMATION_DAYS = 45;
-    private static final String CONFIRMATION_MIN_DAYS_MESSAGE = "O exame de gestação só pode ser realizado %d dias após a cobertura";
+    private static final int MIN_CONFIRMATION_DAYS = 60;
+    private static final String CONFIRMATION_MIN_DAYS_MESSAGE =
+            "Diagnóstico de prenhez só pode ser registrado a partir de 60 dias após a última cobertura.";
+    private static final String WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK = "GESTACAO_ATIVA_SEM_CHECK_VALIDO";
 
     @Override
     @Transactional
@@ -60,7 +77,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         if (vo.getBreedingType() == null) {
             throw new InvalidArgumentException("breedingType", "Tipo de cobertura é obrigatório");
         }
-        if (vo.getEventDate().isAfter(LocalDate.now())) {
+        if (vo.getEventDate().isAfter(LocalDate.now(clock))) {
             throw new InvalidArgumentException("eventDate", "Data do evento não pode ser futura");
         }
 
@@ -79,13 +96,61 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
+    @Transactional
+    public ReproductiveEventResponseVO correctCoverage(Long farmId, String goatId, Long coverageEventId, CoverageCorrectionRequestVO vo) {
+        goatGenderValidator.requireFemale(farmId, goatId);
+        if (coverageEventId == null || coverageEventId <= 0) {
+            throw new InvalidArgumentException("coverageEventId", "Identificador de cobertura inválido");
+        }
+        if (vo.getCorrectedDate() == null) {
+            throw new InvalidArgumentException("correctedDate", "Data corrigida é obrigatória");
+        }
+        if (vo.getCorrectedDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("correctedDate", "Data corrigida não pode ser futura");
+        }
+
+        ReproductiveEvent coverage = reproductiveEventPersistencePort
+                .findByIdAndFarmIdAndGoatId(coverageEventId, farmId, goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cobertura não encontrada para o identificador informado: " + coverageEventId));
+
+        if (coverage.getEventType() != ReproductiveEventType.COVERAGE) {
+            throw new BusinessRuleException("coverageEventId", "Evento informado não é uma cobertura");
+        }
+
+        Optional<ReproductiveEvent> existingCorrection = reproductiveEventPersistencePort
+                .findCoverageCorrectionByRelatedEventId(farmId, goatId, coverageEventId);
+        if (existingCorrection.isPresent()) {
+            throw new BusinessRuleException("coverageEventId", "Cobertura já possui correção registrada");
+        }
+
+        Optional<Pregnancy> linkedPregnancy = pregnancyPersistencePort
+                .findByFarmIdAndCoverageEventId(farmId, coverageEventId);
+        if (linkedPregnancy.isPresent()) {
+            throw new BusinessRuleException("coverageEventId", "Não é possível corrigir uma cobertura associada a uma gestação");
+        }
+
+        ReproductiveEvent correctionEvent = ReproductiveEvent.builder()
+                .farmId(farmId)
+                .goatId(goatId)
+                .eventType(ReproductiveEventType.COVERAGE_CORRECTION)
+                .eventDate(LocalDate.now(clock))
+                .relatedEventId(coverageEventId)
+                .correctedEventDate(vo.getCorrectedDate())
+                .notes(vo.getNotes())
+                .build();
+
+        ReproductiveEvent saved = reproductiveEventPersistencePort.save(correctionEvent);
+        return reproductionMapper.toReproductiveEventResponseVO(saved);
+    }
+
+    @Override
     @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
         goatGenderValidator.requireFemale(farmId, goatId);
         if (vo.getCheckDate() == null) {
             throw new InvalidArgumentException("checkDate", "Data do exame de gestação é obrigatória");
         }
-        if (vo.getCheckDate().isAfter(LocalDate.now())) {
+        if (vo.getCheckDate().isAfter(LocalDate.now(clock))) {
             throw new InvalidArgumentException("checkDate", "Data do exame de gestação não pode ser futura");
         }
         if (vo.getCheckResult() == null) {
@@ -100,17 +165,17 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         }
 
         Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
-                .findLatestCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
+                .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
 
         if (latestCoverage.isEmpty()) {
             throw new InvalidArgumentException("checkDate", "Não foi encontrada cobertura anterior à data do exame de gestação");
         }
 
-        LocalDate breedingDate = latestCoverage.get().getEventDate();
+        ReproductiveEvent coverageEvent = latestCoverage.get();
+        LocalDate breedingDate = resolveEffectiveCoverageDate(farmId, goatId, coverageEvent);
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             if (vo.getCheckDate().isBefore(breedingDate.plusDays(MIN_CONFIRMATION_DAYS))) {
-                throw new BusinessRuleException("checkDate",
-                        String.format(CONFIRMATION_MIN_DAYS_MESSAGE, MIN_CONFIRMATION_DAYS));
+                throw new BusinessRuleException("checkDate", CONFIRMATION_MIN_DAYS_MESSAGE);
             }
             Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
             if (activePregnancy.isPresent()) {
@@ -119,7 +184,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
-            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o fluxo específico de registro de exame de gestação quando disponível.");
+            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o endpoint de diagnóstico negativo.");
         }
 
         ReproductiveEvent checkEvent = ReproductiveEvent.builder()
@@ -146,10 +211,80 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .closedAt(null)
                 .closeReason(null)
                 .notes(vo.getNotes())
+                .coverageEventId(coverageEvent.getId())
                 .build();
 
         Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
         return reproductionMapper.toPregnancyResponseVO(savedPregnancy);
+    }
+
+    @Override
+    @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
+    public ReproductiveEventResponseVO registerPregnancyCheck(Long farmId, String goatId, PregnancyCheckRequestVO vo) {
+        goatGenderValidator.requireFemale(farmId, goatId);
+        if (vo.getCheckDate() == null) {
+            throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez é obrigatória");
+        }
+        if (vo.getCheckDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez não pode ser futura");
+        }
+        if (vo.getCheckResult() == null) {
+            throw new InvalidArgumentException("checkResult", "Resultado do diagnóstico de prenhez é obrigatório");
+        }
+        if (vo.getCheckResult() != PregnancyCheckResult.NEGATIVE) {
+            throw new InvalidArgumentException("checkResult", "Resultado deve ser NEGATIVE neste endpoint de diagnóstico.");
+        }
+
+        Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
+                .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
+
+        if (latestCoverage.isEmpty()) {
+            throw new BusinessRuleException("checkDate",
+                    "Não foi encontrada cobertura anterior à data do diagnóstico de prenhez");
+        }
+
+        ReproductiveEvent coverageEvent = latestCoverage.get();
+        LocalDate breedingDate = resolveEffectiveCoverageDate(farmId, goatId, coverageEvent);
+        if (vo.getCheckDate().isBefore(breedingDate.plusDays(MIN_CONFIRMATION_DAYS))) {
+            throw new BusinessRuleException("checkDate", CONFIRMATION_MIN_DAYS_MESSAGE);
+        }
+
+        ReproductiveEvent checkEvent = ReproductiveEvent.builder()
+                .farmId(farmId)
+                .goatId(goatId)
+                .eventType(ReproductiveEventType.PREGNANCY_CHECK)
+                .eventDate(vo.getCheckDate())
+                .checkResult(PregnancyCheckResult.NEGATIVE)
+                .notes(vo.getNotes())
+                .build();
+
+        ReproductiveEvent savedCheckEvent = reproductiveEventPersistencePort.save(checkEvent);
+
+        Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        if (activePregnancy.isPresent()) {
+            Pregnancy pregnancy = activePregnancy.get();
+            pregnancy.setStatus(PregnancyStatus.CLOSED);
+            pregnancy.setClosedAt(vo.getCheckDate());
+            pregnancy.setCloseReason(PregnancyCloseReason.FALSE_POSITIVE);
+            if (vo.getNotes() != null && !vo.getNotes().isBlank()) {
+                pregnancy.setNotes(vo.getNotes());
+            }
+
+            Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
+
+            ReproductiveEvent closeEvent = ReproductiveEvent.builder()
+                    .farmId(farmId)
+                    .goatId(goatId)
+                    .pregnancyId(savedPregnancy.getId())
+                    .eventType(ReproductiveEventType.PREGNANCY_CLOSE)
+                    .eventDate(vo.getCheckDate())
+                    .notes(vo.getNotes())
+                    .build();
+
+            reproductiveEventPersistencePort.save(closeEvent);
+        }
+
+        return reproductionMapper.toReproductiveEventResponseVO(savedCheckEvent);
     }
 
     @Override
@@ -214,14 +349,142 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     public Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable) {
         goatGenderValidator.requireFemale(farmId, goatId);
-        return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+        Pageable stablePageable = withStableSort(pageable, Sort.by(Sort.Order.desc("breedingDate")));
+        return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, stablePageable)
                 .map(reproductionMapper::toPregnancyResponseVO);
     }
 
     @Override
     public Page<ReproductiveEventResponseVO> getReproductiveEvents(Long farmId, String goatId, Pageable pageable) {
         goatGenderValidator.requireFemale(farmId, goatId);
-        return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+        Pageable stablePageable = withStableSort(pageable, Sort.by(Sort.Order.desc("eventDate")));
+        return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, stablePageable)
                 .map(reproductionMapper::toReproductiveEventResponseVO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DiagnosisRecommendationResponseVO getDiagnosisRecommendation(Long farmId, String goatId, LocalDate referenceDate) {
+        goatGenderValidator.requireFemale(farmId, goatId);
+        LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now(clock);
+
+        Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
+                .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, reference);
+        Optional<ReproductiveEvent> latestCheck = reproductiveEventPersistencePort
+                .findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(farmId, goatId, reference);
+
+        DiagnosisRecommendationStatus status = DiagnosisRecommendationStatus.NOT_ELIGIBLE;
+        LocalDate eligibleDate = null;
+        DiagnosisRecommendationCoverageVO lastCoverage = null;
+
+        if (latestCoverage.isPresent()) {
+            ReproductiveEvent coverage = latestCoverage.get();
+            LocalDate effectiveCoverageDate = resolveEffectiveCoverageDate(farmId, goatId, coverage);
+            eligibleDate = effectiveCoverageDate.plusDays(MIN_CONFIRMATION_DAYS);
+            lastCoverage = toCoverageVO(coverage, effectiveCoverageDate);
+
+            if (!reference.isBefore(eligibleDate)) {
+                boolean hasValidCheck = isValidCheck(latestCheck.orElse(null), effectiveCoverageDate, eligibleDate);
+                status = hasValidCheck ? DiagnosisRecommendationStatus.RESOLVED : DiagnosisRecommendationStatus.ELIGIBLE_PENDING;
+            }
+        }
+
+        DiagnosisRecommendationCheckVO lastCheck = latestCheck
+                .map(this::toCheckVO)
+                .orElse(null);
+
+        List<String> warnings = new ArrayList<>();
+        Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        if (activePregnancy.isPresent()) {
+            LocalDate effectiveCoverageDate = lastCoverage != null ? lastCoverage.getEffectiveDate() : null;
+            boolean hasValidPositiveCheck = isValidPositiveCheck(latestCheck.orElse(null), effectiveCoverageDate, eligibleDate);
+            if (!hasValidPositiveCheck) {
+                warnings.add(WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK);
+                status = DiagnosisRecommendationStatus.ELIGIBLE_PENDING;
+            }
+        }
+
+        return DiagnosisRecommendationResponseVO.builder()
+                .status(status)
+                .eligibleDate(eligibleDate)
+                .lastCoverage(lastCoverage)
+                .lastCheck(lastCheck)
+                .warnings(warnings)
+                .build();
+    }
+
+    private DiagnosisRecommendationCoverageVO toCoverageVO(ReproductiveEvent coverage, LocalDate effectiveCoverageDate) {
+        return DiagnosisRecommendationCoverageVO.builder()
+                .id(coverage.getId())
+                .eventDate(coverage.getEventDate())
+                .effectiveDate(effectiveCoverageDate)
+                .breedingType(coverage.getBreedingType())
+                .breederRef(coverage.getBreederRef())
+                .notes(coverage.getNotes())
+                .build();
+    }
+
+    private DiagnosisRecommendationCheckVO toCheckVO(ReproductiveEvent checkEvent) {
+        return DiagnosisRecommendationCheckVO.builder()
+                .id(checkEvent.getId())
+                .checkDate(checkEvent.getEventDate())
+                .checkResult(checkEvent.getCheckResult())
+                .notes(checkEvent.getNotes())
+                .build();
+    }
+
+    private LocalDate resolveEffectiveCoverageDate(Long farmId, String goatId, ReproductiveEvent coverage) {
+        Optional<ReproductiveEvent> correction = reproductiveEventPersistencePort
+                .findCoverageCorrectionByRelatedEventId(farmId, goatId, coverage.getId());
+        if (correction.isPresent() && correction.get().getCorrectedEventDate() != null) {
+            return correction.get().getCorrectedEventDate();
+        }
+        return coverage.getEventDate();
+    }
+
+    private boolean isValidCheck(ReproductiveEvent checkEvent, LocalDate effectiveCoverageDate, LocalDate eligibleDate) {
+        if (checkEvent == null || checkEvent.getEventDate() == null) {
+            return false;
+        }
+        if (checkEvent.getCheckResult() == null || checkEvent.getCheckResult() == PregnancyCheckResult.PENDING) {
+            return false;
+        }
+        if (effectiveCoverageDate != null && checkEvent.getEventDate().isBefore(effectiveCoverageDate)) {
+            return false;
+        }
+        if (eligibleDate != null && checkEvent.getEventDate().isBefore(eligibleDate)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isValidPositiveCheck(ReproductiveEvent checkEvent, LocalDate effectiveCoverageDate, LocalDate eligibleDate) {
+        if (checkEvent == null || checkEvent.getEventDate() == null) {
+            return false;
+        }
+        if (checkEvent.getCheckResult() != PregnancyCheckResult.POSITIVE) {
+            return false;
+        }
+        if (effectiveCoverageDate != null && checkEvent.getEventDate().isBefore(effectiveCoverageDate)) {
+            return false;
+        }
+        if (eligibleDate != null && checkEvent.getEventDate().isBefore(eligibleDate)) {
+            return false;
+        }
+        return true;
+    }
+
+    private Pageable withStableSort(Pageable pageable, Sort defaultSort) {
+        if (pageable == null) {
+            return PageRequest.of(0, 20, defaultSort.and(Sort.by(Sort.Order.desc("id"))));
+        }
+        Sort sort = pageable.getSort();
+        if (sort.isUnsorted()) {
+            sort = defaultSort;
+        }
+        if (sort.getOrderFor("id") == null) {
+            sort = sort.and(Sort.by(Sort.Order.desc("id")));
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
