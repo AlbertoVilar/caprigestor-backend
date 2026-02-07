@@ -27,16 +27,46 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
 
     @Override
     public Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
-        return repository.findAllByFarmIdAndGoatIdOrderByEventDateDesc(farmId, goatId, pageable);
+        return repository.findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(farmId, goatId, pageable);
+    }
+
+    @Override
+    public Optional<ReproductiveEvent> findByIdAndFarmIdAndGoatId(Long eventId, Long farmId, String goatId) {
+        return repository.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId);
     }
 
     @Override
     public Optional<ReproductiveEvent> findLatestCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
-        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDesc(
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
                 farmId,
                 goatId,
                 ReproductiveEventType.COVERAGE,
                 date
+        );
+    }
+
+    @Override
+    public Optional<ReproductiveEvent> findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
+        return repository.findLatestEffectiveCoverageOnOrBefore(farmId, goatId, date);
+    }
+
+    @Override
+    public Optional<ReproductiveEvent> findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
+                farmId,
+                goatId,
+                ReproductiveEventType.PREGNANCY_CHECK,
+                date
+        );
+    }
+
+    @Override
+    public Optional<ReproductiveEvent> findCoverageCorrectionByRelatedEventId(Long farmId, String goatId, Long relatedEventId) {
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
+                farmId,
+                goatId,
+                ReproductiveEventType.COVERAGE_CORRECTION,
+                relatedEventId
         );
     }
 }

@@ -29,7 +29,8 @@ public interface MilkProductionUseCase {
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable
+            Pageable pageable,
+            boolean includeCanceled
     );
 
     MilkProductionResponseVO findById(Long farmId, String goatId, Long id);

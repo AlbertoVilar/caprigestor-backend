@@ -9,10 +9,13 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
+import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
@@ -27,12 +30,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,6 +62,9 @@ class ReproductionBusinessTest {
     @Mock
     private ReproductionMapper reproductionMapper;
 
+    @Spy
+    private Clock clock = Clock.systemDefaultZone();
+
     @InjectMocks
     private ReproductionBusiness reproductionBusiness;
 
@@ -78,6 +87,9 @@ class ReproductionBusinessTest {
         // Arrange
         BreedingRequestVO requestVO = validBreedingRequestVO();
 
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.empty());
+
         ReproductiveEvent savedEvent = coverageEventEntity();
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
 
@@ -98,7 +110,7 @@ class ReproductionBusinessTest {
         assertThat(capturedEvent.getEventDate()).isEqualTo(requestVO.getEventDate());
         assertThat(capturedEvent.getBreedingType()).isEqualTo(requestVO.getBreedingType());
 
-        verifyNoInteractions(pregnancyPersistencePort);
+        verify(pregnancyPersistencePort).findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID);
         assertThat(result).isSameAs(responseVO);
     }
 
@@ -144,6 +156,115 @@ class ReproductionBusinessTest {
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
     }
 
+    @Test
+    void registerBreeding_shouldBlockWhenActivePregnancyAndEventDateOnOrAfterReference() {
+        BreedingRequestVO requestVO = BreedingRequestVO.builder()
+                .eventDate(LocalDate.of(2026, 2, 6))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(10L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.of(2026, 1, 14))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+
+        assertThatThrownBy(() -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Não é permitido registrar nova cobertura");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+    }
+
+    @Test
+    void registerBreeding_shouldAllowWhenActivePregnancyAndEventDateBeforeReference() {
+        BreedingRequestVO requestVO = BreedingRequestVO.builder()
+                .eventDate(LocalDate.of(2025, 12, 5))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(10L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.of(2026, 1, 14))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+
+        ReproductiveEvent savedEvent = coverageEventEntity();
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
+
+        ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
+        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+
+        ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
+
+        verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
+        assertThat(result).isSameAs(responseVO);
+    }
+
+    @Test
+    void registerBreeding_shouldUseEffectiveCoverageDateFromCorrection() {
+        BreedingRequestVO requestVO = BreedingRequestVO.builder()
+                .eventDate(LocalDate.of(2026, 1, 10))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(10L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.of(2026, 1, 1))
+                .coverageEventId(200L)
+                .build();
+
+        ReproductiveEvent coverageEvent = ReproductiveEvent.builder()
+                .id(200L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .eventType(ReproductiveEventType.COVERAGE)
+                .eventDate(LocalDate.of(2026, 1, 1))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        ReproductiveEvent correctionEvent = ReproductiveEvent.builder()
+                .id(201L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .eventType(ReproductiveEventType.COVERAGE_CORRECTION)
+                .eventDate(LocalDate.of(2026, 1, 5))
+                .relatedEventId(coverageEvent.getId())
+                .correctedEventDate(LocalDate.of(2026, 1, 15))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+        when(reproductiveEventPersistencePort.findByIdAndFarmIdAndGoatId(coverageEvent.getId(), FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.of(correctionEvent));
+
+        ReproductiveEvent savedEvent = coverageEventEntity();
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
+
+        ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
+        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+
+        ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
+
+        verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
+        assertThat(result).isSameAs(responseVO);
+    }
+
     // NOTE: checkScheduledDate not present on BreedingRequestVO, so the related test was removed.
 
     // ==================================================================================
@@ -156,9 +277,11 @@ class ReproductionBusinessTest {
         PregnancyConfirmRequestVO requestVO = validConfirmRequestVOPositive();
         ReproductiveEvent coverageEvent = coverageEventEntity();
 
-        when(reproductiveEventPersistencePort.findLatestCoverageByFarmIdAndGoatIdOnOrBefore(
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
                 .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
 
         when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
                 .thenReturn(Optional.empty());
@@ -207,9 +330,11 @@ class ReproductionBusinessTest {
         PregnancyConfirmRequestVO requestVO = validConfirmRequestVONegative();
         ReproductiveEvent coverageEvent = coverageEventEntity();
 
-        when(reproductiveEventPersistencePort.findLatestCoverageByFarmIdAndGoatIdOnOrBefore(
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
                 .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
 
         // Act & Assert
         InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
@@ -229,7 +354,7 @@ class ReproductionBusinessTest {
         // Arrange
         PregnancyConfirmRequestVO requestVO = validConfirmRequestVOPositive();
 
-        when(reproductiveEventPersistencePort.findLatestCoverageByFarmIdAndGoatIdOnOrBefore(
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
                 .thenReturn(Optional.empty());
 
@@ -249,9 +374,11 @@ class ReproductionBusinessTest {
         ReproductiveEvent coverageEvent = coverageEventEntity();
         Pregnancy activePregnancy = activePregnancyEntity();
 
-        when(reproductiveEventPersistencePort.findLatestCoverageByFarmIdAndGoatIdOnOrBefore(
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
                 .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
 
         when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(activePregnancy));
@@ -259,6 +386,32 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+        verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
+        verifyNoInteractions(reproductionMapper);
+    }
+
+    @Test
+    void confirmPregnancy_shouldThrowBusinessRule_whenCheckDateIsBefore60Days() {
+        LocalDate checkDate = LocalDate.of(2026, 2, 1);
+        PregnancyConfirmRequestVO requestVO = PregnancyConfirmRequestVO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.POSITIVE)
+                .build();
+
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        coverageEvent.setEventDate(checkDate.minusDays(59));
+
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
+                FARM_ID, GOAT_ID, requestVO.getCheckDate()))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Diagnóstico de prenhez só pode ser registrado");
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
@@ -309,6 +462,77 @@ class ReproductionBusinessTest {
 
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper);
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
+    }
+
+    // ==================================================================================
+    // PREGNANCY CHECK (NEGATIVE)
+    // ==================================================================================
+
+    @Test
+    void registerPregnancyCheck_shouldThrowBusinessRule_whenCheckDateIsBefore60Days() {
+        LocalDate checkDate = LocalDate.of(2026, 2, 1);
+        PregnancyCheckRequestVO requestVO = PregnancyCheckRequestVO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.NEGATIVE)
+                .build();
+
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        coverageEvent.setEventDate(checkDate.minusDays(59));
+
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
+                FARM_ID, GOAT_ID, requestVO.getCheckDate()))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reproductionBusiness.registerPregnancyCheck(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Diagnóstico de prenhez só pode ser registrado");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+        verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
+        verifyNoInteractions(reproductionMapper);
+    }
+
+    @Test
+    void registerPregnancyCheck_shouldCloseActivePregnancy_whenNegativeAfter60Days() {
+        LocalDate checkDate = LocalDate.now(clock);
+        PregnancyCheckRequestVO requestVO = PregnancyCheckRequestVO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.NEGATIVE)
+                .notes("Falso positivo")
+                .build();
+
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        coverageEvent.setEventDate(checkDate.minusDays(60));
+
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
+                FARM_ID, GOAT_ID, requestVO.getCheckDate()))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancyEntity()));
+        when(pregnancyPersistencePort.save(any(Pregnancy.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
+        when(reproductionMapper.toReproductiveEventResponseVO(any(ReproductiveEvent.class)))
+                .thenReturn(responseVO);
+
+        ReproductiveEventResponseVO result = reproductionBusiness.registerPregnancyCheck(FARM_ID, GOAT_ID, requestVO);
+
+        ArgumentCaptor<Pregnancy> pregnancyCaptor = ArgumentCaptor.forClass(Pregnancy.class);
+        verify(pregnancyPersistencePort).save(pregnancyCaptor.capture());
+
+        Pregnancy capturedPregnancy = pregnancyCaptor.getValue();
+        assertThat(capturedPregnancy.getStatus()).isEqualTo(PregnancyStatus.CLOSED);
+        assertThat(capturedPregnancy.getCloseReason()).isEqualTo(PregnancyCloseReason.FALSE_POSITIVE);
+        assertThat(capturedPregnancy.getClosedAt()).isEqualTo(checkDate);
+
+        assertThat(result).isSameAs(responseVO);
     }
 
     // ==================================================================================
@@ -563,6 +787,141 @@ class ReproductionBusinessTest {
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verifyNoInteractions(reproductionMapper);
+    }
+
+    // ==================================================================================
+    // DIAGNOSIS RECOMMENDATION
+    // ==================================================================================
+
+    @Test
+    void getDiagnosisRecommendation_shouldReturnEligiblePending_whenEligibleWithoutCheck() {
+        LocalDate referenceDate = LocalDate.of(2026, 2, 1);
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        coverageEvent.setEventDate(referenceDate.minusDays(70));
+
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+        when(reproductiveEventPersistencePort.findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
+                .thenReturn(Optional.empty());
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.empty());
+
+        var result = reproductionBusiness.getDiagnosisRecommendation(FARM_ID, GOAT_ID, referenceDate);
+
+        assertThat(result.getStatus()).isEqualTo(DiagnosisRecommendationStatus.ELIGIBLE_PENDING);
+        assertThat(result.getEligibleDate()).isEqualTo(referenceDate.minusDays(70).plusDays(60));
+        assertThat(result.getLastCoverage()).isNotNull();
+        assertThat(result.getLastCoverage().getEffectiveDate()).isEqualTo(referenceDate.minusDays(70));
+        assertThat(result.getLastCheck()).isNull();
+        assertThat(result.getWarnings()).isEmpty();
+    }
+
+    @Test
+    void getDiagnosisRecommendation_shouldReturnResolved_whenValidPositiveCheckExists() {
+        LocalDate referenceDate = LocalDate.of(2026, 2, 1);
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        coverageEvent.setEventDate(referenceDate.minusDays(80));
+
+        ReproductiveEvent checkEvent = checkEventEntity();
+        checkEvent.setEventDate(referenceDate.minusDays(5));
+        checkEvent.setCheckResult(PregnancyCheckResult.POSITIVE);
+
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+        when(reproductiveEventPersistencePort.findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
+                .thenReturn(Optional.of(checkEvent));
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.empty());
+
+        var result = reproductionBusiness.getDiagnosisRecommendation(FARM_ID, GOAT_ID, referenceDate);
+
+        assertThat(result.getStatus()).isEqualTo(DiagnosisRecommendationStatus.RESOLVED);
+        assertThat(result.getLastCheck()).isNotNull();
+    }
+
+    @Test
+    void getDiagnosisRecommendation_shouldWarnWhenActivePregnancyWithoutValidCheck() {
+        LocalDate referenceDate = LocalDate.of(2026, 2, 1);
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        coverageEvent.setEventDate(referenceDate.minusDays(70));
+
+        when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+        when(reproductiveEventPersistencePort.findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
+                .thenReturn(Optional.empty());
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancyEntity()));
+
+        var result = reproductionBusiness.getDiagnosisRecommendation(FARM_ID, GOAT_ID, referenceDate);
+
+        assertThat(result.getStatus()).isEqualTo(DiagnosisRecommendationStatus.ELIGIBLE_PENDING);
+        assertThat(result.getWarnings()).contains("GESTACAO_ATIVA_SEM_CHECK_VALIDO");
+    }
+
+    // ==================================================================================
+    // COVERAGE CORRECTION
+    // ==================================================================================
+
+    @Test
+    void correctCoverage_shouldCreateCorrectionEvent_whenValid() {
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        CoverageCorrectionRequestVO requestVO = CoverageCorrectionRequestVO.builder()
+                .correctedDate(LocalDate.now(clock).minusDays(2))
+                .notes("Ajuste de data")
+                .build();
+
+        when(reproductiveEventPersistencePort.findByIdAndFarmIdAndGoatId(coverageEvent.getId(), FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+        when(pregnancyPersistencePort.findByFarmIdAndCoverageEventId(FARM_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+
+        ReproductiveEvent savedCorrection = ReproductiveEvent.builder().id(555L).build();
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedCorrection);
+
+        ReproductiveEventResponseVO responseVO = ReproductiveEventResponseVO.builder().build();
+        when(reproductionMapper.toReproductiveEventResponseVO(savedCorrection)).thenReturn(responseVO);
+
+        ReproductiveEventResponseVO result = reproductionBusiness.correctCoverage(FARM_ID, GOAT_ID, coverageEvent.getId(), requestVO);
+
+        ArgumentCaptor<ReproductiveEvent> eventCaptor = ArgumentCaptor.forClass(ReproductiveEvent.class);
+        verify(reproductiveEventPersistencePort).save(eventCaptor.capture());
+
+        ReproductiveEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.getEventType()).isEqualTo(ReproductiveEventType.COVERAGE_CORRECTION);
+        assertThat(capturedEvent.getRelatedEventId()).isEqualTo(coverageEvent.getId());
+        assertThat(capturedEvent.getCorrectedEventDate()).isEqualTo(requestVO.getCorrectedDate());
+        assertThat(capturedEvent.getEventDate()).isEqualTo(LocalDate.now(clock));
+
+        assertThat(result).isSameAs(responseVO);
+    }
+
+    @Test
+    void correctCoverage_shouldRejectWhenCoverageHasLinkedPregnancy() {
+        ReproductiveEvent coverageEvent = coverageEventEntity();
+        CoverageCorrectionRequestVO requestVO = CoverageCorrectionRequestVO.builder()
+                .correctedDate(LocalDate.now(clock).minusDays(2))
+                .build();
+
+        when(reproductiveEventPersistencePort.findByIdAndFarmIdAndGoatId(coverageEvent.getId(), FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.empty());
+        when(pregnancyPersistencePort.findByFarmIdAndCoverageEventId(FARM_ID, coverageEvent.getId()))
+                .thenReturn(Optional.of(activePregnancyEntity()));
+
+        assertThatThrownBy(() -> reproductionBusiness.correctCoverage(FARM_ID, GOAT_ID, coverageEvent.getId(), requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Não é possível corrigir uma cobertura associada a uma gestação");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
     }
 
     // ==================================================================================

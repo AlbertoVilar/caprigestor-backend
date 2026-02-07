@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
@@ -120,6 +121,7 @@ class LactationSummaryIntegrationTest {
         production1.setLactation(lactation);
         production1.setDate(LocalDate.now().minusDays(2));
         production1.setVolumeLiters(new BigDecimal("2.0"));
+        production1.setStatus(MilkProductionStatus.ACTIVE);
         production1.setShift(MilkingShift.MORNING);
         milkProductionRepository.save(production1);
 
@@ -129,6 +131,7 @@ class LactationSummaryIntegrationTest {
         production2.setLactation(lactation);
         production2.setDate(LocalDate.now().minusDays(2));
         production2.setVolumeLiters(new BigDecimal("1.0"));
+        production2.setStatus(MilkProductionStatus.ACTIVE);
         production2.setShift(MilkingShift.AFTERNOON);
         milkProductionRepository.save(production2);
 
@@ -138,6 +141,7 @@ class LactationSummaryIntegrationTest {
         production3.setLactation(lactation);
         production3.setDate(LocalDate.now().minusDays(1));
         production3.setVolumeLiters(new BigDecimal("1.0"));
+        production3.setStatus(MilkProductionStatus.ACTIVE);
         production3.setShift(MilkingShift.MORNING);
         milkProductionRepository.save(production3);
     }

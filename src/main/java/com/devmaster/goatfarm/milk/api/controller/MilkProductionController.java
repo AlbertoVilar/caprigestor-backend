@@ -99,6 +99,10 @@ public class MilkProductionController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate to,
 
+            @Parameter(description = "Incluir registros cancelados")
+            @RequestParam(required = false, defaultValue = "false")
+            boolean includeCanceled,
+
             @ParameterObject
             @PageableDefault(size = 12)
             @SortDefault.SortDefaults({
@@ -109,7 +113,7 @@ public class MilkProductionController {
             Pageable pageable
     ) {
         Page<MilkProductionResponseVO> page =
-                milkProductionUseCase.getMilkProductions(farmId, goatId, from, to, pageable);
+                milkProductionUseCase.getMilkProductions(farmId, goatId, from, to, pageable, includeCanceled);
 
         Page<MilkProductionResponseDTO> dtoPage =
                 page.map(milkProductionMapper::toResponseDTO);

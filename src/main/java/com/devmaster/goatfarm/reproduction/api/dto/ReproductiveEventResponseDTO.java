@@ -26,5 +26,7 @@ public class ReproductiveEventResponseDTO {
     private String notes;
     private LocalDate checkScheduledDate;
     private PregnancyCheckResult checkResult;
+    private Long relatedEventId;
+    private LocalDate correctedEventDate;
     // checkDate removed (redundant)
 }
