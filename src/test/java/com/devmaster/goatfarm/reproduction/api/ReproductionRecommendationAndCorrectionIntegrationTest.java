@@ -11,8 +11,14 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.api.dto.CoverageCorrectionRequestDTO;
+import com.devmaster.goatfarm.reproduction.api.dto.PregnancyCheckRequestDTO;
+import com.devmaster.goatfarm.reproduction.api.dto.PregnancyConfirmRequestDTO;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
+import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
@@ -33,6 +39,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -135,14 +142,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate coverageDate = LocalDate.now().minusDays(70);
 
-        ReproductiveEvent coverage = ReproductiveEvent.builder()
-                .farmId(ownerFarm.getId())
-                .goatId(ownerGoat.getRegistrationNumber())
-                .eventType(ReproductiveEventType.COVERAGE)
-                .eventDate(coverageDate)
-                .breedingType(BreedingType.NATURAL)
-                .build();
-        coverage = reproductiveEventRepository.save(coverage);
+        ReproductiveEvent coverage = saveCoverageEvent(coverageDate);
 
         mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
@@ -159,14 +159,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate coverageDate = LocalDate.now().minusDays(10);
 
-        ReproductiveEvent coverage = ReproductiveEvent.builder()
-                .farmId(ownerFarm.getId())
-                .goatId(ownerGoat.getRegistrationNumber())
-                .eventType(ReproductiveEventType.COVERAGE)
-                .eventDate(coverageDate)
-                .breedingType(BreedingType.NATURAL)
-                .build();
-        coverage = reproductiveEventRepository.save(coverage);
+        ReproductiveEvent coverage = saveCoverageEvent(coverageDate);
 
         CoverageCorrectionRequestDTO request = CoverageCorrectionRequestDTO.builder()
                 .correctedDate(coverageDate.minusDays(2))
@@ -186,5 +179,162 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
 
         String body = result.getResponse().getContentAsString();
         assertThat(body).contains("COVERAGE_CORRECTION");
+    }
+
+    @Test
+    void shouldConfirmPregnancy_whenCheckDateIsAtLeast60Days() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate checkDate = LocalDate.now();
+        LocalDate coverageDate = checkDate.minusDays(60);
+
+        saveCoverageEvent(coverageDate);
+
+        PregnancyConfirmRequestDTO request = PregnancyConfirmRequestDTO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.POSITIVE)
+                .notes("Ultrassom")
+                .build();
+
+        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.confirmDate").value(checkDate.toString()))
+                .andExpect(jsonPath("$.breedingDate").value(coverageDate.toString()));
+    }
+
+    @Test
+    void shouldReturn422_whenConfirmIsBefore60Days() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate checkDate = LocalDate.now();
+        LocalDate coverageDate = checkDate.minusDays(59);
+
+        saveCoverageEvent(coverageDate);
+
+        PregnancyConfirmRequestDTO request = PregnancyConfirmRequestDTO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.POSITIVE)
+                .notes("Ultrassom")
+                .build();
+
+        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].fieldName").value("checkDate"));
+    }
+
+    @Test
+    void shouldRegisterNegativeCheck_whenCheckDateIsAtLeast60Days() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate checkDate = LocalDate.now();
+        LocalDate coverageDate = checkDate.minusDays(60);
+
+        saveCoverageEvent(coverageDate);
+
+        PregnancyCheckRequestDTO request = PregnancyCheckRequestDTO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.NEGATIVE)
+                .notes("Sem evidências")
+                .build();
+
+        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.eventType").value("PREGNANCY_CHECK"))
+                .andExpect(jsonPath("$.checkResult").value("NEGATIVE"));
+    }
+
+    @Test
+    void shouldReturn422_whenNegativeCheckIsBefore60Days() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate checkDate = LocalDate.now();
+        LocalDate coverageDate = checkDate.minusDays(59);
+
+        saveCoverageEvent(coverageDate);
+
+        PregnancyCheckRequestDTO request = PregnancyCheckRequestDTO.builder()
+                .checkDate(checkDate)
+                .checkResult(PregnancyCheckResult.NEGATIVE)
+                .notes("Sem evidências")
+                .build();
+
+        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].fieldName").value("checkDate"));
+    }
+
+    @Test
+    void shouldOrderEventsByEventDateDescAndIdDesc() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate eventDate = LocalDate.now().minusDays(15);
+
+        ReproductiveEvent first = saveCoverageEvent(eventDate);
+        ReproductiveEvent second = saveCoverageEvent(eventDate);
+
+        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/events",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(second.getId()))
+                .andExpect(jsonPath("$.content[1].id").value(first.getId()));
+    }
+
+    @Test
+    void shouldOrderPregnanciesByBreedingDateDescAndIdDesc() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate breedingDate = LocalDate.now().minusDays(90);
+
+        Pregnancy active = Pregnancy.builder()
+                .farmId(ownerFarm.getId())
+                .goatId(ownerGoat.getRegistrationNumber())
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(breedingDate)
+                .confirmDate(breedingDate.plusDays(60))
+                .expectedDueDate(breedingDate.plusDays(150))
+                .build();
+        active = pregnancyRepository.save(active);
+
+        Pregnancy closed = Pregnancy.builder()
+                .farmId(ownerFarm.getId())
+                .goatId(ownerGoat.getRegistrationNumber())
+                .status(PregnancyStatus.CLOSED)
+                .breedingDate(breedingDate)
+                .confirmDate(breedingDate.plusDays(60))
+                .expectedDueDate(breedingDate.plusDays(150))
+                .closedAt(breedingDate.plusDays(120))
+                .closeReason(PregnancyCloseReason.BIRTH)
+                .build();
+        closed = pregnancyRepository.save(closed);
+
+        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(closed.getId()))
+                .andExpect(jsonPath("$.content[1].id").value(active.getId()));
+    }
+
+    private ReproductiveEvent saveCoverageEvent(LocalDate coverageDate) {
+        ReproductiveEvent coverage = ReproductiveEvent.builder()
+                .farmId(ownerFarm.getId())
+                .goatId(ownerGoat.getRegistrationNumber())
+                .eventType(ReproductiveEventType.COVERAGE)
+                .eventDate(coverageDate)
+                .breedingType(BreedingType.NATURAL)
+                .build();
+        return reproductiveEventRepository.save(coverage);
     }
 }
