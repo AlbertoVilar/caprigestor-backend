@@ -55,6 +55,12 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
   "notes": "Cobertura assistida"
 }
 ```
+### Regras de Cobertura (Breeding)
+- Quando existir gesta??o **ACTIVE**, novas coberturas s?o bloqueadas.
+- ? permitido **registro tardio** apenas quando `eventDate` for **anterior** ? cobertura efetiva da gesta??o (effectiveCoverageDate via corre??o ou `breedingDate`).
+- Ap?s encerramento/corre??o da gesta??o (ex.: `FALSE_POSITIVE`, `ABORTION` ou qualquer `CLOSED`), as coberturas s?o liberadas novamente.
+- **Erro 422**: "N?o ? permitido registrar nova cobertura: existe uma gesta??o ativa para esta cabra. Encerre/corrija a gesta??o atual (ex.: falso positivo/aborto) para liberar novas coberturas."
+
 
 ### PregnancyConfirmRequestDTO
 ```json
