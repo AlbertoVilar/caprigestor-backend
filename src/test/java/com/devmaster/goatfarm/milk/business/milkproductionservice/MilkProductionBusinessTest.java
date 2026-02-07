@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
@@ -26,6 +27,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -330,6 +332,31 @@ class MilkProductionBusinessTest {
     }
 
     @Test
+    void shouldThrowBusinessRule_whenUpdatingCanceledMilkProduction() {
+        Long farmId = 1L;
+        String goatId = "1643218012";
+        Long id = 5L;
+
+        MilkProduction canceled = validEntity();
+        canceled.setStatus(MilkProductionStatus.CANCELED);
+
+        MilkProductionUpdateRequestVO updateVO = MilkProductionUpdateRequestVO.builder()
+                .volumeLiters(new BigDecimal("3.00"))
+                .notes("qualquer")
+                .build();
+
+        when(milkProductionPersistencePort.findById(farmId, goatId, id))
+                .thenReturn(Optional.of(canceled));
+
+        assertThrows(BusinessRuleException.class,
+                () -> milkProductionBusiness.update(farmId, goatId, id, updateVO));
+
+        verify(milkProductionPersistencePort).findById(farmId, goatId, id);
+        verify(milkProductionPersistencePort, never()).save(any());
+        verifyNoInteractions(milkProductionMapper);
+    }
+
+    @Test
     void shouldUpdateVolumeAndNotes_whenBothProvided() {
         // Arrange
         Long farmId = 1L;
@@ -423,15 +450,21 @@ class MilkProductionBusinessTest {
 
         when(milkProductionPersistencePort.findById(farmId, goatId, id))
                 .thenReturn(Optional.of(entity));
+        when(milkProductionPersistencePort.save(entity))
+                .thenReturn(entity);
 
         // Act
         milkProductionBusiness.delete(farmId, goatId, id);
 
         // Verify
         verify(milkProductionPersistencePort).findById(farmId, goatId, id);
-        verify(milkProductionPersistencePort).delete(entity);
+        verify(milkProductionPersistencePort).save(entity);
+        verify(milkProductionPersistencePort, never()).delete(entity);
         verifyNoMoreInteractions(milkProductionPersistencePort);
         verifyNoInteractions(milkProductionMapper, lactationPersistencePort);
+
+        assertEquals(MilkProductionStatus.CANCELED, entity.getStatus());
+        assertNotNull(entity.getCanceledAt());
     }
 
     @Test
@@ -466,6 +499,7 @@ class MilkProductionBusinessTest {
         entity.setShift(MilkingShift.MORNING);
         entity.setVolumeLiters(new BigDecimal("2.50"));
         entity.setNotes("Ordenha da manhã");
+        entity.setStatus(MilkProductionStatus.ACTIVE);
         return entity;
     }
 
@@ -485,6 +519,7 @@ class MilkProductionBusinessTest {
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
                 .notes("Ordenha da manhã")
+                .status(MilkProductionStatus.ACTIVE)
                 .build();
     }
 
