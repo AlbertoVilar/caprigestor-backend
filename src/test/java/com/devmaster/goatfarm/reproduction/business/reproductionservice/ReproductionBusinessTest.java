@@ -87,6 +87,9 @@ class ReproductionBusinessTest {
         // Arrange
         BreedingRequestVO requestVO = validBreedingRequestVO();
 
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.empty());
+
         ReproductiveEvent savedEvent = coverageEventEntity();
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
 
@@ -107,7 +110,7 @@ class ReproductionBusinessTest {
         assertThat(capturedEvent.getEventDate()).isEqualTo(requestVO.getEventDate());
         assertThat(capturedEvent.getBreedingType()).isEqualTo(requestVO.getBreedingType());
 
-        verifyNoInteractions(pregnancyPersistencePort);
+        verify(pregnancyPersistencePort).findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID);
         assertThat(result).isSameAs(responseVO);
     }
 
@@ -151,6 +154,115 @@ class ReproductionBusinessTest {
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
         verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
+    }
+
+    @Test
+    void registerBreeding_shouldBlockWhenActivePregnancyAndEventDateOnOrAfterReference() {
+        BreedingRequestVO requestVO = BreedingRequestVO.builder()
+                .eventDate(LocalDate.of(2026, 2, 6))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(10L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.of(2026, 1, 14))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+
+        assertThatThrownBy(() -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Não é permitido registrar nova cobertura");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+    }
+
+    @Test
+    void registerBreeding_shouldAllowWhenActivePregnancyAndEventDateBeforeReference() {
+        BreedingRequestVO requestVO = BreedingRequestVO.builder()
+                .eventDate(LocalDate.of(2025, 12, 5))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(10L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.of(2026, 1, 14))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+
+        ReproductiveEvent savedEvent = coverageEventEntity();
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
+
+        ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
+        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+
+        ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
+
+        verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
+        assertThat(result).isSameAs(responseVO);
+    }
+
+    @Test
+    void registerBreeding_shouldUseEffectiveCoverageDateFromCorrection() {
+        BreedingRequestVO requestVO = BreedingRequestVO.builder()
+                .eventDate(LocalDate.of(2026, 1, 10))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(10L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.of(2026, 1, 1))
+                .coverageEventId(200L)
+                .build();
+
+        ReproductiveEvent coverageEvent = ReproductiveEvent.builder()
+                .id(200L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .eventType(ReproductiveEventType.COVERAGE)
+                .eventDate(LocalDate.of(2026, 1, 1))
+                .breedingType(BreedingType.NATURAL)
+                .build();
+
+        ReproductiveEvent correctionEvent = ReproductiveEvent.builder()
+                .id(201L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .eventType(ReproductiveEventType.COVERAGE_CORRECTION)
+                .eventDate(LocalDate.of(2026, 1, 5))
+                .relatedEventId(coverageEvent.getId())
+                .correctedEventDate(LocalDate.of(2026, 1, 15))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+        when(reproductiveEventPersistencePort.findByIdAndFarmIdAndGoatId(coverageEvent.getId(), FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(coverageEvent));
+        when(reproductiveEventPersistencePort.findCoverageCorrectionByRelatedEventId(FARM_ID, GOAT_ID, coverageEvent.getId()))
+                .thenReturn(Optional.of(correctionEvent));
+
+        ReproductiveEvent savedEvent = coverageEventEntity();
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
+
+        ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
+        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+
+        ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
+
+        verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
+        assertThat(result).isSameAs(responseVO);
     }
 
     // NOTE: checkScheduledDate not present on BreedingRequestVO, so the related test was removed.
