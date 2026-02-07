@@ -69,6 +69,18 @@ public class ReproductionController {
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
+    @PostMapping("/pregnancies/checks")
+    @Operation(summary = "Registrar diagnóstico negativo de prenhez",
+            description = "Registra NEGATIVE e, se houver gestação ativa, encerra como falso positivo.")
+    public ResponseEntity<ReproductiveEventResponseDTO> registerPregnancyCheck(
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Valid @RequestBody PregnancyCheckRequestDTO request) {
+        PregnancyCheckRequestVO vo = mapper.toPregnancyCheckRequestVO(request);
+        ReproductiveEventResponseVO responseVO = commandUseCase.registerPregnancyCheck(farmId, goatId, vo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toReproductiveEventResponseDTO(responseVO));
+    }
+
     @GetMapping("/pregnancies/active")
     @Operation(summary = "Buscar gestação ativa da cabra (se existir)")
     public ResponseEntity<PregnancyResponseDTO> getActivePregnancy(

@@ -12,6 +12,7 @@ public interface ReproductionMapper {
 
     // DTO -> VO (Requests)
     BreedingRequestVO toBreedingRequestVO(BreedingRequestDTO dto);
+    PregnancyCheckRequestVO toPregnancyCheckRequestVO(PregnancyCheckRequestDTO dto);
     PregnancyConfirmRequestVO toPregnancyConfirmRequestVO(PregnancyConfirmRequestDTO dto);
     PregnancyCloseRequestVO toPregnancyCloseRequestVO(PregnancyCloseRequestDTO dto);
     CoverageCorrectionRequestVO toCoverageCorrectionRequestVO(CoverageCorrectionRequestDTO dto);

@@ -14,19 +14,23 @@ import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequest
 import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCheckVO;
 import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCoverageVO;
 import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -180,7 +184,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
-            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o fluxo específico de registro de exame de gestação quando disponível.");
+            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o endpoint de diagnóstico negativo.");
         }
 
         ReproductiveEvent checkEvent = ReproductiveEvent.builder()
@@ -212,6 +216,75 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
         Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
         return reproductionMapper.toPregnancyResponseVO(savedPregnancy);
+    }
+
+    @Override
+    @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
+    public ReproductiveEventResponseVO registerPregnancyCheck(Long farmId, String goatId, PregnancyCheckRequestVO vo) {
+        goatGenderValidator.requireFemale(farmId, goatId);
+        if (vo.getCheckDate() == null) {
+            throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez é obrigatória");
+        }
+        if (vo.getCheckDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez não pode ser futura");
+        }
+        if (vo.getCheckResult() == null) {
+            throw new InvalidArgumentException("checkResult", "Resultado do diagnóstico de prenhez é obrigatório");
+        }
+        if (vo.getCheckResult() != PregnancyCheckResult.NEGATIVE) {
+            throw new InvalidArgumentException("checkResult", "Resultado deve ser NEGATIVE neste endpoint de diagnóstico.");
+        }
+
+        Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
+                .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
+
+        if (latestCoverage.isEmpty()) {
+            throw new BusinessRuleException("checkDate",
+                    "Não foi encontrada cobertura anterior à data do diagnóstico de prenhez");
+        }
+
+        ReproductiveEvent coverageEvent = latestCoverage.get();
+        LocalDate breedingDate = resolveEffectiveCoverageDate(farmId, goatId, coverageEvent);
+        if (vo.getCheckDate().isBefore(breedingDate.plusDays(MIN_CONFIRMATION_DAYS))) {
+            throw new BusinessRuleException("checkDate", CONFIRMATION_MIN_DAYS_MESSAGE);
+        }
+
+        ReproductiveEvent checkEvent = ReproductiveEvent.builder()
+                .farmId(farmId)
+                .goatId(goatId)
+                .eventType(ReproductiveEventType.PREGNANCY_CHECK)
+                .eventDate(vo.getCheckDate())
+                .checkResult(PregnancyCheckResult.NEGATIVE)
+                .notes(vo.getNotes())
+                .build();
+
+        ReproductiveEvent savedCheckEvent = reproductiveEventPersistencePort.save(checkEvent);
+
+        Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        if (activePregnancy.isPresent()) {
+            Pregnancy pregnancy = activePregnancy.get();
+            pregnancy.setStatus(PregnancyStatus.CLOSED);
+            pregnancy.setClosedAt(vo.getCheckDate());
+            pregnancy.setCloseReason(PregnancyCloseReason.FALSE_POSITIVE);
+            if (vo.getNotes() != null && !vo.getNotes().isBlank()) {
+                pregnancy.setNotes(vo.getNotes());
+            }
+
+            Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
+
+            ReproductiveEvent closeEvent = ReproductiveEvent.builder()
+                    .farmId(farmId)
+                    .goatId(goatId)
+                    .pregnancyId(savedPregnancy.getId())
+                    .eventType(ReproductiveEventType.PREGNANCY_CLOSE)
+                    .eventDate(vo.getCheckDate())
+                    .notes(vo.getNotes())
+                    .build();
+
+            reproductiveEventPersistencePort.save(closeEvent);
+        }
+
+        return reproductionMapper.toReproductiveEventResponseVO(savedCheckEvent);
     }
 
     @Override
@@ -276,14 +349,16 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     public Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable) {
         goatGenderValidator.requireFemale(farmId, goatId);
-        return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+        Pageable stablePageable = withStableSort(pageable, Sort.by(Sort.Order.desc("breedingDate")));
+        return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, stablePageable)
                 .map(reproductionMapper::toPregnancyResponseVO);
     }
 
     @Override
     public Page<ReproductiveEventResponseVO> getReproductiveEvents(Long farmId, String goatId, Pageable pageable) {
         goatGenderValidator.requireFemale(farmId, goatId);
-        return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+        Pageable stablePageable = withStableSort(pageable, Sort.by(Sort.Order.desc("eventDate")));
+        return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, stablePageable)
                 .map(reproductionMapper::toReproductiveEventResponseVO);
     }
 
@@ -397,5 +472,19 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             return false;
         }
         return true;
+    }
+
+    private Pageable withStableSort(Pageable pageable, Sort defaultSort) {
+        if (pageable == null) {
+            return PageRequest.of(0, 20, defaultSort.and(Sort.by(Sort.Order.desc("id"))));
+        }
+        Sort sort = pageable.getSort();
+        if (sort.isUnsorted()) {
+            sort = defaultSort;
+        }
+        if (sort.getOrderFor("id") == null) {
+            sort = sort.and(Sort.by(Sort.Order.desc("id")));
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
