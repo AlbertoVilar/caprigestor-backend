@@ -7,10 +7,12 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.api.mapper.MilkProductionMapper;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
@@ -20,8 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -74,6 +76,9 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         milkProduction.setFarmId(farmId);
         milkProduction.setGoatId(goatId);
         milkProduction.setLactation(lactation);
+        milkProduction.setStatus(MilkProductionStatus.ACTIVE);
+        milkProduction.setCanceledAt(null);
+        milkProduction.setCanceledReason(null);
         MilkProduction saved = milkProductionPersistencePort.save(milkProduction);
         return milkProductionMapper.toResponseVO(saved);
     }
@@ -88,6 +93,10 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         goatGenderValidator.requireFemale(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
+        if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
+            throw new BusinessRuleException("status", "Registro cancelado nao pode ser alterado.");
+        }
+
 
         if (request.getVolumeLiters() != null) {
             milkProduction.setVolumeLiters(request.getVolumeLiters());
@@ -120,7 +129,15 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
 
-        milkProductionPersistencePort.delete(milkProduction);
+        if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
+            return;
+        }
+
+        milkProduction.setStatus(MilkProductionStatus.CANCELED);
+        milkProduction.setCanceledAt(LocalDateTime.now());
+        milkProduction.setCanceledReason(null);
+        milkProductionPersistencePort.save(milkProduction);
+
     }
 
     /**
