@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
-import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
+import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,13 +40,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     private final MilkProductionPersistencePort milkProductionPersistencePort;
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
-    private final LactationMapper lactationMapper;
+    private final LactationBusinessMapper lactationMapper;
 
     public LactationBusiness(LactationPersistencePort lactationPersistencePort,
                              MilkProductionPersistencePort milkProductionPersistencePort,
                              PregnancyPersistencePort pregnancyPersistencePort,
                              GoatGenderValidator goatGenderValidator,
-                             LactationMapper lactationMapper) {
+                             LactationBusinessMapper lactationMapper) {
         this.lactationPersistencePort = lactationPersistencePort;
         this.milkProductionPersistencePort = milkProductionPersistencePort;
         this.pregnancyPersistencePort = pregnancyPersistencePort;
