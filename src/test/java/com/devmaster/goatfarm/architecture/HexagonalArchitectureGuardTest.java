@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -20,28 +19,33 @@ import static org.junit.jupiter.api.Assertions.fail;
 class HexagonalArchitectureGuardTest {
 
     private static final Pattern API_IMPORT_PATTERN = Pattern.compile("^\\s*import\\s+.*\\.api\\..*;");
-    // Lista temporária de violações atuais; deve encolher módulo a módulo.
-    private static final Set<String> ALLOWED_VIOLATIONS = new HashSet<>(List.of(
-            "src/main/java/com/devmaster/goatfarm/authority/business/AuthBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/authority/business/usersbusiness/UserBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/farm/business/GoatFarmBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/farm/business/bo/GoatFarmUpdateRequestVO.java",
-            "src/main/java/com/devmaster/goatfarm/goat/business/GoatBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/reproduction/business/reproductionservice/ReproductionBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/milk/business/milkproductionservice/MilkProductionBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/milk/business/lactationservice/LactationBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/genealogy/business/genealogyservice/GenealogyBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/events/business/eventservice/EventBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/address/business/AddressBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/phone/business/phoneservice/PhoneBusiness.java",
-            "src/main/java/com/devmaster/goatfarm/article/business/articleservice/ArticleBusiness.java"
-    ));
+    // DO NOT EXPAND: a allowlist deve apenas diminuir módulo a módulo.
+    private static final int EXPECTED_ALLOWLIST_SIZE = 13;
+    // Caminhos relativos a src/main/java (sem wildcards).
+    private static final Set<String> ALLOWED_VIOLATIONS = Set.of(
+            "com/devmaster/goatfarm/authority/business/AuthBusiness.java",
+            "com/devmaster/goatfarm/authority/business/usersbusiness/UserBusiness.java",
+            "com/devmaster/goatfarm/farm/business/GoatFarmBusiness.java",
+            "com/devmaster/goatfarm/farm/business/bo/GoatFarmUpdateRequestVO.java",
+            "com/devmaster/goatfarm/goat/business/GoatBusiness.java",
+            "com/devmaster/goatfarm/reproduction/business/reproductionservice/ReproductionBusiness.java",
+            "com/devmaster/goatfarm/milk/business/milkproductionservice/MilkProductionBusiness.java",
+            "com/devmaster/goatfarm/milk/business/lactationservice/LactationBusiness.java",
+            "com/devmaster/goatfarm/genealogy/business/genealogyservice/GenealogyBusiness.java",
+            "com/devmaster/goatfarm/events/business/eventservice/EventBusiness.java",
+            "com/devmaster/goatfarm/address/business/AddressBusiness.java",
+            "com/devmaster/goatfarm/phone/business/phoneservice/PhoneBusiness.java",
+            "com/devmaster/goatfarm/article/business/articleservice/ArticleBusiness.java"
+    );
 
     @Test
     void businessLayerMustNotImportApiLayer() {
         Path projectRoot = Paths.get(System.getProperty("user.dir"));
         Path root = projectRoot.resolve(Paths.get("src", "main", "java"));
         List<String> violations = new ArrayList<>();
+
+        assertTrue(ALLOWED_VIOLATIONS.size() == EXPECTED_ALLOWLIST_SIZE,
+                "Allowlist changed. Refactor modules to remove violations; do not expand allowlist.");
 
         try (Stream<Path> paths = Files.walk(root)) {
             paths.filter(path -> path.toString().endsWith(".java"))
@@ -52,7 +56,8 @@ class HexagonalArchitectureGuardTest {
         }
 
         assertTrue(violations.isEmpty(),
-                "business não pode importar api.*; use business/mapper.\n" + String.join("\n", violations));
+                "Business não pode importar api.*. Crie business/mapper (MapStruct) e mova o mapeamento para lá.\n"
+                        + String.join("\n", violations));
     }
 
     private boolean isBusinessPath(Path path) {
@@ -67,7 +72,8 @@ class HexagonalArchitectureGuardTest {
                 lineNumber[0]++;
                 if (API_IMPORT_PATTERN.matcher(line).find()) {
                     String normalized = path.toString().replace('\\', '/');
-                    String relative = projectRoot.relativize(path).toString().replace('\\', '/');
+                    String relative = projectRoot.resolve("src/main/java").relativize(path)
+                            .toString().replace('\\', '/');
                     if (!ALLOWED_VIOLATIONS.contains(relative)) {
                         violations.add(normalized + ":" + lineNumber[0] + ":" + line.trim());
                     }
