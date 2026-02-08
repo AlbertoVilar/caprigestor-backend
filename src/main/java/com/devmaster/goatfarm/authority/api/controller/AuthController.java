@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.authority.api.controller;
 import com.devmaster.goatfarm.authority.api.dto.*;
 import com.devmaster.goatfarm.authority.application.ports.in.AuthManagementUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.UserManagementUseCase;
+import com.devmaster.goatfarm.authority.api.mapper.AuthMapper;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
@@ -28,6 +29,7 @@ public class AuthController {
     private final AuthManagementUseCase authUseCase;
     private final UserManagementUseCase userUseCase;
     private final GoatFarmManagementUseCase farmUseCase;
+    private final AuthMapper authMapper;
     private final UserMapper userMapper;
     private final GoatFarmMapper farmMapper;
     private final AddressMapper addressMapper;
@@ -36,6 +38,7 @@ public class AuthController {
     public AuthController(AuthManagementUseCase authUseCase,
                           UserManagementUseCase userUseCase,
                           GoatFarmManagementUseCase farmUseCase,
+                          AuthMapper authMapper,
                           UserMapper userMapper,
                           GoatFarmMapper farmMapper,
                           AddressMapper addressMapper,
@@ -43,6 +46,7 @@ public class AuthController {
         this.authUseCase = authUseCase;
         this.userUseCase = userUseCase;
         this.farmUseCase = farmUseCase;
+        this.authMapper = authMapper;
         this.userMapper = userMapper;
         this.farmMapper = farmMapper;
         this.addressMapper = addressMapper;
@@ -51,7 +55,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) {
-        return ResponseEntity.ok(authUseCase.login(loginRequest));
+        return ResponseEntity.ok(authMapper.toLoginResponseDTO(authUseCase.login(authMapper.toRequestVO(loginRequest))));
     }
 
     @PostMapping("/register")
@@ -70,7 +74,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<LoginResponseDTO> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO refreshRequest) {
-        return ResponseEntity.ok(authUseCase.refreshToken(refreshRequest));
+        return ResponseEntity.ok(authMapper.toLoginResponseDTO(authUseCase.refreshToken(authMapper.toRefreshRequestVO(refreshRequest))));
     }
 
     @GetMapping("/me")
