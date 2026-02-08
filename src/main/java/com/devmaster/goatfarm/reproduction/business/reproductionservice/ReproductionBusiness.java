@@ -24,7 +24,7 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.springframework.data.domain.Page;
@@ -46,18 +46,18 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
-    private final ReproductionMapper reproductionMapper;
+    private final ReproductionBusinessMapper reproductionBusinessMapper;
     private final Clock clock;
 
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
                                 GoatGenderValidator goatGenderValidator,
-                                ReproductionMapper reproductionMapper,
+                                ReproductionBusinessMapper reproductionBusinessMapper,
                                 Clock clock) {
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
         this.goatGenderValidator = goatGenderValidator;
-        this.reproductionMapper = reproductionMapper;
+        this.reproductionBusinessMapper = reproductionBusinessMapper;
         this.clock = clock;
     }
 
@@ -103,7 +103,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
 
         ReproductiveEvent savedEvent = reproductiveEventPersistencePort.save(event);
-        return reproductionMapper.toReproductiveEventResponseVO(savedEvent);
+        return reproductionBusinessMapper.toReproductiveEventResponseVO(savedEvent);
     }
 
     @Override
@@ -151,7 +151,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
 
         ReproductiveEvent saved = reproductiveEventPersistencePort.save(correctionEvent);
-        return reproductionMapper.toReproductiveEventResponseVO(saved);
+        return reproductionBusinessMapper.toReproductiveEventResponseVO(saved);
     }
 
     @Override
@@ -226,7 +226,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
 
         Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
-        return reproductionMapper.toPregnancyResponseVO(savedPregnancy);
+        return reproductionBusinessMapper.toPregnancyResponseVO(savedPregnancy);
     }
 
     @Override
@@ -295,7 +295,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             reproductiveEventPersistencePort.save(closeEvent);
         }
 
-        return reproductionMapper.toReproductiveEventResponseVO(savedCheckEvent);
+        return reproductionBusinessMapper.toReproductiveEventResponseVO(savedCheckEvent);
     }
 
     @Override
@@ -335,7 +335,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
         reproductiveEventPersistencePort.save(closeEvent);
 
-        return reproductionMapper.toPregnancyResponseVO(savedPregnancy);
+        return reproductionBusinessMapper.toPregnancyResponseVO(savedPregnancy);
     }
 
     @Override
@@ -343,7 +343,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         goatGenderValidator.requireFemale(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nenhuma gestação ativa encontrada para esta cabra"));
-        return reproductionMapper.toPregnancyResponseVO(pregnancy);
+        return reproductionBusinessMapper.toPregnancyResponseVO(pregnancy);
     }
 
     @Override
@@ -354,7 +354,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         }
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
-        return reproductionMapper.toPregnancyResponseVO(pregnancy);
+        return reproductionBusinessMapper.toPregnancyResponseVO(pregnancy);
     }
 
     @Override
@@ -362,7 +362,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         goatGenderValidator.requireFemale(farmId, goatId);
         Pageable stablePageable = withStableSort(pageable, Sort.by(Sort.Order.desc("breedingDate")));
         return pregnancyPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, stablePageable)
-                .map(reproductionMapper::toPregnancyResponseVO);
+                .map(reproductionBusinessMapper::toPregnancyResponseVO);
     }
 
     @Override
@@ -370,7 +370,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         goatGenderValidator.requireFemale(farmId, goatId);
         Pageable stablePageable = withStableSort(pageable, Sort.by(Sort.Order.desc("eventDate")));
         return reproductiveEventPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, stablePageable)
-                .map(reproductionMapper::toReproductiveEventResponseVO);
+                .map(reproductionBusinessMapper::toReproductiveEventResponseVO);
     }
 
     @Override
