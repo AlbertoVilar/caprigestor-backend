@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
-import com.devmaster.goatfarm.milk.api.mapper.MilkProductionMapper;
+import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
@@ -46,7 +46,7 @@ class MilkProductionBusinessTest {
     private GoatGenderValidator goatGenderValidator;
 
     @Mock
-    private MilkProductionMapper milkProductionMapper;
+    private MilkProductionBusinessMapper milkProductionMapper;
 
     @InjectMocks
     private MilkProductionBusiness milkProductionBusiness;

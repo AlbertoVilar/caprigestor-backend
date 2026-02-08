@@ -8,7 +8,6 @@ import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -37,8 +36,4 @@ public interface LactationMapper {
     LactationSummaryResponseDTO.LactationSummaryPregnancyDTO toSummaryPregnancyDTO(
             LactationSummaryResponseVO.LactationSummaryPregnancyVO vo
     );
-
-    LactationResponseVO toResponseVO(Lactation entity);
-
-    List<LactationResponseVO> toResponseVOList(List<Lactation> entities);
 }
