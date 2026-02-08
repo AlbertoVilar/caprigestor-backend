@@ -248,3 +248,42 @@ Se a migration de verificação `V15_9__Assert_no_duplicate_active_pregnancy` en
 - O diagnóstico de prenhez só pode ser registrado a partir de **60 dias após a última cobertura efetiva**.
 - A recomendação de diagnóstico pode ser consultada no endpoint `/pregnancies/diagnosis-recommendation`.
 - A janela de 45 dias � uma recomenda��o de manejo; a API continua exigindo 60 dias e retorna 422 para checks antes desse prazo.
+
+## Farm-level alerts endpoint
+
+This route is farm-level (not goat-level):
+
+- GET /api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis
+
+Query params:
+
+- referenceDate (optional, format YYYY-MM-DD, default server current date)
+- page (optional, default 0)
+- size (optional, default 20)
+
+Example curl:
+
+    curl -X GET "http://localhost:8080/api/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20" \
+      -H "Authorization: Bearer <token>"
+
+Example response:
+
+    {
+      "totalPending": 2,
+      "alerts": [
+        {
+          "goatId": "GOAT-001",
+          "eligibleDate": "2025-12-31",
+          "daysOverdue": 39,
+          "lastCoverageDate": "2025-11-01",
+          "lastCheckDate": null
+        },
+        {
+          "goatId": "GOAT-010",
+          "eligibleDate": "2026-01-05",
+          "daysOverdue": 34,
+          "lastCoverageDate": "2025-11-06",
+          "lastCheckDate": null
+        }
+      ]
+    }
