@@ -1,10 +1,10 @@
 package com.devmaster.goatfarm.authority.business;
 
-import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
-import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
-import com.devmaster.goatfarm.authority.api.dto.RefreshTokenRequestDTO;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.api.mapper.AuthMapper;
+import com.devmaster.goatfarm.authority.business.bo.LoginRequestVO;
+import com.devmaster.goatfarm.authority.business.bo.LoginResponseVO;
+import com.devmaster.goatfarm.authority.business.bo.RefreshTokenRequestVO;
+import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -27,19 +27,19 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserPersistencePort userPort;
-    private final AuthMapper authMapper;
+    private final AuthorityBusinessMapper authorityBusinessMapper;
     private final JwtDecoder jwtDecoder;
 
     public AuthBusiness(AuthenticationManager authenticationManager, JwtService jwtService,
-                        UserPersistencePort userPort, AuthMapper authMapper, JwtDecoder jwtDecoder) {
+                        UserPersistencePort userPort, AuthorityBusinessMapper authorityBusinessMapper, JwtDecoder jwtDecoder) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userPort = userPort;
-        this.authMapper = authMapper;
+        this.authorityBusinessMapper = authorityBusinessMapper;
         this.jwtDecoder = jwtDecoder;
     }
 
-    public LoginResponseDTO authenticateUser(LoginRequestDTO loginRequest) {
+    public LoginResponseVO authenticateUser(LoginRequestVO loginRequest) {
         logger.info("🔒 LOGIN: Tentativa de login para: {}", loginRequest.getEmail());
 
         try {
@@ -54,7 +54,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             String accessToken = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            return authMapper.toLoginResponseDTO(user, accessToken, refreshToken);
+            return authorityBusinessMapper.toLoginResponseVO(user, accessToken, refreshToken);
 
         } catch (BadCredentialsException e) {
             logger.warn("🔒 LOGIN ERROR: Credenciais inválidas para: {}", loginRequest.getEmail());
@@ -62,7 +62,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
     }
 
-    public LoginResponseDTO refreshToken(RefreshTokenRequestDTO refreshRequest) {
+    public LoginResponseVO refreshToken(RefreshTokenRequestVO refreshRequest) {
         logger.info("🔄 REFRESH: Tentativa de refresh token");
 
         try {
@@ -80,7 +80,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             String newAccessToken = jwtService.generateToken(user);
             String newRefreshToken = jwtService.generateRefreshToken(user);
 
-            return authMapper.toLoginResponseDTO(newAccessToken, newRefreshToken);
+            return authorityBusinessMapper.toLoginResponseVO(newAccessToken, newRefreshToken);
 
         } catch (Exception e) {
             logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
@@ -89,7 +89,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
     }
 
     @Override
-    public LoginResponseDTO login(com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO loginRequest) {
+    public LoginResponseVO login(LoginRequestVO loginRequest) {
         return authenticateUser(loginRequest);
     }
 }

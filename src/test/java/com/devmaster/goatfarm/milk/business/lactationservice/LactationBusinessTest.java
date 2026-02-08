@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
+import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +50,7 @@ class LactationBusinessTest {
     private GoatGenderValidator goatGenderValidator;
 
     @Mock
-    private LactationMapper lactationMapper;
+    private LactationBusinessMapper lactationMapper;
 
     @InjectMocks
     private LactationBusiness lactationBusiness;

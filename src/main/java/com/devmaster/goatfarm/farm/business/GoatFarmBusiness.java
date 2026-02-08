@@ -14,15 +14,12 @@ import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
-import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.farm.business.mapper.FarmBusinessMapper;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
 import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
-import com.devmaster.goatfarm.phone.persistence.entity.Phone;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -30,11 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 
 @Service
@@ -44,8 +37,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     private final AddressBusiness addressBusiness;
     private final UserBusiness userBusiness;
     private final PhoneBusiness phoneBusiness;
-    private final GoatFarmMapper goatFarmMapper;
-    private final PhoneMapper phoneMapper;
+    private final FarmBusinessMapper farmBusinessMapper;
     private final OwnershipService ownershipService;
     private final EntityFinder entityFinder;
 
@@ -54,8 +46,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
             AddressBusiness addressBusiness,
             UserBusiness userBusiness,
             PhoneBusiness phoneBusiness,
-            GoatFarmMapper goatFarmMapper,
-            PhoneMapper phoneMapper,
+            FarmBusinessMapper farmBusinessMapper,
             OwnershipService ownershipService,
             EntityFinder entityFinder
     ) {
@@ -63,8 +54,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         this.addressBusiness = addressBusiness;
         this.userBusiness = userBusiness;
         this.phoneBusiness = phoneBusiness;
-        this.goatFarmMapper = goatFarmMapper;
-        this.phoneMapper = phoneMapper;
+        this.farmBusinessMapper = farmBusinessMapper;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
     }
@@ -75,17 +65,17 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
                 () -> goatFarmPort.findByIdWithDetails(id),
                 "Fazenda não encontrada com ID: " + id
         );
-        return goatFarmMapper.toFullResponseVO(farm);
+        return farmBusinessMapper.toFullResponseVO(farm);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) {
-        return goatFarmPort.searchByName(name, pageable).map(goatFarmMapper::toFullResponseVO);
+        return goatFarmPort.searchByName(name, pageable).map(farmBusinessMapper::toFullResponseVO);
     }
 
     @Transactional(readOnly = true)
     public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) {
-        return goatFarmPort.findAll(pageable).map(goatFarmMapper::toFullResponseVO);
+        return goatFarmPort.findAll(pageable).map(farmBusinessMapper::toFullResponseVO);
     }
 
     @Transactional
@@ -132,7 +122,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         User owner = resolveOwner(userVO, currentUser);
         var addressEntity = addressBusiness.findOrCreateAddressEntity(addressVO);
 
-        GoatFarm farmEntity = goatFarmMapper.toEntity(farmVO);
+        GoatFarm farmEntity = farmBusinessMapper.toEntity(farmVO);
         farmEntity.setUser(owner);
         farmEntity.setAddress(addressEntity);
 
@@ -145,7 +135,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
                     () -> goatFarmPort.findById(savedFarm.getId()),
                     "Fazenda não encontrada com ID: " + savedFarm.getId()
             );
-            return goatFarmMapper.toFullResponseVO(reloaded);
+            return farmBusinessMapper.toFullResponseVO(reloaded);
         } catch (DataIntegrityViolationException e) {
             // Mensagem genérica para o cliente, detalhe na causa (logs)
             throw new DuplicateEntityException("Não foi possível processar a solicitação devido a conflito de dados.");
@@ -176,7 +166,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
                 throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farmVO.getTod() + "'.");
             }
             validateLogoUrl(farmVO.getLogoUrl());
-            goatFarmMapper.updateEntity(farmEntity, farmVO);
+            farmBusinessMapper.updateEntity(farmEntity, farmVO);
         }
 
         // Atualiza dados do usuário owner (não permite trocar owner neste fluxo)
@@ -207,7 +197,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         // Recarrega para garantir relacionamentos atualizados
         GoatFarm reloaded = goatFarmPort.findById(saved.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + saved.getId()));
-        return goatFarmMapper.toFullResponseVO(reloaded);
+        return farmBusinessMapper.toFullResponseVO(reloaded);
     }
 
     @Transactional(readOnly = true)

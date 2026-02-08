@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.address.business;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
-import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.business.mapper.AddressBusinessMapper;
 import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -39,7 +39,7 @@ public class AddressBusinessTest {
     private AddressPersistencePort addressPort;
 
     @Mock
-    private AddressMapper addressMapper;
+    private AddressBusinessMapper addressMapper;
 
     @Mock
     private OwnershipService ownershipService;
@@ -172,7 +172,7 @@ public class AddressBusinessTest {
 
         verify(ownershipService).verifyFarmOwnership(farmId);
         verify(addressPort).findByIdAndFarmId(addressId, farmId);
-        verify(addressMapper).toEntity(current, vo);
+        verify(addressMapper).updateEntity(current, vo);
         verify(addressPort).save(current);
         verify(addressMapper).toResponseVO(updated);
     }

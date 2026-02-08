@@ -1,15 +1,15 @@
 package com.devmaster.goatfarm.authority.application.ports.in;
 
-import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
-import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
-import com.devmaster.goatfarm.authority.api.dto.RefreshTokenRequestDTO;
+import com.devmaster.goatfarm.authority.business.bo.LoginRequestVO;
+import com.devmaster.goatfarm.authority.business.bo.LoginResponseVO;
+import com.devmaster.goatfarm.authority.business.bo.RefreshTokenRequestVO;
 
 /**
  * Porta de entrada (Use Case) para operações de autenticação.
  */
 public interface AuthManagementUseCase {
 
-    LoginResponseDTO login(LoginRequestDTO loginRequest);
+    LoginResponseVO login(LoginRequestVO loginRequest);
 
-    LoginResponseDTO refreshToken(RefreshTokenRequestDTO refreshRequest);
+    LoginResponseVO refreshToken(RefreshTokenRequestVO refreshRequest);
 }

@@ -4,10 +4,8 @@ import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
-import com.devmaster.goatfarm.events.persistence.entity.Event;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
 
 import java.util.List;
 @Mapper(componentModel = "spring")
@@ -21,17 +19,5 @@ public interface EventMapper {
     
     List<EventResponseDTO> toResponseDTOList(List<EventResponseVO> voList);
 
-    // Mapeamentos necessários pelo EventApplicationService
-    Event toEntity(EventRequestVO vo);
-
-    void updateEvent(@MappingTarget Event target, EventRequestVO vo);
-
-    // Ajustes de nomes e relações aninhadas:
-    // - id (Entity) -> eventId (VO)
-    // - goat.registrationNumber (Entity) -> goatId (VO)
-    // - goat.name (Entity) -> goatName (VO)
-    @Mapping(source = "id", target = "eventId")
-    @Mapping(source = "goat.registrationNumber", target = "goatId")
-    @Mapping(source = "goat.name", target = "goatName")
-    EventResponseVO toResponseVO(Event entity);
+    // Somente DTO <-> VO. Mapeamentos de Entity ficam na camada business.
 }

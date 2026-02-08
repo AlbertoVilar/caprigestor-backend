@@ -21,7 +21,7 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +60,7 @@ class ReproductionBusinessTest {
     private GoatGenderValidator goatGenderValidator;
 
     @Mock
-    private ReproductionMapper reproductionMapper;
+    private ReproductionBusinessMapper reproductionBusinessMapper;
 
     @Spy
     private Clock clock = Clock.systemDefaultZone();
@@ -94,7 +94,7 @@ class ReproductionBusinessTest {
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
 
         ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
-        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
 
         // Act
         ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
@@ -125,7 +125,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
-        verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
+        verifyNoInteractions(reproductiveEventPersistencePort, reproductionBusinessMapper, pregnancyPersistencePort);
     }
 
     @Test
@@ -139,7 +139,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
-        verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
+        verifyNoInteractions(reproductiveEventPersistencePort, reproductionBusinessMapper, pregnancyPersistencePort);
     }
 
     @Test
@@ -153,7 +153,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO));
-        verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper, pregnancyPersistencePort);
+        verifyNoInteractions(reproductiveEventPersistencePort, reproductionBusinessMapper, pregnancyPersistencePort);
     }
 
     @Test
@@ -203,7 +203,7 @@ class ReproductionBusinessTest {
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
 
         ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
-        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
 
         ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
 
@@ -257,7 +257,7 @@ class ReproductionBusinessTest {
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
 
         ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
-        when(reproductionMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(responseVO);
 
         ReproductiveEventResponseVO result = reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO);
 
@@ -293,7 +293,7 @@ class ReproductionBusinessTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         PregnancyResponseVO responseVO = pregnancyResponseVO();
-        when(reproductionMapper.toPregnancyResponseVO(any(Pregnancy.class)))
+        when(reproductionBusinessMapper.toPregnancyResponseVO(any(Pregnancy.class)))
                 .thenReturn(responseVO);
 
         // Act
@@ -346,7 +346,7 @@ class ReproductionBusinessTest {
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -364,7 +364,7 @@ class ReproductionBusinessTest {
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -389,7 +389,7 @@ class ReproductionBusinessTest {
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -415,7 +415,7 @@ class ReproductionBusinessTest {
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -429,7 +429,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
-        verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionMapper);
+        verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionBusinessMapper);
     }
 
     @Test
@@ -443,7 +443,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(InvalidArgumentException.class,
                 () -> reproductionBusiness.confirmPregnancy(FARM_ID, GOAT_ID, requestVO));
-        verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionMapper);
+        verifyNoInteractions(reproductiveEventPersistencePort, pregnancyPersistencePort, reproductionBusinessMapper);
     }
 
     @Test
@@ -460,7 +460,7 @@ class ReproductionBusinessTest {
 
         assertThat(exception.getMessage()).contains("Foram encontradas múltiplas gestações ativas");
 
-        verifyNoInteractions(reproductiveEventPersistencePort, reproductionMapper);
+        verifyNoInteractions(reproductiveEventPersistencePort, reproductionBusinessMapper);
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
     }
 
@@ -491,7 +491,7 @@ class ReproductionBusinessTest {
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -519,7 +519,7 @@ class ReproductionBusinessTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ReproductiveEventResponseVO responseVO = reproductiveEventResponseVO();
-        when(reproductionMapper.toReproductiveEventResponseVO(any(ReproductiveEvent.class)))
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(any(ReproductiveEvent.class)))
                 .thenReturn(responseVO);
 
         ReproductiveEventResponseVO result = reproductionBusiness.registerPregnancyCheck(FARM_ID, GOAT_ID, requestVO);
@@ -547,7 +547,7 @@ class ReproductionBusinessTest {
 
         when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(activePregnancy));
-        when(reproductionMapper.toPregnancyResponseVO(activePregnancy))
+        when(reproductionBusinessMapper.toPregnancyResponseVO(activePregnancy))
                 .thenReturn(responseVO);
 
         // Act
@@ -570,7 +570,7 @@ class ReproductionBusinessTest {
                 () -> reproductionBusiness.getActivePregnancy(FARM_ID, GOAT_ID));
 
         assertThat(thrown.getMessage()).contains("Foram encontradas múltiplas gestações ativas");
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -582,7 +582,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(ResourceNotFoundException.class,
                 () -> reproductionBusiness.getActivePregnancy(FARM_ID, GOAT_ID));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     // ==================================================================================
@@ -598,7 +598,7 @@ class ReproductionBusinessTest {
 
         when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(pregnancy));
-        when(reproductionMapper.toPregnancyResponseVO(pregnancy))
+        when(reproductionBusinessMapper.toPregnancyResponseVO(pregnancy))
                 .thenReturn(responseVO);
 
         // Act
@@ -618,7 +618,7 @@ class ReproductionBusinessTest {
         // Act & Assert
         assertThrows(ResourceNotFoundException.class,
                 () -> reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, pregnancyId));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -628,7 +628,7 @@ class ReproductionBusinessTest {
                 () -> reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, 0L));
         assertThrows(com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException.class,
                 () -> reproductionBusiness.getPregnancyById(FARM_ID, GOAT_ID, null));
-        verifyNoInteractions(pregnancyPersistencePort, reproductionMapper);
+        verifyNoInteractions(pregnancyPersistencePort, reproductionBusinessMapper);
     }
 
     // ==================================================================================
@@ -652,7 +652,7 @@ class ReproductionBusinessTest {
                 .thenReturn(closeEventEntity(pregnancyId));
 
         PregnancyResponseVO responseVO = pregnancyResponseVO();
-        when(reproductionMapper.toPregnancyResponseVO(any(Pregnancy.class)))
+        when(reproductionBusinessMapper.toPregnancyResponseVO(any(Pregnancy.class)))
                 .thenReturn(responseVO);
 
         // Act
@@ -695,7 +695,7 @@ class ReproductionBusinessTest {
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -714,7 +714,7 @@ class ReproductionBusinessTest {
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -738,7 +738,7 @@ class ReproductionBusinessTest {
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -762,7 +762,7 @@ class ReproductionBusinessTest {
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     @Test
@@ -786,7 +786,7 @@ class ReproductionBusinessTest {
 
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verifyNoInteractions(reproductionMapper);
+        verifyNoInteractions(reproductionBusinessMapper);
     }
 
     // ==================================================================================
@@ -887,7 +887,7 @@ class ReproductionBusinessTest {
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedCorrection);
 
         ReproductiveEventResponseVO responseVO = ReproductiveEventResponseVO.builder().build();
-        when(reproductionMapper.toReproductiveEventResponseVO(savedCorrection)).thenReturn(responseVO);
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedCorrection)).thenReturn(responseVO);
 
         ReproductiveEventResponseVO result = reproductionBusiness.correctCoverage(FARM_ID, GOAT_ID, coverageEvent.getId(), requestVO);
 

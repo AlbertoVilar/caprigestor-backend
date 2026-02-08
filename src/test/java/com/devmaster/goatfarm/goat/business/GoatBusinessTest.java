@@ -13,13 +13,12 @@ import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
+import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -36,7 +35,7 @@ public class GoatBusinessTest {
     @Mock private GoatPersistencePort goatPort;
     @Mock private GoatFarmPersistencePort goatFarmPort;
     @Mock private OwnershipService ownershipService;
-    @Mock private GoatMapper goatMapper;
+    @Mock private GoatBusinessMapper goatBusinessMapper;
     @Mock private EntityFinder entityFinder;
 
     private GoatBusiness goatBusiness;
@@ -49,7 +48,7 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatMapper, entityFinder);
+        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatBusinessMapper, entityFinder);
 
         // Configure default EntityFinder behavior
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
@@ -116,10 +115,10 @@ public class GoatBusinessTest {
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
         when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(java.util.Optional.of(goatFarm));
-        when(goatMapper.toEntity(requestVO)).thenReturn(goat);
+        when(goatBusinessMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
         when(goatPort.save(any(Goat.class))).thenReturn(goat);
-        when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
+        when(goatBusinessMapper.toResponseVO(goat)).thenReturn(responseVO);
 
         // ===== Act =====
         GoatResponseVO resultado = goatBusiness.createGoat(1L, requestVO);
@@ -143,10 +142,10 @@ public class GoatBusinessTest {
         verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
         verify(goatFarmPort, times(1)).findById(1L);
         verify(goatPort, never()).findByRegistrationNumber(any());
-        verify(goatMapper, times(1)).toEntity(requestVO);
+        verify(goatBusinessMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
-        verify(goatMapper, times(1)).toResponseVO(goat);
+        verify(goatBusinessMapper, times(1)).toResponseVO(goat);
     }
 
     @Test
@@ -179,10 +178,10 @@ public class GoatBusinessTest {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(goatFarm));
         when(goatPort.findByRegistrationNumber("164321001")).thenReturn(Optional.of(fatherGoat));
         when(goatPort.findByRegistrationNumber("164321002")).thenReturn(Optional.of(motherGoat));
-        when(goatMapper.toEntity(requestVO)).thenReturn(goat);
+        when(goatBusinessMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
         when(goatPort.save(any(Goat.class))).thenReturn(goat);
-        when(goatMapper.toResponseVO(goat)).thenReturn(responseVO);
+        when(goatBusinessMapper.toResponseVO(goat)).thenReturn(responseVO);
 
         // ===== ACT =====
         GoatResponseVO resultado = goatBusiness.createGoat(1L, requestVO);
@@ -198,10 +197,10 @@ public class GoatBusinessTest {
         verify(goatFarmPort, times(1)).findById(1L);
         verify(goatPort, times(1)).findByRegistrationNumber("164321001"); // Pai
         verify(goatPort, times(1)).findByRegistrationNumber("164321002"); // Mãe
-        verify(goatMapper, times(1)).toEntity(requestVO);
+        verify(goatBusinessMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
-        verify(goatMapper, times(1)).toResponseVO(goat);
+        verify(goatBusinessMapper, times(1)).toResponseVO(goat);
     }
 }
 

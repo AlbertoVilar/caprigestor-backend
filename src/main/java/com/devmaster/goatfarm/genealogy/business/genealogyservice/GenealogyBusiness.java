@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCa
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.genealogy.api.mapper.GenealogyMapper;
+import com.devmaster.goatfarm.genealogy.business.mapper.GenealogyBusinessMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class GenealogyBusiness implements GenealogyQueryUseCase {
 
     private final GoatGenealogyQueryPort goatGenealogyQueryPort;
-    private final GenealogyMapper genealogyMapper;
+    private final GenealogyBusinessMapper genealogyMapper;
 
-    public GenealogyBusiness(GoatGenealogyQueryPort goatGenealogyQueryPort, GenealogyMapper genealogyMapper) {
+    public GenealogyBusiness(GoatGenealogyQueryPort goatGenealogyQueryPort, GenealogyBusinessMapper genealogyMapper) {
         this.goatGenealogyQueryPort = goatGenealogyQueryPort;
         this.genealogyMapper = genealogyMapper;
     }

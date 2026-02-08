@@ -8,7 +8,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
+import com.devmaster.goatfarm.phone.business.mapper.PhoneBusinessMapper;
 import com.devmaster.goatfarm.phone.application.ports.in.PhoneManagementUseCase;
 import com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class PhoneBusiness implements PhoneManagementUseCase {
 
     private final PhonePersistencePort phonePort;
-    private final PhoneMapper phoneMapper;
+    private final PhoneBusinessMapper phoneMapper;
     private final GoatFarmPersistencePort goatFarmPort;
     private final OwnershipService ownershipService;
     private final EntityFinder entityFinder;
@@ -75,7 +75,7 @@ public class PhoneBusiness implements PhoneManagementUseCase {
             throw new DuplicateEntityException("phone", "Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
         }
 
-        phoneMapper.updatePhone(phoneToUpdate, requestVO);
+        phoneMapper.updateEntity(phoneToUpdate, requestVO);
 
         Phone saved = phonePort.save(phoneToUpdate);
         return phoneMapper.toResponseVO(saved);
@@ -152,7 +152,7 @@ public class PhoneBusiness implements PhoneManagementUseCase {
                 if (existing.isPresent() && !existing.get().getId().equals(requestId)) {
                     throw new DuplicateEntityException("phone", "Já existe um telefone com DDD (" + requestVO.getDdd() + ") e número " + requestVO.getNumber());
                 }
-                phoneMapper.updatePhone(current, requestVO);
+                phoneMapper.updateEntity(current, requestVO);
                 phonePort.save(current);
                 retainedIds.add(requestId);
             } else {

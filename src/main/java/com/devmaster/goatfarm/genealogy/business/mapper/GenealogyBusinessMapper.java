@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.genealogy.api.mapper;
+package com.devmaster.goatfarm.genealogy.business.mapper;
 
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
@@ -6,7 +6,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
-public interface GenealogyMapper {
+public interface GenealogyBusinessMapper {
 
     @Mapping(target = "goatName", source = "name")
     @Mapping(target = "goatRegistration", source = "registrationNumber")
