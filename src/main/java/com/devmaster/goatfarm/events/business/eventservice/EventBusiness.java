@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.enums.EventType;
-import com.devmaster.goatfarm.events.api.mapper.EventMapper;
+import com.devmaster.goatfarm.events.business.mapper.EventBusinessMapper;
 import com.devmaster.goatfarm.events.persistence.entity.Event;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.springframework.data.domain.Page;
@@ -28,13 +28,13 @@ public class EventBusiness implements EventManagementUseCase {
     private final EventPersistencePort eventPersistencePort;
     private final GoatPersistencePort goatPersistencePort;
     private final OwnershipService ownershipService;
-    private final EventMapper eventMapper;
+    private final EventBusinessMapper eventMapper;
     private final EventPublisher eventPublisher;
 
     public EventBusiness(EventPersistencePort eventPersistencePort,
                          GoatPersistencePort goatPersistencePort,
                          OwnershipService ownershipService,
-                         EventMapper eventMapper,
+                         EventBusinessMapper eventMapper,
                          EventPublisher eventPublisher) {
         this.eventPersistencePort = eventPersistencePort;
         this.goatPersistencePort = goatPersistencePort;
@@ -73,7 +73,7 @@ public class EventBusiness implements EventManagementUseCase {
 
         verifyFarmOwnership(goat);
 
-        eventMapper.updateEvent(event, requestVO);
+        eventMapper.updateEntity(event, requestVO);
         Event updatedEvent = eventPersistencePort.save(event);
         return eventMapper.toResponseVO(updatedEvent);
     }
