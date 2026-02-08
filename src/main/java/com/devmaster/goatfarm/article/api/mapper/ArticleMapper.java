@@ -12,7 +12,6 @@ import com.devmaster.goatfarm.article.business.bo.ArticlePublicDetailResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
-import com.devmaster.goatfarm.article.persistence.entity.Article;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
@@ -30,9 +29,5 @@ public interface ArticleMapper {
 
     ArticlePublicDetailResponseDTO toPublicDetailResponseDTO(ArticlePublicDetailResponseVO vo);
 
-    ArticleResponseVO toResponseVO(Article entity);
-
-    ArticlePublicListResponseVO toPublicListResponseVO(Article entity);
-
-    ArticlePublicDetailResponseVO toPublicDetailResponseVO(Article entity);
+    // Somente DTO <-> VO. Mapeamentos de Entity ficam na camada business.
 }

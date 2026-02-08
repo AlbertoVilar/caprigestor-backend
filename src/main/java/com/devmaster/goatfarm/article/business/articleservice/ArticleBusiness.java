@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
-import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
+import com.devmaster.goatfarm.article.business.mapper.ArticleBusinessMapper;
 import com.devmaster.goatfarm.article.persistence.entity.Article;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
@@ -36,9 +36,9 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
     private static final int HIGHLIGHT_COUNT = 3;
 
     private final ArticlePersistencePort articlePersistencePort;
-    private final ArticleMapper articleMapper;
+    private final ArticleBusinessMapper articleMapper;
 
-    public ArticleBusiness(ArticlePersistencePort articlePersistencePort, ArticleMapper articleMapper) {
+    public ArticleBusiness(ArticlePersistencePort articlePersistencePort, ArticleBusinessMapper articleMapper) {
         this.articlePersistencePort = articlePersistencePort;
         this.articleMapper = articleMapper;
     }
