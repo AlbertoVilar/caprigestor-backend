@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.address.business;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
+import com.devmaster.goatfarm.address.business.mapper.AddressBusinessMapper;
 import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
 import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
@@ -21,11 +21,11 @@ import java.util.Set;
 public class AddressBusiness implements AddressManagementUseCase {
 
     private final AddressPersistencePort addressPort;
-    private final AddressMapper addressMapper;
+    private final AddressBusinessMapper addressMapper;
     private final OwnershipService ownershipService;
     private final EntityFinder entityFinder;
 
-    public AddressBusiness(AddressPersistencePort addressPort, AddressMapper addressMapper, OwnershipService ownershipService, EntityFinder entityFinder) {
+    public AddressBusiness(AddressPersistencePort addressPort, AddressBusinessMapper addressMapper, OwnershipService ownershipService, EntityFinder entityFinder) {
         this.addressPort = addressPort;
         this.addressMapper = addressMapper;
         this.ownershipService = ownershipService;
@@ -47,7 +47,7 @@ public class AddressBusiness implements AddressManagementUseCase {
                 () -> addressPort.findByIdAndFarmId(addressId, farmId),
                 "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
         );
-        addressMapper.toEntity(current, requestVO);
+        addressMapper.updateEntity(current, requestVO);
         Address updated = addressPort.save(current);
         return addressMapper.toResponseVO(updated);
     }
@@ -59,7 +59,7 @@ public class AddressBusiness implements AddressManagementUseCase {
                 () -> addressPort.findByIdAndFarmId(addressId, farmId),
                 "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
         );
-        addressMapper.toEntity(current, requestVO);
+        addressMapper.updateEntity(current, requestVO);
         return addressPort.save(current);
     }
 
