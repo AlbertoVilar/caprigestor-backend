@@ -212,6 +212,13 @@ domain → application → infrastructure
   - Output Port → Porta de Saída (Interface para Infraestrutura)
   - Adapter / Repository → Adaptador de Saída (Driven Adapter)
 
+### ✅ Regra de Dependência (Hexagonal)
+
+- `business` **nunca** importa `api.*`.
+- Mapeamentos separados: `api.mapper` (DTO ↔ VO) e `business.mapper` (VO ↔ Entity).
+- **Health** é a referência de implementação.
+- Gate automático: `HexagonalArchitectureGuardTest` falha o build em qualquer regressão.
+
 ---
 
 ## 🧭 Diagrama do Domínio (Mermaid)
