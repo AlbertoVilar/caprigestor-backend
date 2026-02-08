@@ -1,21 +1,19 @@
 package com.devmaster.goatfarm.authority.api.mapper;
 
+import com.devmaster.goatfarm.authority.api.dto.LoginRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.LoginResponseDTO;
-import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.api.dto.RefreshTokenRequestDTO;
+import com.devmaster.goatfarm.authority.business.bo.LoginRequestVO;
+import com.devmaster.goatfarm.authority.business.bo.LoginResponseVO;
+import com.devmaster.goatfarm.authority.business.bo.RefreshTokenRequestVO;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring", uses = UserMapper.class)
 public interface AuthMapper {
 
-    @Mapping(target = "user", source = "user")
-    @Mapping(target = "tokenType", constant = "Bearer")
-    @Mapping(target = "expiresIn", constant = "3600L")
-    LoginResponseDTO toLoginResponseDTO(User user, String accessToken, String refreshToken);
+    LoginRequestVO toRequestVO(LoginRequestDTO dto);
 
-    @Mapping(target = "user", ignore = true) // User é nulo no refresh
-    @Mapping(target = "tokenType", constant = "Bearer")
-    @Mapping(target = "expiresIn", constant = "3600L")
-    LoginResponseDTO toLoginResponseDTO(String accessToken, String refreshToken);
+    RefreshTokenRequestVO toRefreshRequestVO(RefreshTokenRequestDTO dto);
+
+    LoginResponseDTO toLoginResponseDTO(LoginResponseVO vo);
 }

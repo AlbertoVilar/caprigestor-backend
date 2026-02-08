@@ -18,9 +18,14 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
+import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
+import org.mapstruct.Named;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring", uses = {PhoneMapper.class, UserMapper.class, AddressMapper.class})
 public interface GoatFarmMapper {
@@ -115,5 +120,10 @@ public interface GoatFarmMapper {
         dto.setCpf(vo.getUserCpf());
         dto.setRoles(vo.getUserRoles() != null ? vo.getUserRoles() : java.util.Collections.emptyList());
         return dto;
+    }
+
+    @Named("rolesToStringList")
+    default List<String> rolesToStringList(Set<Role> roles) {
+        return roles == null ? null : roles.stream().map(Role::getAuthority).collect(Collectors.toList());
     }
 }

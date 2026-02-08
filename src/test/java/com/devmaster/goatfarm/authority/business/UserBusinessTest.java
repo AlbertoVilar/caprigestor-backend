@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
@@ -45,7 +45,7 @@ class UserBusinessTest {
     private RolePersistencePort rolePort;
 
     @Mock
-    private UserMapper userMapper;
+    private AuthorityBusinessMapper authorityBusinessMapper;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -102,9 +102,9 @@ class UserBusinessTest {
         when(rolePort.findByAuthority("ROLE_OPERATOR")).thenReturn(Optional.of(operatorRole));
         when(passwordEncoder.encode("senha123")).thenReturn("$2a$10$hashedPassword");
 
-        when(userMapper.toEntity(any(UserRequestVO.class))).thenReturn(userEntity);
+        when(authorityBusinessMapper.toEntity(any(UserRequestVO.class))).thenReturn(userEntity);
         when(userPort.save(any(User.class))).thenReturn(userEntity);
-        when(userMapper.toResponseVO(any(User.class))).thenReturn(userResponseVO);
+        when(authorityBusinessMapper.toResponseVO(any(User.class))).thenReturn(userResponseVO);
 
         UserResponseVO resultado = userBusiness.saveUser(userRequestVO);
 
@@ -118,7 +118,7 @@ class UserBusinessTest {
         verify(passwordEncoder, times(1)).encode("senha123");
         verify(rolePort, times(1)).findByAuthority("ROLE_OPERATOR");
         verify(userPort, times(1)).save(any(User.class));
-        verify(userMapper, times(1)).toResponseVO(any(User.class));
+        verify(authorityBusinessMapper, times(1)).toResponseVO(any(User.class));
     }
 
     @Test

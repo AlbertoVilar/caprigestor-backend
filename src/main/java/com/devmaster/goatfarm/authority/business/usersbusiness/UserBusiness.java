@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
+import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
@@ -23,13 +23,13 @@ import java.util.stream.Collectors;
 public class UserBusiness implements com.devmaster.goatfarm.authority.application.ports.in.UserManagementUseCase {
     private final UserPersistencePort userPort;
     private final RolePersistencePort rolePort;
-    private final UserMapper userMapper;
+    private final AuthorityBusinessMapper authorityBusinessMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, AuthorityBusinessMapper authorityBusinessMapper, PasswordEncoder passwordEncoder) {
         this.userPort = userPort;
         this.rolePort = rolePort;
-        this.userMapper = userMapper;
+        this.authorityBusinessMapper = authorityBusinessMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -48,12 +48,12 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         String encryptedPassword = passwordEncoder.encode(vo.getPassword());
         Set<Role> resolvedRoles = resolveUserRoles(vo);
 
-        User user = userMapper.toEntity(vo);
+        User user = authorityBusinessMapper.toEntity(vo);
         user.setPassword(encryptedPassword);
         user.getRoles().clear();
         user.getRoles().addAll(resolvedRoles);
         User saved = userPort.save(user);
-        return userMapper.toResponseVO(saved);
+        return authorityBusinessMapper.toResponseVO(saved);
     }
 
     @Transactional
@@ -104,26 +104,26 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
 
         User updated = userPort.save(existingUser);
-        return userMapper.toResponseVO(updated);
+        return authorityBusinessMapper.toResponseVO(updated);
     }
 
     @Transactional
     public UserResponseVO getMe() {
         User current = getAuthenticatedEntity();
-        return userMapper.toResponseVO(current);
+        return authorityBusinessMapper.toResponseVO(current);
     }
 
     @Transactional(readOnly = true)
     public UserResponseVO findByEmail(String email) {
         return userPort.findByEmail(email)
-                .map(userMapper::toResponseVO)
+                .map(authorityBusinessMapper::toResponseVO)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public UserResponseVO findById(Long userId) {
         return userPort.findById(userId)
-                .map(userMapper::toResponseVO)
+                .map(authorityBusinessMapper::toResponseVO)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
     }
 
@@ -164,7 +164,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         user.getRoles().clear();
         user.getRoles().addAll(resolved);
         User saved = userPort.save(user);
-        return userMapper.toResponseVO(saved);
+        return authorityBusinessMapper.toResponseVO(saved);
     }
 
     @Transactional
@@ -232,7 +232,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         validateUserData(vo, true);
         return userPort.findByEmail(vo.getEmail())
                 .orElseGet(() -> {
-                    User user = userMapper.toEntity(vo);
+                    User user = authorityBusinessMapper.toEntity(vo);
                     Set<Role> roles = resolveUserRoles(vo);
                     roles.forEach(user::addRole);
                     user.setPassword(passwordEncoder.encode(vo.getPassword()));
