@@ -3,16 +3,23 @@ package com.devmaster.goatfarm.reproduction.persistence.adapter;
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Component
 public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPersistencePort {
+
+    private static final List<String> BLOCKING_DIAGNOSIS_EVENT_TYPES = List.of(
+            ReproductiveEventType.PREGNANCY_CHECK.name(),
+            ReproductiveEventType.PREGNANCY_CLOSE.name()
+    );
 
     private final ReproductiveEventRepository repository;
 
@@ -67,6 +74,23 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 goatId,
                 ReproductiveEventType.COVERAGE_CORRECTION,
                 relatedEventId
+        );
+    }
+
+    @Override
+    public Page<PregnancyDiagnosisAlertProjection> findPendingPregnancyDiagnosisAlerts(
+            Long farmId,
+            LocalDate referenceDate,
+            int minDays,
+            Pageable pageable
+    ) {
+        LocalDate eligibleThresholdDate = referenceDate.minusDays(minDays);
+        return repository.findPendingPregnancyDiagnosisAlerts(
+                farmId,
+                referenceDate,
+                eligibleThresholdDate,
+                BLOCKING_DIAGNOSIS_EVENT_TYPES,
+                pageable
         );
     }
 }
