@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
+import com.devmaster.goatfarm.phone.business.mapper.PhoneBusinessMapper;
 import com.devmaster.goatfarm.phone.persistence.entity.Phone;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +25,7 @@ class PhoneBusinessTest {
     @Mock
     private PhonePersistencePort phonePort;
     @Mock
-    private PhoneMapper phoneMapper;
+    private PhoneBusinessMapper phoneMapper;
     @Mock
     private GoatFarmPersistencePort goatFarmPort;
     @Mock
