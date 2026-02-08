@@ -56,10 +56,10 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 }
 ```
 ### Regras de Cobertura (Breeding)
-- Quando existir gesta??o **ACTIVE**, novas coberturas s?o bloqueadas.
-- ? permitido **registro tardio** apenas quando `eventDate` for **anterior** ? cobertura efetiva da gesta??o (effectiveCoverageDate via corre??o ou `breedingDate`).
-- Ap?s encerramento/corre??o da gesta??o (ex.: `FALSE_POSITIVE`, `ABORTION` ou qualquer `CLOSED`), as coberturas s?o liberadas novamente.
-- **Erro 422**: "N?o ? permitido registrar nova cobertura: existe uma gesta??o ativa para esta cabra. Encerre/corrija a gesta??o atual (ex.: falso positivo/aborto) para liberar novas coberturas."
+- Quando existir gestação **ACTIVE**, novas coberturas são bloqueadas.
+- É permitido **registro tardio** apenas quando `eventDate` for **anterior** à cobertura efetiva da gestação (effectiveCoverageDate via correção ou `breedingDate`).
+- Após encerramento/correção da gestação (ex.: `FALSE_POSITIVE`, `ABORTION` ou qualquer `CLOSED`), as coberturas são liberadas novamente.
+- **Erro 422**: "Não é permitido registrar nova cobertura: existe uma gestação ativa para esta cabra. Encerre/corrija a gestação atual (ex.: falso positivo/aborto) para liberar novas coberturas."
 
 
 ### PregnancyConfirmRequestDTO
@@ -71,20 +71,20 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 }
 ```
 
-> Regra de dom�nio: neste endpoint de confirma��o, apenas `checkResult = POSITIVE` � aceito.
-> Para diagn�stico `NEGATIVE`, utilize `/pregnancies/checks` (nenhum evento ou gesta��o � criada aqui).
+> Regra de domínio: neste endpoint de confirmação, apenas `checkResult = POSITIVE` é aceito.
+> Para diagnóstico `NEGATIVE`, utilize `/pregnancies/checks` (nenhum evento ou gestação é criada aqui).
 
 ### PregnancyCheckRequestDTO
 ```json
 {
   "checkDate": "2026-02-01",
   "checkResult": "NEGATIVE",
-  "notes": "Sem evid�ncias de gesta��o"
+  "notes": "Sem evidências de gestação"
 }
 ```
 
-> Regra de dom�nio: neste endpoint apenas `checkResult = NEGATIVE` � aceito.
-> A API valida a janela m�nima de 60 dias ap�s a �ltima cobertura efetiva (retorna 422 quando violada).
+> Regra de domínio: neste endpoint apenas `checkResult = NEGATIVE` é aceito.
+> A API valida a janela mínima de 60 dias após a última cobertura efetiva (retorna 422 quando violada).
 
 ### PregnancyCloseRequestDTO
 ```json
@@ -121,12 +121,12 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 }
 ```
 
-> Par�metro opcional: `referenceDate=YYYY-MM-DD` (default: data atual do servidor).
+> Parâmetro opcional: `referenceDate=YYYY-MM-DD` (default: data atual do servidor).
 
 ### Response Objects
 **PregnancyResponseDTO**
 - `confirmedAt` renamed to `confirmDate`.
-- `closedAt` � o campo de data de encerramento no response (n�o `closeDate`).
+- `closedAt` é o campo de data de encerramento no response (não `closeDate`).
 - `recommendedDryDate` removed.
 - `closeReason` added.
 - `notes` added.
@@ -138,9 +138,9 @@ Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 
 ## POST /pregnancies/checks
 
-Endpoint para registrar diagn�stico `NEGATIVE` de prenhez e corrigir falso positivo quando existir gesta��o ativa.
+Endpoint para registrar diagnóstico `NEGATIVE` de prenhez e corrigir falso positivo quando existir gestação ativa.
 
-- **M�todo**: POST
+- **Método**: POST
 - **Rota completa**:
   `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks`
 
@@ -149,23 +149,23 @@ Endpoint para registrar diagn�stico `NEGATIVE` de prenhez e corrigir falso posit
 {
   "checkDate": "2026-02-01",
   "checkResult": "NEGATIVE",
-  "notes": "Sem evid�ncias de gesta��o"
+  "notes": "Sem evidências de gestação"
 }
 ```
 
 ### Regras
-- Apenas `checkResult = NEGATIVE` � aceito (resultado POSITIVE deve usar `/pregnancies/confirm`).
-- `checkDate` n�o pode ser futura.
-- `checkDate` deve ser >= 60 dias ap�s a �ltima cobertura efetiva.
-- Se existir gesta��o ativa, ela � encerrada como `FALSE_POSITIVE` e um evento `PREGNANCY_CLOSE` � registrado.
-- Ap�s o fechamento, `/pregnancies/active` retorna 404.
+- Apenas `checkResult = NEGATIVE` é aceito (resultado POSITIVE deve usar `/pregnancies/confirm`).
+- `checkDate` não pode ser futura.
+- `checkDate` deve ser >= 60 dias após a última cobertura efetiva.
+- Se existir gestação ativa, ela é encerrada como `FALSE_POSITIVE` e um evento `PREGNANCY_CLOSE` é registrado.
+- Após o fechamento, `/pregnancies/active` retorna 404.
 
 ### Status codes
-- **201 Created** - diagn�stico registrado com sucesso.
-- **200 OK** - n�o utilizado no fluxo atual; reservado para respostas idempotentes.
-- **422 Unprocessable Entity** - regra de 60 dias violada ou cobertura v�lida inexistente.
+- **201 Created** - diagnóstico registrado com sucesso.
+- **200 OK** - não utilizado no fluxo atual; reservado para respostas idempotentes.
+- **422 Unprocessable Entity** - regra de 60 dias violada ou cobertura válida inexistente.
 - **409 Conflict** - conflito de integridade (ex.: constraint de unicidade).
-- **404 Not Found** - cabra ou fazenda n�o encontrada.
+- **404 Not Found** - cabra ou fazenda não encontrada.
 
 ## GET /pregnancies/{pregnancyId}
 
@@ -196,7 +196,7 @@ Accept: application/json
   "expectedDueDate": "2026-05-31",
   "closedAt": null,
   "closeReason": null,
-  "notes": "Gesta��o confirmada por ultrassom"
+  "notes": "Gestação confirmada por ultrassom"
 }
 ```
 
@@ -206,10 +206,10 @@ Accept: application/json
 - **400 Bad Request** – `pregnancyId` inválido (null ou <= 0).  
 - **404 Not Found** – gestação não encontrada ou não pertence ao `farmId` informado.
 
-## Pagina��o e Ordena��o
+## Paginação e Ordenação
 
-- `/events`: ordenado por `eventDate` DESC e `id` DESC (desempate est�vel).
-- `/pregnancies`: ordenado por `breedingDate` DESC e `id` DESC (desempate est�vel).
+- `/events`: ordenado por `eventDate` DESC e `id` DESC (desempate estável).
+- `/pregnancies`: ordenado por `breedingDate` DESC e `id` DESC (desempate estável).
 
 ## Concurrency Safety (Blindagem)
 
@@ -218,8 +218,8 @@ Para garantir que a regra “apenas 1 gestação ativa por cabra” seja respeit
 1. **Unique Index Partial**: o banco de dados possui um índice único `(farm_id, goat_id) WHERE status = 'ACTIVE'`.  
 2. **Pre-check no Business**: a aplicação verifica duplicidade antes de salvar uma nova pregnancy ativa.  
 3. **Handler 409**: se ainda assim ocorrer uma race condition e o índice único for violado:
-   - quando a violação vem do índice `ux_pregnancy_single_active_per_goat`, o handler retorna **HTTP 409 Conflict** com `field = "status"` e mensagem `"J� existe uma gesta��o ativa para esta cabra"`;  
-   - para outros constraints, o handler mantém **HTTP 409 Conflict**, mas utiliza `field = "integrity"` e mensagem genérica `"Viola��o de integridade no banco de dados"`.
+   - quando a violação vem do índice `ux_pregnancy_single_active_per_goat`, o handler retorna **HTTP 409 Conflict** com `field = "status"` e mensagem `"Já existe uma gestação ativa para esta cabra"`;  
+   - para outros constraints, o handler mantém **HTTP 409 Conflict**, mas utiliza `field = "integrity"` e mensagem genérica `"Violação de integridade no banco de dados"`.
 
 ## Flyway V16 – banco sujo (duplicated ACTIVE)
 
@@ -247,4 +247,43 @@ Se a migration de verificação `V15_9__Assert_no_duplicate_active_pregnancy` en
 
 - O diagnóstico de prenhez só pode ser registrado a partir de **60 dias após a última cobertura efetiva**.
 - A recomendação de diagnóstico pode ser consultada no endpoint `/pregnancies/diagnosis-recommendation`.
-- A janela de 45 dias � uma recomenda��o de manejo; a API continua exigindo 60 dias e retorna 422 para checks antes desse prazo.
+- A janela de 45 dias é uma recomendação de manejo; a API continua exigindo 60 dias e retorna 422 para checks antes desse prazo.
+
+## Farm-level alerts endpoint
+
+This route is farm-level (not goat-level):
+
+- GET /api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis
+
+Query params:
+
+- referenceDate (optional, format YYYY-MM-DD, default server current date)
+- page (optional, default 0)
+- size (optional, default 20)
+
+Example curl:
+
+    curl -X GET "http://localhost:8080/api/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20" \
+      -H "Authorization: Bearer <token>"
+
+Example response:
+
+    {
+      "totalPending": 2,
+      "alerts": [
+        {
+          "goatId": "GOAT-001",
+          "eligibleDate": "2025-12-31",
+          "daysOverdue": 39,
+          "lastCoverageDate": "2025-11-01",
+          "lastCheckDate": null
+        },
+        {
+          "goatId": "GOAT-010",
+          "eligibleDate": "2026-01-05",
+          "daysOverdue": 34,
+          "lastCoverageDate": "2025-11-06",
+          "lastCheckDate": null
+        }
+      ]
+    }

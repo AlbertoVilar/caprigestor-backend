@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.reproduction.application.ports.in;
 
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationResponseVO;
 import org.springframework.data.domain.Page;
@@ -14,4 +15,5 @@ public interface ReproductionQueryUseCase {
     Page<PregnancyResponseVO> getPregnancies(Long farmId, String goatId, Pageable pageable);
     Page<ReproductiveEventResponseVO> getReproductiveEvents(Long farmId, String goatId, Pageable pageable);
     DiagnosisRecommendationResponseVO getDiagnosisRecommendation(Long farmId, String goatId, LocalDate referenceDate);
+    Page<PregnancyDiagnosisAlertVO> getPendingPregnancyDiagnosisAlerts(Long farmId, LocalDate referenceDate, Pageable pageable);
 }

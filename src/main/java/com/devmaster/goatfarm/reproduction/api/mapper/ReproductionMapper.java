@@ -21,5 +21,6 @@ public interface ReproductionMapper {
     DiagnosisRecommendationResponseDTO toDiagnosisRecommendationResponseDTO(DiagnosisRecommendationResponseVO vo);
     DiagnosisRecommendationCoverageDTO toDiagnosisRecommendationCoverageDTO(DiagnosisRecommendationCoverageVO vo);
     DiagnosisRecommendationCheckDTO toDiagnosisRecommendationCheckDTO(DiagnosisRecommendationCheckVO vo);
-    
+    PregnancyDiagnosisAlertItemDTO toPregnancyDiagnosisAlertItemDTO(PregnancyDiagnosisAlertVO vo);
+
 }
