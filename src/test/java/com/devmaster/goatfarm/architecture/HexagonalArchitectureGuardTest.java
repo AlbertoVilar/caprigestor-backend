@@ -20,12 +20,11 @@ class HexagonalArchitectureGuardTest {
 
     private static final Pattern API_IMPORT_PATTERN = Pattern.compile("^\\s*import\\s+.*\\.api\\..*;");
     // DO NOT EXPAND: a allowlist deve apenas diminuir módulo a módulo.
-    private static final int EXPECTED_ALLOWLIST_SIZE = 3;
+    private static final int EXPECTED_ALLOWLIST_SIZE = 2;
     // Caminhos relativos a src/main/java (sem wildcards).
     private static final Set<String> ALLOWED_VIOLATIONS = Set.of(
             "com/devmaster/goatfarm/address/business/AddressBusiness.java",
-            "com/devmaster/goatfarm/phone/business/phoneservice/PhoneBusiness.java",
-            "com/devmaster/goatfarm/article/business/articleservice/ArticleBusiness.java"
+            "com/devmaster/goatfarm/phone/business/phoneservice/PhoneBusiness.java"
     );
 
     @Test
