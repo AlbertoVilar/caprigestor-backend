@@ -17,18 +17,16 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.GoatFarmBusiness;
-import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.farm.business.mapper.FarmBusinessMapper;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,7 +34,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +47,7 @@ class GoatFarmBusinessTest {
     @Mock
     private GoatFarmPersistencePort goatFarmPort;
     @Mock
-    private GoatFarmMapper goatFarmMapper;
+    private FarmBusinessMapper farmBusinessMapper;
     @Mock
     private OwnershipService ownershipService;
     @Mock
@@ -59,8 +56,6 @@ class GoatFarmBusinessTest {
     private AddressBusiness addressBusiness;
     @Mock
     private PhoneBusiness phoneBusiness;
-    @Mock
-    private PhoneMapper phoneMapper;
     @Mock
     private EntityFinder entityFinder;
 
@@ -80,8 +75,7 @@ class GoatFarmBusinessTest {
                 addressBusiness,
                 userBusiness,
                 phoneBusiness,
-                goatFarmMapper,
-                phoneMapper,
+                farmBusinessMapper,
                 ownershipService,
                 entityFinder
         );
@@ -125,12 +119,12 @@ class GoatFarmBusinessTest {
         when(goatFarmPort.existsByName(any())).thenReturn(false);
         when(goatFarmPort.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
-        when(goatFarmMapper.toEntity(any())).thenReturn(mockFarm);
+        when(farmBusinessMapper.toEntity(any())).thenReturn(mockFarm);
         when(goatFarmPort.save(any())).thenReturn(mockFarm);
         when(goatFarmPort.findById(any())).thenReturn(Optional.of(mockFarm));
         
         GoatFarmFullResponseVO responseVO = new GoatFarmFullResponseVO();
-        when(goatFarmMapper.toFullResponseVO(any())).thenReturn(responseVO);
+        when(farmBusinessMapper.toFullResponseVO(any())).thenReturn(responseVO);
 
         GoatFarmFullResponseVO result = goatFarmBusiness.createGoatFarm(fullRequestVO);
 
@@ -154,10 +148,10 @@ class GoatFarmBusinessTest {
         when(userBusiness.findOrCreateUser(any())).thenReturn(mockUser);
         when(goatFarmPort.existsByName(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
-        when(goatFarmMapper.toEntity(any())).thenReturn(mockFarm);
+        when(farmBusinessMapper.toEntity(any())).thenReturn(mockFarm);
         when(goatFarmPort.save(any())).thenReturn(mockFarm);
         when(goatFarmPort.findById(any())).thenReturn(Optional.of(mockFarm));
-        when(goatFarmMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
+        when(farmBusinessMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
 
         GoatFarmFullResponseVO result = goatFarmBusiness.createGoatFarm(fullRequestVO);
 
@@ -306,7 +300,7 @@ class GoatFarmBusinessTest {
         when(goatFarmPort.existsByName(any())).thenReturn(false);
         when(goatFarmPort.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
-        when(goatFarmMapper.toEntity(any())).thenReturn(mockFarm);
+        when(farmBusinessMapper.toEntity(any())).thenReturn(mockFarm);
         
         when(goatFarmPort.save(any())).thenThrow(new DataIntegrityViolationException("Constraint violation"));
 
@@ -323,7 +317,7 @@ class GoatFarmBusinessTest {
         when(goatFarmPort.findById(100L)).thenReturn(Optional.of(mockFarm));
         when(goatFarmPort.save(any())).thenReturn(mockFarm);
         
-        when(goatFarmMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
+        when(farmBusinessMapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO());
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
         when(userBusiness.updateUser(eq(1L), any(UserRequestVO.class)))
                 .thenReturn(new UserResponseVO(1L, "Owner", "owner@example.com", "00000000001", java.util.List.of()));
