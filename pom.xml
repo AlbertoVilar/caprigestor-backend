@@ -196,7 +196,6 @@
                 <configuration>
                     <systemPropertyVariables>
                         <spring.profiles.active>test</spring.profiles.active>
-                        <spring.flyway.enabled>false</spring.flyway.enabled>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
