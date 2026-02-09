@@ -74,3 +74,20 @@ O sistema utiliza um `GlobalExceptionHandler` para padronizar erros:
 *   **Spring Data JPA**: Repositórios estendem `JpaRepository`.
 *   **Lazy Loading**: Relacionamentos pesados (`Address`, `Phone`, `User`) são `LAZY` por padrão para evitar overhead.
 *   **Projeções**: Consultas otimizadas com `JOIN FETCH` para cenários específicos (ex: Genealogia).
+
+## 4. Shared Kernel Entre Contextos
+
+Para integração entre contextos, o sistema usa contratos do Shared Kernel em vez de dependência direta entre módulos de negócio.
+
+* Contrato atual para prenhez:
+  * `com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot`
+  * Campos: `active`, `breedingDate`, `confirmDate`
+* O módulo `milk` consulta prenhez por port de saída:
+  * `milk/application/ports/out/PregnancySnapshotQueryPort`
+  * Adapter: `milk/persistence/adapter/PregnancySnapshotQueryAdapter` (SQL direto na tabela `pregnancy`)
+* Regra de fronteira:
+  * `milk` não pode importar classes de `reproduction.persistence.entity`
+  * `milk` não pode importar classes de `reproduction.api`
+  * `milk` não pode importar classes de `reproduction.business`
+
+Essa regra é protegida por teste de arquitetura em `src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java`.

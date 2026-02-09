@@ -4,13 +4,14 @@ import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
+import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +22,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.math.BigDecimal;
@@ -38,18 +37,18 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     private final LactationPersistencePort lactationPersistencePort;
     private final MilkProductionPersistencePort milkProductionPersistencePort;
-    private final PregnancyPersistencePort pregnancyPersistencePort;
+    private final PregnancySnapshotQueryPort pregnancySnapshotQueryPort;
     private final GoatGenderValidator goatGenderValidator;
     private final LactationBusinessMapper lactationMapper;
 
     public LactationBusiness(LactationPersistencePort lactationPersistencePort,
                              MilkProductionPersistencePort milkProductionPersistencePort,
-                             PregnancyPersistencePort pregnancyPersistencePort,
+                             PregnancySnapshotQueryPort pregnancySnapshotQueryPort,
                              GoatGenderValidator goatGenderValidator,
                              LactationBusinessMapper lactationMapper) {
         this.lactationPersistencePort = lactationPersistencePort;
         this.milkProductionPersistencePort = milkProductionPersistencePort;
-        this.pregnancyPersistencePort = pregnancyPersistencePort;
+        this.pregnancySnapshotQueryPort = pregnancySnapshotQueryPort;
         this.goatGenderValidator = goatGenderValidator;
         this.lactationMapper = lactationMapper;
     }
@@ -143,8 +142,9 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     }
 
     private LactationSummaryResponseVO buildSummary(Long farmId, String goatId, Lactation lactation) {
+        LocalDate today = LocalDate.now();
         LocalDate startDate = lactation.getStartDate();
-        LocalDate endDate = lactation.getEndDate() != null ? lactation.getEndDate() : LocalDate.now();
+        LocalDate endDate = lactation.getEndDate() != null ? lactation.getEndDate() : today;
 
         List<MilkProduction> productions = milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
                 farmId,
@@ -187,7 +187,12 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
             }
         }
 
-        LactationSummaryResponseVO.LactationSummaryPregnancyVO pregnancyVO = buildPregnancySnapshot(farmId, goatId, lactation);
+        LactationSummaryResponseVO.LactationSummaryPregnancyVO pregnancyVO = buildPregnancySnapshot(
+                farmId,
+                goatId,
+                lactation,
+                today
+        );
 
         LactationSummaryResponseVO.LactationSummaryLactationVO lactationVO = LactationSummaryResponseVO.LactationSummaryLactationVO.builder()
                 .lactationId(lactation.getId())
@@ -213,27 +218,35 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                 .build();
     }
 
-    private LactationSummaryResponseVO.LactationSummaryPregnancyVO buildPregnancySnapshot(Long farmId, String goatId, Lactation lactation) {
-        Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
-        if (activePregnancy.isEmpty()) {
+    private LactationSummaryResponseVO.LactationSummaryPregnancyVO buildPregnancySnapshot(Long farmId,
+                                                                                           String goatId,
+                                                                                           Lactation lactation,
+                                                                                           LocalDate referenceDate) {
+        Optional<PregnancySnapshot> snapshot = pregnancySnapshotQueryPort
+                .findLatestByFarmIdAndGoatId(farmId, goatId, referenceDate);
+        if (snapshot.isEmpty()) {
             return null;
         }
 
-        LocalDate referenceDate = activePregnancy.get().getBreedingDate() != null
-                ? activePregnancy.get().getBreedingDate()
-                : activePregnancy.get().getConfirmDate();
-        if (referenceDate == null) {
+        PregnancySnapshot pregnancySnapshot = snapshot.get();
+
+        LocalDate gestationReferenceDate = pregnancySnapshot.breedingDate() != null
+                ? pregnancySnapshot.breedingDate()
+                : pregnancySnapshot.confirmDate();
+        if (gestationReferenceDate == null) {
             return null;
         }
 
-        int gestationDays = (int) ChronoUnit.DAYS.between(referenceDate, LocalDate.now());
+        int gestationDays = (int) ChronoUnit.DAYS.between(gestationReferenceDate, referenceDate);
         boolean lactationActive = lactation.getStatus() == LactationStatus.ACTIVE;
         int dryAtDays = lactation.getDryAtPregnancyDays() != null ? lactation.getDryAtPregnancyDays() : 90;
-        boolean recommendDryOff = lactationActive && gestationDays >= dryAtDays;
-        LocalDate recommendedDryOffDate = referenceDate.plusDays(dryAtDays);
+        boolean recommendDryOff = pregnancySnapshot.active() && lactationActive && gestationDays >= dryAtDays;
+        LocalDate recommendedDryOffDate = pregnancySnapshot.active() ? gestationReferenceDate.plusDays(dryAtDays) : null;
 
         String message;
-        if (recommendDryOff) {
+        if (!pregnancySnapshot.active()) {
+            message = "Não há prenhez ativa para recomendar secagem.";
+        } else if (recommendDryOff) {
             message = "Prenhez confirmada com " + gestationDays + " dias. Recomenda-se secagem.";
         } else if (!lactationActive) {
             message = "Prenhez confirmada com " + gestationDays + " dias. Lactação não está ativa.";

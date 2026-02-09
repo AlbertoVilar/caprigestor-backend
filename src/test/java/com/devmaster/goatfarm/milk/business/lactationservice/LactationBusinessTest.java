@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.milk.business.lactationservice;
 
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -10,10 +10,12 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
+import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,7 +46,7 @@ class LactationBusinessTest {
     private MilkProductionPersistencePort milkProductionPersistencePort;
 
     @Mock
-    private PregnancyPersistencePort pregnancyPersistencePort;
+    private PregnancySnapshotQueryPort pregnancySnapshotQueryPort;
 
     @Mock
     private GoatGenderValidator goatGenderValidator;
@@ -361,6 +363,71 @@ class LactationBusinessTest {
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(responseVO.getId(), result.getContent().get(0).getId());
+    }
+
+    @Test
+    void getLactationSummary_shouldRecommendDryOff_whenPregnancyIsActiveAndThresholdReached() {
+        Long farmId = 1L;
+        String goatId = "123";
+        Long lactationId = 10L;
+        LocalDate breedingDate = LocalDate.now().minusDays(100);
+
+        Lactation lactation = activeLactationEntity();
+        lactation.setId(lactationId);
+        lactation.setFarmId(farmId);
+        lactation.setGoatId(goatId);
+        lactation.setDryAtPregnancyDays(90);
+
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+                .thenReturn(Optional.of(lactation));
+        when(milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+                eq(farmId), eq(goatId), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
+                .thenReturn(Optional.of(new PregnancySnapshot(true, breedingDate, breedingDate.plusDays(10))));
+
+        LactationSummaryResponseVO result = lactationBusiness.getLactationSummary(farmId, goatId, lactationId);
+
+        assertNotNull(result);
+        assertNotNull(result.getPregnancy());
+        assertTrue(Boolean.TRUE.equals(result.getPregnancy().getDryOffRecommendation()));
+        assertEquals(breedingDate.plusDays(90), result.getPregnancy().getRecommendedDryOffDate());
+    }
+
+    @Test
+    void getLactationSummary_shouldDropDryOffRecommendation_whenPregnancyChangesFromActiveToInactive() {
+        Long farmId = 1L;
+        String goatId = "123";
+        Long lactationId = 10L;
+        LocalDate breedingDate = LocalDate.now().minusDays(100);
+
+        Lactation lactation = activeLactationEntity();
+        lactation.setId(lactationId);
+        lactation.setFarmId(farmId);
+        lactation.setGoatId(goatId);
+        lactation.setDryAtPregnancyDays(90);
+
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+                .thenReturn(Optional.of(lactation));
+        when(milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+                eq(farmId), eq(goatId), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
+                .thenReturn(
+                        Optional.of(new PregnancySnapshot(true, breedingDate, breedingDate.plusDays(10))),
+                        Optional.of(new PregnancySnapshot(false, breedingDate, breedingDate.plusDays(10)))
+                );
+
+        LactationSummaryResponseVO positiveSnapshot = lactationBusiness.getLactationSummary(farmId, goatId, lactationId);
+        LactationSummaryResponseVO negativeSnapshot = lactationBusiness.getLactationSummary(farmId, goatId, lactationId);
+
+        assertNotNull(positiveSnapshot.getPregnancy());
+        assertTrue(Boolean.TRUE.equals(positiveSnapshot.getPregnancy().getDryOffRecommendation()));
+
+        assertNotNull(negativeSnapshot.getPregnancy());
+        assertFalse(Boolean.TRUE.equals(negativeSnapshot.getPregnancy().getDryOffRecommendation()));
+        assertNull(negativeSnapshot.getPregnancy().getRecommendedDryOffDate());
+        assertTrue(negativeSnapshot.getPregnancy().getMessage().contains("prenhez ativa"));
     }
 
     // ==================================================================================
