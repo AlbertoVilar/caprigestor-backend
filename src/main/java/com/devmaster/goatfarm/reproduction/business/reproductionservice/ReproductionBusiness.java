@@ -17,6 +17,7 @@ import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationRe
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
@@ -27,6 +28,7 @@ import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +66,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     private static final int GESTATION_DAYS = 150;
     private static final int MIN_CONFIRMATION_DAYS = 60;
+    private static final int DEFAULT_ALERT_PAGE_SIZE = 20;
     private static final String CONFIRMATION_MIN_DAYS_MESSAGE =
             "Diagnóstico de prenhez só pode ser registrado a partir de 60 dias após a última cobertura.";
     private static final String WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK = "GESTACAO_ATIVA_SEM_CHECK_VALIDO";
@@ -424,6 +428,17 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PregnancyDiagnosisAlertVO> getPendingPregnancyDiagnosisAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
+        LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now(clock);
+        Pageable pageRequest = normalizeAlertsPageable(pageable);
+
+        return reproductiveEventPersistencePort
+                .findPendingPregnancyDiagnosisAlerts(farmId, reference, MIN_CONFIRMATION_DAYS, pageRequest)
+                .map(projection -> toPregnancyDiagnosisAlertVO(projection, reference));
+    }
+
     private DiagnosisRecommendationCoverageVO toCoverageVO(ReproductiveEvent coverage, LocalDate effectiveCoverageDate) {
         return DiagnosisRecommendationCoverageVO.builder()
                 .id(coverage.getId())
@@ -497,6 +512,29 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             return false;
         }
         return true;
+    }
+
+    private PregnancyDiagnosisAlertVO toPregnancyDiagnosisAlertVO(PregnancyDiagnosisAlertProjection projection, LocalDate referenceDate) {
+        LocalDate eligibleDate = projection.getEligibleDate() != null
+                ? projection.getEligibleDate()
+                : projection.getLastCoverageDate().plusDays(MIN_CONFIRMATION_DAYS);
+
+        long overdueDays = Math.max(0L, ChronoUnit.DAYS.between(eligibleDate, referenceDate));
+
+        return PregnancyDiagnosisAlertVO.builder()
+                .goatId(projection.getGoatId())
+                .eligibleDate(eligibleDate)
+                .daysOverdue((int) overdueDays)
+                .lastCoverageDate(projection.getLastCoverageDate())
+                .lastCheckDate(projection.getLastCheckDate())
+                .build();
+    }
+
+    private Pageable normalizeAlertsPageable(Pageable pageable) {
+        if (pageable == null) {
+            return PageRequest.of(0, DEFAULT_ALERT_PAGE_SIZE);
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
     }
 
     private Pageable withStableSort(Pageable pageable, Sort defaultSort) {
