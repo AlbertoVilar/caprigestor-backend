@@ -24,7 +24,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/goatfarms/{farmId}/milk/alerts")
-@PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+@PreAuthorize("@ownershipService.canManageFarm(#farmId)")
 public class FarmMilkAlertsController {
 
     private final LactationQueryUseCase lactationQueryUseCase;
@@ -49,8 +49,9 @@ public class FarmMilkAlertsController {
             @Parameter(description = "Tamanho da pagina")
             @RequestParam(defaultValue = "20") int size
     ) {
+        LocalDate effectiveReferenceDate = referenceDate != null ? referenceDate : LocalDate.now();
         Pageable pageable = PageRequest.of(page, size);
-        Page<LactationDryOffAlertVO> alertsPage = lactationQueryUseCase.getDryOffAlerts(farmId, referenceDate, pageable);
+        Page<LactationDryOffAlertVO> alertsPage = lactationQueryUseCase.getDryOffAlerts(farmId, effectiveReferenceDate, pageable);
 
         List<LactationDryOffAlertItemDTO> alerts = alertsPage.getContent().stream()
                 .map(lactationMapper::toDryOffAlertItemDTO)

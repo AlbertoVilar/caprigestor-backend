@@ -18,5 +18,5 @@ public interface LactationPersistencePort {
 
     Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
 
-    Page<LactationDryOffAlertProjection> findDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable);
+    Page<LactationDryOffAlertProjection> findDryOffAlerts(Long farmId, LocalDate referenceDate, int defaultDryDays, Pageable pageable);
 }

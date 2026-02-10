@@ -146,7 +146,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     @Override
     public Page<LactationDryOffAlertVO> getDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
         LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now();
-        return lactationPersistencePort.findDryOffAlerts(farmId, reference, pageable)
+        return lactationPersistencePort.findDryOffAlerts(farmId, reference, 90, pageable)
                 .map(alert -> toDryOffAlertVO(alert, reference));
     }
 

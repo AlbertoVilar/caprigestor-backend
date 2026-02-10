@@ -65,11 +65,11 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                     select
                         l.id as lactationId,
                         l.goat_id as goatId,
-                        coalesce(l.dry_at_pregnancy_days, 90) as dryAtPregnancyDays,
+                        coalesce(l.dry_at_pregnancy_days, :defaultDryDays) as dryAtPregnancyDays,
                         lp.start_date as startDatePregnancy,
                         lp.breeding_date as breedingDate,
                         lp.confirm_date as confirmDate,
-                        (lp.start_date + coalesce(l.dry_at_pregnancy_days, 90)) as dryOffDate
+                        (lp.start_date + coalesce(l.dry_at_pregnancy_days, :defaultDryDays)) as dryOffDate
                     from lactation l
                     join latest_pregnancy lp
                       on lp.farm_id = l.farm_id
@@ -78,8 +78,8 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                       and l.status = 'ACTIVE'
                       and upper(lp.status) = 'ACTIVE'
                       and (lp.closed_at is null or lp.closed_at > :referenceDate)
-                      and (lp.start_date + coalesce(l.dry_at_pregnancy_days, 90)) <= :referenceDate
-                    order by (lp.start_date + coalesce(l.dry_at_pregnancy_days, 90)) asc, l.goat_id asc, l.id asc
+                      and (lp.start_date + coalesce(l.dry_at_pregnancy_days, :defaultDryDays)) <= :referenceDate
+                    order by (lp.start_date + coalesce(l.dry_at_pregnancy_days, :defaultDryDays)) asc, l.goat_id asc, l.id asc
                     """,
             countQuery = """
                     with pregnancy_candidates as (
@@ -125,13 +125,14 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                       and l.status = 'ACTIVE'
                       and upper(lp.status) = 'ACTIVE'
                       and (lp.closed_at is null or lp.closed_at > :referenceDate)
-                      and (lp.start_date + coalesce(l.dry_at_pregnancy_days, 90)) <= :referenceDate
+                      and (lp.start_date + coalesce(l.dry_at_pregnancy_days, :defaultDryDays)) <= :referenceDate
                     """,
             nativeQuery = true
     )
     Page<LactationDryOffAlertProjection> findDryOffAlerts(
             @Param("farmId") Long farmId,
             @Param("referenceDate") LocalDate referenceDate,
+            @Param("defaultDryDays") int defaultDryDays,
             Pageable pageable
     );
 }

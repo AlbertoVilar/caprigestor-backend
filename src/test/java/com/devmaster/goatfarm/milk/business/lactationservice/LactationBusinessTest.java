@@ -447,7 +447,7 @@ class LactationBusinessTest {
         when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 1, 18));
         when(projection.getDryAtPregnancyDays()).thenReturn(90);
 
-        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, pageable))
+        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, 90, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
 
         Page<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageable);
@@ -476,7 +476,7 @@ class LactationBusinessTest {
         when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 3, 1));
         when(projection.getDryAtPregnancyDays()).thenReturn(90);
 
-        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, pageable))
+        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, 90, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
 
         Page<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageable);

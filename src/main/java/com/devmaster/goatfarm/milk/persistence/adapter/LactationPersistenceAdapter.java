@@ -42,7 +42,7 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     }
 
     @Override
-    public Page<LactationDryOffAlertProjection> findDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
-        return lactationRepository.findDryOffAlerts(farmId, referenceDate, pageable);
+    public Page<LactationDryOffAlertProjection> findDryOffAlerts(Long farmId, LocalDate referenceDate, int defaultDryDays, Pageable pageable) {
+        return lactationRepository.findDryOffAlerts(farmId, referenceDate, defaultDryDays, pageable);
     }
 }
