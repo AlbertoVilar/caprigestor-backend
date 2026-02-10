@@ -10,6 +10,9 @@ Este portal organiza os documentos oficiais de produto, arquitetura e contratos 
 ### 00-overview
 - [BUSINESS_DOMAIN.md](./00-overview/BUSINESS_DOMAIN.md)
 - [DOMAIN_GLOSSARY.md](./00-overview/DOMAIN_GLOSSARY.md)
+- [PROJECT_STATUS.md](./00-overview/PROJECT_STATUS.md)
+- [ROADMAP.md](./00-overview/ROADMAP.md)
+- [AGENT_CONTEXT.md](./00-overview/AGENT_CONTEXT.md)
 
 ### 01-architecture
 - [ARCHITECTURE.md](./01-architecture/ARCHITECTURE.md)
