@@ -1,4 +1,7 @@
 # Módulo Milk Production
+Última atualização: 2026-02-10
+Escopo: registro diário de ordenhas, regras e segurança
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
 ## Visão Geral
 Este módulo é responsável pelo gerenciamento da produção leiteira das cabras, permitindo o registro diário de ordenhas, controle de lactações e análise de produtividade.

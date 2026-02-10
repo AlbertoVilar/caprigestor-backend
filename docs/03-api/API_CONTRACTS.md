@@ -1,4 +1,7 @@
 # Padrões de API e Contratos
+Última atualização: 2026-02-10
+Escopo: convenções, segurança, paginação e erros da API
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulos](../02-modules), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
 ## Base de Rotas
 - Base geral: `/api`

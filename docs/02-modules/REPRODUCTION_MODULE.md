@@ -1,4 +1,7 @@
 # Módulo de Reprodução (Reproduction)
+Última atualização: 2026-02-10
+Escopo: coberturas, diagnósticos de gestação e encerramentos
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
 Este módulo é responsável por gerenciar o ciclo reprodutivo das cabras, incluindo coberturas (breeding), diagnósticos de gestação e partos/encerramentos.
 

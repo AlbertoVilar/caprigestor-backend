@@ -1,4 +1,7 @@
 # Plano do Módulo C — Saúde/Veterinário
+Última atualização: 2026-02-10
+Escopo: eventos sanitários, calendário e ações (realizar/cancelar)
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
 Este documento detalha o planejamento para o módulo de gestão sanitária e veterinária do sistema GoatFarm/CapriGestor.
 

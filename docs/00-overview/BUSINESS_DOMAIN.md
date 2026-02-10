@@ -1,4 +1,7 @@
 # Domínio de Negócio - GoatFarm
+Última atualização: 2026-02-10
+Escopo: entidades principais, agregados e regras de negócio
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Módulos](../02-modules)
 
 Este documento descreve as entidades principais, regras de negócio e requisitos não funcionais do sistema.
 
