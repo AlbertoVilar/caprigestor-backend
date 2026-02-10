@@ -8,12 +8,14 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
+import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.junit.jupiter.api.BeforeEach;
@@ -428,6 +430,62 @@ class LactationBusinessTest {
         assertFalse(Boolean.TRUE.equals(negativeSnapshot.getPregnancy().getDryOffRecommendation()));
         assertNull(negativeSnapshot.getPregnancy().getRecommendedDryOffDate());
         assertTrue(negativeSnapshot.getPregnancy().getMessage().contains("prenhez ativa"));
+    }
+
+    @Test
+    void getDryOffAlerts_shouldMapProjectionAndCalculateOverdueDays() {
+        Long farmId = 1L;
+        LocalDate referenceDate = LocalDate.of(2026, 2, 1);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        LactationDryOffAlertProjection projection = mock(LactationDryOffAlertProjection.class);
+        when(projection.getLactationId()).thenReturn(11L);
+        when(projection.getGoatId()).thenReturn("GOAT-001");
+        when(projection.getStartDatePregnancy()).thenReturn(LocalDate.of(2025, 10, 20));
+        when(projection.getBreedingDate()).thenReturn(LocalDate.of(2025, 10, 20));
+        when(projection.getConfirmDate()).thenReturn(LocalDate.of(2025, 12, 20));
+        when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 1, 18));
+        when(projection.getDryAtPregnancyDays()).thenReturn(90);
+
+        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, pageable))
+                .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
+
+        Page<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        LactationDryOffAlertVO alert = result.getContent().get(0);
+        assertEquals("GOAT-001", alert.getGoatId());
+        assertEquals(104, alert.getGestationDays());
+        assertEquals(14, alert.getDaysOverdue());
+        assertTrue(alert.isDryOffRecommendation());
+        assertEquals(LocalDate.of(2026, 1, 18), alert.getDryOffDate());
+    }
+
+    @Test
+    void getDryOffAlerts_shouldKeepOverdueAtZero_whenReferenceDateIsBeforeDryOffDate() {
+        Long farmId = 1L;
+        LocalDate referenceDate = LocalDate.of(2026, 1, 10);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        LactationDryOffAlertProjection projection = mock(LactationDryOffAlertProjection.class);
+        when(projection.getLactationId()).thenReturn(22L);
+        when(projection.getGoatId()).thenReturn("GOAT-002");
+        when(projection.getStartDatePregnancy()).thenReturn(LocalDate.of(2025, 12, 1));
+        when(projection.getBreedingDate()).thenReturn(LocalDate.of(2025, 12, 1));
+        when(projection.getConfirmDate()).thenReturn(LocalDate.of(2026, 1, 1));
+        when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 3, 1));
+        when(projection.getDryAtPregnancyDays()).thenReturn(90);
+
+        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, pageable))
+                .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
+
+        Page<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        LactationDryOffAlertVO alert = result.getContent().get(0);
+        assertEquals(40, alert.getGestationDays());
+        assertEquals(0, alert.getDaysOverdue());
+        assertFalse(alert.isDryOffRecommendation());
     }
 
     // ==================================================================================
