@@ -1,3 +1,5 @@
+DEPRECATED: conteúdo arquivado. Fonte oficial: ver docs/INDEX.md e módulos correspondentes.
+
 Frontend TODO - GoatFarm/CapriGestor
 
 P0 (critico)

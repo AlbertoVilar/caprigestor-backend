@@ -1,3 +1,5 @@
+DEPRECATED: conteúdo arquivado. Fonte oficial: ver docs/INDEX.md e módulos correspondentes.
+
 UX API Examples - GoatFarm/CapriGestor
 
 GoatFarm - PUT agregado

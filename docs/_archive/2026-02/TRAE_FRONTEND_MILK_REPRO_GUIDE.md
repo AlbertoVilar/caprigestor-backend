@@ -1,3 +1,5 @@
+DEPRECATED: conteúdo arquivado. Fonte oficial: ver docs/INDEX.md e módulos correspondentes.
+
 # Guia Frontend (TRAE) - Producao de Leite, Lactacao e Reproducao
 
 Este documento descreve os endpoints e contratos reais do backend para implementar as telas de Producao de Leite (Milk), Lactacao e Reproducao. Use exatamente estes payloads e autorizacoes.
