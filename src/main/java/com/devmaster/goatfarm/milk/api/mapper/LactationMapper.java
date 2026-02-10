@@ -2,10 +2,12 @@ package com.devmaster.goatfarm.milk.api.mapper;
 
 import com.devmaster.goatfarm.milk.api.dto.LactationRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationDryRequestDTO;
+import com.devmaster.goatfarm.milk.api.dto.LactationDryOffAlertItemDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationResponseDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationSummaryResponseDTO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
+import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import org.mapstruct.Mapper;
@@ -36,4 +38,6 @@ public interface LactationMapper {
     LactationSummaryResponseDTO.LactationSummaryPregnancyDTO toSummaryPregnancyDTO(
             LactationSummaryResponseVO.LactationSummaryPregnancyVO vo
     );
+
+    LactationDryOffAlertItemDTO toDryOffAlertItemDTO(LactationDryOffAlertVO vo);
 }
