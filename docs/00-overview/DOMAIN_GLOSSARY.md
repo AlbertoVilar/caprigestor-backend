@@ -1,18 +1,27 @@
-# Glossário de Domínio
+﻿# Glossario de Dominio
+Ultima atualizacao: 2026-02-10
+Escopo: termos de negocio usados nos modulos oficiais e contratos de API.
+Links relacionados: [Portal](../INDEX.md), [Dominio de negocio](./BUSINESS_DOMAIN.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md)
 
-## Entidades Principais
-- GoatFarm: fazenda, agregado raiz
-- Goat: animal (cabra/bode)
-- Lactation: ciclo produtivo do animal
-- MilkProduction: produção diária por turno
-- Pregnancy: gestação (status ACTIVE/CLOSED)
-- Event: eventos de manejo (cobertura, parto, vacinação, pesagem)
+## Visao geral
+Este glossario padroniza termos para reduzir ambiguidade entre backend, testes e documentacao operacional.
 
-## Termos
-- Ownership: vínculo do usuário à fazenda para autorização
-- Dry-Off (Secagem): encerramento da lactação
-- Gestation Days: dias de gestação desde `breedingDate` ou `confirmDate`
-- Shared Kernel: contrato estável entre módulos (ex.: `PregnancySnapshot`)
+## Termos principais
+- `GoatFarm`: agregado raiz da fazenda.
+- `Goat`: animal individual (cabra/bode).
+- `Ownership`: regra de autorizacao vinculada ao `farmId`.
+- `Lactation`: ciclo de producao (`ACTIVE` ou `CLOSED`).
+- `MilkProduction`: registro diario por data e turno.
+- `Pregnancy`: estado de gestacao no modulo de reproducao.
+- `HealthEvent`: evento sanitario (agendado, realizado ou cancelado).
+- `Shared Kernel`: contrato estavel entre contextos (ex.: `PregnancySnapshot`).
 
-## Notas
-- Detalhes completos: [BUSINESS_DOMAIN.md](../BUSINESS_DOMAIN.md)
+## Regras / Contratos
+- Termos de status devem seguir enums da implementacao.
+- Contratos de endpoint devem usar nomenclatura consistente com DTOs oficiais.
+- Termos de negocio nao devem depender de caminho local ou ambiente especifico.
+
+## Referencias internas
+- Detalhamento de entidades e regras: [BUSINESS_DOMAIN.md](./BUSINESS_DOMAIN.md)
+- Contratos e erros de API: [API_CONTRACTS.md](../03-api/API_CONTRACTS.md)
+- Modulos funcionais: [../02-modules](../02-modules)
