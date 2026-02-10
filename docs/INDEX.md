@@ -4,7 +4,7 @@ Escopo: ponto unico de navegacao para a documentacao oficial do backend.
 Links relacionados: [Visao geral](./00-overview/BUSINESS_DOMAIN.md), [Arquitetura](./01-architecture/ARCHITECTURE.md), [Modulos](./02-modules), [API_CONTRACTS](./03-api/API_CONTRACTS.md)
 
 ## Visao geral
-Este portal organiza os documentos oficiais de produto, arquitetura e contratos de API.
+Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e contratos de API.
 
 ## Navegacao oficial
 ### 00-overview
@@ -19,6 +19,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura e contratos 
 - [README.md](./01-architecture/README.md)
 - [ADR-001-atomic-goatfarm-registration-pt-br.md](./01-architecture/ADR/ADR-001-atomic-goatfarm-registration-pt-br.md)
 - [ADR-001-atomic-goatfarm-registration.md](./01-architecture/ADR/ADR-001-atomic-goatfarm-registration.md)
+- [ADR-002-inventory-ledger-balance-and-lots.md](./01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md)
 
 ### 02-modules
 - [ARTICLE_BLOG_MODULE.md](./02-modules/ARTICLE_BLOG_MODULE.md)
@@ -26,6 +27,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura e contratos 
 - [LACTATION_MODULE.md](./02-modules/LACTATION_MODULE.md)
 - [MILK_PRODUCTION_MODULE.md](./02-modules/MILK_PRODUCTION_MODULE.md)
 - [REPRODUCTION_MODULE.md](./02-modules/REPRODUCTION_MODULE.md)
+- [INVENTORY_MODULE.md](./02-modules/INVENTORY_MODULE.md)
 
 ### 03-api
 - [API_CONTRACTS.md](./03-api/API_CONTRACTS.md)
@@ -33,6 +35,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura e contratos 
 ## Referencias internas
 - Auditorias de documentacao: [docs/_work/DOCS_AUDIT_BEFORE.md](./_work/DOCS_AUDIT_BEFORE.md)
 - Lista oficial auditada: [docs/_work/DOCS_OFFICIAL_LIST.md](./_work/DOCS_OFFICIAL_LIST.md)
+- Planejamento de implementacao do Inventory: [docs/_work/INVENTORY_TODO_MVP.md](./_work/INVENTORY_TODO_MVP.md)
 - Historico preservado: [docs/_archive](./_archive)
 
 ## Observacoes
