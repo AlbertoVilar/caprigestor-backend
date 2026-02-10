@@ -1,112 +1,111 @@
-# ADR-002 - Inventory com ledger, saldo materializado e lotes
-Ultima atualizacao: 2026-02-10
-Escopo: decisao arquitetural para o modulo de estoque farm-level com rastreabilidade, idempotencia, concorrencia segura e validade por lote.
-Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Modulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [TODO MVP](../../_work/INVENTORY_TODO_MVP.md)
+﻿# ADR-002 - Inventory com ledger, balance materializado e lotes
+Última atualização: 2026-02-10
+Escopo: decisão arquitetural para o módulo Inventory no backend GoatFarm/CapriGestor.
+Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Módulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [TODO MVP](../../_work/INVENTORY_TODO_MVP.md)
 
-## Contexto
-O backend possui modulos operacionais maduros (`health`, `milk`, `reproduction`) com padrao farm-level, ownership e alertas agregados. A proxima evolucao precisa fornecer base consistente para:
-- consumo de insumos sanitarios;
-- rastreabilidade de lotes/validade;
-- integracao com compras, vendas e financeiro sem acoplamento indevido.
+## Status
+- Proposta aprovada para implementação do MVP.
+- Ainda não implementado nesta tarefa.
 
-Riscos identificados sem um modulo de `inventory`:
-- financeiro sem lastro operacional;
-- perda de rastreabilidade de uso de medicamentos e vacinas;
-- inconsistencias de saldo sob concorrencia.
+## Contexto e problema
+O backend já possui módulos operacionais relevantes (`health`, `milk`, `reproduction`) e precisa de uma base de estoque farm-level para:
+- rastrear consumo de insumos e medicações;
+- evitar inconsistência de saldo sob concorrência;
+- preparar terreno para módulos futuros (`purchases/sales`, `finance`) sem acoplamento indevido.
 
-### Escopo do MVP (fechado)
-Inclui:
-- itens, lotes, movimentos, saldo materializado e alertas `low-stock`/`expiring`.
+Sem um contexto dedicado de Inventory, há risco de:
+- lançamentos financeiros sem lastro operacional;
+- baixa rastreabilidade de uso de itens críticos;
+- regras de saldo duplicadas no front ou em múltiplos módulos.
 
-Nao inclui:
-- `purchases/sales`, `finance`, `feeding` e motor de eventos como dependencia de consistencia.
+## Decisão
+Adotar `inventory` como bounded context próprio, com MVP já incluindo lotes e validade.
 
-## Decisao
-Adotar `inventory` como bounded context dedicado, com MVP ja incluindo lotes/validade para itens rastreaveis.
+Decisão principal:
+- consistência por `ledger + balance`:
+- `stock_movement` como trilha imutável (fonte de verdade);
+- `stock_balance` como projeção materializada para leitura rápida.
 
-Elementos da decisao:
-- Modelo de consistencia:
-- ledger imutavel em `stock_movement`;
-- saldo materializado em `stock_balance` em dois niveis (item consolidado e lote).
-- Regra de dominio obrigatoria:
-- movimentos `OUT` nao podem deixar saldo negativo;
-- `ADJUST` com decremento nao pode deixar saldo negativo;
-- `trackLot=true` exige `lotId` em qualquer movimento.
-- Quantidade e sentido:
-- `quantity` sempre positiva;
-- sentido definido por `movementType` (`IN`, `OUT`, `ADJUST`) + `adjustDirection` quando `ADJUST`.
-- Idempotencia de API:
-- `Idempotency-Key` obrigatoria no header de `POST /movements`;
-- mesma chave + mesmo payload logico retorna replay idempotente (`200`);
-- mesma chave + payload diferente retorna `409`.
-- Integracao entre contextos:
-- sem FK cruzada para modulos externos;
-- referencia por `sourceModule` + `sourceRef`.
-- Concorrencia:
-- row-lock pessimista (`SELECT ... FOR UPDATE`) em `stock_balance`;
-- ordem de lock fixa: saldo item, depois saldo lote.
-- Seguranca:
-- endpoints farm-level com `@PreAuthorize("@ownershipService.canManageFarm(#farmId)")`.
-- Alertas:
-- `low-stock` e `expiring` com formato `totalPending` + `alerts[]` e ordenacao estavel por severidade.
-- Guardrail arquitetural:
-- `inventory..` nao importa `health..`, `milk..`, `reproduction..` (exceto `sharedkernel..`).
+Decisões complementares:
+- `OUT` e `ADJUST` decremento não podem gerar saldo negativo;
+- idempotência obrigatória para `POST /movements` via `Idempotency-Key`;
+- integração entre contextos por `sourceModule` + `sourceRef` (sem FK cruzada);
+- concorrência controlada por lock pessimista em saldo (`SELECT ... FOR UPDATE`);
+- itens rastreáveis exigem lote (`trackLot=true` => `lotId` em movimentos).
 
-## Alternativas consideradas
-### A) Fazer Finance antes de Inventory
-- Vantagem:
-- entrega tela de lancamento mais rapida.
-- Desvantagem:
-- sem base de saldo/movimento, vira lancamento manual e fraco para auditoria.
-- Decisao:
+## Alternativas consideradas e trade-offs
+### A) Inventory sem lotes/validade no MVP
+- Prós:
+- menor esforço inicial.
+- Contras:
+- retrabalho rápido para cenários de saúde;
+- perda de rastreabilidade operacional.
+- Decisão:
 - rejeitada.
 
-### B) Inventory sem lotes/validade no MVP
-- Vantagem:
-- menor esforco inicial.
-- Desvantagem:
-- retrabalho rapido no contexto de `health` (medicamentos/vacinas);
-- reduz rastreabilidade regulatoria e operacional.
-- Decisao:
+### B) Sem `stock_balance` (apenas agregação no ledger)
+- Prós:
+- menor redundância de armazenamento.
+- Contras:
+- consultas e alertas caros em escala;
+- pior latência para telas farm-level.
+- Decisão:
 - rejeitada.
 
-### C) Integracao via FK direta para tabelas de outros modulos
-- Vantagem:
-- integridade referencial estrita no banco para origem do movimento.
-- Desvantagem:
-- cria acoplamento forte entre contextos e quebra principio hexagonal do repositorio;
-- eleva custo de evolucao e migracao.
-- Decisao:
+### C) Event-driven obrigatório já no MVP
+- Prós:
+- base assíncrona pronta para ecossistema maior.
+- Contras:
+- complexidade elevada para primeira entrega;
+- aumenta risco de atraso do MVP.
+- Decisão:
+- adiado para pós-MVP.
+
+### D) FK direta para entidades de outros módulos
+- Prós:
+- integridade relacional estrita de origem.
+- Contras:
+- quebra isolamento de contexto;
+- acoplamento estrutural entre módulos.
+- Decisão:
 - rejeitada.
 
-### D) Saldo calculado apenas por agregacao de movimentos (sem tabela de balance)
-- Vantagem:
-- sem redundancia de armazenamento.
-- Desvantagem:
-- custo elevado de leitura para consultas e alertas frequentes;
-- piora desempenho em escala.
-- Decisao:
-- rejeitada para MVP.
+## Consequências e riscos
+Consequências positivas:
+- base sólida para evolução de compras/vendas e financeiro;
+- rastreabilidade auditável de movimentos;
+- melhor desempenho em leitura de saldo e alertas.
 
-## Consequencias
-### Positivas
-- base tecnica solida para `purchases/sales` e `finance`;
-- rastreabilidade completa de consumo por modulo de origem;
-- leitura performatica de saldo e alertas farm-level;
-- aderencia ao padrao arquitetural atual do repositorio.
+Riscos técnicos:
+- deadlocks ou corrida em baixa simultânea;
+- divergência entre ledger e balance se transação não for fechada corretamente;
+- conflito de idempotência mal tratado sob retry.
 
-### Custos e trade-offs
-- maior complexidade inicial (ledger + balance + lotes + idempotencia + lock de concorrencia);
-- necessidade de testes de concorrencia para garantir integridade de saldo;
-- necessidade de normalizacao de `sourceRef` por modulo.
+Mitigações planejadas:
+- ordem fixa de lock (item consolidado, depois lote);
+- transação única para validar, gravar movement e atualizar balance;
+- regra explícita de `409` para mesma key com payload divergente;
+- testes de concorrência e idempotência no DoD.
 
-### Guardrails obrigatorios
-- manter gates de arquitetura existentes verdes;
-- adicionar `InventoryBoundaryArchUnitTest` com regra explicita de nao acoplamento;
-- documentar qualquer integracao nova via `sourceModule` + `sourceRef` no modulo e no `API_CONTRACTS`.
+Riscos de evolução:
+- mudanças futuras de esquema (índices/constraints) exigirão migrações cuidadosas;
+- ampliação de categorias/unidades deve preservar compatibilidade com contratos.
 
-### Impacto esperado em roadmap
-- Inventory passa a ser pre-requisito explicito para:
+## Regras de fronteira (anti-corruption)
+- `inventory` não importa camadas internas de `health`, `milk`, `reproduction`.
+- única exceção de compartilhamento: `sharedkernel` aprovado.
+- integração por referência textual:
+- `sourceModule` (enum de contexto);
+- `sourceRef` (identificador externo sem FK).
+
+Critério de conformidade arquitetural:
+- adicionar e manter `InventoryBoundaryArchUnitTest` no pipeline.
+
+## Impacto no roadmap
+`inventory` passa a ser pré-requisito técnico para:
 - `purchases/sales`;
-- `finance` com custo confiavel;
-- evolucoes de consumo em `health` e `reproduction`.
+- consolidação financeira com lastro operacional;
+- alertas operacionais mais consistentes no front.
+
+## Referência de implementação
+Backlog executável e ordem de entrega em: [INVENTORY_TODO_MVP.md](../../_work/INVENTORY_TODO_MVP.md)
