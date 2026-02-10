@@ -6,12 +6,24 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCH
 ## Visao geral
 O modulo `inventory` sera o contexto de referencia para controle de estoque por fazenda, com rastreabilidade completa de entradas, saidas e ajustes.
 
-Objetivos do MVP:
-- controlar itens de estoque por fazenda;
-- suportar itens rastreaveis com lote e validade;
-- manter historico auditavel (ledger) e leitura performatica de saldo;
-- fornecer alertas farm-level para baixo estoque e lote proximo do vencimento;
-- habilitar integracoes com `health`, `milk` e `reproduction` por referencia, sem acoplamento de entidades.
+### MVP exato (entra agora)
+- cadastro e consulta de itens (`inventory_item`) por fazenda, com `minQuantity`, `trackLot` e status ativo/inativo;
+- cadastro e consulta de lotes (`inventory_lot`) com `lotCode`, `expiresAt` e quantidade inicial;
+- movimentos de estoque (`stock_movement`) com tipos `IN`, `OUT`, `ADJUST`, idempotencia e rastreabilidade por origem (`sourceModule`, `sourceRef`);
+- saldo materializado (`stock_balance`) para leitura rapida:
+- nivel item (`lotId = null`) para consultas gerais;
+- nivel lote (`lotId != null`) para itens `trackLot=true`;
+- alertas farm-level:
+- `low-stock` (abaixo do minimo);
+- `expiring` (lote proximo do vencimento);
+- padrao de resposta: `totalPending` + `alerts[]`.
+
+### Fora do MVP (nao entra agora)
+- modulo de compras/vendas (`purchases/sales`);
+- financeiro contabil/fiscal;
+- custo medio ponderado e valorizacao contabil completa;
+- integracao orientada a eventos (outbox/consumer) como requisito de consistencia;
+- feed management completo (consumo planejado de racao com simulacao nutricional).
 
 ## Dominio
 ### Bounded context
@@ -27,6 +39,7 @@ Objetivos do MVP:
 - `id`
 - `farmId`
 - `name`
+- `nameNormalized`
 - `category` (`MEDICAMENTO`, `VACINA`, `HORMONIO`, `RACAO`, `INSUMO`, `OUTRO`)
 - `unit` (`ML`, `DOSE`, `KG`, `L`, `UN`)
 - `minQuantity`
@@ -49,16 +62,17 @@ Objetivos do MVP:
 - Responsabilidades:
 - identificar lote fisico;
 - habilitar controle de validade;
-- suportar baixa por lote (FEFO/selecionado).
+- suportar baixa por lote (selecionado ou FEFO em evolucao futura).
 
 #### StockMovement (ledger)
 - Campos principais:
 - `id`
 - `farmId`
 - `itemId`
-- `lotId` (opcional para item sem lote)
+- `lotId` (obrigatorio para item `trackLot=true`)
 - `movementType` (`IN`, `OUT`, `ADJUST`)
-- `quantity`
+- `adjustDirection` (`INCREMENT`, `DECREMENT`) obrigatorio quando `movementType=ADJUST`
+- `quantity` (sempre positiva)
 - `occurredAt`
 - `reason`
 - `sourceModule` (`HEALTH`, `REPRODUCTION`, `MILK`, `PURCHASES`, `SALES`, `MANUAL`)
@@ -74,28 +88,36 @@ Objetivos do MVP:
 - Campos principais:
 - `farmId`
 - `itemId`
-- `lotId` (opcional)
+- `lotId` (nulo para saldo consolidado por item, nao nulo para saldo por lote)
 - `onHandQuantity`
 - `updatedAt`
 - Responsabilidades:
 - leitura performatica de saldo atual;
-- base para alertas e consultas frequentes.
+- base para alertas e consultas frequentes;
+- evitar agregacao pesada no ledger em tempo de leitura.
 
 ### Value Objects sugeridos
 - `QuantityVO` (valor numerico + unidade valida para item)
 - `InventorySourceVO` (`sourceModule`, `sourceRef`)
 - `InventoryAlertVO` (payload padrao de alertas farm-level)
 
-## Invariantes de negocio
+## Invariantes de negocio (nao negociaveis)
 - `farmId` e obrigatorio em todas as operacoes.
-- `StockItem.name` deve ser unico por fazenda (normalizado).
-- `StockLot.lotCode` deve ser unico por `farmId + itemId`.
+- `quantity` sempre `> 0`; o sentido do movimento vem de `movementType`:
+- `IN` soma saldo;
+- `OUT` subtrai saldo;
+- `ADJUST` usa `adjustDirection` para definir soma/subtracao.
 - `movementType=OUT` nao pode resultar em saldo negativo.
-- `movementType=OUT` para item `trackLot=true` exige lote valido.
-- `expiresAt` (quando informado) nao pode ser anterior a data de entrada.
-- `idempotencyKey` deve ser unica por `farmId` para evitar dupla escrita por retry.
+- `movementType=ADJUST` com `adjustDirection=DECREMENT` nao pode resultar em saldo negativo.
+- `trackLot=true` exige `lotId` para qualquer movimento (`IN`, `OUT`, `ADJUST`).
+- `expiresAt` (quando informado) nao pode ser anterior a data de entrada do lote.
 - `StockMovement` e imutavel apos gravacao.
 - `StockBalance` deve refletir o ledger na mesma transacao de comando.
+- Unicidades minimas:
+- `inventory_item (farm_id, name_normalized)` unico;
+- `inventory_lot (item_id, lot_code)` unico;
+- `stock_movement (farm_id, idempotency_key)` unico;
+- `stock_balance` unico por escopo (`farm_id`, `item_id`, `lot_id`) com garantia para `lot_id null` via indice parcial.
 
 ## Diagramas
 ### Context map (integracao sem acoplamento de entidades)
@@ -110,23 +132,28 @@ graph LR
     Inventory -->|base de custo futuro| Finance[finance futuro]
 ```
 
-### Fluxo de movimento (ledger + balance + idempotencia)
+### Fluxo de movimento (idempotencia + lock + ledger + balance)
 ```mermaid
 sequenceDiagram
     participant C as Controller
     participant B as InventoryBusiness
-    participant L as StockMovementPort
-    participant S as StockBalancePort
+    participant M as StockMovementPort
+    participant SB as StockBalancePort
 
-    C->>B: POST movement (farmId,itemId,lotId,type,qty,idempotencyKey)
-    B->>L: verifica idempotencyKey por farmId
-    alt chave ja usada
-        B-->>C: resposta idempotente (200/201 sem duplicar)
-    else nova chave
-        B->>S: lock saldo atual (item/lote)
-        B->>B: valida invariantes (OUT nao negativo)
-        B->>L: grava movement (ledger)
-        B->>S: atualiza saldo materializado
+    C->>B: POST movement + header Idempotency-Key
+    B->>M: busca por (farmId, idempotencyKey)
+    alt chave existente com mesmo hash de payload
+        B-->>C: 200 OK (replay idempotente)
+    else chave existente com payload diferente
+        B-->>C: 409 Conflict
+    else chave nova
+        B->>SB: lock saldo item (FOR UPDATE)
+        opt item trackLot=true
+            B->>SB: lock saldo lote (FOR UPDATE)
+        end
+        B->>B: valida invariantes e saldo nao negativo
+        B->>M: grava ledger imutavel
+        B->>SB: atualiza saldo item e saldo lote
         B-->>C: 201 Created
     end
 ```
@@ -138,8 +165,9 @@ graph TD
     B --> C[InventoryBusiness]
     C --> D[Ports Out]
     D --> E[StockItemPersistenceAdapter]
-    D --> F[StockMovementPersistenceAdapter]
-    D --> G[StockBalancePersistenceAdapter]
+    D --> F[StockLotPersistenceAdapter]
+    D --> G[StockMovementPersistenceAdapter]
+    D --> H[StockBalancePersistenceAdapter]
 ```
 
 ## API
@@ -214,13 +242,17 @@ Contrato curto (criar lote):
 ```
 
 ### Endpoints de movimentos (ledger)
-| Metodo | URL | Query params | Retorno |
-|---|---|---|---|
-| `POST` | `/api/goatfarms/{farmId}/inventory/movements` | - | `201 Created` |
-| `GET` | `/api/goatfarms/{farmId}/inventory/movements` | `itemId`, `lotId`, `movementType`, `sourceModule`, `sourceRef`, `from`, `to`, `page`, `size`, `sort` | `200 OK` (pagina) |
+| Metodo | URL | Query params | Headers | Retorno |
+|---|---|---|---|---|
+| `POST` | `/api/goatfarms/{farmId}/inventory/movements` | - | `Idempotency-Key` (obrigatorio) | `201 Created` |
+| `GET` | `/api/goatfarms/{farmId}/inventory/movements` | `itemId`, `lotId`, `movementType`, `sourceModule`, `sourceRef`, `from`, `to`, `page`, `size`, `sort` | - | `200 OK` (pagina) |
 
 Contrato curto (baixa por evento de saude):
 - URL: `POST /api/goatfarms/1/inventory/movements`
+- Header:
+```text
+Idempotency-Key: health-10-dose-1
+```
 - Request:
 ```json
 {
@@ -230,8 +262,7 @@ Contrato curto (baixa por evento de saude):
   "quantity": 1,
   "reason": "Aplicacao de vacina",
   "sourceModule": "HEALTH",
-  "sourceRef": "health-event:10",
-  "idempotencyKey": "health-10-dose-1"
+  "sourceRef": "health-event:10"
 }
 ```
 - Response:
@@ -248,6 +279,35 @@ Contrato curto (baixa por evento de saude):
 }
 ```
 
+Contrato curto (ajuste de inventario):
+- URL: `POST /api/goatfarms/1/inventory/movements`
+- Header:
+```text
+Idempotency-Key: inv-adjust-2026-02-10-01
+```
+- Request:
+```json
+{
+  "itemId": 101,
+  "lotId": 7001,
+  "movementType": "ADJUST",
+  "adjustDirection": "DECREMENT",
+  "quantity": 2,
+  "reason": "Quebra de frasco",
+  "sourceModule": "MANUAL",
+  "sourceRef": "count:2026-02-10"
+}
+```
+
+### Contrato de idempotencia
+- mesma `Idempotency-Key` + mesmo payload logico (hash igual):
+- primeira execucao: `201`;
+- replay: `200` com mesmo corpo de negocio e `idempotentReplay=true`.
+- mesma `Idempotency-Key` + payload diferente:
+- `409 Conflict`.
+- `Idempotency-Key` ausente em `POST /movements`:
+- `400 Bad Request`.
+
 ### Endpoints de saldo
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
@@ -256,8 +316,8 @@ Contrato curto (baixa por evento de saude):
 ### Endpoints de alertas
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `GET` | `/api/goatfarms/{farmId}/inventory/alerts/low-stock` | `category`, `page`, `size` | `200 OK` (`totalPending` + `alerts`) |
-| `GET` | `/api/goatfarms/{farmId}/inventory/alerts/expiring` | `days` (default `30`, max `180`), `category`, `page`, `size` | `200 OK` (`totalPending` + `alerts`) |
+| `GET` | `/api/goatfarms/{farmId}/inventory/alerts/low-stock` | `category`, `severity`, `page`, `size` | `200 OK` (`totalPending` + `alerts`) |
+| `GET` | `/api/goatfarms/{farmId}/inventory/alerts/expiring` | `days` (default `30`, max `180`), `category`, `severity`, `page`, `size` | `200 OK` (`totalPending` + `alerts`) |
 
 Contrato curto (low-stock):
 - URL: `GET /api/goatfarms/1/inventory/alerts/low-stock?page=0&size=20`
@@ -267,6 +327,7 @@ Contrato curto (low-stock):
   "totalPending": 2,
   "alerts": [
     {
+      "severity": "HIGH",
       "itemId": 101,
       "itemName": "Vacina clostridiose",
       "onHandQuantity": 12,
@@ -285,6 +346,7 @@ Contrato curto (expiring):
   "totalPending": 1,
   "alerts": [
     {
+      "severity": "MEDIUM",
       "itemId": 101,
       "itemName": "Vacina clostridiose",
       "lotId": 7001,
@@ -323,7 +385,7 @@ Contrato curto (expiring):
 - `created_at`, `updated_at`
 - Constraints:
 - `fk_inventory_lot_item` (`item_id` -> `inventory_item.id`)
-- `uk_inventory_lot_farm_item_code` (`farm_id`, `item_id`, `lot_code`)
+- `uk_inventory_lot_item_code` (`item_id`, `lot_code`)
 
 #### `stock_movement`
 - `id` PK
@@ -331,12 +393,14 @@ Contrato curto (expiring):
 - `item_id` NOT NULL
 - `lot_id` NULL
 - `movement_type` NOT NULL
+- `adjust_direction` NULL
 - `quantity` NOT NULL
 - `occurred_at` NOT NULL
 - `reason` NULL
 - `source_module` NOT NULL
 - `source_ref` NULL
 - `idempotency_key` NOT NULL
+- `payload_hash` NOT NULL
 - `unit_cost` NULL
 - `created_at`
 - Constraints:
@@ -344,14 +408,24 @@ Contrato curto (expiring):
 - `fk_stock_movement_lot` (`lot_id` -> `inventory_lot.id`)
 - `uk_stock_movement_farm_idempotency` (`farm_id`, `idempotency_key`)
 - `ck_stock_movement_quantity_positive` (`quantity > 0`)
+- `ck_stock_movement_adjust_direction` (obrigatorio quando `movement_type='ADJUST'`)
 
 #### `stock_balance`
-- PK composta: (`farm_id`, `item_id`, `lot_id`)
-- `on_hand_quantity` NOT NULL
-- `updated_at` NOT NULL
+- Campos:
+- `id` PK tecnica;
+- `farm_id` NOT NULL;
+- `item_id` NOT NULL;
+- `lot_id` NULL;
+- `on_hand_quantity` NOT NULL;
+- `updated_at` NOT NULL.
+- Semantica:
+- 1 linha por item consolidado (`lot_id null`);
+- 1 linha por lote (`lot_id not null`) quando `trackLot=true`.
 - Constraints:
 - `fk_stock_balance_item` (`item_id` -> `inventory_item.id`)
 - `fk_stock_balance_lot` (`lot_id` -> `inventory_lot.id`)
+- `uk_stock_balance_farm_item_lot` (`farm_id`, `item_id`, `lot_id`)
+- `uk_stock_balance_farm_item_null_lot` (parcial para garantir uma unica linha com `lot_id null`)
 
 ### Indices recomendados
 - `idx_inventory_item_farm_category_active` (`farm_id`, `category`, `active`)
@@ -360,25 +434,37 @@ Contrato curto (expiring):
 - `idx_stock_movement_farm_source` (`farm_id`, `source_module`, `source_ref`)
 - `idx_stock_balance_farm_item` (`farm_id`, `item_id`)
 
-### Estrategia transacional
-- Comando de movimento executa em transacao unica:
+### Estrategia de concorrencia e consistencia
+- abordagem padrao: row-lock pessimista com `SELECT ... FOR UPDATE` em `stock_balance`;
+- ordem de lock para evitar deadlock:
+- primeiro saldo consolidado por item (`lot_id null`);
+- depois saldo por lote (`lot_id not null`, quando aplicavel);
+- se a linha de saldo nao existir:
+- executar upsert;
+- reler com lock antes de validar e atualizar;
+- transacao unica por comando:
 - valida idempotencia;
-- lock de saldo (`select for update` no `stock_balance` de item/lote);
-- valida regra `OUT` sem saldo negativo;
-- grava `stock_movement`;
-- atualiza `stock_balance`.
+- aplica locks;
+- valida invariantes de negocio;
+- grava ledger;
+- atualiza saldos.
 
 ### Flyway (somente planejamento)
 - `V23__create_inventory_core_tables.sql`:
 - cria `inventory_item`, `inventory_lot`, `stock_movement`, `stock_balance` e constraints.
 - `V24__create_inventory_indexes.sql`:
 - cria indices de leitura de saldo, historico e alertas.
-- `V25__seed_inventory_enums_or_reference_data.sql` (se necessario):
-- opcional para dados de apoio.
+- `V25__create_inventory_balance_partial_unique.sql`:
+- cria indice parcial para unicidade de `stock_balance` com `lot_id null`.
 
 ## Alertas
 ### Low-stock
 - Regra: `onHandQuantity < minQuantity`.
+- Severidade sugerida:
+- `HIGH`: `onHandQuantity <= minQuantity * 0.5`;
+- `MEDIUM`: `onHandQuantity > minQuantity * 0.5` e `< minQuantity`.
+- Ordenacao estavel:
+- `severity desc`, `deficit desc`, `itemName asc`.
 - Escopo: farm-level.
 - Resposta: `totalPending` + `alerts[]`.
 - Paginacao: obrigatoria.
@@ -387,6 +473,12 @@ Contrato curto (expiring):
 - Regra: lotes com `expiresAt` entre `today` e `today + days`.
 - Janela default: `30`.
 - Janela maxima: `180`.
+- Severidade sugerida:
+- `HIGH`: vence em `<= 7` dias;
+- `MEDIUM`: vence em `8..30` dias;
+- `LOW`: vence em `31..days`.
+- Ordenacao estavel:
+- `severity desc`, `daysToExpire asc`, `lotCode asc`.
 - Escopo: apenas `trackLot=true`.
 
 ## Seguranca
@@ -429,7 +521,7 @@ Contrato curto (expiring):
 - cria item/lote;
 - movimento `IN`, `OUT`, `ADJUST`;
 - bloqueio de saldo negativo;
-- idempotencia por `idempotencyKey`;
+- idempotencia por `Idempotency-Key`;
 - validacoes de expiracao e minimo.
 
 ### Integration
@@ -438,20 +530,21 @@ Contrato curto (expiring):
 - `403` sem ownership;
 - `200/201` com ownership valido.
 - `InventoryAlertsIntegrationTest`:
-- `low-stock` e `expiring` com `totalPending` + `alerts`.
+- `low-stock` e `expiring` com `totalPending` + `alerts`;
+- severidade e ordenacao estavel.
 - `InventoryConcurrencyIntegrationTest`:
 - disputa de baixa simultanea no mesmo item/lote;
 - validacao de integridade de saldo.
 
 ### Arquitetura
-- Estender guardrails:
 - manter `HexagonalArchitectureGuardTest` verde;
-- criar teste de fronteira `InventoryBoundaryArchUnitTest` para impedir import de `inventory` em classes internas de outros contextos e vice-versa sem porta/shared-kernel.
-- Check auxiliar de imports proibidos:
-- `rg -n "import com\\.devmaster\\.goatfarm\\.(health|milk|reproduction)\\..*(entity|business|api)" src/main/java/com/devmaster/goatfarm/inventory`
+- adicionar gate explicito `InventoryBoundaryArchUnitTest`:
+- pacote `inventory..` nao pode importar `health..`, `milk..`, `reproduction..`, exceto `sharedkernel..`.
+- checks auxiliares de import proibido:
+- `rg -n "import com\\.devmaster\\.goatfarm\\.(health|milk|reproduction)\\." src/main/java/com/devmaster/goatfarm/inventory`
 
 ## Erros/Status
-- `400`: payload invalido, parametros invalidos.
+- `400`: payload invalido, parametros invalidos, `Idempotency-Key` ausente.
 - `401`: autenticacao ausente/invalida.
 - `403`: ownership/perfil insuficiente.
 - `404`: item/lote/movimento nao encontrado no escopo da fazenda.

@@ -1,7 +1,27 @@
-﻿# Inventory MVP - Backlog executavel
+# Inventory MVP - Backlog executavel
 Ultima atualizacao: 2026-02-10
 Escopo: plano incremental para implementar o modulo inventory sem quebrar arquitetura e contratos existentes.
 Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md)
+
+## Etapa 0 - Congelar escopo do MVP
+### Objetivo
+- Confirmar e registrar escopo fechado do MVP para evitar creep.
+
+### Arquivos/classes afetadas (paths)
+- `docs/02-modules/INVENTORY_MODULE.md`
+- `docs/01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md`
+
+### Testes esperados
+- Revisao de arquitetura aprovada (sem codigo).
+
+### DoD
+- MVP fechado com in/out claro:
+- entra: itens + lotes + movimentos + saldo + alertas;
+- nao entra: purchases/sales/finance/feeding.
+
+### Risco / mitigacao
+- Risco: incluir funcionalidades financeiras no meio da entrega.
+- Mitigacao: PR checklist com item explicito de escopo.
 
 ## Etapa 1 - Estrutura de pacote e contratos in/out
 ### Objetivo
@@ -17,7 +37,7 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - `src/main/java/com/devmaster/goatfarm/inventory/persistence/`
 
 ### Testes esperados
-- `InventoryBoundaryArchUnitTest` (ou equivalente) inicial para blindar fronteira de contexto.
+- `InventoryBoundaryArchUnitTest` inicial para blindar fronteira de contexto.
 
 ### DoD
 - Pacotes criados com naming consistente ao repositorio.
@@ -27,13 +47,14 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - Risco: criar acoplamento prematuro com outros contextos.
 - Mitigacao: integrar apenas por `sourceModule/sourceRef`.
 
-## Etapa 2 - Especificacao de esquema Flyway e entidades JPA
+## Etapa 2 - Especificacao de schema Flyway e entidades JPA
 ### Objetivo
 - Materializar schema de `inventory_item`, `inventory_lot`, `stock_movement`, `stock_balance` com constraints e indices.
 
 ### Arquivos/classes afetadas (paths)
 - `src/main/resources/db/migration/V23__create_inventory_core_tables.sql`
 - `src/main/resources/db/migration/V24__create_inventory_indexes.sql`
+- `src/main/resources/db/migration/V25__create_inventory_balance_partial_unique.sql`
 - `src/main/java/com/devmaster/goatfarm/inventory/persistence/entity/InventoryItem.java`
 - `src/main/java/com/devmaster/goatfarm/inventory/persistence/entity/InventoryLot.java`
 - `src/main/java/com/devmaster/goatfarm/inventory/persistence/entity/StockMovement.java`
@@ -43,13 +64,15 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - Testes de repository para constraints unicas e consultas principais.
 
 ### DoD
-- Schema com `uk_stock_movement_farm_idempotency`.
+- `inventory_item (farm_id, name_normalized)` unico.
+- `inventory_lot (item_id, lot_code)` unico.
+- `stock_movement (farm_id, idempotency_key)` unico.
+- `stock_balance` com unicidade por (`farm_id`, `item_id`, `lot_id`) + garantia para `lot_id null`.
 - Constraint de quantidade positiva ativa.
-- Indices para consultas de alerta e historico presentes.
 
 ### Risco / mitigacao
-- Risco: colisoes de nomes/indices com migrations futuras.
-- Mitigacao: prefixo consistente `inventory_` e revisao de naming.
+- Risco: divergencia de semantica para `lot_id null` no banco.
+- Mitigacao: usar indice parcial dedicado e testes de concorrencia de criacao de saldo.
 
 ## Etapa 3 - Regras de negocio core (ledger + balance)
 ### Objetivo
@@ -67,16 +90,18 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - `InventoryMovementBusinessTest`:
 - `IN` aumenta saldo;
 - `OUT` reduz saldo;
-- `OUT` sem saldo suficiente retorna `422`;
-- `ADJUST` respeita regras de sinal.
+- `ADJUST` respeita `adjustDirection`;
+- `OUT` e `ADJUST` decremento sem saldo suficiente retornam `422`.
 
 ### DoD
 - Movimentos gravados em ledger e refletidos em `stock_balance` na mesma transacao.
+- `quantity` sempre positiva.
+- `trackLot=true` exige `lotId` para `IN`, `OUT` e `ADJUST`.
 - Sem regressao em padrao de excecoes (`InvalidArgumentException`, `BusinessRuleException`).
 
 ### Risco / mitigacao
 - Risco: condicao de corrida em baixa simultanea.
-- Mitigacao: lock de saldo (`select for update`) e teste concorrente dedicado.
+- Mitigacao: lock pessimista com ordem fixa (saldo item, depois saldo lote).
 
 ## Etapa 4 - Idempotencia de movimentos
 ### Objetivo
@@ -85,20 +110,23 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 ### Arquivos/classes afetadas (paths)
 - `src/main/java/com/devmaster/goatfarm/inventory/business/InventoryMovementBusiness.java`
 - `src/main/java/com/devmaster/goatfarm/inventory/persistence/repository/StockMovementRepository.java`
+- `src/main/java/com/devmaster/goatfarm/inventory/api/controller/InventoryMovementController.java`
 - `src/main/java/com/devmaster/goatfarm/inventory/business/bo/MovementIdempotencyResultVO.java`
 
 ### Testes esperados
 - `InventoryIdempotencyIntegrationTest`:
-- mesmo `idempotencyKey` e mesmo payload retorna resposta idempotente;
-- mesmo `idempotencyKey` e payload diferente retorna `409`.
+- `Idempotency-Key` igual + payload igual retorna replay (`200`);
+- `Idempotency-Key` igual + payload diferente retorna `409`;
+- header ausente retorna `400`.
 
 ### DoD
-- `idempotencyKey` validada por fazenda.
+- `Idempotency-Key` obrigatoria no header de `POST /movements`.
+- Hash do payload persistido para diferenciar replay valido de conflito.
 - comportamento documentado em contrato REST.
 
 ### Risco / mitigacao
 - Risco: chave curta/nao padronizada gerar colisoes.
-- Mitigacao: guideline de formato no endpoint e validacao minima de tamanho.
+- Mitigacao: guideline de formato e validacao minima de tamanho no controller.
 
 ## Etapa 5 - CRUD de item e lote
 ### Objetivo
@@ -116,12 +144,13 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - `InventoryItemControllerTest`
 
 ### DoD
-- `trackLot=true` exige fluxo de lote para saidas.
+- `trackLot=true` exige lote para consumo/ajuste.
+- `expiresAt` validado contra data de entrada.
 - unicidade de nome por fazenda e lote por item.
 
 ### Risco / mitigacao
 - Risco: itens inconsistentes entre unidades.
-- Mitigacao: valida unidade permitida no momento do cadastro.
+- Mitigacao: validar unidade permitida no momento do cadastro.
 
 ## Etapa 6 - Endpoints de saldo e historico
 ### Objetivo
@@ -139,6 +168,7 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 
 ### DoD
 - filtros por periodo, tipo, origem e item funcionando.
+- leitura por item e por lote sem N+1.
 - paginacao compativel com padrao global de `API_CONTRACTS`.
 
 ### Risco / mitigacao
@@ -158,14 +188,16 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - `InventoryAlertsIntegrationTest` cobrindo:
 - resposta `totalPending` + `alerts`;
 - filtro de janela de expiracao;
-- paginacao.
+- paginacao;
+- severidade e ordenacao estavel.
 
 ### DoD
 - `low-stock` e `expiring` com SLA de consulta aceitavel.
+- severidade consistente (`HIGH`, `MEDIUM`, `LOW`).
 - resposta aderente aos padroes de `health/milk/reproduction`.
 
 ### Risco / mitigacao
-- Risco: alerta de expiring sem normalizar timezone/data.
+- Risco: alerta de expiracao sem normalizar timezone/data.
 - Mitigacao: padronizar `LocalDate` e regra de corte diaria.
 
 ## Etapa 8 - Seguranca e ownership
@@ -187,7 +219,7 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 - Risco: inconsistencias com expressao antiga `isFarmOwner`.
 - Mitigacao: padronizar expression e revisar code review checklist.
 
-## Etapa 9 - Documentacao e gates finais
+## Etapa 9 - Gates de arquitetura e checklist final
 ### Objetivo
 - Fechar entrega com docs oficiais, contratos e guardrails.
 
@@ -201,11 +233,12 @@ Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-
 
 ### Testes esperados
 - `./mvnw.cmd -Dtest=HexagonalArchitectureGuardTest test`
-- `./mvnw.cmd -Dtest=MilkReproductionBoundaryArchUnitTest test`
 - `./mvnw.cmd -Dtest=InventoryBoundaryArchUnitTest test`
 - `./mvnw.cmd test` (suite completa)
+- `rg -n "import com\\.devmaster\\.goatfarm\\.(health|milk|reproduction)\\." src/main/java/com/devmaster/goatfarm/inventory`
 
 ### DoD
+- gate explicito: `inventory..` nao importa `health..`, `milk..`, `reproduction..` (exceto `sharedkernel..`).
 - docs sem link quebrado e sem protocolo local.
 - nenhum acoplamento indevido detectado nos checks de arquitetura.
 

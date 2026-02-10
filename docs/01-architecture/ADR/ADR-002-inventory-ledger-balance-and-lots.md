@@ -1,6 +1,6 @@
-﻿# ADR-002 - Inventory com ledger, saldo materializado e lotes
+# ADR-002 - Inventory com ledger, saldo materializado e lotes
 Ultima atualizacao: 2026-02-10
-Escopo: decisao arquitetural para o modulo de estoque farm-level com rastreabilidade, idempotencia e validade por lote.
+Escopo: decisao arquitetural para o modulo de estoque farm-level com rastreabilidade, idempotencia, concorrencia segura e validade por lote.
 Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Modulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [TODO MVP](../../_work/INVENTORY_TODO_MVP.md)
 
 ## Contexto
@@ -9,10 +9,17 @@ O backend possui modulos operacionais maduros (`health`, `milk`, `reproduction`)
 - rastreabilidade de lotes/validade;
 - integracao com compras, vendas e financeiro sem acoplamento indevido.
 
-Riscos identificados sem um modulo de inventory:
+Riscos identificados sem um modulo de `inventory`:
 - financeiro sem lastro operacional;
 - perda de rastreabilidade de uso de medicamentos e vacinas;
 - inconsistencias de saldo sob concorrencia.
+
+### Escopo do MVP (fechado)
+Inclui:
+- itens, lotes, movimentos, saldo materializado e alertas `low-stock`/`expiring`.
+
+Nao inclui:
+- `purchases/sales`, `finance`, `feeding` e motor de eventos como dependencia de consistencia.
 
 ## Decisao
 Adotar `inventory` como bounded context dedicado, com MVP ja incluindo lotes/validade para itens rastreaveis.
@@ -20,18 +27,30 @@ Adotar `inventory` como bounded context dedicado, com MVP ja incluindo lotes/val
 Elementos da decisao:
 - Modelo de consistencia:
 - ledger imutavel em `stock_movement`;
-- saldo materializado em `stock_balance`.
+- saldo materializado em `stock_balance` em dois niveis (item consolidado e lote).
 - Regra de dominio obrigatoria:
-- movimentos `OUT` nao podem deixar saldo negativo.
-- Idempotencia:
-- `idempotencyKey` unica por fazenda para evitar dupla baixa em retries.
+- movimentos `OUT` nao podem deixar saldo negativo;
+- `ADJUST` com decremento nao pode deixar saldo negativo;
+- `trackLot=true` exige `lotId` em qualquer movimento.
+- Quantidade e sentido:
+- `quantity` sempre positiva;
+- sentido definido por `movementType` (`IN`, `OUT`, `ADJUST`) + `adjustDirection` quando `ADJUST`.
+- Idempotencia de API:
+- `Idempotency-Key` obrigatoria no header de `POST /movements`;
+- mesma chave + mesmo payload logico retorna replay idempotente (`200`);
+- mesma chave + payload diferente retorna `409`.
 - Integracao entre contextos:
 - sem FK cruzada para modulos externos;
 - referencia por `sourceModule` + `sourceRef`.
+- Concorrencia:
+- row-lock pessimista (`SELECT ... FOR UPDATE`) em `stock_balance`;
+- ordem de lock fixa: saldo item, depois saldo lote.
 - Seguranca:
 - endpoints farm-level com `@PreAuthorize("@ownershipService.canManageFarm(#farmId)")`.
 - Alertas:
-- `low-stock` e `expiring` com formato `totalPending` + `alerts[]`.
+- `low-stock` e `expiring` com formato `totalPending` + `alerts[]` e ordenacao estavel por severidade.
+- Guardrail arquitetural:
+- `inventory..` nao importa `health..`, `milk..`, `reproduction..` (exceto `sharedkernel..`).
 
 ## Alternativas consideradas
 ### A) Fazer Finance antes de Inventory
@@ -46,8 +65,8 @@ Elementos da decisao:
 - Vantagem:
 - menor esforco inicial.
 - Desvantagem:
-- retrabalho rapido no contexto de `health` (medicamentos/vacinas).
-- reduz rastreabilidade regulatoria e de operacao.
+- retrabalho rapido no contexto de `health` (medicamentos/vacinas);
+- reduz rastreabilidade regulatoria e operacional.
 - Decisao:
 - rejeitada.
 
@@ -55,16 +74,16 @@ Elementos da decisao:
 - Vantagem:
 - integridade referencial estrita no banco para origem do movimento.
 - Desvantagem:
-- cria acoplamento forte entre contextos e quebra principio hexagonal do repositorio.
+- cria acoplamento forte entre contextos e quebra principio hexagonal do repositorio;
 - eleva custo de evolucao e migracao.
 - Decisao:
 - rejeitada.
 
 ### D) Saldo calculado apenas por agregacao de movimentos (sem tabela de balance)
 - Vantagem:
-- modelo teoricamente mais simples e sem redundancia.
+- sem redundancia de armazenamento.
 - Desvantagem:
-- custo elevado de leitura para consultas e alertas frequentes.
+- custo elevado de leitura para consultas e alertas frequentes;
 - piora desempenho em escala.
 - Decisao:
 - rejeitada para MVP.
@@ -77,13 +96,13 @@ Elementos da decisao:
 - aderencia ao padrao arquitetural atual do repositorio.
 
 ### Custos e trade-offs
-- maior complexidade inicial (ledger + balance + lotes + idempotencia);
+- maior complexidade inicial (ledger + balance + lotes + idempotencia + lock de concorrencia);
 - necessidade de testes de concorrencia para garantir integridade de saldo;
-- necessidade de politica de normalizacao para `sourceRef`.
+- necessidade de normalizacao de `sourceRef` por modulo.
 
 ### Guardrails obrigatorios
 - manter gates de arquitetura existentes verdes;
-- adicionar teste de fronteira para `inventory` (sem import direto de entidades/camadas internas de outros contextos);
+- adicionar `InventoryBoundaryArchUnitTest` com regra explicita de nao acoplamento;
 - documentar qualquer integracao nova via `sourceModule` + `sourceRef` no modulo e no `API_CONTRACTS`.
 
 ### Impacto esperado em roadmap
