@@ -165,3 +165,60 @@ O módulo de Produção de Leite (`MilkProduction`) depende diretamente deste m�
 ### 4. Secagem manual (nao automatizada)
 *   A secagem e uma decisao do proprietario. O sistema **nao** encerra lactacao automaticamente com base na confirmacao de prenhez.
 *   A confirmacao de prenhez pode orientar o manejo, mas a data de secagem continua sendo informada manualmente via PATCH.
+
+## Alertas farm-level de secagem
+
+**Base Path:** `/api/goatfarms/{farmId}/milk/alerts`
+
+| Metodo | Endpoint | Descricao |
+|--------|----------|-----------|
+| **GET** | `/dry-off` | Lista alertas de secagem para lactacoes ativas da fazenda. |
+
+### Query params
+
+- `referenceDate` (opcional, formato ISO `yyyy-MM-dd`, padrao: data atual)
+- `page` (opcional, padrao: `0`)
+- `size` (opcional, padrao: `20`)
+
+### Regras de inclusao (as-of)
+
+- Considera somente lactacao com `status = ACTIVE`.
+- Para cada cabra, seleciona a prenhez mais recente com:
+  - `startDatePregnancy = COALESCE(breeding_date, confirm_date)`
+  - `startDatePregnancy <= referenceDate`
+  - desempate por `id` (maior primeiro).
+- Prenhez entra no alerta apenas se estiver ativa na data de referencia:
+  - `status = ACTIVE`
+  - e `closed_at IS NULL OR closed_at > referenceDate`.
+- Recomendacao de secagem:
+  - `gestationDays = referenceDate - startDatePregnancy`
+  - `threshold = dryAtPregnancyDays` da lactacao (fallback 90)
+  - entra no alerta quando `gestationDays >= threshold`
+  - `dryOffDate = startDatePregnancy + threshold`
+  - `daysOverdue = max(0, referenceDate - dryOffDate)`.
+
+### Exemplo de request
+
+`GET /api/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-01&page=0&size=20`
+
+### Exemplo de response
+
+```json
+{
+  "totalPending": 2,
+  "alerts": [
+    {
+      "lactationId": 101,
+      "goatId": "GOAT-001",
+      "startDatePregnancy": "2025-10-20",
+      "breedingDate": "2025-10-20",
+      "confirmDate": "2025-12-20",
+      "dryOffDate": "2026-01-18",
+      "dryAtPregnancyDays": 90,
+      "gestationDays": 104,
+      "daysOverdue": 14,
+      "dryOffRecommendation": true
+    }
+  ]
+}
+```

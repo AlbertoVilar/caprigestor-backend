@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
+import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
@@ -22,6 +23,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -139,6 +141,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         goatGenderValidator.requireFemale(farmId, goatId);
         Page<Lactation> page = lactationPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable);
         return page.map(lactationMapper::toResponseVO);
+    }
+
+    @Override
+    public Page<LactationDryOffAlertVO> getDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
+        LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now();
+        return lactationPersistencePort.findDryOffAlerts(farmId, reference, 90, pageable)
+                .map(alert -> toDryOffAlertVO(alert, reference));
     }
 
     private LactationSummaryResponseVO buildSummary(Long farmId, String goatId, Lactation lactation) {
@@ -259,6 +268,30 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                 .dryOffRecommendation(recommendDryOff)
                 .recommendedDryOffDate(recommendedDryOffDate)
                 .message(message)
+                .build();
+    }
+
+    private LactationDryOffAlertVO toDryOffAlertVO(LactationDryOffAlertProjection alert, LocalDate referenceDate) {
+        LocalDate gestationStartDate = alert.getStartDatePregnancy();
+        if (gestationStartDate == null) {
+            throw new IllegalStateException("startDatePregnancy deve estar preenchida para alerta de secagem");
+        }
+        int dryAtPregnancyDays = alert.getDryAtPregnancyDays() != null ? alert.getDryAtPregnancyDays() : 90;
+        int gestationDays = (int) Math.max(0L, ChronoUnit.DAYS.between(gestationStartDate, referenceDate));
+        int daysOverdue = Math.max(0, gestationDays - dryAtPregnancyDays);
+        boolean dryOffRecommendation = gestationDays >= dryAtPregnancyDays;
+
+        return LactationDryOffAlertVO.builder()
+                .lactationId(alert.getLactationId())
+                .goatId(alert.getGoatId())
+                .startDatePregnancy(gestationStartDate)
+                .breedingDate(alert.getBreedingDate())
+                .confirmDate(alert.getConfirmDate())
+                .dryOffDate(alert.getDryOffDate())
+                .dryAtPregnancyDays(dryAtPregnancyDays)
+                .gestationDays(gestationDays)
+                .daysOverdue(daysOverdue)
+                .dryOffRecommendation(dryOffRecommendation)
                 .build();
     }
 }
