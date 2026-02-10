@@ -1,89 +1,93 @@
-# Módulo Article/Blog
-Última atualização: 2026-02-10
-Escopo: leitura pública de artigos e gestão admin (publicar/destacar)
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
+﻿# Modulo Article/Blog
+Ultima atualizacao: 2026-02-10
+Escopo: leitura publica de artigos e gestao administrativa de conteudo.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
 
-## Visão Geral
-Este módulo fornece leitura pública de artigos (sem autenticação) e gerenciamento administrativo via API. Segue arquitetura hexagonal (Controller → Port In → Business → Port Out → Adapter/Repository).
+## Visao geral
+O modulo de artigos expone endpoints publicos sem autenticacao e endpoints administrativos para criacao, publicacao, destaque e remocao.
 
-## Endpoints Públicos (sem login)
+## Regras / Contratos
+- Rotas publicas usam base `/public/articles`.
+- Rotas administrativas usam base `/api/articles` e exigem `ROLE_ADMIN`.
+- Apenas artigos com `published=true` aparecem no catalogo publico.
+- `slug` e derivado do titulo e deve ser unico.
 
-Base path: `/public/articles`
+## Endpoints
+### Publicos
+Base URL: `/public/articles`
 
-| Método | Endpoint | Descrição | Status |
-|--------|----------|-----------|--------|
-| **GET** | `/public/articles` | Lista artigos publicados (paginação + filtros). | `200 OK` |
-| **GET** | `/public/articles/{slug}` | Detalhe de artigo publicado. | `200 OK` |
-| **GET** | `/public/articles/highlights` | Retorna 3 destaques para a home. | `200 OK` |
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `GET` | `/public/articles` | `page`, `size`, `sort`, `category`, `q` | `200 OK` (pagina de artigos publicados) |
+| `GET` | `/public/articles/highlights` | - | `200 OK` (ate 3 destaques) |
+| `GET` | `/public/articles/{slug}` | - | `200 OK` (detalhe publicado) |
 
-### Parâmetros de consulta
-- `page`, `size`, `sort` (padrão `publishedAt,desc`)
-- `category` (opcional)
-- `q` (busca por título/resumo, opcional)
+Contrato curto (lista publica):
+- URL: `GET /public/articles?page=0&size=12&sort=publishedAt,desc`
+- Query params: `category` (opcional), `q` (opcional)
+- Response curto:
 
-### Exemplo de resposta (lista pública)
 ```json
 {
   "content": [
     {
       "title": "Manejo eficiente",
       "slug": "manejo-eficiente",
-      "excerpt": "Resumo do artigo",
       "category": "MANEJO",
-      "coverImageUrl": "https://example.com/cover.jpg",
       "publishedAt": "2026-01-20T10:00:00"
     }
   ],
-  "page": {
-    "size": 12,
-    "number": 0,
-    "totalElements": 1,
-    "totalPages": 1
-  }
+  "totalElements": 1
 }
 ```
 
-### Exemplo de resposta (detalhe público)
+### Administrativos
+Base URL: `/api/articles`
+
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `POST` | `/api/articles` | - | `201 Created` |
+| `PUT` | `/api/articles/{id}` | - | `200 OK` |
+| `GET` | `/api/articles` | `page`, `size`, `sort` | `200 OK` |
+| `GET` | `/api/articles/{id}` | - | `200 OK` |
+| `PATCH` | `/api/articles/{id}/publish` | - | `200 OK` |
+| `PATCH` | `/api/articles/{id}/highlight` | - | `200 OK` |
+| `DELETE` | `/api/articles/{id}` | - | `204 No Content` |
+
+Contrato curto (criacao admin):
+- URL: `POST /api/articles`
+- Request curto:
+
 ```json
 {
   "title": "Manejo eficiente",
-  "slug": "manejo-eficiente",
-  "excerpt": "Resumo do artigo",
-  "category": "MANEJO",
-  "coverImageUrl": "https://example.com/cover.jpg",
-  "contentMarkdown": "# Conteúdo",
-  "publishedAt": "2026-01-20T10:00:00"
+  "excerpt": "Resumo",
+  "contentMarkdown": "# Conteudo",
+  "category": "MANEJO"
 }
 ```
 
-## Endpoints Admin (login obrigatório)
+- Response curto: objeto do artigo criado com `id`.
 
-Base path: `/api/articles`
+## Fluxos principais
+1. Leitura publica:
+   `PublicArticleController` retorna somente artigos publicados.
+2. Publicacao:
+   `PATCH /api/articles/{id}/publish` muda estado de publicacao.
+3. Destaque:
+   `PATCH /api/articles/{id}/highlight` marca/desmarca destaque.
 
-| Método | Endpoint | Descrição | Status |
-|--------|----------|-----------|--------|
-| **POST** | `/api/articles` | Cria rascunho. | `201 Created` |
-| **PUT** | `/api/articles/{id}` | Atualiza conteúdo/metadados. | `200 OK` |
-| **GET** | `/api/articles` | Lista todos (inclui rascunhos). | `200 OK` |
-| **GET** | `/api/articles/{id}` | Detalhe administrativo. | `200 OK` |
-| **PATCH** | `/api/articles/{id}/publish` | Publica ou despublica. | `200 OK` |
-| **PATCH** | `/api/articles/{id}/highlight` | Destaca ou remove destaque. | `200 OK` |
-| **DELETE** | `/api/articles/{id}` | Remove artigo. | `204 No Content` |
+Observacao de performance:
+- Listagens sao paginadas e ordenadas no banco.
+- Endpoint de highlights limita retorno para home sem carregar catalogo completo.
 
-## Segurança
-- Endpoints públicos são anonimamente acessíveis.
-- Endpoints `/api/articles/**` exigem `ROLE_ADMIN`.
-- Preparado para futura expansão com `ROLE_EDITOR` sem mudanças estruturais.
+## Erros/Status
+- `404 Not Found`: artigo inexistente ou nao publicado em rota publica.
+- `409 Conflict`: `slug` duplicado.
+- `422 Unprocessable Entity`: validacao de conteudo.
+- `403 Forbidden`: acesso sem permissao em rotas admin.
+- Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
-## Regras de Negócio
-- Apenas artigos com `published=true` são retornados em `/public`.
-- `slug` é gerado pelo título e deve ser único.
-- Conflito de slug retorna **409** com mensagem: "Já existe um artigo com este slug."
-- Publicação exige conteúdo válido (título, resumo, conteúdo e categoria).
-- Highlights: se existirem 3+ destacados, retorna os 3 mais recentes; caso contrário, completa com os mais recentes publicados sem duplicar.
-
-## Códigos de Erro
-- **404 Not Found**: artigo não encontrado ou não publicado em rotas públicas.
-- **409 Conflict**: slug duplicado.
-- **422 Unprocessable Entity**: validações de conteúdo.
-- **403 Forbidden**: acesso sem permissão em rotas admin.
+## Referencias internas
+- Controller publico: [src/main/java/com/devmaster/goatfarm/article/api/controller/PublicArticleController.java](../../src/main/java/com/devmaster/goatfarm/article/api/controller/PublicArticleController.java)
+- Controller admin: [src/main/java/com/devmaster/goatfarm/article/api/controller/ArticleAdminController.java](../../src/main/java/com/devmaster/goatfarm/article/api/controller/ArticleAdminController.java)

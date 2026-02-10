@@ -1,292 +1,118 @@
-# Módulo de Reprodução (Reproduction)
-Última atualização: 2026-02-10
-Escopo: coberturas, diagnósticos de gestação e encerramentos
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
+﻿# Modulo Reproduction
+Ultima atualizacao: 2026-02-10
+Escopo: cobertura, diagnostico, acompanhamento e encerramento de gestacoes.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md)
 
-Este módulo é responsável por gerenciar o ciclo reprodutivo das cabras, incluindo coberturas (breeding), diagnósticos de gestação e partos/encerramentos.
+## Visao geral
+O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente.
 
-## Estrutura do Módulo
-
-O módulo segue a Arquitetura Hexagonal com a seguinte estrutura de pacotes:
-
-- `api/controller`: Controladores REST.
-- `api/dto`: Objetos de Transferência de Dados (Request/Response) da API.
-- `business/reproductionservice`: Implementação das regras de negócio (Core).
-- `business/bo`: Objetos de Negócio (Value Objects) usados internamente.
-- `mapper`: Mapeadores (MapStruct) entre DTOs, VOs e Entidades.
-- `model/entity`: Entidades JPA.
-- `model/repository`: Interfaces Spring Data JPA.
-- `enums`: Enumerações de domínio (Status, Tipos).
-- `application/ports/in`: Interfaces de entrada (Use Cases).
-- `application/ports/out`: Interfaces de saída (Portas de Persistência).
+## Regras / Contratos
+- Base por cabra: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`.
+- Base de alertas por fazenda: `/api/goatfarms/{farmId}/reproduction/alerts`.
+- Ownership por `farmId` em todas as rotas do modulo.
+- Fluxos de gestacao seguem estado de dominio (ativa, encerrada, motivo de encerramento).
+- Integracao com `milk` ocorre por shared kernel (snapshot de prenhez), sem acoplamento direto de entidades.
 
 ## Endpoints
+### Escopo por cabra
+Base URL: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
 
-Base Path: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding` | - | `201 Created` |
+| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections` | - | `201 Created` |
+| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm` | - | `200 OK` |
+| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks` | - | `201 Created` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/active` | - | `200 OK` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}` | - | `200 OK` |
+| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/close` | - | `200 OK` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/events` | `page`, `size`, `sort` | `200 OK` (pagina) |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies` | `page`, `size`, `sort` | `200 OK` (pagina) |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation` | `referenceDate` | `200 OK` |
 
-| Método | Rota | Descrição | Payload (Request) | Response |
-|---|---|---|---|---|
-| POST | `/breeding` | Registra uma cobertura | `BreedingRequestDTO` | `ReproductiveEventResponseDTO` |
-| POST | `/breeding/{coverageEventId}/corrections` | Corrige data de cobertura | `CoverageCorrectionRequestDTO` | `ReproductiveEventResponseDTO` |
-| PATCH | `/pregnancies/confirm` | Confirma prenhez | `PregnancyConfirmRequestDTO` | `PregnancyResponseDTO` |
-| GET | `/pregnancies/diagnosis-recommendation` | Recomendação de diagnóstico | - | `DiagnosisRecommendationResponseDTO` |
-| GET | /pregnancies/active | Busca gestação ativa | - | `PregnancyResponseDTO` |
-| GET | /pregnancies/{pregnancyId} | Busca gestação por ID | - | `PregnancyResponseDTO` |
-| PATCH | /pregnancies/{pregnancyId}/close | Encerra gestação | `PregnancyCloseRequestDTO` | `PregnancyResponseDTO` |
-| GET | `/events` | Histórico de eventos | - | `Page<ReproductiveEventResponseDTO>` |
-| GET | `/pregnancies` | Histórico de gestações | - | `Page<PregnancyResponseDTO>` |
+Contrato curto (registrar cobertura):
+- URL: `POST /api/goatfarms/1/goats/BR123/reproduction/breeding`
+- Request curto:
 
-## Segurança e Autorização
-
-- Todos os endpoints deste módulo são privados e exigem token JWT válido.
-- Nenhuma rota de reprodução é pública. Chamadas sem token retornam **401 Unauthorized**.
-- Usuários com **ROLE_ADMIN** possuem acesso total, independentemente do `farmId`.
-- Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam dados se forem proprietários da fazenda (`ownershipService.isFarmOwner(farmId)`).
-- Quando o token é válido mas o usuário não é proprietário da fazenda da URL, a API retorna **403 Forbidden**.
-
-## Integracao com Lactacao
-- A confirmacao de prenhez **nao** encerra lactacao automaticamente.
-- A secagem e uma decisao do proprietario e deve ser feita via PATCH no modulo de lactacao.
-## Payloads (Resumo)
-
-### BreedingRequestDTO
 ```json
 {
-  "eventDate": "2026-01-01",
+  "eventDate": "2026-01-10",
   "breedingType": "NATURAL",
-  "breederRef": "Bode Alpha",
-  "notes": "Cobertura assistida"
-}
-```
-### Regras de Cobertura (Breeding)
-- Quando existir gestação **ACTIVE**, novas coberturas são bloqueadas.
-- É permitido **registro tardio** apenas quando `eventDate` for **anterior** à cobertura efetiva da gestação (effectiveCoverageDate via correção ou `breedingDate`).
-- Após encerramento/correção da gestação (ex.: `FALSE_POSITIVE`, `ABORTION` ou qualquer `CLOSED`), as coberturas são liberadas novamente.
-- **Erro 422**: "Não é permitido registrar nova cobertura: existe uma gestação ativa para esta cabra. Encerre/corrija a gestação atual (ex.: falso positivo/aborto) para liberar novas coberturas."
-
-
-### PregnancyConfirmRequestDTO
-```json
-{
-  "checkDate": "2026-02-01",
-  "checkResult": "POSITIVE",
-  "notes": "Ultrassom"
+  "breederRef": "BODE-08"
 }
 ```
 
-> Regra de domínio: neste endpoint de confirmação, apenas `checkResult = POSITIVE` é aceito.
-> Para diagnóstico `NEGATIVE`, utilize `/pregnancies/checks` (nenhum evento ou gestação é criada aqui).
-
-### PregnancyCheckRequestDTO
-```json
-{
-  "checkDate": "2026-02-01",
-  "checkResult": "NEGATIVE",
-  "notes": "Sem evidências de gestação"
-}
-```
-
-> Regra de domínio: neste endpoint apenas `checkResult = NEGATIVE` é aceito.
-> A API valida a janela mínima de 60 dias após a última cobertura efetiva (retorna 422 quando violada).
-
-### PregnancyCloseRequestDTO
-```json
-{
-  "closeDate": "2026-06-01",
-  "status": "CLOSED",
-  "closeReason": "BIRTH",
-  "notes": "Parto normal"
-}
-```
-
-### CoverageCorrectionRequestDTO
-```json
-{
-  "correctedDate": "2026-01-05",
-  "notes": "Cobertura registrada com data incorreta"
-}
-```
-
-### DiagnosisRecommendationResponseDTO
-```json
-{
-  "status": "ELIGIBLE_PENDING",
-  "eligibleDate": "2026-03-01",
-  "lastCoverage": {
-    "id": 10,
-    "eventDate": "2026-01-01",
-    "effectiveDate": "2026-01-01",
-    "breedingType": "NATURAL",
-    "breederRef": "Bode Alpha"
-  },
-  "lastCheck": null,
-  "warnings": []
-}
-```
-
-> Parâmetro opcional: `referenceDate=YYYY-MM-DD` (default: data atual do servidor).
-
-### Response Objects
-**PregnancyResponseDTO**
-- `confirmedAt` renamed to `confirmDate`.
-- `closedAt` é o campo de data de encerramento no response (não `closeDate`).
-- `recommendedDryDate` removed.
-- `closeReason` added.
-- `notes` added.
-
-**ReproductiveEventResponseDTO**
-- `checkDate` removed.
-- `pregnancyId` added.
-- `relatedEventId` and `correctedEventDate` added for corrections.
-
-## POST /pregnancies/checks
-
-Endpoint para registrar diagnóstico `NEGATIVE` de prenhez e corrigir falso positivo quando existir gestação ativa.
-
-- **Método**: POST
-- **Rota completa**:
-  `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks`
-
-### Payload (PregnancyCheckRequestDTO)
-```json
-{
-  "checkDate": "2026-02-01",
-  "checkResult": "NEGATIVE",
-  "notes": "Sem evidências de gestação"
-}
-```
-
-### Regras
-- Apenas `checkResult = NEGATIVE` é aceito (resultado POSITIVE deve usar `/pregnancies/confirm`).
-- `checkDate` não pode ser futura.
-- `checkDate` deve ser >= 60 dias após a última cobertura efetiva.
-- Se existir gestação ativa, ela é encerrada como `FALSE_POSITIVE` e um evento `PREGNANCY_CLOSE` é registrado.
-- Após o fechamento, `/pregnancies/active` retorna 404.
-
-### Status codes
-- **201 Created** - diagnóstico registrado com sucesso.
-- **200 OK** - não utilizado no fluxo atual; reservado para respostas idempotentes.
-- **422 Unprocessable Entity** - regra de 60 dias violada ou cobertura válida inexistente.
-- **409 Conflict** - conflito de integridade (ex.: constraint de unicidade).
-- **404 Not Found** - cabra ou fazenda não encontrada.
-
-## GET /pregnancies/{pregnancyId}
-
-Endpoint para buscar o detalhe de uma gestação específica de uma cabra.
-
-- **Método**: GET  
-- **Rota completa**:  
-  `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}`
-
-### Exemplo de request
-
-```http
-GET /api/goatfarms/1/goats/GOAT-001/reproduction/pregnancies/10 HTTP/1.1
-Host: api.caprigestor.local
-Accept: application/json
-```
-
-### Exemplo de response 200
+- Response curto:
 
 ```json
 {
-  "id": 10,
+  "id": 501,
   "farmId": 1,
-  "goatId": "GOAT-001",
-  "status": "ACTIVE",
-  "breedingDate": "2026-01-01",
-  "confirmDate": "2026-02-01",
-  "expectedDueDate": "2026-05-31",
-  "closedAt": null,
-  "closeReason": null,
-  "notes": "Gestação confirmada por ultrassom"
+  "goatId": "BR123",
+  "eventType": "BREEDING",
+  "eventDate": "2026-01-10"
 }
 ```
 
-### Status codes
+Contrato curto (confirmar prenhez):
+- URL: `PATCH /api/goatfarms/1/goats/BR123/reproduction/pregnancies/confirm`
+- Request curto:
 
-- **200 OK** – gestação encontrada para o `farmId` informado.  
-- **400 Bad Request** – `pregnancyId` inválido (null ou <= 0).  
-- **404 Not Found** – gestação não encontrada ou não pertence ao `farmId` informado.
-
-## Paginação e Ordenação
-
-- `/events`: ordenado por `eventDate` DESC e `id` DESC (desempate estável).
-- `/pregnancies`: ordenado por `breedingDate` DESC e `id` DESC (desempate estável).
-
-## Concurrency Safety (Blindagem)
-
-Para garantir que a regra “apenas 1 gestação ativa por cabra” seja respeitada mesmo em cenários de concorrência extrema:
-
-1. **Unique Index Partial**: o banco de dados possui um índice único `(farm_id, goat_id) WHERE status = 'ACTIVE'`.  
-2. **Pre-check no Business**: a aplicação verifica duplicidade antes de salvar uma nova pregnancy ativa.  
-3. **Handler 409**: se ainda assim ocorrer uma race condition e o índice único for violado:
-   - quando a violação vem do índice `ux_pregnancy_single_active_per_goat`, o handler retorna **HTTP 409 Conflict** com `field = "status"` e mensagem `"Já existe uma gestação ativa para esta cabra"`;  
-   - para outros constraints, o handler mantém **HTTP 409 Conflict**, mas utiliza `field = "integrity"` e mensagem genérica `"Violação de integridade no banco de dados"`.
-
-## Flyway V16 – banco sujo (duplicated ACTIVE)
-
-Quando o banco PostgreSQL já possui dados antigos, a migration `V16__enforce_single_active_pregnancy.sql` pode falhar ao criar o índice único parcial se existirem 2+ pregnancies com `status = 'ACTIVE'` para o mesmo `(farm_id, goat_id)`.
-
-### Como detectar
-
-```sql
-SELECT farm_id, goat_id, COUNT(*) AS active_count
-FROM pregnancy
-WHERE status = 'ACTIVE'
-GROUP BY farm_id, goat_id
-HAVING COUNT(*) > 1;
+```json
+{
+  "checkDate": "2026-02-08",
+  "checkResult": "POSITIVE",
+  "notes": "ultrassom"
+}
 ```
 
-### Como corrigir
+### Escopo por fazenda (alertas)
+Base URL: `/api/goatfarms/{farmId}/reproduction/alerts`
 
-1. Rodar o script manual versionado em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql` no banco PostgreSQL alvo (dev/prod).
-2. Esse script mantém somente a pregnancy `ACTIVE` mais recente (critério: `breeding_date` e desempate por `id`) e fecha as demais como `CLOSED` com `close_reason = 'DATA_FIX_DUPLICATED_ACTIVE'`.
-3. Após executar o script manual, subir a aplicação normalmente para que o Flyway aplique a V16.
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `GET` | `/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis` | `referenceDate`, `page`, `size` | `200 OK` (pendencias agregadas) |
 
-Se a migration de verificação `V15_9__Assert_no_duplicate_active_pregnancy` encontrar duplicidades, ela falhará com uma mensagem explícita apontando para o script manual de data-fix.
+Contrato curto (alertas):
+- URL: `GET /api/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20`
+- Response curto:
 
-## Recomendações de Manejo
-
-- O diagnóstico de prenhez só pode ser registrado a partir de **60 dias após a última cobertura efetiva**.
-- A recomendação de diagnóstico pode ser consultada no endpoint `/pregnancies/diagnosis-recommendation`.
-- A janela de 45 dias é uma recomendação de manejo; a API continua exigindo 60 dias e retorna 422 para checks antes desse prazo.
-
-## Farm-level alerts endpoint
-
-This route is farm-level (not goat-level):
-
-- GET /api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis
-
-Query params:
-
-- referenceDate (optional, format YYYY-MM-DD, default server current date)
-- page (optional, default 0)
-- size (optional, default 20)
-
-Example curl:
-
-    curl -X GET "http://localhost:8080/api/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20" \
-      -H "Authorization: Bearer <token>"
-
-Example response:
-
+```json
+{
+  "totalPending": 2,
+  "alerts": [
     {
-      "totalPending": 2,
-      "alerts": [
-        {
-          "goatId": "GOAT-001",
-          "eligibleDate": "2025-12-31",
-          "daysOverdue": 39,
-          "lastCoverageDate": "2025-11-01",
-          "lastCheckDate": null
-        },
-        {
-          "goatId": "GOAT-010",
-          "eligibleDate": "2026-01-05",
-          "daysOverdue": 34,
-          "lastCoverageDate": "2025-11-06",
-          "lastCheckDate": null
-        }
-      ]
+      "goatId": "BR123",
+      "eligibleDate": "2026-02-05",
+      "daysOverdue": 3
     }
+  ]
+}
+```
+
+## Fluxos principais
+1. Cobertura:
+   registra evento base do ciclo reprodutivo.
+2. Diagnostico:
+   check positivo confirma gestacao; check negativo registra evento e pode encerrar ativo indevido.
+3. Encerramento:
+   `close` fecha gestacao com data/motivo (parto, perda, aborto etc.).
+4. Operacao de fazenda:
+   alertas agregam animais com diagnostico pendente para acao operacional.
+
+Observacoes de performance:
+- Historicos (`events`, `pregnancies`) sao paginados por cabra.
+- Alertas farm-level retornam pagina agregada, com filtros por data de referencia.
+
+## Erros/Status
+- `400`: payload invalido/parametro invalido.
+- `401`: autenticacao ausente/invalida.
+- `403`: ownership/perfil insuficiente.
+- `404`: recurso de reproducao nao encontrado.
+- `422`: regra de negocio violada (transicao de estado, consistencia de datas etc.).
+- Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+
+## Referencias internas
+- Controller principal: [src/main/java/com/devmaster/goatfarm/reproduction/api/controller/ReproductionController.java](../../src/main/java/com/devmaster/goatfarm/reproduction/api/controller/ReproductionController.java)
+- Controller de alertas: [src/main/java/com/devmaster/goatfarm/reproduction/api/controller/FarmReproductionAlertsController.java](../../src/main/java/com/devmaster/goatfarm/reproduction/api/controller/FarmReproductionAlertsController.java)
+- DTOs: [src/main/java/com/devmaster/goatfarm/reproduction/api/dto](../../src/main/java/com/devmaster/goatfarm/reproduction/api/dto)

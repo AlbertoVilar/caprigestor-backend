@@ -1,1 +1,10 @@
-DEPRECATED (archived original retained): Promovido a oficial nesta pasta. Histórico antigo em docs/_archive/2026-02/history/adr/ADR-001-atomic-goatfarm-registration.md
+﻿# ADR-001 - Atomic GoatFarm Registration
+Ultima atualizacao: 2026-02-10
+Escopo: status documental da ADR-001 em ingles no conjunto oficial atual.
+Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Historico no _archive](../../_archive/2026-02/history/adr/ADR-001-atomic-goatfarm-registration.md)
+
+## Visao geral
+DEPRECATED: este arquivo permanece como ponte de navegacao para a versao historica arquivada.
+
+## Referencias internas
+- Historico preservado: [docs/_archive/2026-02/history/adr/ADR-001-atomic-goatfarm-registration.md](../../_archive/2026-02/history/adr/ADR-001-atomic-goatfarm-registration.md)

@@ -1,96 +1,49 @@
-# Arquitetura do Sistema GoatFarm
-Última atualização: 2026-02-10
-Escopo: visão técnica, padrões hexagonais, módulos e shared kernel
-Links relacionados: [Portal](../INDEX.md), [ADRs](./ADR), [Padrões de API](../03-api/API_CONTRACTS.md), [Módulos](../02-modules)
+﻿# Arquitetura do Sistema GoatFarm
+Ultima atualizacao: 2026-02-10
+Escopo: visao tecnica, modularizacao por dominio, shared kernel e gates de arquitetura.
+Links relacionados: [Portal](../INDEX.md), [ADR](./ADR), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulos](../02-modules), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
 
-Este documento descreve a arquitetura técnica do sistema, baseada em Arquitetura Hexagonal (Ports & Adapters) e Domain-Driven Design (DDD).
-
-## 1. Visão Geral (Arquitetura Hexagonal)
-
-O sistema está estruturado para isolar o núcleo da aplicação (Domínio e Regras de Negócio) das dependências externas (Banco de Dados, API Web, Mensageria).
-
-### Fluxo de Controle
+## Visao geral
+O backend segue arquitetura hexagonal (Ports and Adapters) com separacao explicita entre API, casos de uso, regras de negocio e persistencia.
 
 ```mermaid
 graph TD
-    Controller --> UseCase
-    UseCase --> Port
-    Port --> Adapter
-    
-    Goat --> Genealogia["Genealogia (read model)"]
+    Controller[API Controller] --> InPort[Application Port In]
+    InPort --> Business[Business Service]
+    Business --> OutPort[Application Port Out]
+    OutPort --> Adapter[Persistence Adapter]
 ```
 
-#### Diagrama em Texto (ASCII)
+A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adaptadores sem impacto no core.
 
-```text
-[Controller] -> [UseCase] -> [Port] -> [Adapter]
+## Regras / Contratos
+- Camadas por modulo:
+  - `api/controller`, `api/dto`, `api/mapper`
+  - `application/ports/in`, `application/ports/out`
+  - `business/*service`, `business/bo`
+  - `persistence/adapter`, `persistence/entity`, `persistence/repository`, `persistence/projection`
+- Contrato farm-level: controllers de fazenda usam validacao de ownership (`@ownershipService.canManageFarm` ou regra equivalente).
+- Shared kernel entre `milk` e `reproduction`:
+  - Contrato: `com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot`
+  - Consulta no modulo `milk` via `PregnancySnapshotQueryPort`.
+- Fronteira de contexto:
+  - `milk` nao importa classes internas de `reproduction` em `api`, `business` e `persistence.entity`.
 
-[Goat] -> [Genealogia (read model)]
-```
+## Fluxos principais
+1. Fluxo HTTP farm-level:
+   `Controller -> Port In -> Business -> Port Out -> Adapter -> Banco`.
+2. Fluxo de leitura de prenhez no modulo de leite:
+   `milk.business -> PregnancySnapshotQueryPort -> adapter SQL -> snapshot`.
+3. Fluxo de erro:
+   excecoes de dominio sobem para handlers globais e seguem padrao do [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
-### Estrutura de Camadas
+## Gates
+| Gate | Objetivo | Evidencia |
+|---|---|---|
+| `HexagonalArchitectureGuardTest` | Impedir import indevido de `business` para `api` | [src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java) |
+| `MilkReproductionBoundaryArchUnitTest` | Garantir fronteira entre `milk` e `reproduction` | [src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java) |
 
-1.  **Application Core (Núcleo)**:
-    *   **Ports (Portas)**: Interfaces que definem a comunicação com o mundo externo.
-        *   `in`: Use Cases (Casos de Uso) - entrada de comandos.
-        *   `out`: Persistence Ports, Event Publishers - saída para infraestrutura.
-    *   **Business (Implementação)**: Serviços que implementam os Use Cases e contém a lógica de negócio.
-    *   **Domain Models (BO/VO)**: Objetos de Negócio e Value Objects puros.
-
-2.  **Adapters (Adaptadores)**:
-    *   **Primary (Driving)**: Controladores REST (`api/controller`) que recebem requisições HTTP e chamam os Use Cases.
-    *   **Secondary (Driven)**: Implementações de persistência (`infrastructure` ou `repository` direto) e consumidores de mensagens.
-
-## 2. Estrutura de Módulos
-
-O projeto é modularizado por domínio funcional:
-
-*   `address`: Gestão de endereços.
-*   `article`: Blog e gestão de conteúdo.
-*   `authority`: Gestão de usuários, roles e autenticação.
-*   `events`: Sistema de eventos (nascimento, vacinação, etc.) e mensageria.
-*   `farm`: Agregado raiz da Fazenda (`GoatFarm`).
-*   `genealogy`: Projeção de árvore genealógica (Read-Only).
-*   `goat`: Gestão de animais (`Goat`).
-*   `health`: Gestão sanitária e veterinária.
-*   `milk`: Gestão de produção de leite.
-*   `phone`: Gestão de telefones.
-*   `reproduction`: Gestão do ciclo reprodutivo.
-*   `config`: Configurações globais (Security, CORS, Exceptions).
-
-## 3. Padrões de Implementação
-
-### API REST
-*   **Base URL**: `/api` (ex: `/api/goatfarms`, `/api/auth`).
-*   **DTOs**: Objetos exclusivos para transferência de dados externos, mapeados via MapStruct.
-*   **Versioning**: Atual v1 (implícito na URL base).
-
-### Tratamento de Exceções
-O sistema utiliza um `GlobalExceptionHandler` para padronizar erros:
-*   `ResourceNotFoundException` (404): Recurso não encontrado.
-*   `InvalidArgumentException` (400): Erro de validação de negócio.
-*   `UnauthorizedException` (401) / `ForbiddenException` (403): Segurança.
-*   `DuplicateEntityException` (409): Conflito de dados únicos.
-*   `DatabaseException`: Erros de integridade.
-
-### Padrão de Persistência
-*   **Spring Data JPA**: Repositórios estendem `JpaRepository`.
-*   **Lazy Loading**: Relacionamentos pesados (`Address`, `Phone`, `User`) são `LAZY` por padrão para evitar overhead.
-*   **Projeções**: Consultas otimizadas com `JOIN FETCH` para cenários específicos (ex: Genealogia).
-
-## 4. Shared Kernel Entre Contextos
-
-Para integração entre contextos, o sistema usa contratos do Shared Kernel em vez de dependência direta entre módulos de negócio.
-
-* Contrato atual para prenhez:
-  * `com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot`
-  * Campos: `active`, `breedingDate`, `confirmDate`
-* O módulo `milk` consulta prenhez por port de saída:
-  * `milk/application/ports/out/PregnancySnapshotQueryPort`
-  * Adapter: `milk/persistence/adapter/PregnancySnapshotQueryAdapter` (SQL direto na tabela `pregnancy`)
-* Regra de fronteira:
-  * `milk` não pode importar classes de `reproduction.persistence.entity`
-  * `milk` não pode importar classes de `reproduction.api`
-  * `milk` não pode importar classes de `reproduction.business`
-
-Essa regra é protegida por teste de arquitetura em `src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java`.
+## Referencias internas
+- Modulos mapeados: `address`, `article`, `authority`, `events`, `farm`, `genealogy`, `goat`, `health`, `milk`, `phone`, `reproduction`.
+- Convencao de API: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+- Decisoes arquiteturais historicas: [ADR](./ADR).

@@ -1,264 +1,114 @@
-# Plano do Módulo C — Saúde/Veterinário
-Última atualização: 2026-02-10
-Escopo: eventos sanitários, calendário e ações (realizar/cancelar)
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
+﻿# Modulo Saude e Veterinario
+Ultima atualizacao: 2026-02-10
+Escopo: eventos sanitarios por cabra e consultas agregadas por fazenda.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
 
-Este documento detalha o planejamento para o módulo de gestão sanitária e veterinária do sistema GoatFarm/CapriGestor.
+## Visao geral
+O modulo `health` registra, atualiza e consulta eventos de saude (vacina, medicacao, procedimento e ocorrencias), com escopo farm-level e validacao de ownership.
 
-## 1. Objetivo do Módulo
+## Regras / Contratos
+- Status de evento: `AGENDADO`, `REALIZADO`, `CANCELADO`.
+- Tipos principais: `VACINA`, `VERMIFUGACAO`, `MEDICACAO`, `PROCEDIMENTO`, `DOENCA`.
+- Ownership obrigatorio nas rotas farm-level (`@ownershipService.canManageFarm`).
+- Reabertura (`/{eventId}/reopen`) exige ownership e papel `ADMIN` ou `FARM_OWNER`.
+- Indicador `overdue` e derivado (nao e payload de entrada).
+- Alertas de fazenda limitam `windowDays` para faixa segura (`1..30`).
 
-Centralizar eventos sanitários e tratamentos do rebanho, oferecendo:
-- Registro de vacinas, vermifugações, medicações, procedimentos e doenças/ocorrências.
-- Calendário sanitário (agendado + concluído).
-- Controle por cabra individual e/ou lote (opcional na fase 1).
-- Histórico consultável e relatórios simples (ex.: “próximos 30 dias”, “atrasados”).
+## Endpoints
+### Escopo por cabra
+Base URL: `/api/goatfarms/{farmId}/goats/{goatId}/health-events`
 
----
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events` | - | `201 Created` |
+| `PUT` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}` | - | `200 OK` |
+| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/done` | - | `200 OK` |
+| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/cancel` | - | `200 OK` |
+| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/reopen` | - | `200 OK` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}` | - | `200 OK` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/health-events` | `from`, `to`, `type`, `status`, `page`, `size`, `sort` | `200 OK` (pagina) |
 
-## 2. Requisitos do Produto
+Contrato curto (criacao):
+- URL: `POST /api/goatfarms/1/goats/BR123/health-events`
+- Request curto:
 
-### 2.1 Funcionais
+```json
+{
+  "type": "VACINA",
+  "title": "Vacina clostridiose",
+  "scheduledDate": "2026-02-15",
+  "notes": "Aplicar dose reforco"
+}
+```
 
-- **Registrar evento de saúde para:**
-  - Uma cabra (`goatId`).
-  - Várias cabras (lista de `goatIds`).
-  - *(Opcional Fase 2)* Lote/grupo (`groupId`).
+- Response curto:
 
-- **Tipos de Evento:**
-  - `VACINA`
-  - `VERMIFUGAÇÃO`
-  - `MEDICAÇÃO/TRATAMENTO`
-  - `PROCEDIMENTO`
-  - `DOENÇA/OCORRÊNCIA`
+```json
+{
+  "id": 10,
+  "farmId": 1,
+  "goatId": "BR123",
+  "status": "AGENDADO",
+  "type": "VACINA"
+}
+```
 
-- **Status do Evento:**
-  - `AGENDADO`
-  - `REALIZADO`
-  - `CANCELADO`
-  - `ATRASADO` (Estado derivado: `scheduledDate < hoje` e `status=AGENDADO`).
+Contrato curto (marcar como realizado):
+- URL: `PATCH /api/goatfarms/1/goats/BR123/health-events/10/done`
+- Request curto:
 
-- **Detalhamento:**
-  - Para eventos com medicação/vacina: registrar produto, dose, via, lote, carência (leite/carne).
+```json
+{
+  "performedAt": "2026-02-15T08:30:00",
+  "responsible": "Tecnico A",
+  "notes": "Sem intercorrencias"
+}
+```
 
-- **Listagens:**
-  - Por cabra (timeline).
-  - Por período (calendário).
-  - Próximos eventos (ex.: próximos 7 ou 30 dias).
-  - Atrasados.
+### Escopo por fazenda
+Base URL: `/api/goatfarms/{farmId}/health-events`
 
-- **Ações:**
-  - **Editar evento:** ajustes de data, observações, dose.
-  - **Concluir evento:** marcar como `REALIZADO` (exige `performedAt`, responsável, observações).
-  - **Cancelar evento:** exige motivo.
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `GET` | `/api/goatfarms/{farmId}/health-events/calendar` | `from`, `to`, `type`, `status`, `page`, `size`, `sort` | `200 OK` (agenda paginada) |
+| `GET` | `/api/goatfarms/{farmId}/health-events/alerts` | `windowDays` | `200 OK` (contadores + top 5) |
 
-- **Relatórios Simples (Fase 1):**
-  - Próximos eventos por cabra.
-  - Eventos realizados no mês.
+Contrato curto (alerts):
+- URL: `GET /api/goatfarms/1/health-events/alerts?windowDays=7`
+- Response curto:
 
-### 2.2 Não Funcionais
+```json
+{
+  "dueTodayCount": 2,
+  "upcomingCount": 5,
+  "overdueCount": 1,
+  "windowDays": 7
+}
+```
 
-- **Ownership:** Validação por `farmId` em todas as rotas `/api/goatfarms/{farmId}/...`.
-- **Localização:** Mensagens de erro em PT-BR e payload padrão de erro.
-- **Arquitetura:** Hexagonal (Controller não acessa Repository diretamente).
-- **Testes:** Mínimo de 1 happy path + 1 regra crítica + 1 ownership deny.
-- **Banco de Dados:** Migrações Flyway com constraints úteis.
+## Fluxos principais
+1. Agendamento:
+   cria evento `AGENDADO` para cabra da fazenda.
+2. Execucao:
+   `done` grava data/hora de execucao e responsavel.
+3. Cancelamento/Reabertura:
+   `cancel` encerra o compromisso; `reopen` retorna para `AGENDADO` com regra de perfil.
+4. Visao de fazenda:
+   `calendar` lista agenda por periodo e `alerts` agrega pendencias.
 
----
+Observacoes de performance:
+- Consultas de lista sao paginadas por fazenda/cabra.
+- Endpoint de alertas retorna contadores e listas reduzidas (top 5 por categoria), evitando varrer todo historico no cliente.
 
-## 3. Variáveis e Domínio
+## Erros/Status
+- `400`: parametros invalidos (datas, enums, formatos).
+- `401`: token ausente/invalido.
+- `403`: ownership/perfil insuficiente.
+- `404`: evento nao encontrado para `farmId/goatId/eventId`.
+- `422`: regra de negocio violada (ex.: transicao de status invalida).
+- Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
-### 3.1 Entidades Principais
-
-#### A) HealthEvent (Núcleo)
-Representa “algo sanitário” (agendado ou realizado).
-
-**Campos:**
-- `id`: Long
-- `farmId`: Long
-- `goatId`: String (Fase 1 focada em individual; múltiplos vira endpoint em lote que cria vários eventos)
-- `type`: `HealthEventType` (enum)
-- `status`: `HealthEventStatus` (enum)
-- `title`: String (ex.: “Vacina clostridial”, “Vermifugação trimestral”)
-- `description`: String?
-- `scheduledDate`: LocalDate (obrigatório para `AGENDADO`)
-- `performedAt`: LocalDateTime? (obrigatório se `REALIZADO`)
-- `responsible`: String? (nome de quem aplicou/realizou)
-- `notes`: String?
-
-**Campos "Clínica/Medicação" (Opcional por tipo):**
-- `productName`: String?
-- `activeIngredient`: String?
-- `dose`: BigDecimal?
-- `doseUnit`: `DoseUnit`?
-- `route`: `AdministrationRoute`?
-- `batchNumber`: String?
-- `withdrawalMilkDays`: Integer?
-- `withdrawalMeatDays`: Integer?
-
-**Auditoria:**
-- `createdAt`, `updatedAt`
-
-#### B) HealthProtocol (Fase 2 - Opcional)
-Modelo de “calendário padrão” (ex.: calendário de vacina/vermífugo) que gera eventos automaticamente.
-
-### 3.2 Enums
-
-- **HealthEventType:** `VACINA`, `VERMIFUGAÇÃO`, `MEDICAÇÃO`, `PROCEDIMENTO`, `DOENÇA`
-- **HealthEventStatus:** `AGENDADO`, `REALIZADO`, `CANCELADO`
-- **DoseUnit:** `ML`, `MG`, `UI`, `G`, `TABLET`, etc.
-- **AdministrationRoute:** `IM`, `SC`, `IV`, `VO`, `TOPICA`, etc.
-
----
-
-## 4. Regras de Negócio (Fase 1)
-
-### RB1 — Ownership Obrigatório
-Qualquer operação com `farmId` exige `OwnershipService.isFarmOwner(farmId)` (ou admin quando aplicável).
-
-### RB2 — Coerência de Status e Datas
-- **Se `status = AGENDADO`:**
-  - `scheduledDate` é obrigatório.
-  - `performedAt` deve ser nulo.
-- **Se `status = REALIZADO`:**
-  - `performedAt` obrigatório.
-  - `scheduledDate` pode existir (para rastrear atraso/planejamento).
-- **Se `status = CANCELADO`:**
-  - Exigir `notes` com motivo (mínimo X caracteres).
-
-### RB3 — “ATRASADO” é Derivado
-Não persistir status `ATRASADO`. Um evento é considerado atrasado se:
-- `status = AGENDADO` E `scheduledDate < hoje`.
-- A API deve devolver um campo calculado: `isOverdue: boolean`.
-
-### RB4 — Validações por Tipo
-- **Para `VACINA` e `MEDICAÇÃO`:**
-  - `productName` obrigatório.
-  - `dose` e `doseUnit` obrigatórios.
-  - `route` recomendado (pode ser obrigatório conforme regra de negócio).
-- **Para `DOENÇA`:**
-  - `description` obrigatório (mínimo).
-- **Para `VERMIFUGAÇÃO`:**
-  - `productName` obrigatório.
-
-### RB5 — Integridade
-- `goatId` deve existir e pertencer ao `farmId`.
-- **Nota:** Não bloquear eventos por sexo (machos também recebem cuidados).
-
----
-
-## 5. Métodos e Casos de Uso (Ports In)
-
-### Port In: HealthEventCommandUseCase
-- `createEvent(farmId, goatId, HealthEventCreateRequestVO) -> HealthEventResponseVO`
-- `updateEvent(farmId, goatId, eventId, HealthEventUpdateRequestVO) -> HealthEventResponseVO`
-- `markAsDone(farmId, goatId, eventId, HealthEventDoneRequestVO) -> HealthEventResponseVO`
-- `cancelEvent(farmId, goatId, eventId, HealthEventCancelRequestVO) -> HealthEventResponseVO`
-- `createBatchEvents(farmId, List<goatId>, HealthEventCreateRequestVO) -> List<HealthEventResponseVO>` (Opcional Fase 1)
-
-### Port In: HealthEventQueryUseCase
-- `getById(farmId, goatId, eventId)`
-- `listByGoat(farmId, goatId, from, to, type, status, pageable)`
-- `listCalendar(farmId, from, to, type, status, pageable)` (Todos os eventos do capril no período)
-- `listOverdue(farmId, referenceDate=hoje, pageable)`
-- `listUpcoming(farmId, days=30, pageable)`
-
-### Port Out: HealthEventPersistencePort
-- `save(event)`
-- `findByIdAndFarmIdAndGoatId(...)`
-- `findByFarmIdAndGoatId(filters...)`
-- `findByFarmIdAndPeriod(filters...)`
-- `existsGoatInFarm(farmId, goatId)` (ou reutilizar `GoatPersistencePort`)
-
----
-
-## 6. API (Controllers) — Sugestão de Rotas
-
-Base: `/api/goatfarms/{farmId}`
-
-### Por Cabra
-- `POST /goats/{goatId}/health-events`
-- `PUT /goats/{goatId}/health-events/{eventId}`
-- `PATCH /goats/{goatId}/health-events/{eventId}/done`
-- `PATCH /goats/{goatId}/health-events/{eventId}/cancel`
-- `GET /goats/{goatId}/health-events`
-- `GET /goats/{goatId}/health-events/{eventId}`
-
-### Visão do Capril (Calendário)
-- `GET /health-events/calendar?from=...&to=...`
-- `GET /health-events/overdue`
-- `GET /health-events/upcoming?days=30`
-
-**Notas:**
-- Incluir `isOverdue` calculado na resposta.
-- Erros em PT-BR com payload padrão.
-
----
-
-## 7. Persistência (Flyway + JPA)
-
-### Migration Sugerida
-Arquivo: `VXX__create_health_events.sql`
-
-### Constraints e Índices
-- **FK Lógica:** `(farmId, goatId)` validada na camada de negócio (ou FK real se possível).
-- **Índices:**
-  - `(farm_id, goat_id, scheduled_date)`
-  - `(farm_id, status, scheduled_date)`
-  - `(farm_id, type, scheduled_date)`
-
----
-
-## 8. Testes Essenciais (Fase 1)
-
-### Integração (Mínimo Necessário)
-- **Happy Path:** Criar evento `AGENDADO` e listar por cabra.
-- **Regra Crítica:** Tentar marcar como `done` sem informar `performedAt` (deve falhar).
-- **Ownership:** Validar que endpoint nega acesso sem posse (403) e sem token (401).
-
-### Unitário (Enxuto)
-- **Validator de Coerência:** Testar combinações de `status` vs `datas`.
-- **Validator por Tipo:** Testar exigência de `dose`/`produto` para vacina/medicação.
-
----
-
-## 9. Plano Passo a Passo de Implementação
-
-### Passo 1 — Domínio e Contratos
-- Criar Enums.
-- Criar VOs (Create, Update, Done, Cancel, Response).
-- Criar Validators de regra (mensagens PT-BR).
-
-### Passo 2 — Ports + Business
-- Definir interfaces `HealthEventCommandUseCase` e `HealthEventQueryUseCase`.
-- Implementar `HealthEventBusiness` com as regras RB1–RB5.
-
-### Passo 3 — Persistence
-- Criar migration Flyway.
-- Criar Entity JPA + Repository Spring Data.
-- Implementar Adapter `HealthEventPersistenceAdapter`.
-
-### Passo 4 — Controller
-- Criar `HealthEventController` (rotas por cabra + calendário capril).
-- Aplicar `@PreAuthorize` e validação de ownership.
-
-### Passo 5 — Testes
-- Implementar 3 testes de integração essenciais.
-- Implementar testes unitários de validação.
-
-### Passo 6 — Swagger PT-BR
-- Adicionar `@Schema(description/example)` nos DTOs.
-- Documentar filtros (from, to, type, status).
-
-### Passo 7 — Frontend (Futuro)
-- Timeline de saúde.
-- Calendário sanitário.
-- Formulários de criação/edição.
-
----
-
-## 10. Entregáveis da Fase 1
-
-- CRUD funcional (com fluxos de Done/Cancel).
-- Endpoints de Calendário (`listCalendar`, `overdue`, `upcoming`).
-- Testes essenciais verdes.
-- Swagger e README atualizados com endpoints e exemplos.
+## Referencias internas
+- Controller por cabra: [src/main/java/com/devmaster/goatfarm/health/api/controller/HealthEventController.java](../../src/main/java/com/devmaster/goatfarm/health/api/controller/HealthEventController.java)
+- Controller por fazenda: [src/main/java/com/devmaster/goatfarm/health/api/controller/FarmHealthEventController.java](../../src/main/java/com/devmaster/goatfarm/health/api/controller/FarmHealthEventController.java)
+- DTOs de entrada/saida: [src/main/java/com/devmaster/goatfarm/health/api/dto](../../src/main/java/com/devmaster/goatfarm/health/api/dto)

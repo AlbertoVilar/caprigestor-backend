@@ -1,84 +1,67 @@
-# Domínio de Negócio - GoatFarm
-Última atualização: 2026-02-10
-Escopo: entidades principais, agregados e regras de negócio
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Módulos](../02-modules)
+﻿# Dominio de Negocio - GoatFarm
+Ultima atualizacao: 2026-02-10
+Escopo: entidades centrais, regras de negocio e requisitos nao funcionais do backend.
+Links relacionados: [Portal](../INDEX.md), [Glossario](./DOMAIN_GLOSSARY.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md)
 
-Este documento descreve as entidades principais, regras de negócio e requisitos não funcionais do sistema.
+## Visao geral
+O sistema modela operacao de caprinos por fazenda, com foco em ownership, rastreabilidade de eventos e contratos estaveis entre modulos.
 
-## 1. Entidades e Agregados
+## Regras / Contratos
+### Entidades principais
+- `GoatFarm`:
+  - agregado raiz da fazenda.
+  - possui identificador de negocio `TOD`.
+  - relaciona dados de contato e animais.
+- `Goat`:
+  - identifica animal por `registrationNumber`.
+  - mantem referencia de genealogia (`father`, `mother`).
+  - pertence a uma fazenda.
+- `User` / `Authority`:
+  - controla autenticacao/autorizacao.
+  - perfis operacionais: `ROLE_ADMIN`, `ROLE_OPERATOR`, `ROLE_FARM_OWNER`.
+- `Lactation`:
+  - ciclo produtivo por cabra (`ACTIVE`/`CLOSED`).
+  - regra: no maximo uma lactacao ativa por cabra.
+- `MilkProduction`:
+  - registro diario por data/turno.
+  - vinculado a cabra e ciclo de lactacao.
+- `Event` (manejo, saude e reproducao):
+  - registra fatos operacionais com historico audivel.
 
-### GoatFarm (Fazenda)
-*   **Descrição**: O núcleo do sistema. Representa o capril.
-*   **Responsabilidades**: Agrupa animais, proprietário e dados de contato.
-*   **Regras**:
-    *   Pertence a um único `User` (Proprietário).
-    *   Possui identificador único `TOD` (Tatuagem Orelha Direita da fazenda).
-    *   Endereço e telefones são carregados sob demanda.
+### Regras de seguranca e ownership
+- Operacoes farm-level devem respeitar o vinculo usuario-fazenda.
+- Um usuario nao pode manipular dados de fazenda de terceiros.
 
-### Goat (Caprino)
-*   **Descrição**: Animal individual (cabra ou bode).
-*   **Atributos Chave**: `registrationNumber` (ID), `name`, `gender`, `breed`, `birthDate`.
-*   **Relacionamentos**:
-    *   Pai e Mãe (Auto-relacionamento).
-    *   Fazenda de origem.
-*   **Regras**:
-    *   Registro deve ser único.
-    *   Controle de genealogia via referências diretas (`father`, `mother`).
+### Regras de consistencia
+- Unicidade de registro do animal por identificador de negocio.
+- Unicidade operacional em pontos sensiveis (ex.: producao por data+turno).
+- Fronteiras entre modulos sao protegidas por portas e contratos de shared kernel.
 
-### User & Authority (Segurança)
-*   **User**: Usuário do sistema (login via email/CPF).
-*   **Roles**:
-    *   `ROLE_ADMIN`: Acesso total e manutenção.
-    *   `ROLE_OPERATOR`: Gestão da própria fazenda.
-    *   `ROLE_FARM_OWNER`: Proprietário da fazenda (criação/edição/remoção de cabras da própria fazenda).
-*   **Ownership**: Um usuário só pode manipular dados da sua própria fazenda (validado via `OwnershipService`).
+## Fluxos principais
+1. Cadastro e manutencao de rebanho:
+   fazenda -> cabras -> eventos de ciclo de vida.
+2. Ciclo produtivo:
+   abertura de lactacao -> producoes diarias -> secagem/encerramento.
+3. Ciclo reprodutivo:
+   cobertura -> diagnostico -> confirmacao -> encerramento.
+4. Operacao sanitaria:
+   agendamento -> execucao -> consultas por cabra e por fazenda.
 
-### Event (Eventos de Manejo)
-*   **Tipos**: Parto, Cobertura, Vacinação, Pesagem, Morte, Transferência.
-*   **Fluxo**: Eventos são registrados e podem disparar processamentos assíncronos (via RabbitMQ) para atualizações de status ou notificações.
+## Requisitos nao funcionais
+- Performance:
+  - consultas paginadas nas listagens.
+  - uso de estrategias para evitar carga excessiva em agregacoes.
+- Seguranca:
+  - JWT stateless.
+  - verificacao de ownership por `farmId`.
+- Observabilidade:
+  - logs tecnicos em fluxos criticos.
+  - suporte a health checks quando habilitado.
+- Testes:
+  - foco em regra de negocio, contratos de API e gates de arquitetura.
 
-### Lactation (Lactação)
-*   **Descrição**: Representa o ciclo produtivo de uma cabra.
-*   **Atributos Chave**: `startDate`, `endDate`, `status` (ACTIVE, CLOSED).
-*   **Regras**:
-    *   Uma cabra só pode ter **uma** lactação ativa por vez.
-    *   Para encerrar (secagem), deve-se informar a `endDate`.
-    *   O status é a fonte de verdade para saber se o animal está "em lactação".
-
-### MilkProduction (Produção de Leite)
-*   **Descrição**: Registro diário da produção de leite de uma cabra.
-*   **Atributos Chave**: `date`, `shift` (Turno: Manhã/Tarde), `volumeLiters`.
-*   **Relacionamentos**:
-    *   Pertence a uma `Goat` (fêmea).
-    *   Vinculado a uma `Lactation` (Ciclo de lactação ativo).
-*   **Regras**:
-    *   Unicidade: Apenas um registro por Data + Turno para a mesma cabra.
-    *   Escopo: Só pode ser registrado para cabras da fazenda do usuário logado.
-
-### Genealogy (Genealogia)
-*   **Conceito**: Não é uma entidade persistida, mas uma **projeção**.
-*   **Funcionamento**:
-    *   Calculada em tempo real (On-Demand).
-    *   Constrói árvore com até 3 níveis (Pais, Avós, Bisavós).
-    *   Otimizada para evitar problemas de N+1 queries.
-
-## 2. Requisitos Não Funcionais
-
-### Performance
-*   **Lazy Loading**: Entidades relacionadas não são carregadas a menos que necessário.
-*   **Queries Otimizadas**: Uso de `JOIN FETCH` para carregar grafos complexos (ex: Genealogia) em uma única query.
-*   **Paginação**: Todas as listagens suportam `Pageable`.
-
-### Segurança
-*   **Autenticação**: JWT (Stateless).
-*   **Proteção de Senha**: BCrypt.
-*   **Isolamento**: Filtros de segurança garantem que um usuário não acesse dados de outro (`OwnershipService`).
-
-### Observabilidade
-*   **Logs**: Uso de SLF4J/Logback. Logs estruturados em pontos críticos (Auth, Erros, Eventos).
-*   **Health Checks**: Disponíveis via Spring Actuator (se habilitado).
-
-### Testes
-*   **Unitários**: JUnit 5 + Mockito.
-*   **Integração**: `@SpringBootTest` com H2 Database.
-*   **Cobertura**: Foco em Regras de Negócio e Casos de Uso.
+## Referencias internas
+- Glossario: [DOMAIN_GLOSSARY.md](./DOMAIN_GLOSSARY.md)
+- Arquitetura: [ARCHITECTURE.md](../01-architecture/ARCHITECTURE.md)
+- Contratos de API: [API_CONTRACTS.md](../03-api/API_CONTRACTS.md)
+- Modulos: [../02-modules](../02-modules)

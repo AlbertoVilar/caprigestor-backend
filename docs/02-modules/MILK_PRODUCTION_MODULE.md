@@ -1,66 +1,79 @@
-# Módulo Milk Production
-Última atualização: 2026-02-10
-Escopo: registro diário de ordenhas, regras e segurança
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
+﻿# Modulo Milk Production
+Ultima atualizacao: 2026-02-10
+Escopo: registro diario de ordenhas por cabra e consulta paginada de producao.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md)
 
-## Visão Geral
-Este módulo é responsável pelo gerenciamento da produção leiteira das cabras, permitindo o registro diário de ordenhas, controle de lactações e análise de produtividade.
+## Visao geral
+Este modulo gerencia producoes de leite por cabra, com operacoes de criacao, consulta, atualizacao parcial e cancelamento logico.
 
-## Endpoints do CRUD
+## Regras / Contratos
+- Base URL: `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
+- `POST` exige `date`, `shift` e `volumeLiters`.
+- Registro de producao depende de lactacao ativa.
+- `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
+- `DELETE` realiza cancelamento logico (nao remove historico fisico).
 
-O módulo expõe uma API RESTful completa para gerenciamento das produções.
-**Base Path:** `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions`
+## Endpoints
+| Metodo | URL | Query params | Retorno |
+|---|---|---|---|
+| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions` | - | `201 Created` |
+| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
+| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions` | `from`, `to`, `includeCanceled`, `page`, `size`, `sort` | `200 OK` (pagina) |
+| `DELETE` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `204 No Content` |
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| **POST** | `/` | Cria um novo registro de produção de leite. |
-| **GET** | `/` | Lista as produções de forma paginada (por padrão apenas ACTIVE; use includeCanceled=true para incluir canceladas). |
-| **GET** | `/{id}` | Busca os detalhes de uma produção específica por ID. |
-| **PATCH** | `/{id}` | Atualiza parcialmente uma produção (apenas volume e observações). |
-| **DELETE** | `/{id}` | Cancela um registro de produção (soft delete). |
+Contrato curto (criacao):
+- URL: `POST /api/goatfarms/1/goats/BR123/milk-productions`
+- Request curto:
 
+```json
+{
+  "date": "2026-02-10",
+  "shift": "MORNING",
+  "volumeLiters": 2.45,
+  "notes": "ordenha regular"
+}
+```
 
-## Regras de Domínio
-- A produção de leite é registrada via **POST** e nunca é iniciada automaticamente por PATCH de lactação.
-- Para registrar produção, é obrigatório informar `date`, `shift` e `volumeLiters`.
-- A produção exige lactação ativa para a cabra no momento do registro.
-- Registros cancelados não aparecem em GET / por padrão (use includeCanceled=true para incluir).
-- `includeCanceled=true` retorna registros **ACTIVE** + **CANCELED** na listagem paginada.
+- Response curto:
 
-## Segurança e Autorização
+```json
+{
+  "id": 55,
+  "date": "2026-02-10",
+  "shift": "MORNING",
+  "volumeLiters": 2.45,
+  "status": "ACTIVE"
+}
+```
 
-- Todos os endpoints de produção de leite são privados e exigem token JWT válido.
-- Chamadas sem token retornam **401 Unauthorized** para qualquer rota de produção.
-- Usuários com **ROLE_ADMIN** têm acesso total, independentemente do `farmId`.
-- Usuários com **ROLE_OPERATOR** ou **ROLE_FARM_OWNER** só acessam produções da fazenda se forem proprietários (`ownershipService.isFarmOwner(farmId)`).
-- Quando o token é válido mas o usuário não é proprietário da fazenda, a API retorna **403 Forbidden**.
+Contrato curto (listagem):
+- URL: `GET /api/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-10&includeCanceled=false&page=0&size=12`
+- Query params:
+  - `from` / `to`: filtro por intervalo de data (opcional)
+  - `includeCanceled`: inclui cancelados (default `false`)
+  - `page`, `size`, `sort`: paginacao e ordenacao
 
-## Fluxo de Atualização (PATCH)
+## Fluxos principais
+1. Registro de producao:
+   cria item diario vinculado a cabra/fazenda.
+2. Correcao operacional:
+   `PATCH` ajusta volume/notas sem reescrever historico completo.
+3. Cancelamento:
+   `DELETE` marca cancelamento e preserva rastreabilidade.
 
-A operação de atualização permite modificar dados mutáveis de uma produção existente:
+Observacoes de performance:
+- Listagem e paginada e ordenada no banco.
+- Filtros por periodo e escopo de fazenda reduzem carga de consulta.
 
-1.  **Campos Mutáveis**: Apenas `volumeLiters` e `notes` podem ser alterados.
-2.  **Imutabilidade**: `date` e `shift` não podem ser alterados via PATCH para garantir a integridade das validações de duplicidade.
-3.  **Validação de Escopo**: Assim como no DELETE, o sistema verifica se o registro pertence ao `farmId` e `goatId` informados.
-4.  **Bloqueio**: Registros cancelados não podem ser alterados (422).
+## Erros/Status
+- `400`: payload invalido ou parametros inconsistentes.
+- `401`: autenticacao ausente/invalida.
+- `403`: ownership/perfil insuficiente.
+- `404`: producao nao encontrada.
+- `422`: regra de negocio violada (ex.: sem lactacao ativa).
+- Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
-## Fluxo de Exclusão (DELETE)
-
-A exclusão é um **cancelamento lógico** para preservar auditoria:
-
-1.  **Validação de Escopo**: O sistema verifica se o ID da produção pertence à Cabra (`goatId`) e à Fazenda (`farmId`) informadas na URL.
-2.  **Busca Segura**: Utiliza o método `findById(farmId, goatId, id)` no Business para garantir que o registro existe dentro do contexto autorizado.
-3.  **Persistência**: O registro **não é removido fisicamente**. Ele é marcado como `status = CANCELED`, com `canceledAt` preenchido e `canceledReason` nulo (v1).
-4.  **Retorno**:
-    *   **204 No Content**: Cancelamento realizado com sucesso.
-    *   **404 Not Found**: Se o registro não existir ou não pertencer ao escopo (Fazenda/Cabra) informado.
-
-## Observações de Cancelamento
-
-- `GET /{id}` retorna **200 OK** mesmo para registros cancelados, com `status = CANCELED`.
-- `GET /` lista apenas `ACTIVE` por padrão. Para incluir cancelados, usar `includeCanceled=true`.
-- `PATCH /{id}` em registro cancelado retorna **422** com mensagem: "Registro cancelado não pode ser alterado."
-
-### Erros comuns (status codes)
-- **422 Unprocessable Entity**: sem lactação ativa no momento do registro; ou tentativa de PATCH em registro cancelado ("Registro cancelado não pode ser alterado.").
-- **409 Conflict**: já existe produção **ACTIVE** para a mesma combinação (`date`, `shift`) (unicidade parcial para ACTIVE).
+## Referencias internas
+- Controller: [src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java)
+- DTOs: [src/main/java/com/devmaster/goatfarm/milk/api/dto](../../src/main/java/com/devmaster/goatfarm/milk/api/dto)
