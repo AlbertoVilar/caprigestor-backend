@@ -3,11 +3,13 @@ package com.devmaster.goatfarm.milk.persistence.adapter;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Component
@@ -37,5 +39,10 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     @Override
     public Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
         return lactationRepository.findAllByFarmIdAndGoatId(farmId, goatId, pageable);
+    }
+
+    @Override
+    public Page<LactationDryOffAlertProjection> findDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
+        return lactationRepository.findDryOffAlerts(farmId, referenceDate, pageable);
     }
 }
