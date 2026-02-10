@@ -1,227 +1,227 @@
-<div align="center">
+﻿<div align="center">
 
-# 🐐 CapriGestor – Backend
+# ðŸ CapriGestor â€“ Backend
 
-### Sistema completo para gestão de caprinos com arquitetura limpa, segura e escalável
+### Sistema completo para gestÃ£o de caprinos com arquitetura limpa, segura e escalÃ¡vel
 
 [![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)](https://www.java.com)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?style=for-the-badge&logo=spring)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com)
 
-[📚 Portal de Documentação](./docs/INDEX.md) • [📋 Arquitetura](./docs/01-architecture/ARCHITECTURE.md) • [💼 Domínio](./docs/00-overview/BUSINESS_DOMAIN.md) • [🖥️ Frontend](https://github.com/albertovilar/caprigestor-frontend) • [📊 Swagger](http://localhost:8080/swagger-ui/index.html)
+[ðŸ“š Portal de DocumentaÃ§Ã£o](./docs/INDEX.md) â€¢ [ðŸ“‹ Arquitetura](./docs/01-architecture/ARCHITECTURE.md) â€¢ [ðŸ’¼ DomÃ­nio](./docs/00-overview/BUSINESS_DOMAIN.md) â€¢ [ðŸ–¥ï¸ Frontend](https://github.com/albertovilar/caprigestor-frontend) â€¢ [ðŸ“Š Swagger](http://localhost:8080/swagger-ui/index.html)
 
 </div>
 
 ---
 
-## 📊 Status do Projeto
+## ðŸ“Š Status do Projeto
 
-> **Em Desenvolvimento** – MVP previsto para **02/10/2025**
+> **Em Desenvolvimento** â€“ MVP previsto para **02/10/2025**
 
 ---
 
-## 📑 Índice
+## ðŸ“‘ Ãndice
 
 - [Sobre](#sobre-o-projeto)
 - [Funcionalidades](#funcionalidades-principais)
 - [Tecnologias](#tecnologias-utilizadas)
-- [Arquitetura](#arquitetura-e-módulos)
-- [Diagrama do Domínio](#diagrama-do-domínio-mermaid)
+- [Arquitetura](#arquitetura-e-mÃ³dulos)
+- [Diagrama do DomÃ­nio](#diagrama-do-domÃ­nio-mermaid)
 - [Diagrama de Classes](#diagrama-de-classes-mermaid)
-- [Pré-requisitos](#pré-requisitos)
-- [Instalação](#instalação)
-- [Configuração](#configuração)
-- [Perfis de Execução](#perfis-de-execução)
+- [PrÃ©-requisitos](#prÃ©-requisitos)
+- [InstalaÃ§Ã£o](#instalaÃ§Ã£o)
+- [ConfiguraÃ§Ã£o](#configuraÃ§Ã£o)
+- [Perfis de ExecuÃ§Ã£o](#perfis-de-execuÃ§Ã£o)
 - [Uso](#como-usar)
 - [Banco de Dados](#banco-de-dados)
-- [Segurança](#segurança)
-- [API](#api--documentação)
+- [SeguranÃ§a](#seguranÃ§a)
+- [API](#api--documentaÃ§Ã£o)
 - [Testes](#testes)
 - [Docker](#docker)
-- [Licença](#licença)
+- [LicenÃ§a](#licenÃ§a)
 - [Contato](#contato)
 - [Mensageria](#-mensageria-de-eventos-rabbitmq)
 
 ---
 
-## 📖 Sobre o Projeto
+## ðŸ“– Sobre o Projeto
 
-**CapriGestor** é uma API REST robusta e moderna desenvolvida para o gerenciamento completo de fazendas de caprinos. Construída com **Spring Boot 3** e seguindo os princípios de **arquitetura hexagonal** (ports & adapters), oferece uma solução escalável, segura e de fácil manutenção.
+**CapriGestor** Ã© uma API REST robusta e moderna desenvolvida para o gerenciamento completo de fazendas de caprinos. ConstruÃ­da com **Spring Boot 3** e seguindo os princÃ­pios de **arquitetura hexagonal** (ports & adapters), oferece uma soluÃ§Ã£o escalÃ¡vel, segura e de fÃ¡cil manutenÃ§Ã£o.
 
-### 🎯 Objetivo
+### ðŸŽ¯ Objetivo
 
-Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todos os aspectos de suas fazendas, desde o cadastro de animais até o rastreamento genealógico completo e controle de eventos.
+Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todos os aspectos de suas fazendas, desde o cadastro de animais atÃ© o rastreamento genealÃ³gico completo e controle de eventos.
 
 ---
 
-## ✨ Funcionalidades Principais
+## âœ¨ Funcionalidades Principais
 
-### 🏡 Gestão de Fazendas
-- ✅ Cadastro completo de fazendas com endereços e telefones
-- ✅ Controle de propriedade e ownership
-- ✅ Listagem e busca paginadas
-- ✅ Gerenciamento de estábulos e locais
-- ✅ **Logo do Capril:** campo `logoUrl` válido (http/https) em cadastros e atualizações de fazenda para exibir identidade visual
+### ðŸ¡ GestÃ£o de Fazendas
+- âœ… Cadastro completo de fazendas com endereÃ§os e telefones
+- âœ… Controle de propriedade e ownership
+- âœ… Listagem e busca paginadas
+- âœ… Gerenciamento de estÃ¡bulos e locais
+- âœ… **Logo do Capril:** campo `logoUrl` vÃ¡lido (http/https) em cadastros e atualizaÃ§Ãµes de fazenda para exibir identidade visual
 
-### 📰 Blog e Artigos
-- ✅ **Módulo de Artigos:** endpoints públicos (`/public/articles`) para listagem de notícias e dicas
-- ✅ Gestão administrativa completa com `ROLE_ADMIN` (detalhes em `docs/ARTICLE_BLOG_MODULE.md`)
+### ðŸ“° Blog e Artigos
+- âœ… **MÃ³dulo de Artigos:** endpoints pÃºblicos (`/public/articles`) para listagem de notÃ­cias e dicas
+- âœ… GestÃ£o administrativa completa com `ROLE_ADMIN` (detalhes em `docs/02-modules/ARTICLE_BLOG_MODULE.md`)
 
-### 🛡️ GoatFarm Atomic Registration
-O sistema implementa um fluxo de registro estrito e atômico para garantir consistência e segurança:
+### ðŸ›¡ï¸ GoatFarm Atomic Registration
+O sistema implementa um fluxo de registro estrito e atÃ´mico para garantir consistÃªncia e seguranÃ§a:
 
-- **Domain Rule:** `GoatFarm` é o Aggregate Root. A criação de Fazenda, Endereço, Telefones e Usuário (no caso anônimo) é indivisível.
-- **Fluxo Atômico:** Uma única transação engloba todas as entidades. Se qualquer validação falhar, nada é persistido (Rollback total).
+- **Domain Rule:** `GoatFarm` Ã© o Aggregate Root. A criaÃ§Ã£o de Fazenda, EndereÃ§o, Telefones e UsuÃ¡rio (no caso anÃ´nimo) Ã© indivisÃ­vel.
+- **Fluxo AtÃ´mico:** Uma Ãºnica transaÃ§Ã£o engloba todas as entidades. Se qualquer validaÃ§Ã£o falhar, nada Ã© persistido (Rollback total).
 - **Security & Privacy:**
-  - **Authenticated Flow:** Se o usuário já está logado, ele se torna automaticamente o *Owner*. Qualquer dado de usuário enviado no payload é ignorado para prevenir *Account Takeover*.
-  - **Anonymous Flow:** Cria automaticamente um novo usuário com `ROLE_USER`.
-    - Bloqueia envio de campos sensíveis (`roles`, `admin`, `id`).
-    - Se o e-mail já existe, retorna erro genérico para impedir *User Enumeration*.
-  - **Anti-Mass Assignment:** DTOs de entrada são blindados contra injeção de propriedades não autorizadas.
+  - **Authenticated Flow:** Se o usuÃ¡rio jÃ¡ estÃ¡ logado, ele se torna automaticamente o *Owner*. Qualquer dado de usuÃ¡rio enviado no payload Ã© ignorado para prevenir *Account Takeover*.
+  - **Anonymous Flow:** Cria automaticamente um novo usuÃ¡rio com `ROLE_USER`.
+    - Bloqueia envio de campos sensÃ­veis (`roles`, `admin`, `id`).
+    - Se o e-mail jÃ¡ existe, retorna erro genÃ©rico para impedir *User Enumeration*.
+  - **Anti-Mass Assignment:** DTOs de entrada sÃ£o blindados contra injeÃ§Ã£o de propriedades nÃ£o autorizadas.
 
-### 🐐 Gestão de Animais
-- ✅ Cadastro detalhado de caprinos com todas as informações relevantes
-- ✅ Rastreamento genealógico completo (pai, mãe, avós)
-- ✅ Visualização de árvore genealógica interativa
-- ✅ Status e categorização (PO, PA, PC)
-- ✅ Busca avançada e filtros
+### ðŸ GestÃ£o de Animais
+- âœ… Cadastro detalhado de caprinos com todas as informaÃ§Ãµes relevantes
+- âœ… Rastreamento genealÃ³gico completo (pai, mÃ£e, avÃ³s)
+- âœ… VisualizaÃ§Ã£o de Ã¡rvore genealÃ³gica interativa
+- âœ… Status e categorizaÃ§Ã£o (PO, PA, PC)
+- âœ… Busca avanÃ§ada e filtros
 
-### 🥛 Gestão de Produção Leiteira e Lactação
-- ✅ **Lactação:** Ciclo de vida produtivo (abertura, secagem, status ativo/fechado)
-- ✅ **Sumário de Lactação:** novos endpoints `/active/summary` e `/lactations/{id}/summary` para visão consolidada
-- ✅ **Produção Diária:** Registro de ordenhas por turno (Manhã/Tarde)
-- ✅ Controle de volume e observações
-- ✅ Histórico completo de lactações e produções
-- ✅ Validação de duplicidade e regras de negócio
+### ðŸ¥› GestÃ£o de ProduÃ§Ã£o Leiteira e LactaÃ§Ã£o
+- âœ… **LactaÃ§Ã£o:** Ciclo de vida produtivo (abertura, secagem, status ativo/fechado)
+- âœ… **SumÃ¡rio de LactaÃ§Ã£o:** novos endpoints `/active/summary` e `/lactations/{id}/summary` para visÃ£o consolidada
+- âœ… **ProduÃ§Ã£o DiÃ¡ria:** Registro de ordenhas por turno (ManhÃ£/Tarde)
+- âœ… Controle de volume e observaÃ§Ãµes
+- âœ… HistÃ³rico completo de lactaÃ§Ãµes e produÃ§Ãµes
+- âœ… ValidaÃ§Ã£o de duplicidade e regras de negÃ³cio
 
-### 🧬 Regras de Negócio (Genealogia & Classificação)
+### ðŸ§¬ Regras de NegÃ³cio (Genealogia & ClassificaÃ§Ã£o)
 
-O sistema valida a genealogia com base na classificação do animal:
+O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 
-| Classificação | Descrição | Exigência de Filiação |
+| ClassificaÃ§Ã£o | DescriÃ§Ã£o | ExigÃªncia de FiliaÃ§Ã£o |
 | :--- | :--- | :--- |
-| **PO** | *Puro de Origem* | 🔴 **Obrigatório** (Pai e Mãe) |
-| **PC** | *Puro por Cruza* | 🔴 **Obrigatório** (Pai e Mãe) |
-| **PA** | *Puro por Avaliação* | 🟢 **Opcional** (Permite cadastro sem filiação) |
+| **PO** | *Puro de Origem* | ðŸ”´ **ObrigatÃ³rio** (Pai e MÃ£e) |
+| **PC** | *Puro por Cruza* | ðŸ”´ **ObrigatÃ³rio** (Pai e MÃ£e) |
+| **PA** | *Puro por AvaliaÃ§Ã£o* | ðŸŸ¢ **Opcional** (Permite cadastro sem filiaÃ§Ã£o) |
 
-> **Nota:** Os genitores (pai/mãe) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminação externa.
+> **Nota:** Os genitores (pai/mÃ£e) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminaÃ§Ã£o externa.
 
-### 📅 Eventos e Rastreabilidade
-- ✅ Registro de nascimentos, coberturas e partos
-- ✅ Histórico de pesagens
-- ✅ Histórico completo por animal
-- ✅ Filtros avançados por tipo e período
+### ðŸ“… Eventos e Rastreabilidade
+- âœ… Registro de nascimentos, coberturas e partos
+- âœ… HistÃ³rico de pesagens
+- âœ… HistÃ³rico completo por animal
+- âœ… Filtros avanÃ§ados por tipo e perÃ­odo
 
-### 🩺 Gestão de Saúde (Health Module)
-- ✅ **Vacinas e Tratamentos:** Registro completo de eventos sanitários.
-- ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
-- ✅ **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
-- ✅ **Endpoints:**
+### ðŸ©º GestÃ£o de SaÃºde (Health Module)
+- âœ… **Vacinas e Tratamentos:** Registro completo de eventos sanitÃ¡rios.
+- âœ… **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
+- âœ… **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
+- âœ… **Endpoints:**
   - `POST /api/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
   - `PUT /.../health-events/{eventId}` (Editar dados)
   - `PATCH /.../health-events/{eventId}/done` (Marcar como realizado)
   - `PATCH /.../health-events/{eventId}/cancel` (Cancelar evento)
   - `GET /.../health-events/{eventId}` (Detalhes)
   - `GET /.../health-events` (Listagem por animal com filtros de data/status)
-  - *Planejado:* Endpoint de calendário geral da fazenda (`listCalendar`).
+  - *Planejado:* Endpoint de calendÃ¡rio geral da fazenda (`listCalendar`).
 
-### 🔐 Controle de Acesso
-- ✅ Autenticação JWT stateless
-- ✅ Autorização baseada em roles (ADMIN, FARM_OWNER, OPERATOR)
-- ✅ Proteção de endpoints sensíveis
-- ✅ Integração OAuth2
+### ðŸ” Controle de Acesso
+- âœ… AutenticaÃ§Ã£o JWT stateless
+- âœ… AutorizaÃ§Ã£o baseada em roles (ADMIN, FARM_OWNER, OPERATOR)
+- âœ… ProteÃ§Ã£o de endpoints sensÃ­veis
+- âœ… IntegraÃ§Ã£o OAuth2
 
-**Permissões por perfil (resumo):**
+**PermissÃµes por perfil (resumo):**
 - `ROLE_ADMIN`: Acesso total ao sistema.
-- `ROLE_FARM_OWNER`: Acesso total aos recursos da **própria fazenda** (`farmId`).
-- `ROLE_OPERATOR`: Acesso operacional restrito às fazendas onde possui vínculo explícito.
-  - O vínculo é persistido na tabela `tb_farm_operator`.
-  - A validação é feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador só acesse fazendas permitidas.
+- `ROLE_FARM_OWNER`: Acesso total aos recursos da **prÃ³pria fazenda** (`farmId`).
+- `ROLE_OPERATOR`: Acesso operacional restrito Ã s fazendas onde possui vÃ­nculo explÃ­cito.
+  - O vÃ­nculo Ã© persistido na tabela `tb_farm_operator`.
+  - A validaÃ§Ã£o Ã© feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador sÃ³ acesse fazendas permitidas.
 
-**Endpoint de permissões da fazenda:**
-- `GET /api/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
+**Endpoint de permissÃµes da fazenda:**
+- `GET /api/goatfarms/{farmId}/permissions` disponÃ­vel para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## ðŸ› ï¸ Tecnologias Utilizadas
 
 ### Core
-- **Java 21** – Linguagem de programação moderna e robusta
-- **Spring Boot 3.x** – Framework principal para desenvolvimento
-- **Spring Security** – Segurança e controle de acesso
-- **Spring Data JPA** – Camada de persistência
+- **Java 21** â€“ Linguagem de programaÃ§Ã£o moderna e robusta
+- **Spring Boot 3.x** â€“ Framework principal para desenvolvimento
+- **Spring Security** â€“ SeguranÃ§a e controle de acesso
+- **Spring Data JPA** â€“ Camada de persistÃªncia
 
 ### Banco de Dados
-- **PostgreSQL 16** – Banco de dados relacional principal
-- **Flyway** – Controle de versionamento do schema
-- **Testcontainers** – Banco efêmero para testes de integração
-- **H2 Database** – Apenas para testes unitários isolados (opcional)
+- **PostgreSQL 16** â€“ Banco de dados relacional principal
+- **Flyway** â€“ Controle de versionamento do schema
+- **Testcontainers** â€“ Banco efÃªmero para testes de integraÃ§Ã£o
+- **H2 Database** â€“ Apenas para testes unitÃ¡rios isolados (opcional)
 
-### Segurança
-- **JWT (JSON Web Tokens)** – Autenticação stateless
-- **OAuth2** – Protocolo de autorização
+### SeguranÃ§a
+- **JWT (JSON Web Tokens)** â€“ AutenticaÃ§Ã£o stateless
+- **OAuth2** â€“ Protocolo de autorizaÃ§Ã£o
 
-### Documentação e Testes
-- **Swagger/OpenAPI** – Documentação interativa da API
-- **JUnit 5** – Framework de testes
-- **Mockito** – Mocks para testes unitários
-- **Testcontainers** – Infraestrutura de testes robusta
+### DocumentaÃ§Ã£o e Testes
+- **Swagger/OpenAPI** â€“ DocumentaÃ§Ã£o interativa da API
+- **JUnit 5** â€“ Framework de testes
+- **Mockito** â€“ Mocks para testes unitÃ¡rios
+- **Testcontainers** â€“ Infraestrutura de testes robusta
 
 ### DevOps
-- **Docker** – Containerização
-- **Docker Compose** – Orquestração de containers
-- **Maven** – Gerenciamento de dependências e build
+- **Docker** â€“ ContainerizaÃ§Ã£o
+- **Docker Compose** â€“ OrquestraÃ§Ã£o de containers
+- **Maven** â€“ Gerenciamento de dependÃªncias e build
 
 ---
 
-## 🏗️ Arquitetura e Módulos
+## ðŸ—ï¸ Arquitetura e MÃ³dulos
 
-O projeto segue a **arquitetura hexagonal** (ports & adapters), garantindo baixo acoplamento e alta coesão.
+O projeto segue a **arquitetura hexagonal** (ports & adapters), garantindo baixo acoplamento e alta coesÃ£o.
 
-### 📦 Estrutura de Camadas
+### ðŸ“¦ Estrutura de Camadas
 
 ```
-domain → application → infrastructure
+domain â†’ application â†’ infrastructure
 ```
 
-### 🗂️ Módulos
+### ðŸ—‚ï¸ MÃ³dulos
 
-| Módulo | Descrição |
+| MÃ³dulo | DescriÃ§Ã£o |
 |--------|-----------|
-| **goat** | Regras de negócio e acesso a dados de caprinos |
-| **reproduction** | Ciclo reprodutivo (coberturas, gestações, eventos reprodutivos) |
-| **milk** | Gestão de produção de leite e lactações |
-| **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
-| **health** | Gestão sanitária e veterinária (vacinas, tratamentos) |
-| **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
-| **farm** | Entidades e serviços de fazendas/estábulos/locais |
-| **address** | Gestão de endereços e localizações |
-| **phone** | Gestão de contatos telefônicos |
-| **article** | Blog e gerenciamento de conteúdo informativo |
-| **authority** | Autenticação, autorização, usuários e papéis |
-| **shared** | Utilitários, DTOs comuns, exceções e infra compartilhada |
+| **goat** | Regras de negÃ³cio e acesso a dados de caprinos |
+| **reproduction** | Ciclo reprodutivo (coberturas, gestaÃ§Ãµes, eventos reprodutivos) |
+| **milk** | GestÃ£o de produÃ§Ã£o de leite e lactaÃ§Ãµes |
+| **events** | GestÃ£o de eventos (nascimentos, coberturas, pesagens, etc.) |
+| **health** | GestÃ£o sanitÃ¡ria e veterinÃ¡ria (vacinas, tratamentos) |
+| **genealogy** | Relacionamento e linhagem (ProjeÃ§Ã£o On-Demand) |
+| **farm** | Entidades e serviÃ§os de fazendas/estÃ¡bulos/locais |
+| **address** | GestÃ£o de endereÃ§os e localizaÃ§Ãµes |
+| **phone** | GestÃ£o de contatos telefÃ´nicos |
+| **article** | Blog e gerenciamento de conteÃºdo informativo |
+| **authority** | AutenticaÃ§Ã£o, autorizaÃ§Ã£o, usuÃ¡rios e papÃ©is |
+| **shared** | UtilitÃ¡rios, DTOs comuns, exceÃ§Ãµes e infra compartilhada |
 
-### 🧠 Filosofia Arquitetural (Hexagonal)
+### ðŸ§  Filosofia Arquitetural (Hexagonal)
 
-- Princípios: inversão de dependências, isolamento do domínio e Portas & Adaptadores.
-- Convenção pragmática de nomes mapeada para hexagonal:
-  - Controller → Adaptador de Entrada (Driving Adapter)
-  - UseCase / Port → Porta de Entrada (Input Port)
-  - Business → Serviço de Aplicação (Implementa Input Port)
-  - Output Port → Porta de Saída (Interface para Infraestrutura)
-  - Adapter / Repository → Adaptador de Saída (Driven Adapter)
+- PrincÃ­pios: inversÃ£o de dependÃªncias, isolamento do domÃ­nio e Portas & Adaptadores.
+- ConvenÃ§Ã£o pragmÃ¡tica de nomes mapeada para hexagonal:
+  - Controller â†’ Adaptador de Entrada (Driving Adapter)
+  - UseCase / Port â†’ Porta de Entrada (Input Port)
+  - Business â†’ ServiÃ§o de AplicaÃ§Ã£o (Implementa Input Port)
+  - Output Port â†’ Porta de SaÃ­da (Interface para Infraestrutura)
+  - Adapter / Repository â†’ Adaptador de SaÃ­da (Driven Adapter)
 
-### ✅ Regra de Dependência (Hexagonal)
+### âœ… Regra de DependÃªncia (Hexagonal)
 
 - `business` **nunca** importa `api.*`.
-- Mapeamentos separados: `api.mapper` (DTO ↔ VO) e `business.mapper` (VO ↔ Entity).
-- **Health** é a referência de implementação.
-- Gate automático: `HexagonalArchitectureGuardTest` falha o build em qualquer regressão.
+- Mapeamentos separados: `api.mapper` (DTO â†” VO) e `business.mapper` (VO â†” Entity).
+- **Health** Ã© a referÃªncia de implementaÃ§Ã£o.
+- Gate automÃ¡tico: `HexagonalArchitectureGuardTest` falha o build em qualquer regressÃ£o.
 
 ---
 
-## 🧭 Diagrama do Domínio (Mermaid)
+## ðŸ§­ Diagrama do DomÃ­nio (Mermaid)
 
 ```mermaid
 erDiagram
@@ -384,11 +384,11 @@ erDiagram
 
 ---
 
-## 🧩 Diagrama de Classes (Mermaid)
+## ðŸ§© Diagrama de Classes (Mermaid)
 
 ```mermaid
 classDiagram
-    %% ========== MÓDULO FARM ==========
+    %% ========== MÃ“DULO FARM ==========
     class GoatFarm {
         +Long id
         +String name
@@ -409,7 +409,7 @@ classDiagram
         +PhoneType type
     }
 
-    %% ========== MÓDULO AUTHORITY ==========
+    %% ========== MÃ“DULO AUTHORITY ==========
     class User {
         +Long id
         +String email
@@ -422,7 +422,7 @@ classDiagram
         OPERATOR
     }
 
-    %% ========== MÓDULO GOAT ==========
+    %% ========== MÃ“DULO GOAT ==========
     class Goat {
         +String registrationNumber
         +String name
@@ -437,7 +437,7 @@ classDiagram
         FEMALE
     }
 
-    %% ========== MÓDULO REPRODUCTION ==========
+    %% ========== MÃ“DULO REPRODUCTION ==========
     class Pregnancy {
         +Long id
         +Long farmId
@@ -487,7 +487,7 @@ classDiagram
         AI
     }
 
-    %% ========== MÓDULO MILK ==========
+    %% ========== MÃ“DULO MILK ==========
     class Lactation {
         +Long id
         +LocalDate startDate
@@ -522,40 +522,40 @@ classDiagram
 
 ---
 
-## 📋 Pré-requisitos
+## ðŸ“‹ PrÃ©-requisitos
 
-Antes de começar, certifique-se de ter instalado:
+Antes de comeÃ§ar, certifique-se de ter instalado:
 
-- ☕ **Java 21** ou superior
-- 🔧 **Maven 3.8+** (ou use o wrapper incluído)
-- 🐳 **Docker & Docker Compose** (obrigatório para banco de dados e mensageria)
-- 💻 **IDE**: IntelliJ IDEA, Eclipse ou VS Code
+- â˜• **Java 21** ou superior
+- ðŸ”§ **Maven 3.8+** (ou use o wrapper incluÃ­do)
+- ðŸ³ **Docker & Docker Compose** (obrigatÃ³rio para banco de dados e mensageria)
+- ðŸ’» **IDE**: IntelliJ IDEA, Eclipse ou VS Code
 
 ---
 
-## 🚀 Instalação
+## ðŸš€ InstalaÃ§Ã£o
 
-1️⃣ **Clone o repositório**
+1ï¸âƒ£ **Clone o repositÃ³rio**
 ```bash
 git clone https://github.com/albertovilar/caprigestor-backend.git
 cd caprigestor-backend
 ```
 
-2️⃣ **Subir infraestrutura (PostgreSQL + RabbitMQ)**
+2ï¸âƒ£ **Subir infraestrutura (PostgreSQL + RabbitMQ)**
 ```bash
 cd docker
 docker compose up -d
 ```
 
-## 🧪 Testes
+## ðŸ§ª Testes
 
-> **Nota sobre Warnings:** É comum ver avisos do "Mockito inline agent" (Byte Buddy) durante a execução dos testes em Java 21+. Isso não afeta o resultado. Para suprimir, use a flag `-XX:+EnableDynamicAgentLoading`.
+> **Nota sobre Warnings:** Ã‰ comum ver avisos do "Mockito inline agent" (Byte Buddy) durante a execuÃ§Ã£o dos testes em Java 21+. Isso nÃ£o afeta o resultado. Para suprimir, use a flag `-XX:+EnableDynamicAgentLoading`.
 
-O projeto possui uma suíte robusta de testes:
+O projeto possui uma suÃ­te robusta de testes:
 
-- **Testes Unitários:** Cobrem as regras de negócio (`*Business`), isolados de dependências externas (banco, web). Organizados espelhando a estrutura de pacotes de `src/main`.
-- **Testes de Integração:** Validam o fluxo completo, incluindo banco de dados e endpoints REST (`@SpringBootTest`).
-- **Arquitetura:** Testes que garantem a integridade da Arquitetura Hexagonal (dependências corretas entre camadas).
+- **Testes UnitÃ¡rios:** Cobrem as regras de negÃ³cio (`*Business`), isolados de dependÃªncias externas (banco, web). Organizados espelhando a estrutura de pacotes de `src/main`.
+- **Testes de IntegraÃ§Ã£o:** Validam o fluxo completo, incluindo banco de dados e endpoints REST (`@SpringBootTest`).
+- **Arquitetura:** Testes que garantem a integridade da Arquitetura Hexagonal (dependÃªncias corretas entre camadas).
 
 Para executar os testes:
 ```bash
@@ -564,7 +564,7 @@ Para executar os testes:
 
 ---
 
-## 🐳 Docker
+## ðŸ³ Docker
 
 Para subir o ambiente completo (Banco de Dados + RabbitMQ):
 
@@ -572,40 +572,40 @@ Para subir o ambiente completo (Banco de Dados + RabbitMQ):
 cd docker
 docker compose up -d
 ```
-> **Serviços:**
+> **ServiÃ§os:**
 > - PostgreSQL: `localhost:5432`
 > - RabbitMQ UI: `http://localhost:15672` (admin/admin)
 > - PgAdmin: `http://localhost:8081`
 
 ---
 
-## ⚙️ Configuração
+## âš™ï¸ ConfiguraÃ§Ã£o
 
 ### Filosofia dos Perfis
-O projeto adota uma estratégia estrita de perfis para evitar configurações implícitas e garantir consistência entre ambientes.
+O projeto adota uma estratÃ©gia estrita de perfis para evitar configuraÃ§Ãµes implÃ­citas e garantir consistÃªncia entre ambientes.
 
-- **`default`**: Apenas configurações básicas (logging, jackson). **Não conecta ao banco.**
+- **`default`**: Apenas configuraÃ§Ãµes bÃ¡sicas (logging, jackson). **NÃ£o conecta ao banco.**
 - **`dev`**: Ambiente de desenvolvimento. Conecta ao **PostgreSQL local** e roda **Flyway**.
-- **`test`**: Ambiente de testes. Usa **Testcontainers** para subir um banco efêmero.
-- **`prod`**: Ambiente de produção. Configurações via variáveis de ambiente.
+- **`test`**: Ambiente de testes. Usa **Testcontainers** para subir um banco efÃªmero.
+- **`prod`**: Ambiente de produÃ§Ã£o. ConfiguraÃ§Ãµes via variÃ¡veis de ambiente.
 
 ---
 
-## 💻 Perfis de Execução
+## ðŸ’» Perfis de ExecuÃ§Ã£o
 
-O projeto está configurado para usar o perfil `dev` por padrão para facilitar o desenvolvimento.
+O projeto estÃ¡ configurado para usar o perfil `dev` por padrÃ£o para facilitar o desenvolvimento.
 
 | Perfil | Uso | Banco de Dados | Flyway | DDL Auto |
 |--------|-----|----------------|--------|----------|
-| `dev` | Desenvolvimento (Padrão) | PostgreSQL (Docker) | ✅ Habilitado | `validate` |
-| `test` | Testes Automatizados | Testcontainers | ✅ Habilitado | `validate` |
-| `prod` | Produção | PostgreSQL (AWS/Cloud) | ✅ Habilitado | `validate` |
-| `default` | Base | ❌ Nenhum | ❌ Desabilitado | `none` |
+| `dev` | Desenvolvimento (PadrÃ£o) | PostgreSQL (Docker) | âœ… Habilitado | `validate` |
+| `test` | Testes Automatizados | Testcontainers | âœ… Habilitado | `validate` |
+| `prod` | ProduÃ§Ã£o | PostgreSQL (AWS/Cloud) | âœ… Habilitado | `validate` |
+| `default` | Base | âŒ Nenhum | âŒ Desabilitado | `none` |
 
-### ▶️ Como Executar (Modo Dev)
+### â–¶ï¸ Como Executar (Modo Dev)
 
 **Via Maven Wrapper (Simples):**
-O perfil `dev` é ativado automaticamente.
+O perfil `dev` Ã© ativado automaticamente.
 ```bash
 # Windows (PowerShell)
 ./mvnw.cmd spring-boot:run
@@ -614,8 +614,8 @@ O perfil `dev` é ativado automaticamente.
 ./mvnw spring-boot:run
 ```
 
-**Via Maven (Explícito):**
-Caso queira forçar um perfil específico:
+**Via Maven (ExplÃ­cito):**
+Caso queira forÃ§ar um perfil especÃ­fico:
 ```bash
 ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
@@ -627,40 +627,40 @@ java -jar target/CapriGestor-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
 
 ---
 
-## 💻 Como Usar
+## ðŸ’» Como Usar
 
-Após iniciar com o perfil `dev`, a API estará disponível em:
+ApÃ³s iniciar com o perfil `dev`, a API estarÃ¡ disponÃ­vel em:
 
 - **API Base:** `http://localhost:8080/api`
 - **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
 
-> ⚠️ **Importante:** A maioria das operações requer autenticação via Bearer Token e os dados são isolados por `farmId`.
+> âš ï¸ **Importante:** A maioria das operaÃ§Ãµes requer autenticaÃ§Ã£o via Bearer Token e os dados sÃ£o isolados por `farmId`.
 
 ---
 
-## 🗄️ Banco de Dados
+## ðŸ—„ï¸ Banco de Dados
 
 ### Versionamento (Flyway)
-Todo o schema do banco é gerenciado pelo **Flyway**.
+Todo o schema do banco Ã© gerenciado pelo **Flyway**.
 - Migrations em: `src/main/resources/db/migration`
 - O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
 
 ### H2 Database
-O H2 é utilizado em dois cenários:
-1.  **Testes Unitários**: Execução rápida e isolada.
-2.  **Smoke Tests**: Validação rápida do build (`profile: smoke`), permitindo rodar a aplicação em memória sem depender do Docker.
+O H2 Ã© utilizado em dois cenÃ¡rios:
+1.  **Testes UnitÃ¡rios**: ExecuÃ§Ã£o rÃ¡pida e isolada.
+2.  **Smoke Tests**: ValidaÃ§Ã£o rÃ¡pida do build (`profile: smoke`), permitindo rodar a aplicaÃ§Ã£o em memÃ³ria sem depender do Docker.
 
-### Flyway V16 – banco sujo com ACTIVE duplicada
+### Flyway V16 â€“ banco sujo com ACTIVE duplicada
 
-A migration `V16` cria um índice único para garantir apenas **uma gestação ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falhará.
+A migration `V16` cria um Ã­ndice Ãºnico para garantir apenas **uma gestaÃ§Ã£o ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falharÃ¡.
 
-O fluxo recomendado é totalmente manual e está documentado em:
+O fluxo recomendado Ã© totalmente manual e estÃ¡ documentado em:
 - `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`  
-  (contém **diagnóstico**, **fix seguro** e **verificação final**)
+  (contÃ©m **diagnÃ³stico**, **fix seguro** e **verificaÃ§Ã£o final**)
 
-**Procedimento de Correção (ambiente dev com PostgreSQL Docker):**
+**Procedimento de CorreÃ§Ã£o (ambiente dev com PostgreSQL Docker):**
 
-1.  **Rodar diagnóstico (verificar se há duplicidades):**
+1.  **Rodar diagnÃ³stico (verificar se hÃ¡ duplicidades):**
 
     ```sql
     SELECT farm_id, goat_id, COUNT(*) AS active_count
@@ -670,10 +670,10 @@ O fluxo recomendado é totalmente manual e está documentado em:
     HAVING COUNT(*) > 1;
     ```
 
-    - Se o resultado vier vazio, não há problema para a V16.
-    - Se houver linhas, existem gestações `ACTIVE` duplicadas que precisam ser corrigidas.
+    - Se o resultado vier vazio, nÃ£o hÃ¡ problema para a V16.
+    - Se houver linhas, existem gestaÃ§Ãµes `ACTIVE` duplicadas que precisam ser corrigidas.
 
-    Exemplo usando o container padrão do projeto:
+    Exemplo usando o container padrÃ£o do projeto:
 
     ```bash
     docker exec -it caprigestor-postgres \
@@ -681,39 +681,39 @@ O fluxo recomendado é totalmente manual e está documentado em:
       -c "SELECT farm_id, goat_id, COUNT(*) AS active_count FROM pregnancy WHERE status = 'ACTIVE' GROUP BY farm_id, goat_id HAVING COUNT(*) > 1;"
     ```
 
-2.  **Executar Data Fix (fechar gestações duplicadas mais antigas):**
+2.  **Executar Data Fix (fechar gestaÃ§Ãµes duplicadas mais antigas):**
 
     - Execute o script manual em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`
       diretamente no banco (via `psql`, PgAdmin ou outra ferramenta SQL).
-    - O script mantém apenas a gestação `ACTIVE` mais recente por `(farm_id, goat_id)` e fecha as demais.
+    - O script mantÃ©m apenas a gestaÃ§Ã£o `ACTIVE` mais recente por `(farm_id, goat_id)` e fecha as demais.
 
-3.  **Rodar verificação final:**
+3.  **Rodar verificaÃ§Ã£o final:**
 
-    - Reexecute o SELECT de diagnóstico (ou o bloco **C) Verificação final** do script manual).
-    - O resultado deve estar vazio antes de subir a aplicação.
+    - Reexecute o SELECT de diagnÃ³stico (ou o bloco **C) VerificaÃ§Ã£o final** do script manual).
+    - O resultado deve estar vazio antes de subir a aplicaÃ§Ã£o.
 
-4.  **Subir aplicação normalmente:**
+4.  **Subir aplicaÃ§Ã£o normalmente:**
 
-    - Com o banco já corrigido, a aplicação subirá e o Flyway aplicará a `V16` com sucesso.
+    - Com o banco jÃ¡ corrigido, a aplicaÃ§Ã£o subirÃ¡ e o Flyway aplicarÃ¡ a `V16` com sucesso.
 
 ---
 
-## 🔐 Segurança
+## ðŸ” SeguranÃ§a
 
-- **OAuth2 + JWT:** Autenticação stateless robusta.
+- **OAuth2 + JWT:** AutenticaÃ§Ã£o stateless robusta.
 - **Roles:**
   - `ROLE_ADMIN`: Acesso total.
-  - `ROLE_OPERATOR`: Acesso operacional à fazenda vinculada.
-- **Header Obrigatório:**
+  - `ROLE_OPERATOR`: Acesso operacional Ã  fazenda vinculada.
+- **Header ObrigatÃ³rio:**
   ```http
   Authorization: Bearer <seu-token-jwt>
   ```
 
 ---
 
-## 🧪 Testes
+## ðŸ§ª Testes
 
-Os testes de integração sobem a aplicação completa usando **Testcontainers** para garantir fidelidade ao ambiente real.
+Os testes de integraÃ§Ã£o sobem a aplicaÃ§Ã£o completa usando **Testcontainers** para garantir fidelidade ao ambiente real.
 
 **Executar todos os testes:**
 ```bash
@@ -723,11 +723,11 @@ Os testes de integração sobem a aplicação completa usando **Testcontainers**
 # Linux/Mac
 ./mvnw test
 ```
-> *Nota: É necessário ter o Docker rodando para que os Testcontainers funcionem.*
+> *Nota: Ã‰ necessÃ¡rio ter o Docker rodando para que os Testcontainers funcionem.*
 
 ---
 
-## 🐳 Docker
+## ðŸ³ Docker
 
 Para subir todo o ecossistema (App + Banco + Mensageria):
 
@@ -736,19 +736,19 @@ cd docker
 docker compose up -d
 ```
 
-| Serviço | Porta | Descrição |
+| ServiÃ§o | Porta | DescriÃ§Ã£o |
 |---------|-------|-----------|
 | API | 8080 | Backend Spring Boot |
 | PostgreSQL | 5432 | Banco de Dados |
 | RabbitMQ | 5672 | Mensageria (AMQP) |
-| RabbitMQ UI | 15672 | Painel de Gestão |
-| PgAdmin | 8081 | Gestão Visual do Banco |
+| RabbitMQ UI | 15672 | Painel de GestÃ£o |
+| PgAdmin | 8081 | GestÃ£o Visual do Banco |
 
 ---
 
-## 📨 Mensageria de Eventos (RabbitMQ)
+## ðŸ“¨ Mensageria de Eventos (RabbitMQ)
 
-O sistema utiliza RabbitMQ para processamento assíncrono de eventos (nascimentos, atualizações), garantindo desacoplamento.
+O sistema utiliza RabbitMQ para processamento assÃ­ncrono de eventos (nascimentos, atualizaÃ§Ãµes), garantindo desacoplamento.
 
 - **Exchange:** `events-exchange`
 - **Fila:** `events-queue`
@@ -758,22 +758,22 @@ Para monitorar, acesse o painel do RabbitMQ em `http://localhost:15672` (User/Pa
 
 ---
 
-## 📄 Licença
+## ðŸ“„ LicenÃ§a
 
-Este projeto é proprietário. Todos os direitos reservados.
+Este projeto Ã© proprietÃ¡rio. Todos os direitos reservados.
 
 ---
 
-## 👤 Contato
+## ðŸ‘¤ Contato
 
-**José Alberto Vilar Pereira**
+**JosÃ© Alberto Vilar Pereira**
 
-📧 Email: albertovilar1@gmail.com
-💼 LinkedIn: [Alberto Vilar](https://www.linkedin.com/in/alberto-vilar-316725ab)
-🐙 GitHub: [@albertovilar](https://github.com/albertovilar)
+ðŸ“§ Email: albertovilar1@gmail.com
+ðŸ’¼ LinkedIn: [Alberto Vilar](https://www.linkedin.com/in/alberto-vilar-316725ab)
+ðŸ™ GitHub: [@albertovilar](https://github.com/albertovilar)
 
 <div align="center">
-Desenvolvido com ☕ e ❤️ por Alberto Vilar
+Desenvolvido com â˜• e â¤ï¸ por Alberto Vilar
 
-⭐ Se este projeto foi útil para você, considere dar uma estrela!
+â­ Se este projeto foi Ãºtil para vocÃª, considere dar uma estrela!
 </div>
