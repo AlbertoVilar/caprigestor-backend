@@ -1,3 +1,5 @@
+DEPRECATED: conteúdo arquivado. Fonte oficial: ver docs/INDEX.md e módulos correspondentes.
+
 UX Frontend Guide - GoatFarm/CapriGestor
 
 0. Auditoria objetiva do backend

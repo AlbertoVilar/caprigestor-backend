@@ -1,3 +1,5 @@
+DEPRECATED: conteúdo arquivado. Fonte oficial: ver docs/INDEX.md e módulos correspondentes.
+
 # AUDIT_APPLICATION_CORE_USAGE.md
 
 ## 1. Inventário do Pacote `com.devmaster.goatfarm.application`
