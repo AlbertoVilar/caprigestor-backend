@@ -9,14 +9,19 @@ Este documento descreve a arquitetura técnica do sistema, baseada em Arquitetur
 
 O sistema está estruturado para isolar o núcleo da aplicação (Domínio e Regras de Negócio) das dependências externas (Banco de Dados, API Web, Mensageria).
 
-### Fluxo de Controle
+### Fluxo Hexagonal
 
 ```mermaid
 graph TD
     Controller --> UseCase
     UseCase --> Port
     Port --> Adapter
-    
+```
+
+### Exemplo Genealogy (read model)
+
+```mermaid
+graph TD
     Goat --> Genealogia["Genealogia (read model)"]
 ```
 
@@ -63,20 +68,14 @@ O projeto é modularizado por domínio funcional:
 ### API REST
 *   **Base URL**: `/api` (ex: `/api/goatfarms`, `/api/auth`).
 *   **DTOs**: Objetos exclusivos para transferência de dados externos, mapeados via MapStruct.
-*   **Versioning**: Atual v1 (implícito na URL base).
+*   **Versionamento**: ver [API_CONTRACTS.md](../03-api/API_CONTRACTS.md).
 
 ### Tratamento de Exceções
-O sistema utiliza um `GlobalExceptionHandler` para padronizar erros:
-*   `ResourceNotFoundException` (404): Recurso não encontrado.
-*   `InvalidArgumentException` (400): Erro de validação de negócio.
-*   `UnauthorizedException` (401) / `ForbiddenException` (403): Segurança.
-*   `DuplicateEntityException` (409): Conflito de dados únicos.
-*   `DatabaseException`: Erros de integridade.
+Visão geral: erros são padronizados via `GlobalExceptionHandler`. Códigos/status e payloads estão documentados em [API_CONTRACTS.md](../03-api/API_CONTRACTS.md).
 
 ### Padrão de Persistência
-*   **Spring Data JPA**: Repositórios estendem `JpaRepository`.
-*   **Lazy Loading**: Relacionamentos pesados (`Address`, `Phone`, `User`) são `LAZY` por padrão para evitar overhead.
-*   **Projeções**: Consultas otimizadas com `JOIN FETCH` para cenários específicos (ex: Genealogia).
+*   **Default**: Spring Data JPA (repositórios `JpaRepository`), relacionamentos pesados `LAZY`.
+*   **Exceções de performance**: quando necessário, usam-se `native SQL`, projeções específicas e `JDBC adapters`, evitando N+1 e otimizando agregações.
 
 ## 4. Shared Kernel Entre Contextos
 
@@ -94,3 +93,28 @@ Para integração entre contextos, o sistema usa contratos do Shared Kernel em v
   * `milk` não pode importar classes de `reproduction.business`
 
 Essa regra é protegida por teste de arquitetura em `src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java`.
+
+## 5. Regras de Arquitetura (Gates)
+
+- Regra global: `business/**` não importa `api.*` (allowlist=0).
+- Teste de guarda: `HexagonalArchitectureGuardTest` (ver pasta de testes de arquitetura).
+- Boundary explícito: proibição de importação entre `milk` ↔ `reproduction` nos níveis `persistence.entity`, `api`, `business`.
+- Teste de boundary: [MilkReproductionBoundaryArchUnitTest](file:///c:/Dev/GoatFarm/src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java).
+
+## 6. Padrão de Pacotes por Módulo
+
+- api/controller, api/dto, api/mapper
+- application/ports/in, application/ports/out
+- business/*service, business/bo
+- persistence/adapter, persistence/entity, persistence/repository, persistence/projection
+
+## 7. Segurança e Ownership
+
+- Padrão farm-level: `@PreAuthorize("@ownershipService.canManageFarm(#farmId)")` nos controllers de escopo de fazenda.
+- Roles: `ROLE_FARM_OWNER`, `ROLE_OPERATOR`, `ROLE_ADMIN` — acesso condicionado ao `farmId` (owner/operator) ou global (admin).
+- O detalhamento de códigos/status está em [API_CONTRACTS.md](../03-api/API_CONTRACTS.md).
+
+---
+
+Notas/Depreciações
+- O texto anterior sobre "Versioning v1 implícito" foi ajustado: o versionamento é tratado em [API_CONTRACTS.md](../03-api/API_CONTRACTS.md).

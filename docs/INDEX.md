@@ -5,7 +5,7 @@ Bem-vindo ao hub de documentação oficial do backend GoatFarm/CapriGestor.
 ## Navegação
 - Visão Geral: [00-overview](./00-overview)
   - Glossário de Domínio: [DOMAIN_GLOSSARY.md](./00-overview/DOMAIN_GLOSSARY.md)
-  - Domínio de Negócio: [BUSINESS_DOMAIN.md](./BUSINESS_DOMAIN.md)
+-  - Domínio de Negócio: [BUSINESS_DOMAIN.md](./00-overview/BUSINESS_DOMAIN.md)
 - Arquitetura: [01-architecture](./01-architecture)
   - Arquitetura do Sistema: [ARCHITECTURE.md](./01-architecture/ARCHITECTURE.md)
   - ADRs: [ADR](./01-architecture/ADR)
