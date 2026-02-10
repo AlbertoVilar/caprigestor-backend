@@ -1,0 +1,39 @@
+name: guard_root_markdown
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  deny_root_markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate markdown location
+        shell: bash
+        run: |
+          shopt -s nullglob
+          violations=()
+
+          for file in *.md; do
+            if [[ "$file" != "README.md" ]]; then
+              violations+=("$file")
+            fi
+          done
+
+          if (( ${#violations[@]} > 0 )); then
+            echo "Policy violation: markdown files are not allowed in repository root (except README.md)."
+            printf '%s\n' "${violations[@]}"
+            echo "Move documentation files to docs/ (official docs) or docs/_work/ (work artifacts)."
+            exit 1
+          fi
+
+          echo "Root markdown policy check passed."
