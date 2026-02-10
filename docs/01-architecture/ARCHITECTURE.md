@@ -1,4 +1,7 @@
 # Arquitetura do Sistema GoatFarm
+Última atualização: 2026-02-10
+Escopo: visão técnica, padrões hexagonais, módulos e shared kernel
+Links relacionados: [Portal](../INDEX.md), [ADRs](./ADR), [Padrões de API](../03-api/API_CONTRACTS.md), [Módulos](../02-modules)
 
 Este documento descreve a arquitetura técnica do sistema, baseada em Arquitetura Hexagonal (Ports & Adapters) e Domain-Driven Design (DDD).
 

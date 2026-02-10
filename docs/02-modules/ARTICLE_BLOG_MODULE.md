@@ -1,4 +1,7 @@
 # Módulo Article/Blog
+Última atualização: 2026-02-10
+Escopo: leitura pública de artigos e gestão admin (publicar/destacar)
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Padrões de API](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
 ## Visão Geral
 Este módulo fornece leitura pública de artigos (sem autenticação) e gerenciamento administrativo via API. Segue arquitetura hexagonal (Controller → Port In → Business → Port Out → Adapter/Repository).
