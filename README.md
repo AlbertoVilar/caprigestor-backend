@@ -39,7 +39,7 @@
 - [API](#api--documentação)
 - [Testes](#testes)
 - [Docker](#docker)
-- [LicenÃ§a](#licenÃ§a)
+- [Licença](#licença)
 - [Contato](#contato)
 - [Mensageria](#-mensageria-de-eventos-rabbitmq)
 
@@ -97,7 +97,7 @@ O sistema implementa um fluxo de registro estrito e atômico para garantir consi
 
 ### 🧬 Regras de Negócio (Genealogia & Classificação)
 
-O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
+O sistema valida a genealogia com base na classificação do animal:
 
 | Classificação | Descrição | Exigência de Filiação |
 | :--- | :--- | :--- |
@@ -108,16 +108,16 @@ O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 > **Nota:** Os genitores (pai/mãe) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminação externa.
 
 ### 📅 Eventos e Rastreabilidade
-- âœ… Registro de nascimentos, coberturas e partos
-- âœ… HistÃ³rico de pesagens
-- âœ… HistÃ³rico completo por animal
-- âœ… Filtros avanÃ§ados por tipo e perÃ­odo
+- ✅ Registro de nascimentos, coberturas e partos
+- ✅ Histórico de pesagens
+- ✅ Histórico completo por animal
+- ✅ Filtros avançados por tipo e período
 
 ### 🩺 Gestão de Saúde (Health Module)
-- âœ… **Vacinas e Tratamentos:** Registro completo de eventos sanitÃ¡rios.
-- âœ… **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
-- âœ… **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
-- âœ… **Endpoints:**
+- ✅ **Vacinas e Tratamentos:** Registro completo de eventos sanitários.
+- ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
+- ✅ **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
+- ✅ **Endpoints:**
   - `POST /api/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
   - `PUT /.../health-events/{eventId}` (Editar dados)
   - `PATCH /.../health-events/{eventId}/done` (Marcar como realizado)
@@ -136,10 +136,10 @@ O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 - `ROLE_ADMIN`: Acesso total ao sistema.
 - `ROLE_FARM_OWNER`: Acesso total aos recursos da **própria fazenda** (`farmId`).
 - `ROLE_OPERATOR`: Acesso operacional restrito às fazendas onde possui vínculo explícito.
-  - O vÃ­nculo Ã© persistido na tabela `tb_farm_operator`.
+  - O vínculo é persistido na tabela `tb_farm_operator`.
   - A validação é feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador só acesse fazendas permitidas.
 
-**Endpoint de permissÃµes da fazenda:**
+**Endpoint de permissões da fazenda:**
 - `GET /api/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
 
 ---
@@ -162,7 +162,7 @@ O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 - **JWT (JSON Web Tokens)** – Autenticação stateless
 - **OAuth2** – Protocolo de autorização
 
-### DocumentaÃ§Ã£o e Testes
+### Documentação e Testes
 - **Swagger/OpenAPI** – Documentação interativa da API
 - **JUnit 5** – Framework de testes
 - **Mockito** – Mocks para testes unitários
