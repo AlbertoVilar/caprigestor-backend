@@ -36,12 +36,11 @@
 - [Uso](#como-usar)
 - [Banco de Dados](#banco-de-dados)
 - [Segurança](#segurança)
-- [API](#api--documentação)
 - [Testes](#testes)
 - [Docker](#docker)
-- [LicenÃ§a](#licenÃ§a)
+- [Licença](#licença)
 - [Contato](#contato)
-- [Mensageria](#-mensageria-de-eventos-rabbitmq)
+- [Mensageria](#mensageria-de-eventos-rabbitmq)
 
 ---
 
@@ -97,7 +96,7 @@ O sistema implementa um fluxo de registro estrito e atômico para garantir consi
 
 ### 🧬 Regras de Negócio (Genealogia & Classificação)
 
-O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
+O sistema valida a genealogia com base na classificação do animal:
 
 | Classificação | Descrição | Exigência de Filiação |
 | :--- | :--- | :--- |
@@ -108,23 +107,23 @@ O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 > **Nota:** Os genitores (pai/mãe) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminação externa.
 
 ### 📅 Eventos e Rastreabilidade
-- âœ… Registro de nascimentos, coberturas e partos
-- âœ… HistÃ³rico de pesagens
-- âœ… HistÃ³rico completo por animal
-- âœ… Filtros avanÃ§ados por tipo e perÃ­odo
+- ✅ Registro de nascimentos, coberturas e partos
+- ✅ Histórico de pesagens
+- ✅ Histórico completo por animal
+- ✅ Filtros avançados por tipo e período
 
 ### 🩺 Gestão de Saúde (Health Module)
-- âœ… **Vacinas e Tratamentos:** Registro completo de eventos sanitÃ¡rios.
-- âœ… **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
-- âœ… **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
-- âœ… **Endpoints:**
+- ✅ **Vacinas e Tratamentos:** Registro completo de eventos sanitários.
+- ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
+- ✅ **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
+- ✅ **Endpoints:**
   - `POST /api/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
   - `PUT /.../health-events/{eventId}` (Editar dados)
   - `PATCH /.../health-events/{eventId}/done` (Marcar como realizado)
   - `PATCH /.../health-events/{eventId}/cancel` (Cancelar evento)
   - `GET /.../health-events/{eventId}` (Detalhes)
   - `GET /.../health-events` (Listagem por animal com filtros de data/status)
-  - *Planejado:* Endpoint de calendÃ¡rio geral da fazenda (`listCalendar`).
+  - *Planejado:* Endpoint de calendário geral da fazenda (`listCalendar`).
 
 ### 🔐 Controle de Acesso
 - ✅ Autenticação JWT stateless
@@ -136,10 +135,10 @@ O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 - `ROLE_ADMIN`: Acesso total ao sistema.
 - `ROLE_FARM_OWNER`: Acesso total aos recursos da **própria fazenda** (`farmId`).
 - `ROLE_OPERATOR`: Acesso operacional restrito às fazendas onde possui vínculo explícito.
-  - O vÃ­nculo Ã© persistido na tabela `tb_farm_operator`.
+  - O vínculo é persistido na tabela `tb_farm_operator`.
   - A validação é feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador só acesse fazendas permitidas.
 
-**Endpoint de permissÃµes da fazenda:**
+**Endpoint de permissões da fazenda:**
 - `GET /api/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
 
 ---
@@ -151,27 +150,6 @@ O sistema valida a genealogia com base na classificaÃ§Ã£o do animal:
 - **Spring Boot 3.x** – Framework principal para desenvolvimento
 - **Spring Security** – Segurança e controle de acesso
 - **Spring Data JPA** – Camada de persistência
-
-### Banco de Dados
-- **PostgreSQL 16** – Banco de dados relacional principal
-- **Flyway** – Controle de versionamento do schema
-- **Testcontainers** – Banco efêmero para testes de integração
-- **H2 Database** – Apenas para testes unitários isolados (opcional)
-
-### Segurança
-- **JWT (JSON Web Tokens)** – Autenticação stateless
-- **OAuth2** – Protocolo de autorização
-
-### DocumentaÃ§Ã£o e Testes
-- **Swagger/OpenAPI** – Documentação interativa da API
-- **JUnit 5** – Framework de testes
-- **Mockito** – Mocks para testes unitários
-- **Testcontainers** – Infraestrutura de testes robusta
-
-### DevOps
-- **Docker** – Containerização
-- **Docker Compose** – Orquestração de containers
-- **Maven** – Gerenciamento de dependências e build
 
 ---
 
@@ -524,7 +502,7 @@ classDiagram
 
 ## 📋 Pré-requisitos
 
-Antes de comeÃ§ar, certifique-se de ter instalado:
+Antes de começar, certifique-se de ter instalado:
 
 - ☕ **Java 21** ou superior
 - 🛠 **Maven 3.8+** (ou use o wrapper incluído)
@@ -551,7 +529,7 @@ docker compose up -d
 
 > **Nota sobre Warnings:** É comum ver avisos do "Mockito inline agent" (Byte Buddy) durante a execução dos testes em Java 21+. Isso não afeta o resultado. Para suprimir, use a flag `-XX:+EnableDynamicAgentLoading`.
 
-O projeto possui uma suÃ­te robusta de testes:
+O projeto possui uma suíte robusta de testes:
 
 - **Testes Unitários:** Cobrem as regras de negócio (`*Business`), isolados de dependências externas (banco, web). Organizados espelhando a estrutura de pacotes de `src/main`.
 - **Testes de Integração:** Validam o fluxo completo, incluindo banco de dados e endpoints REST (`@SpringBootTest`).
@@ -614,8 +592,8 @@ O perfil `dev` é ativado automaticamente.
 ./mvnw spring-boot:run
 ```
 
-**Via Maven (ExplÃ­cito):**
-Caso queira forÃ§ar um perfil especÃ­fico:
+**Via Maven (Explícito):**
+Caso queira forçar um perfil específico:
 ```bash
 ./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
@@ -647,20 +625,20 @@ Todo o schema do banco é gerenciado pelo **Flyway**.
 
 ### H2 Database
 O H2 é utilizado em dois cenários:
-1.  **Testes UnitÃ¡rios**: ExecuÃ§Ã£o rÃ¡pida e isolada.
-2.  **Smoke Tests**: ValidaÃ§Ã£o rÃ¡pida do build (`profile: smoke`), permitindo rodar a aplicaÃ§Ã£o em memÃ³ria sem depender do Docker.
+1.  **Testes Unitários**: Execução rápida e isolada.
+2.  **Smoke Tests**: Validação rápida do build (`profile: smoke`), permitindo rodar a aplicação em memória sem depender do Docker.
 
 ### Flyway V16 – banco sujo com ACTIVE duplicada
 
-A migration `V16` cria um Ã­ndice Ãºnico para garantir apenas **uma gestaÃ§Ã£o ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falharÃ¡.
+A migration `V16` cria um índice único para garantir apenas **uma gestação ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falhará.
 
-O fluxo recomendado Ã© totalmente manual e estÃ¡ documentado em:
+O fluxo recomendado é totalmente manual e está documentado em:
 - `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`  
-  (contÃ©m **diagnÃ³stico**, **fix seguro** e **verificaÃ§Ã£o final**)
+  (contém **diagnóstico**, **fix seguro** e **verificação final**)
 
-**Procedimento de CorreÃ§Ã£o (ambiente dev com PostgreSQL Docker):**
+**Procedimento de Correção (ambiente dev com PostgreSQL Docker):**
 
-1.  **Rodar diagnÃ³stico (verificar se hÃ¡ duplicidades):**
+1.  **Rodar diagnóstico (verificar se há duplicidades):**
 
     ```sql
     SELECT farm_id, goat_id, COUNT(*) AS active_count
@@ -673,7 +651,7 @@ O fluxo recomendado Ã© totalmente manual e estÃ¡ documentado em:
     - Se o resultado vier vazio, não há problema para a V16.
     - Se houver linhas, existem gestações `ACTIVE` duplicadas que precisam ser corrigidas.
 
-    Exemplo usando o container padrÃ£o do projeto:
+    Exemplo usando o container padrão do projeto:
 
     ```bash
     docker exec -it caprigestor-postgres \
@@ -681,18 +659,18 @@ O fluxo recomendado Ã© totalmente manual e estÃ¡ documentado em:
       -c "SELECT farm_id, goat_id, COUNT(*) AS active_count FROM pregnancy WHERE status = 'ACTIVE' GROUP BY farm_id, goat_id HAVING COUNT(*) > 1;"
     ```
 
-2.  **Executar Data Fix (fechar gestaÃ§Ãµes duplicadas mais antigas):**
+2.  **Executar Data Fix (fechar gestações duplicadas mais antigas):**
 
     - Execute o script manual em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`
       diretamente no banco (via `psql`, PgAdmin ou outra ferramenta SQL).
     - O script mantém apenas a gestação `ACTIVE` mais recente por `(farm_id, goat_id)` e fecha as demais.
 
-3.  **Rodar verificaÃ§Ã£o final:**
+3.  **Rodar verificação final:**
 
-    - Reexecute o SELECT de diagnÃ³stico (ou o bloco **C) VerificaÃ§Ã£o final** do script manual).
+    - Reexecute o SELECT de diagnóstico (ou o bloco **C) Verificação final** do script manual).
     - O resultado deve estar vazio antes de subir a aplicação.
 
-4.  **Subir aplicaÃ§Ã£o normalmente:**
+4.  **Subir aplicação normalmente:**
 
     - Com o banco já corrigido, a aplicação subirá e o Flyway aplicará a `V16` com sucesso.
 
@@ -704,7 +682,7 @@ O fluxo recomendado Ã© totalmente manual e estÃ¡ documentado em:
 - **Roles:**
   - `ROLE_ADMIN`: Acesso total.
   - `ROLE_OPERATOR`: Acesso operacional à fazenda vinculada.
-- **Header ObrigatÃ³rio:**
+- **Header Obrigatório:**
   ```http
   Authorization: Bearer <seu-token-jwt>
   ```
@@ -713,7 +691,7 @@ O fluxo recomendado Ã© totalmente manual e estÃ¡ documentado em:
 
 ## 🧪 Testes
 
-Os testes de integraÃ§Ã£o sobem a aplicaÃ§Ã£o completa usando **Testcontainers** para garantir fidelidade ao ambiente real.
+Os testes de integração sobem a aplicação completa usando **Testcontainers** para garantir fidelidade ao ambiente real.
 
 **Executar todos os testes:**
 ```bash
