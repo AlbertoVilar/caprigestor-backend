@@ -1,11 +1,11 @@
-﻿# ADR-002 - Inventory com ledger, balance materializado e lotes
-Última atualização: 2026-02-10
+﻿# ADR-002 — Inventory: ledger, balance materializado e lotes
+Última atualização: 2026-02-11
 Escopo: decisão arquitetural para o módulo Inventory no backend GoatFarm/CapriGestor.
 Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Módulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [TODO MVP](../../_work/INVENTORY_TODO_MVP.md)
 
 ## Status
-- Proposta aprovada para implementação do MVP.
-- Ainda não implementado nesta tarefa.
+- **Aceito** (aprovado para implementação do MVP).
+- Documento define a decisão; não implica implementação concluída.
 
 ## Contexto e problema
 O backend já possui módulos operacionais relevantes (`health`, `milk`, `reproduction`) e precisa de uma base de estoque farm-level para:
@@ -21,10 +21,10 @@ Sem um contexto dedicado de Inventory, há risco de:
 ## Decisão
 Adotar `inventory` como bounded context próprio, com MVP já incluindo lotes e validade.
 
-Decisão principal:
-- consistência por `ledger + balance`:
-- `stock_movement` como trilha imutável (fonte de verdade);
-- `stock_balance` como projeção materializada para leitura rápida.
+Decisão principal (modelo de consistência):
+- **ledger + balance**:
+  - `inventory_movement` como trilha imutável (fonte de verdade);
+  - `inventory_balance` como projeção materializada para leitura rápida.
 
 Decisões complementares:
 - `OUT` e `ADJUST` decremento não podem gerar saldo negativo;
@@ -32,6 +32,10 @@ Decisões complementares:
 - integração entre contextos por `sourceModule` + `sourceRef` (sem FK cruzada);
 - concorrência controlada por lock pessimista em saldo (`SELECT ... FOR UPDATE`);
 - itens rastreáveis exigem lote (`trackLot=true` => `lotId` em movimentos).
+
+Notas de padronização:
+- Padronizar prefixo de artefatos/tabelas do módulo como `inventory_*`.
+- Regras detalhadas de contratos, DTOs e endpoints pertencem ao `INVENTORY_MODULE.md` e ao `API_CONTRACTS.md`.
 
 ## Alternativas consideradas e trade-offs
 ### A) Inventory sem lotes/validade no MVP
@@ -43,7 +47,7 @@ Decisões complementares:
 - Decisão:
 - rejeitada.
 
-### B) Sem `stock_balance` (apenas agregação no ledger)
+### B) Sem `inventory_balance` (apenas agregação no ledger)
 - Prós:
 - menor redundância de armazenamento.
 - Contras:
@@ -82,7 +86,7 @@ Riscos técnicos:
 - conflito de idempotência mal tratado sob retry.
 
 Mitigações planejadas:
-- ordem fixa de lock (item consolidado, depois lote);
+- ordem fixa de lock (item -> balances impactados; em lotes, ordenar por `lotId` asc);
 - transação única para validar, gravar movement e atualizar balance;
 - regra explícita de `409` para mesma key com payload divergente;
 - testes de concorrência e idempotência no DoD.
@@ -93,10 +97,10 @@ Riscos de evolução:
 
 ## Regras de fronteira (anti-corruption)
 - `inventory` não importa camadas internas de `health`, `milk`, `reproduction`.
-- única exceção de compartilhamento: `sharedkernel` aprovado.
-- integração por referência textual:
-- `sourceModule` (enum de contexto);
-- `sourceRef` (identificador externo sem FK).
+- Única exceção de compartilhamento: `sharedkernel` aprovado.
+- integração por referência textual (sem FK cruzada):
+  - `sourceModule` (enum de contexto);
+  - `sourceRef` (identificador externo sem FK).
 
 Critério de conformidade arquitetural:
 - adicionar e manter `InventoryBoundaryArchUnitTest` no pipeline.
@@ -109,3 +113,4 @@ Critério de conformidade arquitetural:
 
 ## Referência de implementação
 Backlog executável e ordem de entrega em: [INVENTORY_TODO_MVP.md](../../_work/INVENTORY_TODO_MVP.md)
+
