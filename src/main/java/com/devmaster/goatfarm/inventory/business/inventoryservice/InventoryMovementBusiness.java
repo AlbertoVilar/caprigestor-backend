@@ -30,7 +30,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         // TODO: idempotência (replay vs conflict)
         // TODO: lock balance (SELECT FOR UPDATE) e aplicar invariantes (não negativo)
         // TODO: persistir movement + balance + idempotency record
-        return null;
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
     private void validateInput(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {
@@ -39,7 +39,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
 
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new InvalidArgumentException("idempotencyKey", "Idempotency-Key é obrigatório.");
+            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key é obrigatório.");
         }
 
         if (request == null) {
