@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface InventoryMovementPersistencePort {
 
-    Optional<InventoryIdempotencyVO> findIdempotency(Long farmId, String key);
+    Optional<InventoryIdempotencyVO> findIdempotency(Long farmId, String idempotencyKey);
 
     InventoryIdempotencyVO saveIdempotency(InventoryIdempotencyVO vo);
 

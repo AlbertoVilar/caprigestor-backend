@@ -12,8 +12,9 @@ import java.util.Optional;
 public class InventoryMovementPersistenceAdapter implements InventoryMovementPersistencePort {
 
     @Override
-    public Optional<InventoryIdempotencyVO> findIdempotency(Long farmId, String key) {
-        throw new UnsupportedOperationException("Not implemented yet");
+    public Optional<InventoryIdempotencyVO> findIdempotency(Long farmId, String idempotencyKey) {
+        // TODO: implementar busca por (farmId, idempotencyKey) na persistência.
+        return Optional.empty();
     }
 
     @Override

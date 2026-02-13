@@ -1,14 +1,21 @@
 package com.devmaster.goatfarm.inventory.business.inventoryservice;
 
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryMovementCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementPersistencePort;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+import java.util.Optional;
 
 @Service
 public class InventoryMovementBusiness implements InventoryMovementCommandUseCase {
@@ -26,8 +33,18 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             InventoryMovementCreateRequestVO request
     ) {
         validateInput(farmId, idempotencyKey, request);
+        String requestHash = hashRequest(request);
 
-        // TODO: idempotência (replay vs conflict)
+        Optional<InventoryIdempotencyVO> existing = persistencePort.findIdempotency(farmId, idempotencyKey);
+        if (existing.isPresent()) {
+            InventoryIdempotencyVO idempotencyVO = existing.get();
+            if (idempotencyVO.requestHash().equals(requestHash)) {
+                return idempotencyVO.response();
+            }
+            throw new DuplicateEntityException("idempotencyKey", "Idempotency-Key já foi usada com payload diferente.");
+        }
+
+        // TODO: registrar idempotência após persistência real
         // TODO: lock balance (SELECT FOR UPDATE) e aplicar invariantes (não negativo)
         // TODO: persistir movement + balance + idempotency record
         throw new UnsupportedOperationException("Not implemented yet");
@@ -61,5 +78,32 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         if (InventoryMovementType.ADJUST.equals(request.type()) && request.adjustDirection() == null) {
             throw new InvalidArgumentException("adjustDirection", "adjustDirection é obrigatório quando o tipo é ADJUST.");
         }
+    }
+
+    private String hashRequest(InventoryMovementCreateRequestVO request) {
+        String canonical = buildCanonicalRequest(request);
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(canonical.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Algoritmo SHA-256 não disponível.", e);
+        }
+    }
+
+    private String buildCanonicalRequest(InventoryMovementCreateRequestVO request) {
+        String quantityNormalized = request.quantity().stripTrailingZeros().toPlainString();
+        String lotIdOrEmpty = request.lotId() == null ? "" : request.lotId().toString();
+        String adjustDirectionOrEmpty = request.adjustDirection() == null ? "" : request.adjustDirection().name();
+        String movementDateOrEmpty = request.movementDate() == null ? "" : request.movementDate().toString();
+        String reasonTrimOrEmpty = request.reason() == null ? "" : request.reason().trim();
+
+        return request.type().name()
+                + "|" + quantityNormalized
+                + "|" + request.itemId()
+                + "|" + lotIdOrEmpty
+                + "|" + adjustDirectionOrEmpty
+                + "|" + movementDateOrEmpty
+                + "|" + reasonTrimOrEmpty;
     }
 }
