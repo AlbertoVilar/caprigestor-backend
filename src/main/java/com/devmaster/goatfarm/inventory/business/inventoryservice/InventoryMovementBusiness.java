@@ -96,7 +96,9 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         String lotIdOrEmpty = request.lotId() == null ? "" : request.lotId().toString();
         String adjustDirectionOrEmpty = request.adjustDirection() == null ? "" : request.adjustDirection().name();
         String movementDateOrEmpty = request.movementDate() == null ? "" : request.movementDate().toString();
-        String reasonTrimOrEmpty = request.reason() == null ? "" : request.reason().trim();
+        String reasonTrimOrEmpty = request.reason() == null
+                ? ""
+                : request.reason().trim().replaceAll("\\s+", " ");
 
         return request.type().name()
                 + "|" + quantityNormalized

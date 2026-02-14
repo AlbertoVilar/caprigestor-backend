@@ -175,6 +175,50 @@ class InventoryMovementBusinessTest {
         verify(persistencePort).findIdempotency(farmId, idempotencyKey);
     }
 
+    @Test
+    void replay_when_reason_has_extra_whitespace_should_still_match_same_hash() {
+        Long farmId = 1L;
+        String idempotencyKey = "idem-1";
+        InventoryMovementCreateRequestVO requestA = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.OUT,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "ra\u00e7\u00e3o  premium"
+        );
+        InventoryMovementCreateRequestVO requestB = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.OUT,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "ra\u00e7\u00e3o premium"
+        );
+
+        String requestHash = hashRequest(requestA);
+        InventoryMovementResponseVO replayResponse = new InventoryMovementResponseVO(
+                101L,
+                InventoryMovementType.OUT,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                requestB.movementDate(),
+                new BigDecimal("12.00"),
+                OffsetDateTime.now()
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey))
+                .thenReturn(Optional.of(new InventoryIdempotencyVO(idempotencyKey, requestHash, replayResponse)));
+
+        InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, requestB);
+
+        assertThat(result).isSameAs(replayResponse);
+        verify(persistencePort).findIdempotency(farmId, idempotencyKey);
+    }
+
     private InventoryMovementCreateRequestVO validRequest() {
         return new InventoryMovementCreateRequestVO(
                 InventoryMovementType.IN,
@@ -192,7 +236,9 @@ class InventoryMovementBusinessTest {
         String lotIdOrEmpty = request.lotId() == null ? "" : request.lotId().toString();
         String adjustDirectionOrEmpty = request.adjustDirection() == null ? "" : request.adjustDirection().name();
         String movementDateOrEmpty = request.movementDate() == null ? "" : request.movementDate().toString();
-        String reasonTrimOrEmpty = request.reason() == null ? "" : request.reason().trim();
+        String reasonTrimOrEmpty = request.reason() == null
+                ? ""
+                : request.reason().trim().replaceAll("\\s+", " ");
 
         String canonical = request.type().name()
                 + "|" + quantityNormalized
