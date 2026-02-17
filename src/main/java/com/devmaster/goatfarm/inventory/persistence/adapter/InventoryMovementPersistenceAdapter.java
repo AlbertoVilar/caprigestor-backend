@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.inventory.persistence.adapter;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementPersistencePort;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +11,11 @@ import java.util.Optional;
 
 @Component
 public class InventoryMovementPersistenceAdapter implements InventoryMovementPersistencePort {
+
+    @Override
+    public Optional<InventoryItemSnapshotVO> findItemSnapshot(Long farmId, Long itemId) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
 
     @Override
     public Optional<InventoryIdempotencyVO> findIdempotency(Long farmId, String idempotencyKey) {

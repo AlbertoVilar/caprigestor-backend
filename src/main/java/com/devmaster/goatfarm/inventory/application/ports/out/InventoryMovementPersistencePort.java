@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.inventory.application.ports.out;
 
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO;
 
 import java.util.Optional;
@@ -17,4 +18,8 @@ public interface InventoryMovementPersistencePort {
     InventoryBalanceSnapshotVO lockBalanceForUpdate(Long farmId, Long itemId, Long lotId);
 
     InventoryBalanceSnapshotVO upsertBalance(InventoryBalanceSnapshotVO vo);
+
+
+    Optional<InventoryItemSnapshotVO> findItemSnapshot(Long farmId, Long itemId);
+
 }
