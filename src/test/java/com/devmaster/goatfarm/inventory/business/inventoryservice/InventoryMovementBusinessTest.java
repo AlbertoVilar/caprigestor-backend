@@ -2,8 +2,10 @@ package com.devmaster.goatfarm.inventory.business.inventoryservice;
 
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementPersistencePort;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
@@ -24,6 +26,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -217,6 +221,86 @@ class InventoryMovementBusinessTest {
 
         assertThat(result).isSameAs(replayResponse);
         verify(persistencePort).findIdempotency(farmId, idempotencyKey);
+    }
+
+    @Test
+    void shouldThrowInvalidArgument_whenTrackLotTrue_andLotIdIsNull() {
+        Long farmId = 1L;
+        String idempotencyKey = "k-1";
+        Long itemId = 10L;
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("1.0"),
+                itemId,
+                null,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "entrada"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, true)));
+
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request));
+
+        assertThat(exception.getMessage()).contains("lotId");
+        verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
+        verify(persistencePort, never()).saveMovement(any());
+        verify(persistencePort, never()).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldThrowInvalidArgument_whenTrackLotFalse_andLotIdIsProvided() {
+        Long farmId = 1L;
+        String idempotencyKey = "k-1";
+        Long itemId = 10L;
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("1.0"),
+                itemId,
+                99L,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "entrada"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request));
+
+        assertThat(exception.getMessage()).contains("lotId");
+        verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
+        verify(persistencePort, never()).saveMovement(any());
+        verify(persistencePort, never()).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldThrowResourceNotFound_whenItemSnapshotNotFound() {
+        Long farmId = 1L;
+        String idempotencyKey = "k-1";
+        Long itemId = 10L;
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("1.0"),
+                itemId,
+                null,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "entrada"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request));
+
+        verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
+        verify(persistencePort, never()).saveMovement(any());
+        verify(persistencePort, never()).saveIdempotency(any());
     }
 
     private InventoryMovementCreateRequestVO validRequest() {
