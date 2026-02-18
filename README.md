@@ -620,7 +620,9 @@ Após iniciar com o perfil `dev`, a API estará disponível em:
 
 ### Versionamento (Flyway)
 Todo o schema do banco é gerenciado pelo **Flyway**.
-- Migrations em: `src/main/resources/db/migration`
+- Migrations SQL versionadas em: `src/main/resources/db/migration`
+- Java migrations Flyway (quando necessario) em: `src/main/java/db/migration` com `package db.migration`
+- Estrategia oficial: SQL-first; Java migration somente para guardrails tecnicos que nao cabem bem em SQL declarativo.
 - O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
 
 ### H2 Database
@@ -631,6 +633,7 @@ O H2 é utilizado em dois cenários:
 ### Flyway V16 – banco sujo com ACTIVE duplicada
 
 A migration `V16` cria um índice único para garantir apenas **uma gestação ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falhará.
+Antes dela, a Java migration `V15_9__Assert_no_duplicate_active_pregnancy` (em `src/main/java/db/migration`) executa um guardrail e interrompe o migrate com mensagem de correção manual quando encontra duplicidades.
 
 O fluxo recomendado é totalmente manual e está documentado em:
 - `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`  
