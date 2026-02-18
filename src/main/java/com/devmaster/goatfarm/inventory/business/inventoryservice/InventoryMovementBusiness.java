@@ -10,15 +10,20 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryAdjustDirection;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.Optional;
 
@@ -26,12 +31,15 @@ import java.util.Optional;
 public class InventoryMovementBusiness implements InventoryMovementCommandUseCase {
 
     private final InventoryMovementPersistencePort persistencePort;
+    private final Clock clock;
 
-    public InventoryMovementBusiness(InventoryMovementPersistencePort persistencePort) {
+    public InventoryMovementBusiness(InventoryMovementPersistencePort persistencePort, Clock clock) {
         this.persistencePort = persistencePort;
+        this.clock = clock;
     }
 
     @Override
+    @Transactional
     public InventoryMovementResponseVO createMovement(
             Long farmId,
             String idempotencyKey,
@@ -55,22 +63,52 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         validateTrackLot(item, request);
         Long effectiveLotId = item.trackLot() ? request.lotId() : null;
 
+        // Ordem de lock obrigatória do ADR: item primeiro, depois balance.
         InventoryItemSnapshotVO lockedItem = persistencePort.lockItemForUpdate(farmId, request.itemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
-
         validateTrackLot(lockedItem, request);
 
         InventoryBalanceSnapshotVO currentBalance = persistencePort.lockBalanceForUpdate(farmId, request.itemId(), effectiveLotId)
                 .orElse(new InventoryBalanceSnapshotVO(farmId, request.itemId(), effectiveLotId, BigDecimal.ZERO));
 
-        // Mantem a regra de saldo nao negativo para OUT e ADJUST DECREASE.
-        computeResultingBalance(request, currentBalance.quantity());
+        BigDecimal resultingBalance = computeResultingBalance(request, currentBalance.quantity());
 
-        // TODO: registrar idempotencia apos persistencia real.
-        // TODO: persistir movement + balance + idempotency record.
-        throw new UnsupportedOperationException("Not implemented yet");
+        InventoryMovementPersistedVO persistedMovement = persistencePort.saveMovement(new InventoryMovementPersistedVO(
+                null,
+                farmId,
+                request.type(),
+                request.adjustDirection(),
+                request.quantity(),
+                request.itemId(),
+                effectiveLotId,
+                resolveMovementDate(request),
+                normalizeReason(request.reason()),
+                resultingBalance,
+                OffsetDateTime.now(clock)
+        ));
+
+        InventoryBalanceSnapshotVO persistedBalance = persistencePort.upsertBalance(
+                new InventoryBalanceSnapshotVO(farmId, request.itemId(), effectiveLotId, resultingBalance)
+        );
+
+        InventoryMovementResponseVO response = new InventoryMovementResponseVO(
+                persistedMovement.movementId(),
+                persistedMovement.type(),
+                persistedMovement.quantity(),
+                persistedMovement.itemId(),
+                persistedMovement.lotId(),
+                persistedMovement.movementDate(),
+                persistedBalance.quantity(),
+                persistedMovement.createdAt()
+        );
+
+        persistencePort.saveIdempotency(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, response));
+        return response;
     }
 
+    /**
+     * Garante a regra de rastreio por lote no comando de movimento.
+     */
     private void validateTrackLot(InventoryItemSnapshotVO item, InventoryMovementCreateRequestVO request) {
         if (item.trackLot() && request.lotId() == null) {
             throw new InvalidArgumentException("lotId", "lotId é obrigatório quando o item possui rastreio por lote (trackLot=true).");
@@ -81,6 +119,9 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
     }
 
+    /**
+     * Calcula o saldo final aplicando as invariantes de não-negatividade.
+     */
     private BigDecimal computeResultingBalance(InventoryMovementCreateRequestVO request, BigDecimal currentBalance) {
         if (InventoryMovementType.IN.equals(request.type())) {
             return currentBalance.add(request.quantity());
@@ -89,9 +130,11 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         if (InventoryMovementType.OUT.equals(request.type())) {
             BigDecimal resulting = currentBalance.subtract(request.quantity());
             if (resulting.compareTo(BigDecimal.ZERO) < 0) {
-                throw new BusinessRuleException("quantity",
+                throw new BusinessRuleException(
+                        "quantity",
                         "Saldo insuficiente para realizar a movimentação. Saldo atual: "
-                                + currentBalance + ", solicitado: " + request.quantity() + ".");
+                                + currentBalance + ", solicitado: " + request.quantity() + "."
+                );
             }
             return resulting;
         }
@@ -102,11 +145,26 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
         BigDecimal resulting = currentBalance.subtract(request.quantity());
         if (resulting.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("quantity",
+            throw new BusinessRuleException(
+                    "quantity",
                     "Ajuste (DECREASE) não permitido: saldo ficaria negativo. Saldo atual: "
-                            + currentBalance + ", ajuste: " + request.quantity() + ".");
+                            + currentBalance + ", ajuste: " + request.quantity() + "."
+            );
         }
+
         return resulting;
+    }
+
+    private LocalDate resolveMovementDate(InventoryMovementCreateRequestVO request) {
+        return request.movementDate() != null ? request.movementDate() : LocalDate.now(clock);
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null) {
+            return null;
+        }
+        String normalized = reason.trim().replaceAll("\\s+", " ");
+        return normalized.isBlank() ? null : normalized;
     }
 
     private void validateInput(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {

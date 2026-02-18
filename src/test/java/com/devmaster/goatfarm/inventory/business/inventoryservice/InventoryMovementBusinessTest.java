@@ -22,8 +22,11 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.Optional;
 
@@ -31,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -41,6 +45,9 @@ class InventoryMovementBusinessTest {
 
     @Mock
     private InventoryMovementPersistencePort persistencePort;
+
+    @Mock
+    private Clock clock;
 
     @InjectMocks
     private InventoryMovementBusiness inventoryMovementBusiness;
@@ -148,7 +155,7 @@ class InventoryMovementBusinessTest {
         );
 
         when(persistencePort.findIdempotency(farmId, idempotencyKey))
-                .thenReturn(Optional.of(new InventoryIdempotencyVO(idempotencyKey, requestHash, replayResponse)));
+                .thenReturn(Optional.of(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, replayResponse)));
 
         InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
 
@@ -174,7 +181,7 @@ class InventoryMovementBusinessTest {
         );
 
         when(persistencePort.findIdempotency(farmId, idempotencyKey))
-                .thenReturn(Optional.of(new InventoryIdempotencyVO(idempotencyKey, "hash-diferente", replayResponse)));
+                .thenReturn(Optional.of(new InventoryIdempotencyVO(farmId, idempotencyKey, "hash-diferente", replayResponse)));
 
         DuplicateEntityException exception = assertThrows(DuplicateEntityException.class,
                 () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request));
@@ -219,7 +226,7 @@ class InventoryMovementBusinessTest {
         );
 
         when(persistencePort.findIdempotency(farmId, idempotencyKey))
-                .thenReturn(Optional.of(new InventoryIdempotencyVO(idempotencyKey, requestHash, replayResponse)));
+                .thenReturn(Optional.of(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, replayResponse)));
 
         InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, requestB);
 
@@ -371,6 +378,128 @@ class InventoryMovementBusinessTest {
         verify(persistencePort, never()).saveMovement(any());
         verify(persistencePort, never()).upsertBalance(any());
         verify(persistencePort, never()).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldPersistMovementAndBalanceAndIdempotency_whenInMovementIsValid() {
+        stubFixedClock();
+
+        Long farmId = 1L;
+        String idempotencyKey = "in-1";
+        Long itemId = 10L;
+        Long movementId = 700L;
+        LocalDate movementDate = LocalDate.of(2026, 2, 13);
+        OffsetDateTime createdAt = OffsetDateTime.parse("2026-02-13T10:15:30Z");
+
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("10.0"),
+                itemId,
+                null,
+                null,
+                movementDate,
+                "entrada manual"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockItemForUpdate(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockBalanceForUpdate(farmId, itemId, null))
+                .thenReturn(Optional.of(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("5.0"))));
+
+        when(persistencePort.saveMovement(any())).thenAnswer(invocation -> {
+            var vo = invocation.getArgument(0, com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO.class);
+            return new com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO(
+                    movementId,
+                    vo.farmId(),
+                    vo.type(),
+                    vo.adjustDirection(),
+                    vo.quantity(),
+                    vo.itemId(),
+                    vo.lotId(),
+                    vo.movementDate(),
+                    vo.reason(),
+                    vo.resultingBalance(),
+                    createdAt
+            );
+        });
+
+        when(persistencePort.upsertBalance(any()))
+                .thenReturn(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("15.0")));
+        when(persistencePort.saveIdempotency(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
+
+        assertThat(result.movementId()).isEqualTo(movementId);
+        assertThat(result.resultingBalance()).isEqualByComparingTo("15.0");
+        assertThat(result.itemId()).isEqualTo(itemId);
+        assertThat(result.lotId()).isNull();
+        assertThat(result.createdAt()).isEqualTo(createdAt);
+
+        verify(persistencePort).lockBalanceForUpdate(farmId, itemId, null);
+        verify(persistencePort).saveMovement(any());
+        verify(persistencePort).upsertBalance(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("15.0")));
+        verify(persistencePort).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldRespectLockOrder_itemThenBalance() {
+        stubFixedClock();
+
+        Long farmId = 1L;
+        String idempotencyKey = "in-lock-order";
+        Long itemId = 10L;
+        LocalDate movementDate = LocalDate.of(2026, 2, 13);
+        OffsetDateTime createdAt = OffsetDateTime.parse("2026-02-13T10:15:30Z");
+
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("2.0"),
+                itemId,
+                null,
+                null,
+                movementDate,
+                "entrada"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockItemForUpdate(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockBalanceForUpdate(farmId, itemId, null))
+                .thenReturn(Optional.of(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("3.0"))));
+        when(persistencePort.saveMovement(any())).thenAnswer(invocation -> {
+            var vo = invocation.getArgument(0, com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO.class);
+            return new com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO(
+                    900L,
+                    vo.farmId(),
+                    vo.type(),
+                    vo.adjustDirection(),
+                    vo.quantity(),
+                    vo.itemId(),
+                    vo.lotId(),
+                    vo.movementDate(),
+                    vo.reason(),
+                    vo.resultingBalance(),
+                    createdAt
+            );
+        });
+        when(persistencePort.upsertBalance(any()))
+                .thenReturn(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("5.0")));
+        when(persistencePort.saveIdempotency(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
+
+        var inOrder = inOrder(persistencePort);
+        inOrder.verify(persistencePort).lockItemForUpdate(farmId, itemId);
+        inOrder.verify(persistencePort).lockBalanceForUpdate(farmId, itemId, null);
+        inOrder.verify(persistencePort).saveMovement(any());
+        inOrder.verify(persistencePort).upsertBalance(any());
+        inOrder.verify(persistencePort).saveIdempotency(any());
+    }
+
+    private void stubFixedClock() {
+        when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+        when(clock.instant()).thenReturn(Instant.parse("2026-02-13T10:15:30Z"));
     }
 
     private InventoryMovementCreateRequestVO validRequest() {
