@@ -15,7 +15,9 @@ public interface InventoryMovementPersistencePort {
 
     InventoryMovementPersistedVO saveMovement(InventoryMovementPersistedVO vo);
 
-    InventoryBalanceSnapshotVO lockBalanceForUpdate(Long farmId, Long itemId, Long lotId);
+    Optional<InventoryItemSnapshotVO> lockItemForUpdate(Long farmId, Long itemId);
+
+    Optional<InventoryBalanceSnapshotVO> lockBalanceForUpdate(Long farmId, Long itemId, Long lotId);
 
     InventoryBalanceSnapshotVO upsertBalance(InventoryBalanceSnapshotVO vo);
 

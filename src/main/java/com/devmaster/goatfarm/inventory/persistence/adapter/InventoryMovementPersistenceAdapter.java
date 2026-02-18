@@ -34,7 +34,12 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
     }
 
     @Override
-    public InventoryBalanceSnapshotVO lockBalanceForUpdate(Long farmId, Long itemId, Long lotId) {
+    public Optional<InventoryItemSnapshotVO> lockItemForUpdate(Long farmId, Long itemId) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public Optional<InventoryBalanceSnapshotVO> lockBalanceForUpdate(Long farmId, Long itemId, Long lotId) {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
