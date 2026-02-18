@@ -57,7 +57,7 @@ class InventoryMovementBusinessTest {
         InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
                 () -> inventoryMovementBusiness.createMovement(null, "idem-key", validRequest()));
 
-        assertThat(exception.getMessage()).contains("farmId é obrigatório.");
+        assertThat(exception.getMessage()).contains("farmId e obrigatorio.");
         verifyNoInteractions(persistencePort);
     }
 
@@ -66,7 +66,7 @@ class InventoryMovementBusinessTest {
         InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
                 () -> inventoryMovementBusiness.createMovement(1L, "   ", validRequest()));
 
-        assertThat(exception.getMessage()).contains("Idempotency-Key é obrigatório.");
+        assertThat(exception.getMessage()).contains("Idempotency-Key e obrigatorio.");
         verifyNoInteractions(persistencePort);
     }
 
@@ -75,7 +75,7 @@ class InventoryMovementBusinessTest {
         InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
                 () -> inventoryMovementBusiness.createMovement(1L, "idem-key", null));
 
-        assertThat(exception.getMessage()).contains("Payload da requisição é obrigatório.");
+        assertThat(exception.getMessage()).contains("Payload da requisicao e obrigatorio.");
         verifyNoInteractions(persistencePort);
     }
 
@@ -132,7 +132,7 @@ class InventoryMovementBusinessTest {
         InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
                 () -> inventoryMovementBusiness.createMovement(1L, "idem-key", request));
 
-        assertThat(exception.getMessage()).contains("adjustDirection é obrigatório quando o tipo é ADJUST.");
+        assertThat(exception.getMessage()).contains("adjustDirection e obrigatorio quando o tipo e ADJUST.");
         verifyNoInteractions(persistencePort);
     }
 
@@ -510,7 +510,7 @@ class InventoryMovementBusinessTest {
                 null,
                 null,
                 LocalDate.of(2026, 2, 13),
-                " entrada padrão "
+                " entrada padrao "
         );
     }
 
@@ -536,7 +536,8 @@ class InventoryMovementBusinessTest {
             byte[] hash = digest.digest(canonical.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Algoritmo SHA-256 não disponível para teste.", e);
+            throw new IllegalStateException("Algoritmo SHA-256 nao disponivel para teste.", e);
         }
     }
 }
+

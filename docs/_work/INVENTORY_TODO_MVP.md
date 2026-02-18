@@ -1,4 +1,4 @@
-﻿# Inventory TODO MVP (Checklist de Engenharia)
+# Inventory TODO MVP (Checklist de Engenharia)
 Ultima atualizacao: 2026-02-18
 Escopo: plano executavel do MVP de Inventory com status de execucao do ledger core.
 Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Portal](../INDEX.md)

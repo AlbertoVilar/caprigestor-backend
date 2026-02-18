@@ -45,34 +45,85 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             String idempotencyKey,
             InventoryMovementCreateRequestVO request
     ) {
-        validateInput(farmId, idempotencyKey, request);
+        validateRequest(farmId, idempotencyKey, request);
         String requestHash = hashRequest(request);
 
-        Optional<InventoryIdempotencyVO> existing = persistencePort.findIdempotency(farmId, idempotencyKey);
-        if (existing.isPresent()) {
-            InventoryIdempotencyVO idempotencyVO = existing.get();
-            if (idempotencyVO.requestHash().equals(requestHash)) {
-                return idempotencyVO.response();
-            }
-            throw new DuplicateEntityException("idempotencyKey", "Idempotency-Key já foi usada com payload diferente.");
+        Optional<InventoryMovementResponseVO> replay = resolveIdempotencyReplay(farmId, idempotencyKey, requestHash);
+        if (replay.isPresent()) {
+            return replay.get();
         }
 
-        InventoryItemSnapshotVO item = persistencePort.findItemSnapshot(farmId, request.itemId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
+        InventoryItemSnapshotVO itemSnapshot = resolveItemSnapshot(farmId, request.itemId());
+        validateTrackLot(itemSnapshot, request);
+        Long effectiveLotId = itemSnapshot.trackLot() ? request.lotId() : null;
 
-        validateTrackLot(item, request);
-        Long effectiveLotId = item.trackLot() ? request.lotId() : null;
+        InventoryBalanceSnapshotVO currentBalance = lockItemThenBalance(farmId, request, effectiveLotId);
+        BigDecimal resultingBalance = computeNewBalance(request, currentBalance.quantity());
 
-        // Ordem de lock obrigatória do ADR: item primeiro, depois balance.
+        InventoryMovementResponseVO response = persistMovementAndBalance(
+                farmId,
+                request,
+                effectiveLotId,
+                resultingBalance
+        );
+
+        persistIdempotencyResult(farmId, idempotencyKey, requestHash, response);
+        return response;
+    }
+
+    /**
+     * Resolve replay idempotente ou conflito de payload para a mesma chave.
+     */
+    private Optional<InventoryMovementResponseVO> resolveIdempotencyReplay(
+            Long farmId,
+            String idempotencyKey,
+            String requestHash
+    ) {
+        return persistencePort.findIdempotency(farmId, idempotencyKey)
+                .map(existing -> {
+                    if (existing.requestHash().equals(requestHash)) {
+                        return existing.response();
+                    }
+                    throw new DuplicateEntityException(
+                            "idempotencyKey",
+                            "Idempotency-Key ja foi usada com payload diferente."
+                    );
+                });
+    }
+
+    /**
+     * Carrega snapshot do item para validar regras de trackLot antes do lock.
+     */
+    private InventoryItemSnapshotVO resolveItemSnapshot(Long farmId, Long itemId) {
+        return persistencePort.findItemSnapshot(farmId, itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
+    }
+
+    /**
+     * Executa lock na ordem obrigatoria: item e depois balance.
+     */
+    private InventoryBalanceSnapshotVO lockItemThenBalance(
+            Long farmId,
+            InventoryMovementCreateRequestVO request,
+            Long effectiveLotId
+    ) {
         InventoryItemSnapshotVO lockedItem = persistencePort.lockItemForUpdate(farmId, request.itemId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
         validateTrackLot(lockedItem, request);
 
-        InventoryBalanceSnapshotVO currentBalance = persistencePort.lockBalanceForUpdate(farmId, request.itemId(), effectiveLotId)
+        return persistencePort.lockBalanceForUpdate(farmId, request.itemId(), effectiveLotId)
                 .orElse(new InventoryBalanceSnapshotVO(farmId, request.itemId(), effectiveLotId, BigDecimal.ZERO));
+    }
 
-        BigDecimal resultingBalance = computeResultingBalance(request, currentBalance.quantity());
-
+    /**
+     * Persiste ledger e saldo materializado dentro da mesma transacao.
+     */
+    private InventoryMovementResponseVO persistMovementAndBalance(
+            Long farmId,
+            InventoryMovementCreateRequestVO request,
+            Long effectiveLotId,
+            BigDecimal resultingBalance
+    ) {
         InventoryMovementPersistedVO persistedMovement = persistencePort.saveMovement(new InventoryMovementPersistedVO(
                 null,
                 farmId,
@@ -91,7 +142,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 new InventoryBalanceSnapshotVO(farmId, request.itemId(), effectiveLotId, resultingBalance)
         );
 
-        InventoryMovementResponseVO response = new InventoryMovementResponseVO(
+        return new InventoryMovementResponseVO(
                 persistedMovement.movementId(),
                 persistedMovement.type(),
                 persistedMovement.quantity(),
@@ -101,9 +152,18 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 persistedBalance.quantity(),
                 persistedMovement.createdAt()
         );
+    }
 
+    /**
+     * Persiste o resultado de idempotencia para suportar replay futuro.
+     */
+    private void persistIdempotencyResult(
+            Long farmId,
+            String idempotencyKey,
+            String requestHash,
+            InventoryMovementResponseVO response
+    ) {
         persistencePort.saveIdempotency(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, response));
-        return response;
     }
 
     /**
@@ -111,47 +171,49 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
      */
     private void validateTrackLot(InventoryItemSnapshotVO item, InventoryMovementCreateRequestVO request) {
         if (item.trackLot() && request.lotId() == null) {
-            throw new InvalidArgumentException("lotId", "lotId é obrigatório quando o item possui rastreio por lote (trackLot=true).");
+            throw new InvalidArgumentException(
+                    "lotId",
+                    "lotId e obrigatorio quando o item possui rastreio por lote (trackLot=true)."
+            );
         }
 
         if (!item.trackLot() && request.lotId() != null) {
-            throw new InvalidArgumentException("lotId", "lotId deve ser nulo quando o item não possui rastreio por lote (trackLot=false).");
+            throw new InvalidArgumentException(
+                    "lotId",
+                    "lotId deve ser nulo quando o item nao possui rastreio por lote (trackLot=false)."
+            );
         }
     }
 
     /**
-     * Calcula o saldo final aplicando as invariantes de não-negatividade.
+     * Calcula saldo final aplicando invariantes de nao negatividade.
      */
-    private BigDecimal computeResultingBalance(InventoryMovementCreateRequestVO request, BigDecimal currentBalance) {
+    private BigDecimal computeNewBalance(InventoryMovementCreateRequestVO request, BigDecimal currentBalance) {
         if (InventoryMovementType.IN.equals(request.type())) {
             return currentBalance.add(request.quantity());
         }
 
         if (InventoryMovementType.OUT.equals(request.type())) {
-            BigDecimal resulting = currentBalance.subtract(request.quantity());
-            if (resulting.compareTo(BigDecimal.ZERO) < 0) {
-                throw new BusinessRuleException(
-                        "quantity",
-                        "Saldo insuficiente para realizar a movimentação. Saldo atual: "
-                                + currentBalance + ", solicitado: " + request.quantity() + "."
-                );
-            }
-            return resulting;
+            return decreaseWithNonNegativeCheck(currentBalance, request.quantity(),
+                    "Saldo insuficiente para realizar a movimentacao.");
         }
 
         if (InventoryAdjustDirection.INCREASE.equals(request.adjustDirection())) {
             return currentBalance.add(request.quantity());
         }
 
-        BigDecimal resulting = currentBalance.subtract(request.quantity());
+        return decreaseWithNonNegativeCheck(currentBalance, request.quantity(),
+                "Ajuste (DECREASE) nao permitido: saldo ficaria negativo.");
+    }
+
+    private BigDecimal decreaseWithNonNegativeCheck(BigDecimal currentBalance, BigDecimal quantity, String message) {
+        BigDecimal resulting = currentBalance.subtract(quantity);
         if (resulting.compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessRuleException(
                     "quantity",
-                    "Ajuste (DECREASE) não permitido: saldo ficaria negativo. Saldo atual: "
-                            + currentBalance + ", ajuste: " + request.quantity() + "."
+                    message + " Saldo atual: " + currentBalance + ", solicitado: " + quantity + "."
             );
         }
-
         return resulting;
     }
 
@@ -167,21 +229,21 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         return normalized.isBlank() ? null : normalized;
     }
 
-    private void validateInput(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {
+    private void validateRequest(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {
         if (farmId == null) {
-            throw new InvalidArgumentException("farmId", "farmId é obrigatório.");
+            throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
         }
 
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key é obrigatório.");
+            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key e obrigatorio.");
         }
 
         if (request == null) {
-            throw new InvalidArgumentException("request", "Payload da requisição é obrigatório.");
+            throw new InvalidArgumentException("request", "Payload da requisicao e obrigatorio.");
         }
 
         if (request.type() == null) {
-            throw new InvalidArgumentException("type", "Tipo do movimento é obrigatório.");
+            throw new InvalidArgumentException("type", "Tipo do movimento e obrigatorio.");
         }
 
         if (request.quantity() == null || request.quantity().compareTo(BigDecimal.ZERO) <= 0) {
@@ -189,11 +251,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
 
         if (request.itemId() == null) {
-            throw new InvalidArgumentException("itemId", "itemId é obrigatório.");
+            throw new InvalidArgumentException("itemId", "itemId e obrigatorio.");
         }
 
         if (InventoryMovementType.ADJUST.equals(request.type()) && request.adjustDirection() == null) {
-            throw new InvalidArgumentException("adjustDirection", "adjustDirection é obrigatório quando o tipo é ADJUST.");
+            throw new InvalidArgumentException(
+                    "adjustDirection",
+                    "adjustDirection e obrigatorio quando o tipo e ADJUST."
+            );
         }
     }
 
@@ -204,7 +269,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             byte[] hash = digest.digest(canonical.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Algoritmo SHA-256 não disponível.", e);
+            throw new IllegalStateException("Algoritmo SHA-256 nao disponivel.", e);
         }
     }
 

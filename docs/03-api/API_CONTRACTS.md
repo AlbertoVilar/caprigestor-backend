@@ -1,4 +1,4 @@
-﻿# API_CONTRACTS
+# API_CONTRACTS
 Ultima atualizacao: 2026-02-18
 Escopo: padroes transversais de rotas, autenticacao, paginacao, idempotencia e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Modulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Modulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Modulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Modulo Inventory](../02-modules/INVENTORY_MODULE.md)

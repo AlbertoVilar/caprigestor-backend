@@ -1,4 +1,4 @@
-﻿# Modulo Inventory (Estoque)
+# Modulo Inventory (Estoque)
 Ultima atualizacao: 2026-02-18
 Escopo: estado tecnico e funcional do MVP de Inventory apos implementacao do ledger core no backend.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Modulo Health](./HEALTH_VETERINARY_MODULE.md), [Modulo Lactation](./LACTATION_MODULE.md), [Modulo Reproduction](./REPRODUCTION_MODULE.md)
