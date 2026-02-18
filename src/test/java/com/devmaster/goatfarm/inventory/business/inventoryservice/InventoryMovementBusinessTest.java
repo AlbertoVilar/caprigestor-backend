@@ -1,13 +1,16 @@
 package com.devmaster.goatfarm.inventory.business.inventoryservice;
 
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementPersistencePort;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
+import com.devmaster.goatfarm.inventory.domain.enums.InventoryAdjustDirection;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -300,6 +304,72 @@ class InventoryMovementBusinessTest {
 
         verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
         verify(persistencePort, never()).saveMovement(any());
+        verify(persistencePort, never()).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldThrowBusinessRule_whenOutWouldMakeBalanceNegative() {
+        Long farmId = 1L;
+        String idempotencyKey = "out-1";
+        Long itemId = 10L;
+
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.OUT,
+                new BigDecimal("10.0"),
+                itemId,
+                null,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "saida"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockItemForUpdate(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockBalanceForUpdate(farmId, itemId, null))
+                .thenReturn(Optional.of(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("5.0"))));
+
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request));
+
+        assertThat(exception.getMessage()).contains("Saldo insuficiente");
+        verify(persistencePort).lockItemForUpdate(farmId, itemId);
+        verify(persistencePort).lockBalanceForUpdate(farmId, itemId, null);
+        verify(persistencePort, never()).saveMovement(any());
+        verify(persistencePort, never()).upsertBalance(any());
+        verify(persistencePort, never()).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldThrowBusinessRule_whenAdjustDecreaseWouldMakeBalanceNegative() {
+        Long farmId = 1L;
+        String idempotencyKey = "adjust-1";
+        Long itemId = 10L;
+
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.ADJUST,
+                new BigDecimal("4.0"),
+                itemId,
+                null,
+                InventoryAdjustDirection.DECREASE,
+                LocalDate.of(2026, 2, 13),
+                "ajuste"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockItemForUpdate(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, false)));
+        when(persistencePort.lockBalanceForUpdate(farmId, itemId, null))
+                .thenReturn(Optional.of(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("3.0"))));
+
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request));
+
+        assertThat(exception.getMessage()).contains("Ajuste (DECREASE)");
+        verify(persistencePort).lockItemForUpdate(farmId, itemId);
+        verify(persistencePort).lockBalanceForUpdate(eq(farmId), eq(itemId), eq(null));
+        verify(persistencePort, never()).saveMovement(any());
+        verify(persistencePort, never()).upsertBalance(any());
         verify(persistencePort, never()).saveIdempotency(any());
     }
 
