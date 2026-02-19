@@ -1,12 +1,12 @@
 # Inventory TODO MVP (Checklist de Engenharia)
-Ultima atualizacao: 2026-02-18
+Ultima atualizacao: 2026-02-19
 Escopo: plano executavel do MVP de Inventory com status de execucao do ledger core.
 Links relacionados: [Modulo Inventory](../02-modules/INVENTORY_MODULE.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Portal](../INDEX.md)
 
 ## Status atual
 - [x] Milestone 2 - Entidades, ports e regras de dominio do ledger core.
 - [x] Milestone 3 - Consistencia e concorrencia (locks item -> balance, upsert, idempotencia persistida).
-- [x] Milestone 4 (parcial) - `POST /inventory/movements` com ownership, validacao e Swagger.
+- [x] Milestone 4 (parcial) - `POST /api/v1/goatfarms/{farmId}/inventory/movements` com ownership, validacao e Swagger.
 - [x] Gate de fronteira - `InventoryBoundaryArchUnitTest` ativo.
 - [ ] Milestone 4 (restante) - endpoints de listagem de movimentos.
 - [ ] Milestone 5 - stock snapshot e alertas farm-level.
@@ -32,7 +32,7 @@ Objetivo:
 
 Status:
 - [x] Migration `V23__create_inventory_ledger_core_tables.sql` criada.
-- [ ] Validar em ambiente PostgreSQL real com `flyway migrate` e smoke test de startup.
+- [x] Validacao em PostgreSQL real com `InventoryFlywayPostgresIntegrationTest` (Testcontainers + Flyway).
 
 ### Milestone 2 - Entidades, Ports e regras de dominio
 Status: concluido.
@@ -41,6 +41,7 @@ DoD atendido:
 - `OUT` e `ADJUST DECREASE` sem saldo suficiente retornam `BusinessRuleException (422)`.
 - `trackLot=true` exige `lotId`; `trackLot=false` proibe `lotId`.
 - `ADJUST` exige `adjustDirection` explicito (`INCREASE` ou `DECREASE`).
+- `IN` e `OUT` exigem `adjustDirection` nulo (`InvalidArgumentException`, 400).
 
 ### Milestone 3 - Consistencia e concorrencia (ledger + balance)
 Status: concluido.
@@ -55,10 +56,10 @@ DoD atendido:
 Status: parcial.
 
 Entregue:
-- `POST /api/goatfarms/{farmId}/inventory/movements`.
+- `POST /api/v1/goatfarms/{farmId}/inventory/movements`.
 - header `Idempotency-Key` obrigatorio.
 - ownership com `@PreAuthorize("@ownershipService.canManageFarm(#farmId)")`.
-- Swagger PT-BR com status `201`, `400`, `404`, `409`, `422`.
+- Swagger PT-BR com status `200` (replay), `201` (criacao), `400`, `404`, `409`, `422`.
 
 Pendente:
 - testes de integracao HTTP do endpoint de movement.
@@ -80,6 +81,7 @@ Executar antes de abrir PR:
 - `./mvnw -Dtest=InventoryBoundaryArchUnitTest test`
 - `./mvnw -Dtest=InventoryMovementBusinessTest test`
 - `./mvnw -Dtest=InventoryMovementPersistenceAdapterIntegrationTest test`
+- `./mvnw -Dtest=InventoryFlywayPostgresIntegrationTest test`
 - `./mvnw -U clean test`
 - `rg -n "import com\\.devmaster\\.goatfarm\\.(health|milk|reproduction)\\." src/main/java/com/devmaster/goatfarm/inventory`
 

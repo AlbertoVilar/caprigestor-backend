@@ -1,5 +1,5 @@
 ﻿# ADR-002 — Inventory: ledger, balance materializado e lotes
-Última atualização: 2026-02-11
+Última atualização: 2026-02-19
 Escopo: decisão arquitetural para o módulo Inventory no backend GoatFarm/CapriGestor.
 Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Módulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [TODO MVP](../../_work/INVENTORY_TODO_MVP.md)
 
@@ -27,8 +27,8 @@ Decisão principal (modelo de consistência):
   - `inventory_balance` como projeção materializada para leitura rápida.
 
 Decisões complementares:
-- `OUT` e `ADJUST` decremento não podem gerar saldo negativo;
-- idempotência obrigatória para `POST /movements` via `Idempotency-Key`;
+- `OUT` e `ADJUST` com direção `DECREASE` não podem gerar saldo negativo;
+- idempotência obrigatória para `POST /api/v1/goatfarms/{farmId}/inventory/movements` via `Idempotency-Key`;
 - integração entre contextos por `sourceModule` + `sourceRef` (sem FK cruzada);
 - concorrência controlada por lock pessimista em saldo (`SELECT ... FOR UPDATE`);
 - itens rastreáveis exigem lote (`trackLot=true` => `lotId` em movimentos).
@@ -113,4 +113,3 @@ Critério de conformidade arquitetural:
 
 ## Referência de implementação
 Backlog executável e ordem de entrega em: [INVENTORY_TODO_MVP.md](../../_work/INVENTORY_TODO_MVP.md)
-
