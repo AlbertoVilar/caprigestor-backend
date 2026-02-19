@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Validated
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/inventory/movements")
+@RequestMapping("/api/v1/goatfarms/{farmId}/inventory/movements")
 @Tag(
         name = "Inventory Movement API",
         description = "Registro de movimentos de estoque no ledger da fazenda."
