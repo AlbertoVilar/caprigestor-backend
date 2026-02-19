@@ -137,6 +137,44 @@ class InventoryMovementBusinessTest {
     }
 
     @Test
+    void createMovement_shouldThrowInvalidArgument_whenInTypeWithAdjustDirection() {
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                InventoryAdjustDirection.INCREASE,
+                LocalDate.now(),
+                "entrada"
+        );
+
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(1L, "idem-key", request));
+
+        assertThat(exception.getMessage()).contains("adjustDirection deve ser nulo quando o tipo e IN ou OUT.");
+        verifyNoInteractions(persistencePort);
+    }
+
+    @Test
+    void createMovement_shouldThrowInvalidArgument_whenOutTypeWithAdjustDirection() {
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.OUT,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                InventoryAdjustDirection.DECREASE,
+                LocalDate.now(),
+                "saida"
+        );
+
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(1L, "idem-key", request));
+
+        assertThat(exception.getMessage()).contains("adjustDirection deve ser nulo quando o tipo e IN ou OUT.");
+        verifyNoInteractions(persistencePort);
+    }
+
+    @Test
     void replay_when_same_idempotency_key_and_same_payload_returns_previous_response() {
         Long farmId = 1L;
         String idempotencyKey = "idem-key-1";

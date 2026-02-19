@@ -260,6 +260,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                     "adjustDirection e obrigatorio quando o tipo e ADJUST."
             );
         }
+
+        if ((InventoryMovementType.IN.equals(request.type()) || InventoryMovementType.OUT.equals(request.type()))
+                && request.adjustDirection() != null) {
+            throw new InvalidArgumentException(
+                    "adjustDirection",
+                    "adjustDirection deve ser nulo quando o tipo e IN ou OUT."
+            );
+        }
     }
 
     private String hashRequest(InventoryMovementCreateRequestVO request) {
