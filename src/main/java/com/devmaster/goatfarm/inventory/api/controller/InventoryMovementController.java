@@ -50,7 +50,8 @@ public class InventoryMovementController {
             description = "Cria um movimento do tipo IN, OUT ou ADJUST com idempotencia por header."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Movimento registrado com sucesso."),
+            @ApiResponse(responseCode = "200", description = "Replay idempotente retornado com sucesso."),
+            @ApiResponse(responseCode = "201", description = "Movimento criado com sucesso."),
             @ApiResponse(responseCode = "400", description = "Requisicao invalida."),
             @ApiResponse(responseCode = "404", description = "Item de estoque nao encontrado."),
             @ApiResponse(responseCode = "409", description = "Idempotency-Key ja usada com payload diferente."),
@@ -90,7 +91,8 @@ public class InventoryMovementController {
             @Valid @RequestBody InventoryMovementCreateRequestDTO request
     ) {
         var requestVO = apiMapper.toRequestVO(request);
-        var responseVO = commandUseCase.createMovement(farmId, idempotencyKey, requestVO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiMapper.toResponseDTO(responseVO));
+        var resultVO = commandUseCase.createMovement(farmId, idempotencyKey, requestVO);
+        var status = resultVO.replayed() ? HttpStatus.OK : HttpStatus.CREATED;
+        return ResponseEntity.status(status).body(apiMapper.toResponseDTO(resultVO.response()));
     }
 }
