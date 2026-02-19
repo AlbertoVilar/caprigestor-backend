@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResultVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryAdjustDirection;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
@@ -40,7 +41,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
     @Override
     @Transactional
-    public InventoryMovementResponseVO createMovement(
+    public InventoryMovementResultVO createMovement(
             Long farmId,
             String idempotencyKey,
             InventoryMovementCreateRequestVO request
@@ -50,7 +51,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
         Optional<InventoryMovementResponseVO> replay = resolveIdempotencyReplay(farmId, idempotencyKey, requestHash);
         if (replay.isPresent()) {
-            return replay.get();
+            return new InventoryMovementResultVO(replay.get(), true);
         }
 
         InventoryItemSnapshotVO itemSnapshot = resolveItemSnapshot(farmId, request.itemId());
@@ -68,7 +69,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         );
 
         persistIdempotencyResult(farmId, idempotencyKey, requestHash, response);
-        return response;
+        return new InventoryMovementResultVO(response, false);
     }
 
     /**
@@ -258,6 +259,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             throw new InvalidArgumentException(
                     "adjustDirection",
                     "adjustDirection e obrigatorio quando o tipo e ADJUST."
+            );
+        }
+
+        if ((InventoryMovementType.IN.equals(request.type()) || InventoryMovementType.OUT.equals(request.type()))
+                && request.adjustDirection() != null) {
+            throw new InvalidArgumentException(
+                    "adjustDirection",
+                    "adjustDirection deve ser nulo quando o tipo e IN ou OUT."
             );
         }
     }

@@ -31,7 +31,10 @@ public record InventoryMovementCreateRequestDTO(
         @Schema(description = "Identificador do lote (obrigatorio quando trackLot=true).", example = "501")
         Long lotId,
 
-        @Schema(description = "Direcao do ajuste quando type=ADJUST.", example = "DECREASE")
+        @Schema(
+                description = "Direcao do ajuste: obrigatoria quando type=ADJUST e deve ser nula em IN/OUT.",
+                example = "DECREASE"
+        )
         InventoryAdjustDirection adjustDirection,
 
         @Schema(description = "Data do movimento. Se ausente, usa a data atual.", example = "2026-02-18")

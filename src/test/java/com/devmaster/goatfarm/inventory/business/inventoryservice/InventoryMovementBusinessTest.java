@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementP
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResultVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryAdjustDirection;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
@@ -137,6 +138,44 @@ class InventoryMovementBusinessTest {
     }
 
     @Test
+    void createMovement_shouldThrowInvalidArgument_whenInTypeWithAdjustDirection() {
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                InventoryAdjustDirection.INCREASE,
+                LocalDate.now(),
+                "entrada"
+        );
+
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(1L, "idem-key", request));
+
+        assertThat(exception.getMessage()).contains("adjustDirection deve ser nulo quando o tipo e IN ou OUT.");
+        verifyNoInteractions(persistencePort);
+    }
+
+    @Test
+    void createMovement_shouldThrowInvalidArgument_whenOutTypeWithAdjustDirection() {
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.OUT,
+                new BigDecimal("2.50"),
+                10L,
+                null,
+                InventoryAdjustDirection.DECREASE,
+                LocalDate.now(),
+                "saida"
+        );
+
+        InvalidArgumentException exception = assertThrows(InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(1L, "idem-key", request));
+
+        assertThat(exception.getMessage()).contains("adjustDirection deve ser nulo quando o tipo e IN ou OUT.");
+        verifyNoInteractions(persistencePort);
+    }
+
+    @Test
     void replay_when_same_idempotency_key_and_same_payload_returns_previous_response() {
         Long farmId = 1L;
         String idempotencyKey = "idem-key-1";
@@ -157,9 +196,10 @@ class InventoryMovementBusinessTest {
         when(persistencePort.findIdempotency(farmId, idempotencyKey))
                 .thenReturn(Optional.of(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, replayResponse)));
 
-        InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
+        InventoryMovementResultVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
 
-        assertThat(result).isSameAs(replayResponse);
+        assertThat(result.replayed()).isTrue();
+        assertThat(result.response()).isSameAs(replayResponse);
         verify(persistencePort).findIdempotency(farmId, idempotencyKey);
     }
 
@@ -228,9 +268,10 @@ class InventoryMovementBusinessTest {
         when(persistencePort.findIdempotency(farmId, idempotencyKey))
                 .thenReturn(Optional.of(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, replayResponse)));
 
-        InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, requestB);
+        InventoryMovementResultVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, requestB);
 
-        assertThat(result).isSameAs(replayResponse);
+        assertThat(result.replayed()).isTrue();
+        assertThat(result.response()).isSameAs(replayResponse);
         verify(persistencePort).findIdempotency(farmId, idempotencyKey);
     }
 
@@ -428,13 +469,14 @@ class InventoryMovementBusinessTest {
                 .thenReturn(new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("15.0")));
         when(persistencePort.saveIdempotency(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        InventoryMovementResponseVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
+        InventoryMovementResultVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request);
 
-        assertThat(result.movementId()).isEqualTo(movementId);
-        assertThat(result.resultingBalance()).isEqualByComparingTo("15.0");
-        assertThat(result.itemId()).isEqualTo(itemId);
-        assertThat(result.lotId()).isNull();
-        assertThat(result.createdAt()).isEqualTo(createdAt);
+        assertThat(result.replayed()).isFalse();
+        assertThat(result.response().movementId()).isEqualTo(movementId);
+        assertThat(result.response().resultingBalance()).isEqualByComparingTo("15.0");
+        assertThat(result.response().itemId()).isEqualTo(itemId);
+        assertThat(result.response().lotId()).isNull();
+        assertThat(result.response().createdAt()).isEqualTo(createdAt);
 
         verify(persistencePort).lockBalanceForUpdate(farmId, itemId, null);
         verify(persistencePort).saveMovement(any());

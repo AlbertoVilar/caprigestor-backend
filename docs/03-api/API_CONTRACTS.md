@@ -1,5 +1,5 @@
 # API_CONTRACTS
-Ultima atualizacao: 2026-02-18
+Ultima atualizacao: 2026-02-19
 Escopo: padroes transversais de rotas, autenticacao, paginacao, idempotencia e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Modulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Modulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Modulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Modulo Inventory](../02-modules/INVENTORY_MODULE.md)
 
@@ -8,8 +8,8 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 
 ## Regras / Contratos
 ### Base de rotas
-- Base geral: `/api`
-- Escopo por fazenda: `/api/goatfarms/{farmId}/...`
+- Base geral: `/api/v1`
+- Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Rotas publicas sem autenticacao (quando aplicavel) usam namespace separado, exemplo: `/public/articles`.
 
 ### Seguranca
@@ -29,8 +29,9 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Mensagens de validacao em PT-BR.
 
 ### Idempotencia de comandos
-Para endpoints que exigem idempotencia (ex.: `POST /api/goatfarms/{farmId}/inventory/movements`):
+Para endpoints que exigem idempotencia (ex.: `POST /api/v1/goatfarms/{farmId}/inventory/movements`):
 - Header obrigatorio: `Idempotency-Key`.
+- Primeira execucao valida: `201 Created`.
 - Mesma key + payload equivalente: replay (`200` com resposta persistida).
 - Mesma key + payload diferente: `409 Conflict`.
 - Ausencia de key: `400 Bad Request`.
@@ -44,7 +45,7 @@ Erros seguem estrutura `ValidationError`:
   "timestamp": "2026-02-18T10:00:00Z",
   "status": 422,
   "error": "Regra de negocio violada",
-  "path": "/api/goatfarms/1/inventory/movements",
+  "path": "/api/v1/goatfarms/1/inventory/movements",
   "errors": [
     {
       "fieldName": "quantity",

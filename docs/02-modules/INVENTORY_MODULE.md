@@ -1,11 +1,11 @@
 # Modulo Inventory (Estoque)
-Ultima atualizacao: 2026-02-18
+Ultima atualizacao: 2026-02-19
 Escopo: estado tecnico e funcional do MVP de Inventory apos implementacao do ledger core no backend.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Modulo Health](./HEALTH_VETERINARY_MODULE.md), [Modulo Lactation](./LACTATION_MODULE.md), [Modulo Reproduction](./REPRODUCTION_MODULE.md)
 
 ## Status do documento
 - Natureza: especificacao + status de implementacao.
-- Estado atual do modulo: ledger core implementado (movement, balance, idempotency, API POST /movements).
+- Estado atual do modulo: ledger core implementado (movement, balance, idempotency, API POST /api/v1/goatfarms/{farmId}/inventory/movements).
 - Objetivo: manter contratos, invariantes e estrategia de consistencia sincronizados com o codigo.
 
 ## Visao geral
@@ -31,12 +31,13 @@ Fora do MVP:
 - `OUT` nao pode gerar saldo negativo.
 - `ADJUST` com `adjustDirection=DECREASE` nao pode gerar saldo negativo.
 - `ADJUST` exige `adjustDirection` explicito (`INCREASE` ou `DECREASE`).
+- `IN` e `OUT` exigem `adjustDirection` nulo.
 - `trackLot=true` exige `lotId`; `trackLot=false` proibe `lotId`.
 - `inventory_movement` e imutavel apos gravacao.
 - chave idempotente reutilizada com payload diferente retorna `409`.
 
 ## Contratos REST do MVP
-Base: `/api/goatfarms/{farmId}/inventory`
+Base: `/api/v1/goatfarms/{farmId}/inventory`
 
 Padroes obrigatorios:
 - seguranca por ownership: `@PreAuthorize("@ownershipService.canManageFarm(#farmId)")`.
@@ -48,7 +49,7 @@ Padroes obrigatorios:
 | `POST` | `/movements` | registrar `IN`, `OUT` ou `ADJUST` (implementado) |
 | `GET` | `/movements` | listar historico (planejado) |
 
-Exemplo minimo (POST /movements):
+Exemplo minimo (POST /api/v1/goatfarms/{farmId}/inventory/movements):
 - Headers:
   - `Idempotency-Key: <string>`
 - Request:
@@ -78,7 +79,8 @@ Exemplo minimo (POST /movements):
 ```
 
 Regra de idempotencia:
-- `Idempotency-Key` obrigatoria no `POST /movements`.
+- `Idempotency-Key` obrigatoria no `POST /api/v1/goatfarms/{farmId}/inventory/movements`.
+- primeira execucao valida: `201 Created`.
 - mesma key + mesmo payload logico: replay idempotente (`200` com mesma resposta).
 - mesma key + payload diferente: `409 Conflict`.
 - ausencia de key: `400 Bad Request`.
@@ -111,7 +113,7 @@ Validacao:
 
 ## Erros/Status
 Status esperados:
-- `400`, `401`, `403`, `404`, `409`, `422`, `500`.
+- `200` (replay idempotente), `201` (criacao real), `400`, `401`, `403`, `404`, `409`, `422`, `500`.
 
 ## Observacoes
 - Este documento representa o contrato alvo e o estado atual do modulo.
