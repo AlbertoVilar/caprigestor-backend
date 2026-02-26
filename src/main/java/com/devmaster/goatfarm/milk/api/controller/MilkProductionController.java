@@ -27,8 +27,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions")
-@Tag(name = "Milk Production API", description = "Gestão de produção de leite")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions", "/api/goatfarms/{farmId}/goats/{goatId}/milk-productions"})
+@Tag(name = "Milk Production API", description = "Gestão de produção de leite. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class MilkProductionController {
 
     private final MilkProductionUseCase milkProductionUseCase;

@@ -23,7 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/reproduction/alerts")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/reproduction/alerts", "/api/goatfarms/{farmId}/reproduction/alerts"})
 @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
 public class FarmReproductionAlertsController {
 

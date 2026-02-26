@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/goatfarms")
+@RequestMapping({"/api/v1/goatfarms", "/api/goatfarms"})
 public class GoatFarmController {
 
     private final GoatFarmManagementUseCase farmUseCase;
