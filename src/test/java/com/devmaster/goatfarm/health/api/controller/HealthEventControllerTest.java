@@ -58,7 +58,7 @@ class HealthEventControllerTest {
                 .scheduledDate(null) // Mandatory
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity()) // 422 for validation error
@@ -76,7 +76,7 @@ class HealthEventControllerTest {
                 .dose(new java.math.BigDecimal("123.4567")) // 4 decimals, max is 3
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -92,7 +92,7 @@ class HealthEventControllerTest {
                 .scheduledDate(java.time.LocalDate.now())
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -106,7 +106,7 @@ class HealthEventControllerTest {
                 .responsible("John Doe")
                 .build();
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/done", 1L, "GOAT-001", 100L)
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/done", 1L, "GOAT-001", 100L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -120,7 +120,7 @@ class HealthEventControllerTest {
                 .responsible("John Doe")
                 .build();
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/done", 1L, "GOAT-001", 100L)
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/done", 1L, "GOAT-001", 100L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -132,7 +132,7 @@ class HealthEventControllerTest {
                 .notes("") // Mandatory
                 .build();
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/cancel", 1L, "GOAT-001", 100L)
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/cancel", 1L, "GOAT-001", 100L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -144,7 +144,7 @@ class HealthEventControllerTest {
         when(commandUseCase.reopen(1L, "GOAT-001", 100L)).thenReturn(HealthEventResponseVO.builder().build());
         when(apiMapper.toDTO(any(HealthEventResponseVO.class))).thenReturn(HealthEventResponseDTO.builder().build());
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/reopen", 1L, "GOAT-001", 100L)
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/reopen", 1L, "GOAT-001", 100L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk());
@@ -152,3 +152,4 @@ class HealthEventControllerTest {
         verify(commandUseCase).reopen(1L, "GOAT-001", 100L);
     }
 }
+

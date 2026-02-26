@@ -133,7 +133,7 @@ class ReproductionActivePregnancyIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -179,7 +179,7 @@ class ReproductionActivePregnancyIntegrationTest {
                 .when(pregnancyPersistenceAdapter).findActiveByFarmIdAndGoatId(eq(ownerFarm.getId()), eq(ownerGoat.getRegistrationNumber()));
 
         // 5. Perform Request
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -188,3 +188,4 @@ class ReproductionActivePregnancyIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].message").value("Já existe uma gestação ativa para esta cabra"));
     }
 }
+

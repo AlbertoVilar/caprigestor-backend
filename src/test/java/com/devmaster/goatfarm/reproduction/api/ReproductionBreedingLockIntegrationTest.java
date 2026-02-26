@@ -137,7 +137,7 @@ class ReproductionBreedingLockIntegrationTest {
                 .notes("Confirmacao positiva")
                 .build();
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(confirmRequest))
@@ -155,7 +155,7 @@ class ReproductionBreedingLockIntegrationTest {
                 .notes("Falso positivo")
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(negativeRequest))
@@ -172,7 +172,7 @@ class ReproductionBreedingLockIntegrationTest {
                 .notes("Cobertura")
                 .build();
 
-        return mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding",
+        return mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -181,7 +181,7 @@ class ReproductionBreedingLockIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -191,3 +191,4 @@ class ReproductionBreedingLockIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
+

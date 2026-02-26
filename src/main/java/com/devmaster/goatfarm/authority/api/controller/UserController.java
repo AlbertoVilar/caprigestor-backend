@@ -18,7 +18,7 @@ import com.devmaster.goatfarm.authority.api.dto.UserPasswordUpdateDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserRolesUpdateDTO;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping({"/api/v1/users", "/api/users"})
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
@@ -52,11 +52,11 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long id) {
-        logger.info("Iniciando busca por usuÃ¡rio com ID: {}", id);
+        logger.info("Iniciando busca por usuário com ID: {}", id);
         try {
             return ResponseEntity.ok(userMapper.toResponseDTO(userUseCase.findById(id)));
         } catch (Exception e) {
-            logger.error("ERRO COMPLETO ao buscar usuÃ¡rio com ID {}: {}", id, e.getMessage());
+            logger.error("ERRO COMPLETO ao buscar usuário com ID {}: {}", id, e.getMessage());
             logger.error("Stack trace completo:", e);
             throw e;
         }

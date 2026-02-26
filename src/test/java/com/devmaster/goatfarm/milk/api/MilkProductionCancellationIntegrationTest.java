@@ -120,7 +120,7 @@ class MilkProductionCancellationIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -135,7 +135,7 @@ class MilkProductionCancellationIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         MilkProduction production = saveMilkProduction(LocalDate.now().minusDays(1), MilkingShift.MORNING);
 
-        mockMvc.perform(delete("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
+        mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
@@ -144,14 +144,14 @@ class MilkProductionCancellationIntegrationTest {
         assertThat(canceled.getStatus()).isEqualTo(MilkProductionStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isNotNull();
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content.length()").value(0));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .param("includeCanceled", "true")
                         .header("Authorization", "Bearer " + token))
@@ -159,7 +159,7 @@ class MilkProductionCancellationIntegrationTest {
                 .andExpect(jsonPath("$.content[0].id").value(production.getId()))
                 .andExpect(jsonPath("$.content[0].status").value("CANCELED"));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -178,7 +178,7 @@ class MilkProductionCancellationIntegrationTest {
                 .notes("Teste")
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions",
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -200,7 +200,7 @@ class MilkProductionCancellationIntegrationTest {
                 .notes("Duplicado")
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions",
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -215,7 +215,7 @@ class MilkProductionCancellationIntegrationTest {
 
         MilkProduction production = saveMilkProduction(date, MilkingShift.MORNING);
 
-        mockMvc.perform(delete("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
+        mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
@@ -227,7 +227,7 @@ class MilkProductionCancellationIntegrationTest {
                 .notes("Reprocessado")
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/milk-productions",
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -249,3 +249,4 @@ class MilkProductionCancellationIntegrationTest {
         return milkProductionRepository.save(production);
     }
 }
+

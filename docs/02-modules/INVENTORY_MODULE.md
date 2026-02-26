@@ -1,12 +1,12 @@
-# Modulo Inventory (Estoque)
-Ultima atualizacao: 2026-02-19
-Escopo: estado tecnico e funcional do MVP de Inventory apos implementacao do ledger core no backend.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Modulo Health](./HEALTH_VETERINARY_MODULE.md), [Modulo Lactation](./LACTATION_MODULE.md), [Modulo Reproduction](./REPRODUCTION_MODULE.md)
+﻿# Módulo Inventory (Estoque)
+Última atualização: 2026-02-26
+Escopo: estado técnico e funcional do MVP de Inventory após implementação do ledger core no backend.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Módulo Health](./HEALTH_VETERINARY_MODULE.md), [Módulo Lactation](./LACTATION_MODULE.md), [Módulo Reproduction](./REPRODUCTION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Status do documento
-- Natureza: especificacao + status de implementacao.
+- Natureza: especificação + status de implementação.
 - Estado atual do modulo: ledger core implementado (movement, balance, idempotency, API POST /api/v1/goatfarms/{farmId}/inventory/movements).
-- Objetivo: manter contratos, invariantes e estrategia de consistencia sincronizados com o codigo.
+- Objetivo: manter contratos, invariantes e estratégia de consistência sincronizados com o código.
 
 ## Visao geral
 O modulo `inventory` controla estoque por fazenda (`farmId`) com rastreabilidade de entradas, saidas e ajustes.
@@ -118,3 +118,5 @@ Status esperados:
 ## Observacoes
 - Este documento representa o contrato alvo e o estado atual do modulo.
 - Ajustes de escopo devem atualizar tambem o [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md) e o [TODO MVP](../_work/INVENTORY_TODO_MVP.md).
+
+

@@ -113,7 +113,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
         insertPregnancy(ownerFarm.getId(), "GOAT-CLOSED", "ACTIVE",
                 LocalDate.of(2025, 10, 1), LocalDate.of(2025, 12, 1), LocalDate.of(2026, 1, 20));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -140,7 +140,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
                     LocalDate.of(2025, 10, 20), null, null);
         }
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .param("page", "0")
                         .param("size", "2")
@@ -151,7 +151,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
                 .andExpect(jsonPath("$.alerts[0].goatId").value("GOAT-001"))
                 .andExpect(jsonPath("$.alerts[1].goatId").value("GOAT-002"));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .param("page", "2")
                         .param("size", "2")
@@ -174,7 +174,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
         insertPregnancy(ownerFarm.getId(), "GOAT-HISTORY", "CLOSED",
                 LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 20), LocalDate.of(2026, 3, 25));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -192,7 +192,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
         insertPregnancy(ownerFarm.getId(), "GOAT-AS-OF", "ACTIVE",
                 LocalDate.of(2025, 10, 20), LocalDate.of(2025, 12, 20), LocalDate.of(2026, 2, 10));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
                         .param("referenceDate", "2026-02-01")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -200,7 +200,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
                 .andExpect(jsonPath("$.alerts.length()").value(1))
                 .andExpect(jsonPath("$.alerts[0].goatId").value("GOAT-AS-OF"));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", ownerFarm.getId())
                         .param("referenceDate", "2026-02-20")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -258,7 +258,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -268,3 +268,4 @@ class MilkFarmDryOffAlertsIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
+

@@ -148,7 +148,7 @@ class LactationSummaryIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload))
                 .andExpect(status().isOk())
@@ -164,7 +164,7 @@ class LactationSummaryIntegrationTest {
 
         int expectedDaysInLactation = (int) (java.time.temporal.ChronoUnit.DAYS.between(lactation.getStartDate(), LocalDate.now()) + 1);
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber()
                 + "/lactations/" + lactation.getId() + "/summary")
                 .header("Authorization", "Bearer " + token))
@@ -185,7 +185,7 @@ class LactationSummaryIntegrationTest {
 
         milkProductionRepository.deleteAll();
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber()
                 + "/lactations/" + lactation.getId() + "/summary")
                 .header("Authorization", "Bearer " + token))
@@ -217,7 +217,7 @@ class LactationSummaryIntegrationTest {
         maleLactation.setStatus(LactationStatus.ACTIVE);
         maleLactation = lactationRepository.save(maleLactation);
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + maleGoat.getRegistrationNumber()
                 + "/lactations/" + maleLactation.getId() + "/summary")
                 .header("Authorization", "Bearer " + token))
@@ -229,10 +229,11 @@ class LactationSummaryIntegrationTest {
     void summaryShouldReturn404WhenLactationMissing() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber()
                 + "/lactations/99999/summary")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
     }
 }
+

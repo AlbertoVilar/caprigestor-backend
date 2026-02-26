@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/phones")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/phones", "/api/goatfarms/{farmId}/phones"})
 public class PhoneController {
 
     private final PhoneManagementUseCase phoneUseCase;

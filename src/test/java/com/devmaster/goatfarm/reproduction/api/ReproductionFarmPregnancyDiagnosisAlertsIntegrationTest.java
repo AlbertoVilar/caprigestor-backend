@@ -110,7 +110,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
         saveCoverage(goatResolved.getRegistrationNumber(), referenceDate.minusDays(70));
         saveCheck(goatResolved.getRegistrationNumber(), referenceDate.minusDays(2), PregnancyCheckResult.NEGATIVE);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -133,7 +133,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
             saveCoverage(goatIds.get(index), referenceDate.minusDays(90 - index));
         }
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .param("page", "0")
                         .param("size", "2")
@@ -144,7 +144,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
                 .andExpect(jsonPath("$.alerts[0].goatId").value("GOAT-001"))
                 .andExpect(jsonPath("$.alerts[1].goatId").value("GOAT-002"));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", ownerFarm.getId())
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", ownerFarm.getId())
                         .param("referenceDate", referenceDate.toString())
                         .param("page", "2")
                         .param("size", "2")
@@ -190,7 +190,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -200,3 +200,4 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
+

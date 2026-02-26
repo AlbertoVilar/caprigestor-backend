@@ -1,29 +1,30 @@
-﻿# Modulo Milk Production
-Ultima atualizacao: 2026-02-10
-Escopo: registro diario de ordenhas por cabra e consulta paginada de producao.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md)
+﻿# Módulo Milk Production
+Última atualização: 2026-02-26
+Escopo: registro diário de ordenhas por cabra e consulta paginada de produção.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
-## Visao geral
-Este modulo gerencia producoes de leite por cabra, com operacoes de criacao, consulta, atualizacao parcial e cancelamento logico.
+## Visão geral
+Este módulo gerencia produções de leite por cabra, com operações de criação, consulta, atualização parcial e cancelamento lógico.
 
 ## Regras / Contratos
-- Base URL: `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
+- Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
 - `POST` exige `date`, `shift` e `volumeLiters`.
 - Registro de producao depende de lactacao ativa.
 - `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
-- `DELETE` realiza cancelamento logico (nao remove historico fisico).
+- `DELETE` realiza cancelamento lógico (não remove histórico físico).
+- Compatibilidade temporária: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
 
 ## Endpoints
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions` | - | `201 Created` |
-| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions` | `from`, `to`, `includeCanceled`, `page`, `size`, `sort` | `200 OK` (pagina) |
-| `DELETE` | `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `204 No Content` |
+| `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | - | `201 Created` |
+| `PATCH` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | `from`, `to`, `includeCanceled`, `page`, `size`, `sort` | `200 OK` (pagina) |
+| `DELETE` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `204 No Content` |
 
 Contrato curto (criacao):
-- URL: `POST /api/goatfarms/1/goats/BR123/milk-productions`
+- URL: `POST /api/v1/goatfarms/1/goats/BR123/milk-productions`
 - Request curto:
 
 ```json
@@ -48,7 +49,7 @@ Contrato curto (criacao):
 ```
 
 Contrato curto (listagem):
-- URL: `GET /api/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-10&includeCanceled=false&page=0&size=12`
+- URL: `GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-10&includeCanceled=false&page=0&size=12`
 - Query params:
   - `from` / `to`: filtro por intervalo de data (opcional)
   - `includeCanceled`: inclui cancelados (default `false`)
@@ -77,3 +78,6 @@ Observacoes de performance:
 ## Referencias internas
 - Controller: [src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java)
 - DTOs: [src/main/java/com/devmaster/goatfarm/milk/api/dto](../../src/main/java/com/devmaster/goatfarm/milk/api/dto)
+
+
+

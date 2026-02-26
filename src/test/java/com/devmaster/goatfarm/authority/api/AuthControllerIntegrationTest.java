@@ -61,7 +61,7 @@ public class AuthControllerIntegrationTest {
     void shouldLoginSuccessfully() throws Exception {
         String loginPayload = "{\"email\":\"test@example.com\", \"password\":\"password\"}";
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -72,7 +72,7 @@ public class AuthControllerIntegrationTest {
     void shouldFailLoginWithInvalidCredentials() throws Exception {
         String loginPayload = "{\"email\":\"test@example.com\", \"password\":\"wrongpassword\"}";
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isBadRequest()); // ou 401, dependendo da implementação do handler
@@ -82,7 +82,7 @@ public class AuthControllerIntegrationTest {
     void shouldGetCurrentUserWithValidToken() throws Exception {
         String loginPayload = "{\"email\":\"test@example.com\", \"password\":\"password\"}";
 
-        String response = mockMvc.perform(post("/api/auth/login")
+        String response = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andReturn().getResponse().getContentAsString();
@@ -92,7 +92,7 @@ public class AuthControllerIntegrationTest {
                 .get("accessToken")
                 .asText();
 
-        mockMvc.perform(get("/api/auth/me")
+        mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@example.com"));

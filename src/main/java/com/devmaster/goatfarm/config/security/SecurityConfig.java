@@ -66,7 +66,13 @@ public class SecurityConfig {
         http
             // Torna públicos apenas os endpoints de autenticação explícitos (login/register/refresh)
             // Exclui "/api/auth/me" para que ele seja tratado pelo filtro JWT e exija autenticação
-            .securityMatcher("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/register-farm", "/api/goatfarms/full", "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .securityMatcher(
+                    "/api/v1/auth/login", "/api/auth/login",
+                    "/api/v1/auth/register", "/api/auth/register",
+                    "/api/v1/auth/refresh", "/api/auth/refresh",
+                    "/api/v1/auth/register-farm", "/api/auth/register-farm",
+                    "/api/v1/goatfarms/full", "/api/goatfarms/full",
+                    "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions().disable())
@@ -84,20 +90,27 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // Fazendas (público - leitura)
                 .requestMatchers(HttpMethod.GET,
+                        "/api/v1/goatfarms",
+                        "/api/v1/goatfarms/*",
+                        "/api/v1/goatfarms/name",
                         "/api/goatfarms",
                         "/api/goatfarms/*",
                         "/api/goatfarms/name").permitAll()
                 // Consultas de cabras dentro da fazenda (públicas)
-                .requestMatchers(HttpMethod.GET, 
-                        "/api/goatfarms/*/goats", 
-                        "/api/goatfarms/*/goats/*", 
+                .requestMatchers(HttpMethod.GET,
+                        "/api/v1/goatfarms/*/goats",
+                        "/api/v1/goatfarms/*/goats/*",
+                        "/api/v1/goatfarms/*/goats/search",
+                        "/api/goatfarms/*/goats",
+                        "/api/goatfarms/*/goats/*",
                         "/api/goatfarms/*/goats/search").permitAll()
                 // Genealogias públicas (apenas leitura)
                 .requestMatchers(HttpMethod.GET,
+                        "/api/v1/goatfarms/*/goats/*/genealogies",
                         "/api/goatfarms/*/goats/*/genealogies").permitAll()
-                .requestMatchers("/api/articles/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers("/api/v1/articles/**", "/api/articles/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/v1/users/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
                 .requestMatchers(HttpMethod.POST, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.PUT, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
