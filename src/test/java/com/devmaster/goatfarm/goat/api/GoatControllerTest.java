@@ -116,7 +116,7 @@ class GoatControllerTest {
         when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
 
         // Act & Assert
-        mockMvc.perform(get("/api/goatfarms/1/goats")
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -137,7 +137,7 @@ class GoatControllerTest {
         when(goatUseCase.findGoatById(eq(1L), eq("001"))).thenReturn(goatResponseVO);
 
         // Act & Assert
-        mockMvc.perform(get("/api/goatfarms/1/goats/001"))
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.registrationNumber").value("001"))
                 .andExpect(jsonPath("$.name").value("Cabra Teste"))
@@ -153,7 +153,7 @@ class GoatControllerTest {
         // Arrange
         when(goatUseCase.findGoatById(eq(1L), eq("999"))).thenThrow(new ResourceNotFoundException("Goat not found with id: 999"));
 
-        mockMvc.perform(get("/api/goatfarms/1/goats/999"))
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Recurso não encontrado"))
                 .andExpect(jsonPath("$.errors[0].fieldName").value("resource"))
@@ -187,7 +187,7 @@ class GoatControllerTest {
         when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(createdGoatResponseVO);
 
         // Act & Assert
-        mockMvc.perform(post("/api/goatfarms/1/goats")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
@@ -216,7 +216,7 @@ class GoatControllerTest {
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
         // Act & Assert
-        mockMvc.perform(post("/api/goatfarms/2/goats")
+        mockMvc.perform(post("/api/v1/goatfarms/2/goats")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
@@ -251,7 +251,7 @@ class GoatControllerTest {
         when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(createdGoatResponseVO);
 
         // Act & Assert
-        mockMvc.perform(post("/api/goatfarms/1/goats")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
@@ -286,7 +286,7 @@ class GoatControllerTest {
         when(goatUseCase.updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class))).thenReturn(updatedGoatResponseVO);
 
         // Act & Assert
-        mockMvc.perform(put("/api/goatfarms/1/goats/001")
+        mockMvc.perform(put("/api/v1/goatfarms/1/goats/001")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateGoatRequestDTO)))
@@ -307,7 +307,7 @@ class GoatControllerTest {
         doNothing().when(goatUseCase).deleteGoat(eq(1L), eq("001"));
 
         // Act & Assert
-        mockMvc.perform(delete("/api/goatfarms/1/goats/001")
+        mockMvc.perform(delete("/api/v1/goatfarms/1/goats/001")
                         .with(csrf()))
                 .andExpect(status().isNoContent());
 
@@ -320,7 +320,7 @@ class GoatControllerTest {
         doThrow(new ResourceNotFoundException("Goat not found with id: 999"))
                 .when(goatUseCase).deleteGoat(eq(1L), eq("999"));
 
-        mockMvc.perform(delete("/api/goatfarms/1/goats/999")
+        mockMvc.perform(delete("/api/v1/goatfarms/1/goats/999")
                         .with(csrf()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Recurso não encontrado"))
@@ -338,6 +338,21 @@ class GoatControllerTest {
         when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
 
         // Act & Assert
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+    }
+
+    @Test
+    void shouldAllowLegacyGoatListRouteDuringCompatibilityWindow() throws Exception {
+        List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
+        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage);
+
         mockMvc.perform(get("/api/goatfarms/1/goats")
                         .param("page", "0")
                         .param("size", "10"))
@@ -361,7 +376,7 @@ class GoatControllerTest {
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
         // Act & Assert
-        mockMvc.perform(post("/api/goatfarms/1/goats")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
@@ -378,7 +393,7 @@ class GoatControllerTest {
         // Deixar campos obrigatórios vazios
 
         // Act & Assert
-        mockMvc.perform(post("/api/goatfarms/1/goats")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidGoatRequestDTO)))
@@ -396,7 +411,7 @@ class GoatControllerTest {
         when(goatUseCase.findAllGoatsByFarm(eq(1L), any(Pageable.class))).thenReturn(goatPage2);
 
         // Act & Assert
-        mockMvc.perform(get("/api/goatfarms/1/goats")
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -407,3 +422,4 @@ class GoatControllerTest {
         verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
     }
 }
+

@@ -86,7 +86,7 @@ class HealthExceptionHandlingIntegrationTest {
 
     private String obtainToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        String response = mockMvc.perform(post("/api/auth/login")
+        String response = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andReturn().getResponse().getContentAsString();
@@ -97,7 +97,7 @@ class HealthExceptionHandlingIntegrationTest {
     @Test
     @DisplayName("1. POST without body -> 400 Bad Request")
     void shouldReturn400WhenBodyIsMissing() throws Exception {
-        mockMvc.perform(post("/api/goatfarms/1/goats/99999/health-events")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/99999/health-events")
                         .header("Authorization", "Bearer " + adminToken) // Use Admin to bypass ownership check for now
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
@@ -110,7 +110,7 @@ class HealthExceptionHandlingIntegrationTest {
     void shouldReturn400WhenJsonIsInvalid() throws Exception {
         String invalidJson = "{ \"type\": \"INVALID_TYPE\", \"date\": \"2025-01-01\" }"; // Enum invalid
 
-        mockMvc.perform(post("/api/goatfarms/1/goats/99999/health-events")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/99999/health-events")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
@@ -123,7 +123,7 @@ class HealthExceptionHandlingIntegrationTest {
     void shouldReturn400WhenJsonIsMalformed() throws Exception {
         String malformedJson = "{ \"type\": \"VACINA\", \"date\": "; // Broken JSON
 
-        mockMvc.perform(post("/api/goatfarms/1/goats/99999/health-events")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/99999/health-events")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(malformedJson))
@@ -140,7 +140,7 @@ class HealthExceptionHandlingIntegrationTest {
                 .scheduledDate(LocalDate.now())
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/1/goats/99999/health-events")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/99999/health-events")
                         .header("Authorization", "Bearer " + adminToken) // Admin bypasses farm ownership, hits business logic
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -159,7 +159,7 @@ class HealthExceptionHandlingIntegrationTest {
                 .build();
 
         // User is OPERATOR but not linked to Farm 1 (since we just cleared DB and didn't create farm link)
-        mockMvc.perform(post("/api/goatfarms/1/goats/99999/health-events")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/99999/health-events")
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -177,7 +177,7 @@ class HealthExceptionHandlingIntegrationTest {
                 .scheduledDate(LocalDate.now())
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/1/goats/99999/health-events")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/99999/health-events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
@@ -189,7 +189,7 @@ class HealthExceptionHandlingIntegrationTest {
     @DisplayName("5. GET restricted endpoint without role -> 403 Forbidden (Filter Level)")
     void shouldReturn403WhenUserHasNoRoleForEndpoint() throws Exception {
         // /api/articles requires ROLE_ADMIN. User has ROLE_OPERATOR.
-        mockMvc.perform(post("/api/articles") 
+        mockMvc.perform(post("/api/v1/articles") 
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
@@ -197,3 +197,4 @@ class HealthExceptionHandlingIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Acesso negado"));
     }
 }
+

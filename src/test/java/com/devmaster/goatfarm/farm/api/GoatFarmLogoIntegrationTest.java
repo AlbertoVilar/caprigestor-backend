@@ -106,7 +106,7 @@ class GoatFarmLogoIntegrationTest {
                 }
                 """;
 
-        MvcResult createResult = mockMvc.perform(post("/api/goatfarms")
+        MvcResult createResult = mockMvc.perform(post("/api/v1/goatfarms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
@@ -117,12 +117,12 @@ class GoatFarmLogoIntegrationTest {
         JsonNode created = objectMapper.readTree(createResult.getResponse().getContentAsString());
         long farmId = created.get("id").asLong();
 
-        mockMvc.perform(get("/api/goatfarms/" + farmId)
+        mockMvc.perform(get("/api/v1/goatfarms/" + farmId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.logoUrl").value("https://cdn.example.com/logo.png"));
 
-        mockMvc.perform(get("/api/goatfarms")
+        mockMvc.perform(get("/api/v1/goatfarms")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].logoUrl").value("https://cdn.example.com/logo.png"));
@@ -130,7 +130,7 @@ class GoatFarmLogoIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -140,3 +140,4 @@ class GoatFarmLogoIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
+

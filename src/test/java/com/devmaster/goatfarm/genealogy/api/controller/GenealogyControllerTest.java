@@ -37,7 +37,7 @@ public class GenealogyControllerTest {
 
         when(genealogyQueryUseCase.findGenealogy(anyLong(), anyString())).thenReturn(responseVO);
 
-        mockMvc.perform(get("/api/goatfarms/1/goats/123/genealogies")
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/123/genealogies")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.goatRegistration").value("123"))
@@ -49,9 +49,10 @@ public class GenealogyControllerTest {
         when(genealogyQueryUseCase.findGenealogy(anyLong(), anyString()))
                 .thenThrow(new ResourceNotFoundException("Not Found"));
 
-        mockMvc.perform(get("/api/goatfarms/1/goats/999/genealogies")
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/999/genealogies")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
 }
+
 

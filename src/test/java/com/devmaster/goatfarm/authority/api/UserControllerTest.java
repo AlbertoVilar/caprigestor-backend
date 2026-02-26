@@ -57,8 +57,9 @@ public class UserControllerTest {
         when(userMapper.toResponseDTO(any(UserResponseVO.class))).thenReturn(dto);
 
         // Act & Assert
-        mockMvc.perform(get("/api/users/1"))
+        mockMvc.perform(get("/api/v1/users/1"))
                 .andExpect(status().isOk());
     }
 }
+
 

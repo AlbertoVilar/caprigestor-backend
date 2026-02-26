@@ -127,7 +127,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
@@ -144,7 +144,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
 
         ReproductiveEvent coverage = saveCoverageEvent(coverageDate);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -166,7 +166,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .notes("Ajuste manual")
                 .build();
 
-        MvcResult result = mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections",
+        MvcResult result = mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), coverage.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -195,7 +195,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .notes("Ultrassom")
                 .build();
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -220,7 +220,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .notes("Ultrassom")
                 .build();
 
-        mockMvc.perform(patch("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -243,7 +243,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .notes("Sem evidências")
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -267,7 +267,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .notes("Sem evidências")
                 .build();
 
-        mockMvc.perform(post("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -284,7 +284,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         ReproductiveEvent first = saveCoverageEvent(eventDate);
         ReproductiveEvent second = saveCoverageEvent(eventDate);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/events",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -319,7 +319,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .build();
         closed = pregnancyRepository.save(closed);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -338,3 +338,4 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         return reproductiveEventRepository.save(coverage);
     }
 }
+
