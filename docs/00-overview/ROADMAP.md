@@ -39,14 +39,14 @@ Links relacionados: [Portal](../INDEX.md), [Status do Projeto](./PROJECT_STATUS.
 - alertas farm-level: `low-stock` e `expiring` (`totalPending` + `alerts`).
 - integracao com modulos atuais por `sourceModule` + `sourceRef` (sem FK cruzada).
 - Endpoints esperados:
-- `POST /api/goatfarms/{farmId}/inventory/items`
-- `GET /api/goatfarms/{farmId}/inventory/items`
-- `POST /api/goatfarms/{farmId}/inventory/items/{itemId}/lots`
-- `POST /api/goatfarms/{farmId}/inventory/movements`
-- `GET /api/goatfarms/{farmId}/inventory/movements`
-- `GET /api/goatfarms/{farmId}/inventory/stock`
-- `GET /api/goatfarms/{farmId}/inventory/alerts/low-stock`
-- `GET /api/goatfarms/{farmId}/inventory/alerts/expiring`
+- `POST /api/v1/goatfarms/{farmId}/inventory/items`
+- `GET /api/v1/goatfarms/{farmId}/inventory/items`
+- `POST /api/v1/goatfarms/{farmId}/inventory/items/{itemId}/lots`
+- `POST /api/v1/goatfarms/{farmId}/inventory/movements`
+- `GET /api/v1/goatfarms/{farmId}/inventory/movements`
+- `GET /api/v1/goatfarms/{farmId}/inventory/stock`
+- `GET /api/v1/goatfarms/{farmId}/inventory/alerts/low-stock`
+- `GET /api/v1/goatfarms/{farmId}/inventory/alerts/expiring`
 - Dependencias:
 - concluidos de Milestone 1 (ownership e hardening).
 - aprovacao do [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md).
