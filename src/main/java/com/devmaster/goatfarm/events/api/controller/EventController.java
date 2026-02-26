@@ -23,7 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/events")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/events", "/api/goatfarms/{farmId}/goats/{goatId}/events"})
 public class EventController {
 
     private final EventManagementUseCase eventUseCase;

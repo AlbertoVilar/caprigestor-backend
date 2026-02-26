@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/health-events")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", "/api/goatfarms/{farmId}/goats/{goatId}/health-events"})
 public class HealthEventController {
 
     private final HealthEventCommandUseCase commandUseCase;

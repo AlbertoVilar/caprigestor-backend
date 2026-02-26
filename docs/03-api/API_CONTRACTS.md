@@ -1,43 +1,49 @@
-# API_CONTRACTS
-Ultima atualizacao: 2026-02-19
-Escopo: padroes transversais de rotas, autenticacao, paginacao, idempotencia e erros da API.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Modulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Modulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Modulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Modulo Inventory](../02-modules/INVENTORY_MODULE.md)
+﻿# API_CONTRACTS
+Última atualização: 2026-02-26
+Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
-## Visao geral
+## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
 
 ## Regras / Contratos
 ### Base de rotas
 - Base geral: `/api/v1`
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
-- Rotas publicas sem autenticacao (quando aplicavel) usam namespace separado, exemplo: `/public/articles`.
+- Rotas públicas sem autenticação (quando aplicável) usam namespace separado, exemplo: `/public/articles`.
 
-### Seguranca
-- Autenticacao: JWT.
-- Autorizacao: ownership por `farmId` e/ou roles (`ROLE_ADMIN`, `ROLE_OPERATOR`, `ROLE_FARM_OWNER`).
-- Respostas de seguranca:
+### Versionamento e compatibilidade
+- Rotas canônicas: sempre em `/api/v1/...`.
+- Compatibilidade temporária: rotas legadas em `/api/...` permanecem ativas por 1 ciclo como **DEPRECATED**.
+- Remoção planejada das rotas legadas: **2026-06-30** (versão alvo **v2.0.0**).
+- Novos endpoints não devem ser publicados fora de `/api/v1`.
+
+### Segurança
+- Autenticação: JWT.
+- Autorização: ownership por `farmId` e/ou roles (`ROLE_ADMIN`, `ROLE_OPERATOR`, `ROLE_FARM_OWNER`).
+- Respostas de segurança:
   - `401` via `CustomAuthenticationEntryPoint`
   - `403` via `CustomAccessDeniedHandler` ou `AccessDeniedException`
 
-### Paginacao
-- Parametros padrao: `page` (base 0), `size`, `sort`.
-- Resposta padrao de pagina contem `content`, `number`, `size`, `totalElements`, `totalPages`.
+### Paginação
+- Parâmetros padrão: `page` (base 0), `size`, `sort`.
+- Resposta padrão de página contém `content`, `number`, `size`, `totalElements`, `totalPages`.
 
-### Convencoes de payload
+### Convenções de payload
 - DTOs de request e response separados por modulo.
 - Datas em formato ISO (`yyyy-MM-dd` ou `yyyy-MM-dd'T'HH:mm:ss`).
-- Mensagens de validacao em PT-BR.
+- Mensagens de validação em PT-BR.
 
-### Idempotencia de comandos
-Para endpoints que exigem idempotencia (ex.: `POST /api/v1/goatfarms/{farmId}/inventory/movements`):
-- Header obrigatorio: `Idempotency-Key`.
-- Primeira execucao valida: `201 Created`.
+### Idempotência de comandos
+Para endpoints que exigem idempotência (ex.: `POST /api/v1/goatfarms/{farmId}/inventory/movements`):
+- Header obrigatório: `Idempotency-Key`.
+- Primeira execução válida: `201 Created`.
 - Mesma key + payload equivalente: replay (`200` com resposta persistida).
 - Mesma key + payload diferente: `409 Conflict`.
-- Ausencia de key: `400 Bad Request`.
+- Ausência de key: `400 Bad Request`.
 
 ## Erros/Status
-### Estrutura de erro padrao
+### Estrutura de erro padrão
 Erros seguem estrutura `ValidationError`:
 
 ```json
@@ -73,3 +79,4 @@ Erros seguem estrutura `ValidationError`:
 - Entry point 401: [src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java)
 - Handler 403: [src/main/java/com/devmaster/goatfarm/config/security/CustomAccessDeniedHandler.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAccessDeniedHandler.java)
 - Modulos oficiais: [../02-modules](../02-modules)
+

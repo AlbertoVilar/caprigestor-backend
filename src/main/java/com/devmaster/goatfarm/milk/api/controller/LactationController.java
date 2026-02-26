@@ -25,8 +25,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/goats/{goatId}/lactations")
-@Tag(name = "Lactation API", description = "Gestão de lactações de cabras na fazenda")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations", "/api/goatfarms/{farmId}/goats/{goatId}/lactations"})
+@Tag(name = "Lactation API", description = "Gestão de lactações de cabras na fazenda. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class LactationController {
 
     private final LactationQueryUseCase lactationQueryUseCase;

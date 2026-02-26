@@ -70,7 +70,7 @@ class ReproductionControllerTest {
         when(queryUseCase.getPregnancyById(farmId, goatId, pregnancyId)).thenReturn(responseVO);
         when(mapper.toPregnancyResponseDTO(responseVO)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}",
                         farmId, goatId, pregnancyId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -88,7 +88,7 @@ class ReproductionControllerTest {
         when(queryUseCase.getPregnancyById(farmId, goatId, pregnancyId))
                 .thenThrow(new ResourceNotFoundException("Pregnancy not found with id: " + pregnancyId));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}",
                         farmId, goatId, pregnancyId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
@@ -103,10 +103,11 @@ class ReproductionControllerTest {
         when(queryUseCase.getPregnancyById(eq(farmId), eq(goatId), anyLong()))
                 .thenThrow(new InvalidArgumentException("Invalid pregnancy ID"));
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}",
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}",
                         farmId, goatId, invalidId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
     }
 }
+
 

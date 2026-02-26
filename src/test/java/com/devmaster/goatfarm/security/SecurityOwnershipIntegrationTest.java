@@ -231,7 +231,7 @@ public class SecurityOwnershipIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload))
                 .andExpect(status().isOk())
@@ -308,33 +308,33 @@ public class SecurityOwnershipIntegrationTest {
 
     @Test
     void publicEndpoints_shouldBeAccessibleWithoutToken() throws Exception {
-        mockMvc.perform(get("/api/goatfarms")).andExpect(status().isOk());
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/goats")).andExpect(status().isOk());
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/goats")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/genealogies"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void privateLactationEndpoints_shouldReturn401WithoutToken() throws Exception {
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/" + ownerLactation.getId() + "/summary"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void privateReproductionEndpoints_shouldReturn401WithoutToken() throws Exception {
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/events"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void privateMilkProductionEndpoints_shouldReturn401WithoutToken() throws Exception {
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/milk-productions"))
                 .andExpect(status().isUnauthorized());
     }
@@ -343,21 +343,21 @@ public class SecurityOwnershipIntegrationTest {
     void privateEndpoints_shouldReturn403ForNonOwnerUser() throws Exception {
         String token = loginAndGetToken("other@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/" + ownerLactation.getId() + "/summary")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/events")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/milk-productions")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
@@ -367,18 +367,18 @@ public class SecurityOwnershipIntegrationTest {
     void privateEndpoints_shouldReturn200ForOwnerUser() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
         // Reproduction events might be empty but 200 OK
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/events")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/milk-productions")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
@@ -388,17 +388,17 @@ public class SecurityOwnershipIntegrationTest {
     void privateEndpoints_shouldBypassOwnershipForAdmin() throws Exception {
         String token = loginAndGetToken("admin@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/events")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/milk-productions")
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
@@ -406,7 +406,7 @@ public class SecurityOwnershipIntegrationTest {
 
     @Test
     void farmCalendarEndpoint_shouldRespectOwnership() throws Exception {
-        String calendarPath = "/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar";
+        String calendarPath = "/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar";
 
         mockMvc.perform(get(calendarPath))
                 .andExpect(status().isUnauthorized());
@@ -426,7 +426,7 @@ public class SecurityOwnershipIntegrationTest {
     void farmCalendarEndpoint_shouldReturn200WhenNoDateFilters() throws Exception {
         String ownerToken = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
@@ -437,7 +437,7 @@ public class SecurityOwnershipIntegrationTest {
         String ownerToken = loginAndGetToken("owner@example.com", "password");
         LocalDate from = LocalDate.now().minusDays(1);
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
                 .param("from", from.toString())
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
@@ -449,7 +449,7 @@ public class SecurityOwnershipIntegrationTest {
         String ownerToken = loginAndGetToken("owner@example.com", "password");
         LocalDate to = LocalDate.now().plusDays(1);
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
                 .param("to", to.toString())
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
@@ -462,7 +462,7 @@ public class SecurityOwnershipIntegrationTest {
         LocalDate from = LocalDate.now().minusDays(1);
         LocalDate to = LocalDate.now().plusDays(1);
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
                 .param("from", from.toString())
                 .param("to", to.toString())
                 .header("Authorization", "Bearer " + ownerToken))
@@ -478,7 +478,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String ownerToken = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(patch("/api/v1/goatfarms/" + ownerFarm.getId()
                         + "/goats/" + ownerGoat.getRegistrationNumber()
                         + "/health-events/" + event.getId() + "/reopen")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -497,7 +497,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String adminToken = loginAndGetToken("admin@example.com", "password");
 
-        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(patch("/api/v1/goatfarms/" + ownerFarm.getId()
                         + "/goats/" + ownerGoat.getRegistrationNumber()
                         + "/health-events/" + event.getId() + "/reopen")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -516,7 +516,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String ownerToken = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(patch("/api/v1/goatfarms/" + ownerFarm.getId()
                         + "/goats/" + ownerGoat.getRegistrationNumber()
                         + "/health-events/" + event.getId() + "/reopen")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -535,7 +535,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String operatorToken = loginAndGetToken("operator@example.com", "password");
 
-        mockMvc.perform(patch("/api/goatfarms/" + ownerFarm.getId()
+        mockMvc.perform(patch("/api/v1/goatfarms/" + ownerFarm.getId()
                         + "/goats/" + ownerGoat.getRegistrationNumber()
                         + "/health-events/" + event.getId() + "/reopen")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -551,7 +551,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String ownerToken = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
@@ -564,7 +564,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String ownerToken = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/calendar")
                 .param("status", HealthEventStatus.CANCELADO.name())
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
@@ -574,7 +574,7 @@ public class SecurityOwnershipIntegrationTest {
 
     @Test
     void farmAlertsEndpoint_shouldRespectOwnership() throws Exception {
-        String alertsPath = "/api/goatfarms/" + ownerFarm.getId() + "/health-events/alerts";
+        String alertsPath = "/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/alerts";
 
         mockMvc.perform(get(alertsPath))
                 .andExpect(status().isUnauthorized());
@@ -599,7 +599,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String ownerToken = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(get("/api/goatfarms/" + ownerFarm.getId() + "/health-events/alerts")
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/health-events/alerts")
                 .header("Authorization", "Bearer " + ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dueTodayCount").value(1))
@@ -614,7 +614,7 @@ public class SecurityOwnershipIntegrationTest {
     @Test
     void goatFarmUpdate_shouldReturn401WithoutToken() throws Exception {
         String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithId());
-        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+        mockMvc.perform(put("/api/v1/goatfarms/" + ownerFarm.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
                 .andExpect(status().isUnauthorized());
@@ -625,7 +625,7 @@ public class SecurityOwnershipIntegrationTest {
         String token = loginAndGetToken("other@example.com", "password");
         String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithId());
 
-        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+        mockMvc.perform(put("/api/v1/goatfarms/" + ownerFarm.getId())
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -640,7 +640,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithId());
 
-        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+        mockMvc.perform(put("/api/v1/goatfarms/" + ownerFarm.getId())
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -668,7 +668,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String payload = buildGoatFarmUpdatePayload(addressIdBefore, buildPhonesPayloadWithId());
 
-        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+        mockMvc.perform(put("/api/v1/goatfarms/" + ownerFarm.getId())
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -685,7 +685,7 @@ public class SecurityOwnershipIntegrationTest {
 
         String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), buildPhonesPayloadWithIdAndNew());
 
-        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+        mockMvc.perform(put("/api/v1/goatfarms/" + ownerFarm.getId())
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -703,7 +703,7 @@ public class SecurityOwnershipIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         String payload = buildGoatFarmUpdatePayload(ownerAddress.getId(), java.util.Collections.emptyList());
 
-        mockMvc.perform(put("/api/goatfarms/" + ownerFarm.getId())
+        mockMvc.perform(put("/api/v1/goatfarms/" + ownerFarm.getId())
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
@@ -714,10 +714,11 @@ public class SecurityOwnershipIntegrationTest {
     void phoneDelete_shouldReturn422WhenDeletingLastPhone() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
 
-        mockMvc.perform(delete("/api/goatfarms/" + ownerFarm.getId() + "/phones/" + ownerPhone.getId())
+        mockMvc.perform(delete("/api/v1/goatfarms/" + ownerFarm.getId() + "/phones/" + ownerPhone.getId())
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnprocessableEntity());
 
         org.junit.jupiter.api.Assertions.assertEquals(1L, phoneRepository.countByGoatFarmId(ownerFarm.getId()));
     }
 }
+

@@ -8,7 +8,8 @@ O modulo de artigos expone endpoints publicos sem autenticacao e endpoints admin
 
 ## Regras / Contratos
 - Rotas publicas usam base `/public/articles`.
-- Rotas administrativas usam base `/api/articles` e exigem `ROLE_ADMIN`.
+- Rotas administrativas usam base `/api/v1/articles` e exigem `ROLE_ADMIN`.
+- Compatibilidade temporária: `/api/articles` permanece ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
 - Apenas artigos com `published=true` aparecem no catalogo publico.
 - `slug` e derivado do titulo e deve ser unico.
 
@@ -42,20 +43,20 @@ Contrato curto (lista publica):
 ```
 
 ### Administrativos
-Base URL: `/api/articles`
+Base URL: `/api/v1/articles`
 
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `POST` | `/api/articles` | - | `201 Created` |
-| `PUT` | `/api/articles/{id}` | - | `200 OK` |
-| `GET` | `/api/articles` | `page`, `size`, `sort` | `200 OK` |
-| `GET` | `/api/articles/{id}` | - | `200 OK` |
-| `PATCH` | `/api/articles/{id}/publish` | - | `200 OK` |
-| `PATCH` | `/api/articles/{id}/highlight` | - | `200 OK` |
-| `DELETE` | `/api/articles/{id}` | - | `204 No Content` |
+| `POST` | `/api/v1/articles` | - | `201 Created` |
+| `PUT` | `/api/v1/articles/{id}` | - | `200 OK` |
+| `GET` | `/api/v1/articles` | `page`, `size`, `sort` | `200 OK` |
+| `GET` | `/api/v1/articles/{id}` | - | `200 OK` |
+| `PATCH` | `/api/v1/articles/{id}/publish` | - | `200 OK` |
+| `PATCH` | `/api/v1/articles/{id}/highlight` | - | `200 OK` |
+| `DELETE` | `/api/v1/articles/{id}` | - | `204 No Content` |
 
 Contrato curto (criacao admin):
-- URL: `POST /api/articles`
+- URL: `POST /api/v1/articles`
 - Request curto:
 
 ```json
@@ -73,9 +74,9 @@ Contrato curto (criacao admin):
 1. Leitura publica:
    `PublicArticleController` retorna somente artigos publicados.
 2. Publicacao:
-   `PATCH /api/articles/{id}/publish` muda estado de publicacao.
+   `PATCH /api/v1/articles/{id}/publish` muda estado de publicacao.
 3. Destaque:
-   `PATCH /api/articles/{id}/highlight` marca/desmarca destaque.
+   `PATCH /api/v1/articles/{id}/highlight` marca/desmarca destaque.
 
 Observacao de performance:
 - Listagens sao paginadas e ordenadas no banco.
@@ -91,3 +92,4 @@ Observacao de performance:
 ## Referencias internas
 - Controller publico: [src/main/java/com/devmaster/goatfarm/article/api/controller/PublicArticleController.java](../../src/main/java/com/devmaster/goatfarm/article/api/controller/PublicArticleController.java)
 - Controller admin: [src/main/java/com/devmaster/goatfarm/article/api/controller/ArticleAdminController.java](../../src/main/java/com/devmaster/goatfarm/article/api/controller/ArticleAdminController.java)
+

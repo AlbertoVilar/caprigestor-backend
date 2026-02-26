@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/goatfarms/{farmId}/addresses")
+@RequestMapping({"/api/v1/goatfarms/{farmId}/addresses", "/api/goatfarms/{farmId}/addresses"})
 public class AddressController {
 
     private final AddressManagementUseCase addressUseCase;

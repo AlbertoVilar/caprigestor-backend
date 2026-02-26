@@ -75,7 +75,7 @@ class ArticlePublicAdminIntegrationTest {
 
     private String loginAndGetToken(String email, String password) throws Exception {
         String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"" + password + "\"}";
-        MvcResult result = mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginPayload))
                 .andExpect(status().isOk())
@@ -197,7 +197,7 @@ class ArticlePublicAdminIntegrationTest {
                 }
                 """;
 
-        MvcResult createResult = mockMvc.perform(post("/api/articles")
+        MvcResult createResult = mockMvc.perform(post("/api/v1/articles")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createPayload))
@@ -218,7 +218,7 @@ class ArticlePublicAdminIntegrationTest {
                 }
                 """;
 
-        mockMvc.perform(put("/api/articles/" + articleId)
+        mockMvc.perform(put("/api/v1/articles/" + articleId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePayload))
@@ -226,7 +226,7 @@ class ArticlePublicAdminIntegrationTest {
                 .andExpect(jsonPath("$.slug").value("titulo-atualizado"));
 
         String publishPayload = "{\"published\": true}";
-        mockMvc.perform(patch("/api/articles/" + articleId + "/publish")
+        mockMvc.perform(patch("/api/v1/articles/" + articleId + "/publish")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(publishPayload))
@@ -235,7 +235,7 @@ class ArticlePublicAdminIntegrationTest {
                 .andExpect(jsonPath("$.publishedAt").isNotEmpty());
 
         String highlightPayload = "{\"highlighted\": true}";
-        mockMvc.perform(patch("/api/articles/" + articleId + "/highlight")
+        mockMvc.perform(patch("/api/v1/articles/" + articleId + "/highlight")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(highlightPayload))
@@ -257,16 +257,17 @@ class ArticlePublicAdminIntegrationTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/articles")
+        mockMvc.perform(post("/api/v1/articles")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createPayload))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/articles")
+        mockMvc.perform(post("/api/v1/articles")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createPayload))
                 .andExpect(status().isConflict());
     }
 }
+
