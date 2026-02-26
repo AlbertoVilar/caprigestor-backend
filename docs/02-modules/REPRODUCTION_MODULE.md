@@ -1,37 +1,38 @@
-﻿# Modulo Reproduction
-Ultima atualizacao: 2026-02-10
-Escopo: cobertura, diagnostico, acompanhamento e encerramento de gestacoes.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md)
+﻿# Módulo Reproduction
+Última atualização: 2026-02-26
+Escopo: cobertura, diagnóstico, acompanhamento e encerramento de gestações.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
-## Visao geral
-O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente.
+## Visão geral
+O módulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestação e alertas farm-level para diagnóstico pendente.
 
 ## Regras / Contratos
-- Base por cabra: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`.
-- Base de alertas por fazenda: `/api/goatfarms/{farmId}/reproduction/alerts`.
-- Ownership por `farmId` em todas as rotas do modulo.
-- Fluxos de gestacao seguem estado de dominio (ativa, encerrada, motivo de encerramento).
-- Integracao com `milk` ocorre por shared kernel (snapshot de prenhez), sem acoplamento direto de entidades.
+- Base por cabra: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction`.
+- Base de alertas por fazenda: `/api/v1/goatfarms/{farmId}/reproduction/alerts`.
+- Ownership por `farmId` em todas as rotas do módulo.
+- Fluxos de gestação seguem estado de domínio (ativa, encerrada, motivo de encerramento).
+- Integração com `milk` ocorre por shared kernel (snapshot de prenhez), sem acoplamento direto de entidades.
+- Compatibilidade temporária: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
 
 ## Endpoints
 ### Escopo por cabra
-Base URL: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction`
+Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction`
 
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding` | - | `201 Created` |
-| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections` | - | `201 Created` |
-| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm` | - | `200 OK` |
-| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks` | - | `201 Created` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/active` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}` | - | `200 OK` |
-| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/close` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/events` | `page`, `size`, `sort` | `200 OK` (pagina) |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies` | `page`, `size`, `sort` | `200 OK` (pagina) |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation` | `referenceDate` | `200 OK` |
+| `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding` | - | `201 Created` |
+| `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections` | - | `201 Created` |
+| `PATCH` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm` | - | `200 OK` |
+| `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks` | - | `201 Created` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/active` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}` | - | `200 OK` |
+| `PATCH` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/close` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events` | `page`, `size`, `sort` | `200 OK` (pagina) |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies` | `page`, `size`, `sort` | `200 OK` (pagina) |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation` | `referenceDate` | `200 OK` |
 
 Contrato curto (registrar cobertura):
-- URL: `POST /api/goatfarms/1/goats/BR123/reproduction/breeding`
+- URL: `POST /api/v1/goatfarms/1/goats/BR123/reproduction/breeding`
 - Request curto:
 
 ```json
@@ -55,7 +56,7 @@ Contrato curto (registrar cobertura):
 ```
 
 Contrato curto (confirmar prenhez):
-- URL: `PATCH /api/goatfarms/1/goats/BR123/reproduction/pregnancies/confirm`
+- URL: `PATCH /api/v1/goatfarms/1/goats/BR123/reproduction/pregnancies/confirm`
 - Request curto:
 
 ```json
@@ -67,14 +68,14 @@ Contrato curto (confirmar prenhez):
 ```
 
 ### Escopo por fazenda (alertas)
-Base URL: `/api/goatfarms/{farmId}/reproduction/alerts`
+Base URL: `/api/v1/goatfarms/{farmId}/reproduction/alerts`
 
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `GET` | `/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis` | `referenceDate`, `page`, `size` | `200 OK` (pendencias agregadas) |
+| `GET` | `/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis` | `referenceDate`, `page`, `size` | `200 OK` (pendencias agregadas) |
 
 Contrato curto (alertas):
-- URL: `GET /api/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20`
+- URL: `GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20`
 - Response curto:
 
 ```json
@@ -116,3 +117,6 @@ Observacoes de performance:
 - Controller principal: [src/main/java/com/devmaster/goatfarm/reproduction/api/controller/ReproductionController.java](../../src/main/java/com/devmaster/goatfarm/reproduction/api/controller/ReproductionController.java)
 - Controller de alertas: [src/main/java/com/devmaster/goatfarm/reproduction/api/controller/FarmReproductionAlertsController.java](../../src/main/java/com/devmaster/goatfarm/reproduction/api/controller/FarmReproductionAlertsController.java)
 - DTOs: [src/main/java/com/devmaster/goatfarm/reproduction/api/dto](../../src/main/java/com/devmaster/goatfarm/reproduction/api/dto)
+
+
+

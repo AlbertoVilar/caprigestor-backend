@@ -1,34 +1,35 @@
-﻿# Modulo Lactacao
-Ultima atualizacao: 2026-02-10
-Escopo: abertura, encerramento, consulta de lactacoes e alertas de secagem por fazenda.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Milk Production](./MILK_PRODUCTION_MODULE.md)
+﻿# Módulo Lactação
+Última atualização: 2026-02-26
+Escopo: abertura, encerramento, consulta de lactações e alertas de secagem por fazenda.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Milk Production](./MILK_PRODUCTION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
-## Visao geral
-O modulo de lactacao pertence ao contexto `milk` e controla o ciclo produtivo da cabra (abertura, historico, sumarios e secagem).
+## Visão geral
+O módulo de lactação pertence ao contexto `milk` e controla o ciclo produtivo da cabra (abertura, histórico, sumários e secagem).
 
 ## Regras / Contratos
-- Base principal por cabra: `/api/goatfarms/{farmId}/goats/{goatId}/lactations`.
+- Base principal por cabra: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations`.
 - Abertura exige `startDate`.
 - Encerramento (dry) exige `endDate`.
-- Consultas de sumario combinam dados da lactacao, producao e recomendacao de secagem.
-- Rotas sao farm-level com ownership por `farmId`.
+- Consultas de sumário combinam dados da lactação, produção e recomendação de secagem.
+- Rotas são farm-level com ownership por `farmId`.
+- Compatibilidade temporária: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
 
 ## Endpoints
 ### Escopo por cabra
-Base URL: `/api/goatfarms/{farmId}/goats/{goatId}/lactations`
+Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations`
 
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `POST` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations` | - | `201 Created` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations/active` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations/active/summary` | - | `200 OK` |
-| `PATCH` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/dry` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/summary` | - | `200 OK` |
-| `GET` | `/api/goatfarms/{farmId}/goats/{goatId}/lactations` | `page`, `size`, `sort` | `200 OK` (pagina) |
+| `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations` | - | `201 Created` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active/summary` | - | `200 OK` |
+| `PATCH` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/dry` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/summary` | - | `200 OK` |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations` | `page`, `size`, `sort` | `200 OK` (pagina) |
 
 Contrato curto (abrir lactacao):
-- URL: `POST /api/goatfarms/1/goats/BR123/lactations`
+- URL: `POST /api/v1/goatfarms/1/goats/BR123/lactations`
 - Request curto:
 
 ```json
@@ -50,14 +51,14 @@ Contrato curto (abrir lactacao):
 ```
 
 ### Escopo por fazenda (alertas)
-Base URL: `/api/goatfarms/{farmId}/milk/alerts`
+Base URL: `/api/v1/goatfarms/{farmId}/milk/alerts`
 
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
-| `GET` | `/api/goatfarms/{farmId}/milk/alerts/dry-off` | `referenceDate`, `page`, `size` | `200 OK` (alertas agregados) |
+| `GET` | `/api/v1/goatfarms/{farmId}/milk/alerts/dry-off` | `referenceDate`, `page`, `size` | `200 OK` (alertas agregados) |
 
 Contrato curto (dry-off alerts):
-- URL: `GET /api/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size=20`
+- URL: `GET /api/v1/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size=20`
 - Response curto:
 
 ```json
@@ -97,3 +98,6 @@ Observacoes de performance:
 - Controller lactacao: [src/main/java/com/devmaster/goatfarm/milk/api/controller/LactationController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/LactationController.java)
 - Controller alertas: [src/main/java/com/devmaster/goatfarm/milk/api/controller/FarmMilkAlertsController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/FarmMilkAlertsController.java)
 - DTOs lactacao: [src/main/java/com/devmaster/goatfarm/milk/api/dto](../../src/main/java/com/devmaster/goatfarm/milk/api/dto)
+
+
+
