@@ -1,7 +1,7 @@
 ﻿# API_VERSIONING_MIGRATION_GUIDE
 Última atualização: 2026-02-28
 Escopo: migração de rotas do padrão legado `/api/...` para o padrão canônico `/api/v1/...`.
-Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md)
+Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md)
 
 ## Padrão oficial
 - Base URL canônica: `/api/v1`
@@ -34,6 +34,18 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Reproduction](
 | Articles (admin) | `/api/articles*` | `/api/v1/articles*` |
 | Users | `/api/users*` | `/api/v1/users*` |
 | Admin Maintenance | `/api/admin/maintenance*` | `/api/v1/admin/maintenance*` |
+
+## Detalhes Goat/Farm
+- Busca de fazendas por nome:
+  - legado: `/api/goatfarms/name`
+  - canônico: `/api/v1/goatfarms/name`
+- Permissões da fazenda:
+  - legado: `/api/goatfarms/{farmId}/permissions`
+  - canônico: `/api/v1/goatfarms/{farmId}/permissions`
+- Busca de cabras por nome:
+  - legado: `/api/goatfarms/{farmId}/goats/search`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/search`
+- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
 ## Impacto no frontend (checklist)
 1. Atualizar `baseURL` para `/api/v1`.
