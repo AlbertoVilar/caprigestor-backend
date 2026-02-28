@@ -1,11 +1,11 @@
 ﻿# Módulo Inventory (Estoque)
-Última atualização: 2026-02-26
+Última atualização: 2026-02-28
 Escopo: estado técnico e funcional do MVP de Inventory após implementação do ledger core no backend.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Módulo Health](./HEALTH_VETERINARY_MODULE.md), [Módulo Lactation](./LACTATION_MODULE.md), [Módulo Reproduction](./REPRODUCTION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Status do documento
 - Natureza: especificação + status de implementação.
-- Estado atual do modulo: ledger core implementado (movement, balance, idempotency, API POST /api/v1/goatfarms/{farmId}/inventory/movements).
+- Estado atual do modulo: ledger core implementado (movement, balance, idempotency) e API farm-level para itens e movimentos.
 - Objetivo: manter contratos, invariantes e estratégia de consistência sincronizados com o código.
 
 ## Visao geral
@@ -17,7 +17,7 @@ No MVP atual, o modulo cobre:
 - movimentos (`IN`, `OUT`, `ADJUST`);
 - saldo materializado (`inventory_balance`);
 - idempotencia persistida (`inventory_idempotency`);
-- endpoint farm-level de comando para movimentos.
+- endpoints farm-level para itens e movimentos.
 
 Fora do MVP:
 - compras e vendas ponta a ponta;
@@ -48,6 +48,37 @@ Padroes obrigatorios:
 |---|---|---|
 | `POST` | `/movements` | registrar `IN`, `OUT` ou `ADJUST` (implementado) |
 | `GET` | `/movements` | listar historico (planejado) |
+
+### Itens de estoque
+| Metodo | URL | Finalidade |
+|---|---|---|
+| `POST` | `/items` | cadastrar item de estoque com `name` único por fazenda (implementado) |
+| `GET` | `/items` | listar itens de estoque de forma paginada (implementado) |
+
+Exemplo mínimo (POST /api/v1/goatfarms/{farmId}/inventory/items):
+- Request:
+```json
+{
+  "name": "Ração Premium 22%",
+  "trackLot": true
+}
+```
+- Response:
+```json
+{
+  "id": 101,
+  "name": "Ração Premium 22%",
+  "trackLot": true,
+  "active": true
+}
+```
+
+Regras do cadastro de itens:
+- `name` é obrigatório após `trim`.
+- `name` deve ter no máximo 120 caracteres.
+- `trackLot` assume `false` quando ausente.
+- `active` nasce como `true`.
+- duplicidade por `(farm_id, name_normalized)` retorna `409 Conflict`.
 
 Exemplo minimo (POST /api/v1/goatfarms/{farmId}/inventory/movements):
 - Headers:
@@ -118,5 +149,4 @@ Status esperados:
 ## Observacoes
 - Este documento representa o contrato alvo e o estado atual do modulo.
 - Ajustes de escopo devem atualizar tambem o [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md) e o [TODO MVP](../_work/INVENTORY_TODO_MVP.md).
-
 
