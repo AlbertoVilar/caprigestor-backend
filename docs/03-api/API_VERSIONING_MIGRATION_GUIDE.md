@@ -61,6 +61,22 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
   - legado: `/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis`
   - canônico: `/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis`
 - O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
+
+## Detalhes Lactation e Milk Production
+- Lactação ativa:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/lactations/active`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active`
+- Sumário da lactação ativa:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/lactations/active/summary`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active/summary`
+- Alertas de secagem por fazenda:
+  - legado: `/api/goatfarms/{farmId}/milk/alerts/dry-off`
+  - canônico: `/api/v1/goatfarms/{farmId}/milk/alerts/dry-off`
+- Produção de leite por cabra:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`
+- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
+
 ## Impacto no frontend (checklist)
 1. Atualizar `baseURL` para `/api/v1`.
 2. Substituir rotas hardcoded de `/api/...` para `/api/v1/...`.
