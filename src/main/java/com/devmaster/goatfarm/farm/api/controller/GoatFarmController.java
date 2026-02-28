@@ -9,6 +9,11 @@ import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +27,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping({"/api/v1/goatfarms", "/api/goatfarms"})
+@Tag(name = "Goat Farm API", description = "Gestão de fazendas caprinas. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GoatFarmController {
 
     private final GoatFarmManagementUseCase farmUseCase;
@@ -43,6 +49,13 @@ public class GoatFarmController {
     }
 
     @PostMapping
+    @Operation(summary = "Cadastra uma nova fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Fazenda criada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido."),
+            @ApiResponse(responseCode = "409", description = "Conflito de unicidade (nome, TOD ou usuário)."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação dos dados informados.")
+    })
     public ResponseEntity<GoatFarmFullResponseDTO> createGoatFarm(@RequestBody @Valid GoatFarmFullRequestDTO requestDTO) {
         var responseVO = farmUseCase.createGoatFarm(farmMapper.toFullRequestVO(requestDTO));
         return new ResponseEntity<>(farmMapper.toFullDTO(responseVO), HttpStatus.CREATED);
@@ -50,6 +63,13 @@ public class GoatFarmController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @PutMapping("/{id}")
+    @Operation(summary = "Atualiza os dados completos de uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Fazenda atualizada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido."),
+            @ApiResponse(responseCode = "404", description = "Fazenda não encontrada."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação dos dados informados.")
+    })
     public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(@PathVariable Long id, @RequestBody @Valid GoatFarmUpdateRequestDTO requestDTO) {
         var responseVO = farmUseCase.updateGoatFarm(
                 id,
@@ -62,24 +82,45 @@ public class GoatFarmController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Busca uma fazenda pelo identificador")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Fazenda encontrada com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Fazenda não encontrada.")
+    })
     public ResponseEntity<GoatFarmFullResponseDTO> findGoatFarmById(@PathVariable Long id) {
         return ResponseEntity.ok(farmMapper.toFullDTO(farmUseCase.findGoatFarmById(id)));
     }
 
     @GetMapping("/name")
+    @Operation(summary = "Busca fazendas por nome com paginação")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Busca executada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos.")
+    })
     public ResponseEntity<Page<GoatFarmFullResponseDTO>> searchGoatFarmByName(
+            @Parameter(description = "Trecho do nome da fazenda para busca.", example = "Capril")
             @RequestParam(value = "name", defaultValue = "") String name,
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
         return ResponseEntity.ok(farmUseCase.searchGoatFarmByName(name, pageable).map(farmMapper::toFullDTO));
     }
 
     @GetMapping
+    @Operation(summary = "Lista fazendas com paginação")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listagem executada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos.")
+    })
     public ResponseEntity<Page<GoatFarmFullResponseDTO>> findAllGoatFarm(@PageableDefault(size = 12, page = 0) Pageable pageable) {
         return ResponseEntity.ok(farmUseCase.findAllGoatFarm(pageable).map(farmMapper::toFullDTO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @DeleteMapping("/{id}")
+    @Operation(summary = "Remove uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Fazenda removida com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Fazenda não encontrada.")
+    })
     public ResponseEntity<Void> deleteGoatFarm(@PathVariable Long id) {
         farmUseCase.deleteGoatFarm(id);
         return ResponseEntity.noContent().build();
@@ -87,6 +128,11 @@ public class GoatFarmController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @GetMapping("/{farmId}/permissions")
+    @Operation(summary = "Consulta permissões do usuário na fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Permissões retornadas com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Fazenda não encontrada, quando aplicável.")
+    })
     public ResponseEntity<FarmPermissionsDTO> getFarmPermissions(@PathVariable Long farmId) {
         var vo = farmUseCase.getFarmPermissions(farmId);
         FarmPermissionsDTO dto = new FarmPermissionsDTO();

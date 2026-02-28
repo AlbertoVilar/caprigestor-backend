@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping({"/api/v1/goatfarms/{farmId}/goats", "/api/goatfarms/{farmId}/goats"})
-@Tag(name = "Goat API", description = "Gerenciamento de cabras na fazenda. Caminho canônico /api/v1; legado /api em descontinuação.")
+@Tag(name = "Goat API", description = "Gerenciamento de cabras da fazenda. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GoatController {
 
     private final GoatManagementUseCase goatUseCase;
@@ -31,6 +33,12 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
     @Operation(summary = "Cadastra uma nova cabra em uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Cabra criada com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para cadastrar cabras nesta fazenda."),
+            @ApiResponse(responseCode = "409", description = "Conflito de unicidade (registro já existente)."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação dos dados informados.")
+    })
     public ResponseEntity<GoatResponseDTO> createGoat(@PathVariable("farmId") Long farmId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(goatMapper.toResponseDTO(
@@ -41,6 +49,12 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PutMapping("/{goatId}")
     @Operation(summary = "Atualiza os dados de uma cabra existente em uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cabra atualizada com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para atualizar cabras nesta fazenda."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação dos dados informados.")
+    })
     public ResponseEntity<GoatResponseDTO> updateGoat(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         return ResponseEntity.ok(
                 goatMapper.toResponseDTO(
@@ -52,6 +66,11 @@ public class GoatController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @DeleteMapping("/{goatId}")
     @Operation(summary = "Remove uma cabra de uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Cabra removida com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para remover cabras nesta fazenda."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
+    })
     public ResponseEntity<Void> deleteGoat(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
         goatUseCase.deleteGoat(farmId, goatId);
         return ResponseEntity.noContent().build();
@@ -59,6 +78,10 @@ public class GoatController {
 
     @GetMapping("/{goatId}")
     @Operation(summary = "Busca uma cabra pelo ID dentro de uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cabra encontrada com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
+    })
     public ResponseEntity<GoatResponseDTO> findGoatById(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
         return ResponseEntity.ok(
                 goatMapper.toResponseDTO(
@@ -69,6 +92,10 @@ public class GoatController {
 
     @GetMapping
     @Operation(summary = "Lista todas as cabras de uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listagem executada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos.")
+    })
     public ResponseEntity<Page<GoatResponseDTO>> findAllGoatsByFarm(@PathVariable("farmId") Long farmId, @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(
                 goatUseCase.findAllGoatsByFarm(farmId, pageable).map(goatMapper::toResponseDTO)
@@ -77,6 +104,10 @@ public class GoatController {
 
     @GetMapping("/search")
     @Operation(summary = "Busca cabras por nome dentro de uma fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Busca executada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de busca ou paginação inválidos.")
+    })
     public ResponseEntity<Page<GoatResponseDTO>> findGoatsByNameAndFarm(
             @PathVariable("farmId") Long farmId,
             @RequestParam String name,
@@ -86,3 +117,4 @@ public class GoatController {
         );
     }
 }
+
