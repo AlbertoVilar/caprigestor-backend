@@ -1,4 +1,4 @@
-﻿# API_VERSIONING_MIGRATION_GUIDE
+# API_VERSIONING_MIGRATION_GUIDE
 Última atualização: 2026-02-28
 Escopo: migração de rotas do padrão legado `/api/...` para o padrão canônico `/api/v1/...`.
 Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md)
@@ -47,6 +47,20 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
   - canônico: `/api/v1/goatfarms/{farmId}/goats/search`
 - O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
+## Detalhes Reproduction
+- Registro de cobertura:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding`
+- Correção de cobertura:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections`
+- Histórico por cabra:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/reproduction/events`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events`
+- Alertas por fazenda:
+  - legado: `/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis`
+  - canônico: `/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis`
+- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 ## Impacto no frontend (checklist)
 1. Atualizar `baseURL` para `/api/v1`.
 2. Substituir rotas hardcoded de `/api/...` para `/api/v1/...`.
