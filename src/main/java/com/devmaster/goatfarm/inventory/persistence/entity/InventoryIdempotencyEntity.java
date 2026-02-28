@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -42,8 +41,7 @@ public class InventoryIdempotencyEntity {
     @Column(name = "request_hash", nullable = false, length = 64)
     private String requestHash;
 
-    @Lob
-    @Column(name = "response_payload", nullable = false)
+    @Column(name = "response_payload", nullable = false, columnDefinition = "TEXT")
     private String responsePayload;
 
     @Column(name = "created_at", nullable = false)
