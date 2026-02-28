@@ -86,7 +86,7 @@ Estrutura padrão:
 ## UTF-8 e anti-mojibake
 
 Antes de commitar:
-- validar diff para `Ã`, `�`, `Â`, `â€“`, `â€”`, `â€œ`, `â€`
+- validar diff contra sequências típicas de mojibake antes do commit
 - manter arquivos em UTF-8
 - revisar mensagens PT-BR com acentuação
 
