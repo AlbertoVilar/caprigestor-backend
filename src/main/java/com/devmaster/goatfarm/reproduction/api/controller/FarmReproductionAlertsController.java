@@ -7,6 +7,9 @@ import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQuer
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +28,10 @@ import java.util.List;
 @RestController
 @RequestMapping({"/api/v1/goatfarms/{farmId}/reproduction/alerts", "/api/goatfarms/{farmId}/reproduction/alerts"})
 @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+@Tag(
+        name = "Reproduction Alerts API",
+        description = "Alertas reprodutivos agregados por fazenda. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."
+)
 public class FarmReproductionAlertsController {
 
     private final ReproductionQueryUseCase queryUseCase;
@@ -36,10 +43,15 @@ public class FarmReproductionAlertsController {
     }
 
     @GetMapping("/pregnancy-diagnosis")
-    @Operation(summary = "Listar alertas agregados de diagnostico de prenhez pendente por fazenda")
+    @Operation(summary = "Listar alertas agregados de diagnóstico de prenhez pendente por fazenda")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Alertas retornados com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação ou data de referência inválidos."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
+    })
     public ResponseEntity<PregnancyDiagnosisAlertResponseDTO> getPendingPregnancyDiagnosisAlerts(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
-            @Parameter(description = "Data de referencia (ISO)")
+            @Parameter(description = "Data de referência (ISO)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate referenceDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
