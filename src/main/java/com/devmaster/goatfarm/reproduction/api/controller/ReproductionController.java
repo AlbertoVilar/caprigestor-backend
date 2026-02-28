@@ -1,12 +1,15 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
+import com.devmaster.goatfarm.reproduction.api.dto.*;
+import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
-import com.devmaster.goatfarm.reproduction.api.dto.*;
 import com.devmaster.goatfarm.reproduction.business.bo.*;
-import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +26,10 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction", "/api/goatfarms/{farmId}/goats/{goatId}/reproduction"})
 @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+@Tag(
+        name = "Reproduction API",
+        description = "Gestão reprodutiva por cabra. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."
+)
 public class ReproductionController {
 
     private final ReproductionCommandUseCase commandUseCase;
@@ -37,6 +44,13 @@ public class ReproductionController {
 
     @PostMapping("/breeding")
     @Operation(summary = "Registrar um evento de cobertura")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Evento de cobertura registrado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou dados obrigatórios ausentes."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada para a fazenda informada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada durante o registro da cobertura.")
+    })
     public ResponseEntity<ReproductiveEventResponseDTO> registerBreeding(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -48,6 +62,13 @@ public class ReproductionController {
 
     @PostMapping("/breeding/{coverageEventId}/corrections")
     @Operation(summary = "Registrar correção de cobertura")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Correção de cobertura registrada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador de cobertura inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Cobertura original não encontrada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao registrar a correção.")
+    })
     public ResponseEntity<ReproductiveEventResponseDTO> correctCoverage(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -60,6 +81,13 @@ public class ReproductionController {
 
     @PatchMapping("/pregnancies/confirm")
     @Operation(summary = "Confirmar gestação e ativar")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Gestação confirmada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou parâmetros inconsistentes."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Cabra ou gestação não encontrada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao confirmar a gestação.")
+    })
     public ResponseEntity<PregnancyResponseDTO> confirmPregnancy(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -70,8 +98,17 @@ public class ReproductionController {
     }
 
     @PostMapping("/pregnancies/checks")
-    @Operation(summary = "Registrar diagnóstico negativo de prenhez",
-            description = "Registra NEGATIVE e, se houver gestação ativa, encerra como falso positivo.")
+    @Operation(
+            summary = "Registrar diagnóstico negativo de prenhez",
+            description = "Registra NEGATIVE e, se houver gestação ativa, encerra como falso positivo."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Diagnóstico registrado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou parâmetros inconsistentes."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada para a fazenda informada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao registrar o diagnóstico.")
+    })
     public ResponseEntity<ReproductiveEventResponseDTO> registerPregnancyCheck(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -83,6 +120,11 @@ public class ReproductionController {
 
     @GetMapping("/pregnancies/active")
     @Operation(summary = "Buscar gestação ativa da cabra (se existir)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Gestação ativa retornada com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Não existe gestação ativa para a cabra informada.")
+    })
     public ResponseEntity<PregnancyResponseDTO> getActivePregnancy(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId) {
@@ -92,6 +134,12 @@ public class ReproductionController {
 
     @GetMapping("/pregnancies/{pregnancyId}")
     @Operation(summary = "Buscar gestação por identificador")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Gestação retornada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Identificador de gestação inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Gestação não encontrada.")
+    })
     public ResponseEntity<PregnancyResponseDTO> getPregnancyById(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -102,6 +150,13 @@ public class ReproductionController {
 
     @PatchMapping("/pregnancies/{pregnancyId}/close")
     @Operation(summary = "Encerrar gestação (parto, perda, aborto, etc.)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Gestação encerrada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador de gestação inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Gestação não encontrada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao encerrar a gestação.")
+    })
     public ResponseEntity<PregnancyResponseDTO> closePregnancy(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -114,6 +169,11 @@ public class ReproductionController {
 
     @GetMapping("/events")
     @Operation(summary = "Listar histórico de eventos reprodutivos (paginado)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Histórico de eventos retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
+    })
     public ResponseEntity<Page<ReproductiveEventResponseDTO>> getReproductiveEvents(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -125,6 +185,11 @@ public class ReproductionController {
 
     @GetMapping("/pregnancies")
     @Operation(summary = "Listar histórico de gestações da cabra (paginado)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Histórico de gestações retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
+    })
     public ResponseEntity<Page<PregnancyResponseDTO>> getPregnancies(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
@@ -136,6 +201,11 @@ public class ReproductionController {
 
     @GetMapping("/pregnancies/diagnosis-recommendation")
     @Operation(summary = "Obter recomendação para diagnóstico de prenhez")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Recomendação retornada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Data de referência inválida."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
+    })
     public ResponseEntity<DiagnosisRecommendationResponseDTO> getDiagnosisRecommendation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
