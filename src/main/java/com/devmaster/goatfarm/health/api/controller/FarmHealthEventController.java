@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -26,6 +27,10 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping({"/api/v1/goatfarms/{farmId}/health-events", "/api/goatfarms/{farmId}/health-events"})
+@Tag(
+        name = "Farm Health API",
+        description = "Consultas agregadas de saúde por fazenda. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."
+)
 public class FarmHealthEventController {
 
     private final HealthEventQueryUseCase queryUseCase;
@@ -45,11 +50,12 @@ public class FarmHealthEventController {
         this.alertsMapper = alertsMapper;
     }
 
-    @Operation(summary = "Agenda sanitária da fazenda", description = "Lista eventos por período, tipo e status de saúde da fazenda.")
+    @Operation(summary = "Calendário sanitário da fazenda", description = "Lista eventos por período, tipo e status de saúde da fazenda.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Calendário retornado"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Calendário retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Filtros ou paginação inválidos."),
+            @ApiResponse(responseCode = "401", description = "Não autenticado."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
     @GetMapping(value = "/calendar", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
@@ -69,11 +75,12 @@ public class FarmHealthEventController {
         return ResponseEntity.ok(pageVO.map(apiMapper::toDTO));
     }
 
-    @Operation(summary = "Alertas em aplicativo", description = "Retorna contadores e top 5 para hoje, próximos dias e atrasados.")
+    @Operation(summary = "Alertas do aplicativo", description = "Retorna contadores e top 5 para hoje, próximos dias e atrasados.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Alertas calculados"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Alertas calculados com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Janela de dias inválida."),
+            @ApiResponse(responseCode = "401", description = "Não autenticado."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
     @GetMapping(value = "/alerts", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")

@@ -20,11 +20,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,20 +48,20 @@ class HealthEventControllerTest {
     private HealthEventApiMapper apiMapper;
 
     @MockBean(name = "ownershipService")
-    private Object ownershipService; // Mocking to avoid ApplicationContext failure if checked
+    private Object ownershipService;
 
     @Test
     void create_shouldReturn422_whenMandatoryFieldsAreMissing() throws Exception {
         HealthEventCreateRequestDTO request = HealthEventCreateRequestDTO.builder()
-                .type(null) // Mandatory
-                .title("") // Mandatory
-                .scheduledDate(null) // Mandatory
+                .type(null)
+                .title("")
+                .scheduledDate(null)
                 .build();
 
         mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnprocessableEntity()) // 422 for validation error
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[?(@.fieldName=='type')].message").value("O tipo do evento é obrigatório"))
                 .andExpect(jsonPath("$.errors[?(@.fieldName=='title')].message").value("O título é obrigatório"))
                 .andExpect(jsonPath("$.errors[?(@.fieldName=='scheduledDate')].message").value("A data agendada é obrigatória"));
@@ -73,7 +73,7 @@ class HealthEventControllerTest {
                 .type(HealthEventType.VACINA)
                 .title("Vacinação")
                 .scheduledDate(java.time.LocalDate.now())
-                .dose(new java.math.BigDecimal("123.4567")) // 4 decimals, max is 3
+                .dose(new java.math.BigDecimal("123.4567"))
                 .build();
 
         mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
@@ -116,7 +116,7 @@ class HealthEventControllerTest {
     @Test
     void markAsDone_shouldReturn200_whenPerformedAtIsPast() throws Exception {
         HealthEventDoneRequestDTO request = HealthEventDoneRequestDTO.builder()
-                .performedAt(LocalDateTime.now().minusMinutes(1)) // Avoid flake
+                .performedAt(LocalDateTime.now().minusMinutes(1))
                 .responsible("John Doe")
                 .build();
 
@@ -129,7 +129,7 @@ class HealthEventControllerTest {
     @Test
     void cancel_shouldReturn422_whenNotesAreBlank() throws Exception {
         HealthEventCancelRequestDTO request = HealthEventCancelRequestDTO.builder()
-                .notes("") // Mandatory
+                .notes("")
                 .build();
 
         mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/cancel", 1L, "GOAT-001", 100L)
@@ -152,4 +152,3 @@ class HealthEventControllerTest {
         verify(commandUseCase).reopen(1L, "GOAT-001", 100L);
     }
 }
-
