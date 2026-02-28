@@ -1,4 +1,4 @@
-﻿# API_CONTRACTS
+# API_CONTRACTS
 Última atualização: 2026-02-28
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
@@ -65,6 +65,55 @@ Status principais:
 - `409` em conflitos de unicidade
 - `422` em payload inválido
 
+### Reproduction (gestação e alertas)
+Rotas canônicas:
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding`
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/confirm`
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/active`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/close`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events?page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies?page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation?referenceDate=`
+- `GET /api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis?referenceDate=&page=&size=`
+
+Compatibilidade:
+- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
+
+Paginação atual:
+- Os endpoints `events` e `pregnancies` continuam retornando `Page` do Spring para preservar compatibilidade com o frontend já publicado.
+- O endpoint `pregnancy-diagnosis` retorna envelope agregado com `totalPending` e `alerts`.
+
+Status principais:
+- `200` em consultas e atualizações
+- `201` em criações
+- `400` em payload inválido, parâmetros inconsistentes ou paginação inválida
+- `403` em falha de ownership/perfil
+- `404` em recurso não encontrado
+- `422` em regra de negócio violada
+
+Exemplo de alerta pendente:
+
+```http
+GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=2026-02-08&page=0&size=20
+```
+
+```json
+{
+  "totalPending": 2,
+  "alerts": [
+    {
+      "goatId": "BR123",
+      "eligibleDate": "2026-02-05",
+      "daysOverdue": 3,
+      "lastCoverageDate": "2026-01-06",
+      "lastCheckDate": null
+    }
+  ]
+}
+```
 ### Idempotência de comandos
 Para endpoints que exigem idempotência (ex.: `POST /api/v1/goatfarms/{farmId}/inventory/movements`):
 - Header obrigatório: `Idempotency-Key`.
