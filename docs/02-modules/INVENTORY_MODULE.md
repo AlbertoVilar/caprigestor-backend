@@ -47,13 +47,76 @@ Padroes obrigatorios:
 | Metodo | URL | Finalidade |
 |---|---|---|
 | `POST` | `/movements` | registrar `IN`, `OUT` ou `ADJUST` (implementado) |
-| `GET` | `/movements` | listar historico (planejado) |
+| `GET` | `/movements` | listar histórico paginado com filtros (implementado) |
 
 ### Itens de estoque
 | Metodo | URL | Finalidade |
 |---|---|---|
 | `POST` | `/items` | cadastrar item de estoque com `name` único por fazenda (implementado) |
 | `GET` | `/items` | listar itens de estoque de forma paginada (implementado) |
+
+### Consultas: Saldos e Movimentações
+
+#### GET /api/v1/goatfarms/{farmId}/inventory/balances
+- Filtros opcionais: `itemId`, `lotId`, `activeOnly`.
+- Paginação padrão: `page`, `size`, `sort`.
+- Ordenação padrão: `itemId asc`.
+- Resposta:
+```json
+{
+  "content": [
+    {
+      "itemId": 101,
+      "itemName": "Ração Premium 22%",
+      "trackLot": true,
+      "lotId": 501,
+      "quantity": 18.750
+    }
+  ],
+  "page": {
+    "number": 0,
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+#### GET /api/v1/goatfarms/{farmId}/inventory/movements
+- Filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`.
+- Paginação padrão: `page`, `size`, `sort`.
+- Ordenação padrão: `movementDate desc`, `createdAt desc`.
+- Resposta:
+```json
+{
+  "content": [
+    {
+      "movementId": 9001,
+      "type": "OUT",
+      "adjustDirection": null,
+      "quantity": 2.000,
+      "itemId": 101,
+      "itemName": "Ração Premium 22%",
+      "lotId": 501,
+      "movementDate": "2026-02-28",
+      "reason": "Baixa por aplicação sanitária",
+      "resultingBalance": 18.750,
+      "createdAt": "2026-02-28T12:15:00Z"
+    }
+  ],
+  "page": {
+    "number": 0,
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+Regras de consulta:
+- `fromDate` não pode ser maior que `toDate`.
+- `size` máximo aceito: `100`.
+- As consultas usam o saldo materializado e `join` com item para devolver `itemName` e `trackLot` sem N+1.
 
 Exemplo mínimo (POST /api/v1/goatfarms/{farmId}/inventory/items):
 - Request:
@@ -149,4 +212,3 @@ Status esperados:
 ## Observacoes
 - Este documento representa o contrato alvo e o estado atual do modulo.
 - Ajustes de escopo devem atualizar tambem o [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md) e o [TODO MVP](../_work/INVENTORY_TODO_MVP.md).
-

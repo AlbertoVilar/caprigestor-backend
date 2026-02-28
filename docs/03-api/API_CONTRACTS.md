@@ -48,6 +48,31 @@ Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
 - Nome duplicado na mesma fazenda: `409 Conflict`.
 - Listagem paginada: `GET /api/v1/goatfarms/{farmId}/inventory/items`.
 
+### Inventory (consultas)
+- `GET /api/v1/goatfarms/{farmId}/inventory/balances`
+  - filtros opcionais: `itemId`, `lotId`, `activeOnly`
+  - paginação padrão: `page`, `size`, `sort`
+  - resposta paginada com `itemId`, `itemName`, `trackLot`, `lotId`, `quantity`
+- `GET /api/v1/goatfarms/{farmId}/inventory/movements`
+  - filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`
+  - ordenação padrão: `movementDate desc`, `createdAt desc`
+  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `createdAt`
+- validações obrigatórias:
+  - `fromDate <= toDate`
+  - `size <= 100`
+
+Exemplo de consulta de saldos:
+
+```http
+GET /api/v1/goatfarms/1/inventory/balances?itemId=101&page=0&size=20
+```
+
+Exemplo de consulta de histórico:
+
+```http
+GET /api/v1/goatfarms/1/inventory/movements?type=OUT&fromDate=2026-02-01&toDate=2026-02-28&page=0&size=20
+```
+
 ## Erros/Status
 ### Estrutura de erro padrão
 Erros seguem estrutura `ValidationError`:

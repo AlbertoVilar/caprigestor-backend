@@ -24,6 +24,7 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Reproduction](
 | Milk Alerts | `/api/goatfarms/{farmId}/milk/alerts*` | `/api/v1/goatfarms/{farmId}/milk/alerts*` |
 | Health (goat) | `/api/goatfarms/{farmId}/goats/{goatId}/health-events*` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events*` |
 | Health (farm) | `/api/goatfarms/{farmId}/health-events*` | `/api/v1/goatfarms/{farmId}/health-events*` |
+| Inventory Balances | `/api/goatfarms/{farmId}/inventory/balances*` | `/api/v1/goatfarms/{farmId}/inventory/balances*` |
 | Inventory Items | `/api/goatfarms/{farmId}/inventory/items*` | `/api/v1/goatfarms/{farmId}/inventory/items*` |
 | Inventory Movements | `/api/goatfarms/{farmId}/inventory/movements*` | `/api/v1/goatfarms/{farmId}/inventory/movements*` |
 | Address | `/api/goatfarms/{farmId}/addresses*` | `/api/v1/goatfarms/{farmId}/addresses*` |
