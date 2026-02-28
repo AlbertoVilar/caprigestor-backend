@@ -1,7 +1,7 @@
 # API_CONTRACTS
 Última atualização: 2026-02-28
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
@@ -10,7 +10,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 ### Base de rotas
 - Base geral: `/api/v1`
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
-- Rotas públicas sem autenticação (quando aplicável) usam namespace separado, exemplo: `/public/articles`.
+- Rotas públicas sem autenticação (quando aplicável) usam namespace separado, por exemplo: `/public/articles`.
 
 ### Versionamento e compatibilidade
 - Rotas canônicas: sempre em `/api/v1/...`.
@@ -27,10 +27,11 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 
 ### Paginação
 - Parâmetros padrão: `page` (base 0), `size`, `sort`.
-- Resposta padrão de página contém `content` e metadados em `page.number`, `page.size`, `page.totalElements`, `page.totalPages`.
+- O padrão alvo para novos contratos é `content` + metadados em `page.number`, `page.size`, `page.totalElements`, `page.totalPages`.
+- Quando um módulo já publicado ainda retorna `Page` do Spring, a exceção deve ser documentada no módulo e preservada por compatibilidade.
 
 ### Convenções de payload
-- DTOs de request e response separados por modulo.
+- DTOs de request e response separados por módulo.
 - Datas em formato ISO (`yyyy-MM-dd` ou `yyyy-MM-dd'T'HH:mm:ss`).
 - Mensagens de validação em PT-BR.
 
@@ -114,6 +115,60 @@ GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=20
   ]
 }
 ```
+
+### Lactation e Milk Production
+Rotas canônicas de lactação:
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active/summary`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/dry`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/summary`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations?page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/milk/alerts/dry-off?referenceDate=&page=&size=`
+
+Rotas canônicas de produção de leite:
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions?from=&to=&includeCanceled=&page=&size=&sort=`
+- `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}`
+
+Compatibilidade:
+- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
+
+Paginação atual:
+- As listagens de lactação e produção continuam retornando `Page` do Spring para preservar compatibilidade.
+- O endpoint `dry-off` retorna envelope agregado com `totalPending` e `alerts`.
+
+Status principais:
+- `200` em consultas e atualizações
+- `201` em criações
+- `204` em cancelamentos lógicos
+- `400` em payload inválido, filtros inconsistentes ou paginação inválida
+- `403` em falha de ownership/perfil
+- `404` em recurso não encontrado
+- `422` em regra de negócio violada
+
+Exemplo de alerta de secagem:
+
+```http
+GET /api/v1/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size=20
+```
+
+```json
+{
+  "totalPending": 1,
+  "alerts": [
+    {
+      "lactationId": 120,
+      "goatId": "BR123",
+      "dryOffRecommendation": true
+    }
+  ]
+}
+```
+
 ### Idempotência de comandos
 Para endpoints que exigem idempotência (ex.: `POST /api/v1/goatfarms/{farmId}/inventory/movements`):
 - Header obrigatório: `Idempotency-Key`.
@@ -161,32 +216,32 @@ Erros seguem estrutura `ValidationError`:
 {
   "timestamp": "2026-02-18T10:00:00Z",
   "status": 422,
-  "error": "Regra de negocio violada",
+  "error": "Regra de negócio violada",
   "path": "/api/v1/goatfarms/1/inventory/movements",
   "errors": [
     {
       "fieldName": "quantity",
-      "message": "Saldo insuficiente para realizar a movimentacao"
+      "message": "Saldo insuficiente para realizar a movimentação"
     }
   ]
 }
 ```
 
 ### Mapeamento principal de status
-| Status | Origem tipica |
+| Status | Origem típica |
 |---|---|
-| `400 Bad Request` | `InvalidArgumentException`, `IllegalArgumentException`, JSON invalido |
-| `401 Unauthorized` | falha de autenticacao/token |
+| `400 Bad Request` | `InvalidArgumentException`, `IllegalArgumentException`, JSON inválido |
+| `401 Unauthorized` | falha de autenticação/token |
 | `403 Forbidden` | falha de ownership/perfil |
 | `404 Not Found` | `ResourceNotFoundException` |
-| `405 Method Not Allowed` | metodo HTTP nao suportado |
+| `405 Method Not Allowed` | método HTTP não suportado |
 | `409 Conflict` | `DuplicateEntityException`, `DataIntegrityViolationException` |
-| `415 Unsupported Media Type` | content type nao suportado |
-| `422 Unprocessable Entity` | `BusinessRuleException`, validacao de bean |
-| `500 Internal Server Error` | erro nao tratado |
+| `415 Unsupported Media Type` | content type não suportado |
+| `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean |
+| `500 Internal Server Error` | erro não tratado |
 
-## Referencias internas
+## Referências internas
 - Handler global: [src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java](../../src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java)
 - Entry point 401: [src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java)
 - Handler 403: [src/main/java/com/devmaster/goatfarm/config/security/CustomAccessDeniedHandler.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAccessDeniedHandler.java)
-- Modulos oficiais: [../02-modules](../02-modules)
+- Módulos oficiais: [../02-modules](../02-modules)

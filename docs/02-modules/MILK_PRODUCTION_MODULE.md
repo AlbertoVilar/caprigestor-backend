@@ -1,5 +1,5 @@
-﻿# Módulo Milk Production
-Última atualização: 2026-02-26
+# Módulo Milk Production
+Última atualização: 2026-02-28
 Escopo: registro diário de ordenhas por cabra e consulta paginada de produção.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -9,34 +9,35 @@ Este módulo gerencia produções de leite por cabra, com operações de criaç�
 ## Regras / Contratos
 - Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
 - `POST` exige `date`, `shift` e `volumeLiters`.
-- Registro de producao depende de lactacao ativa.
+- Registro de produção depende de lactação ativa.
 - `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
 - `DELETE` realiza cancelamento lógico (não remove histórico físico).
 - Compatibilidade temporária: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
 
 ## Endpoints
-| Metodo | URL | Query params | Retorno |
+| Método | URL | Query params | Retorno |
 |---|---|---|---|
 | `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | - | `201 Created` |
 | `PATCH` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
 | `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
-| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | `from`, `to`, `includeCanceled`, `page`, `size`, `sort` | `200 OK` (pagina) |
+| `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | `from`, `to`, `includeCanceled`, `page`, `size`, `sort` | `200 OK` (`Page` do Spring) |
 | `DELETE` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `204 No Content` |
 
-Contrato curto (criacao):
-- URL: `POST /api/v1/goatfarms/1/goats/BR123/milk-productions`
-- Request curto:
+Exemplo curto (criação):
+
+```http
+POST /api/v1/goatfarms/1/goats/BR123/milk-productions
+Content-Type: application/json
+```
 
 ```json
 {
   "date": "2026-02-10",
   "shift": "MORNING",
   "volumeLiters": 2.45,
-  "notes": "ordenha regular"
+  "notes": "Ordenha regular"
 }
 ```
-
-- Response curto:
 
 ```json
 {
@@ -48,36 +49,25 @@ Contrato curto (criacao):
 }
 ```
 
-Contrato curto (listagem):
-- URL: `GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-10&includeCanceled=false&page=0&size=12`
-- Query params:
-  - `from` / `to`: filtro por intervalo de data (opcional)
-  - `includeCanceled`: inclui cancelados (default `false`)
-  - `page`, `size`, `sort`: paginacao e ordenacao
+Exemplo curto (listagem):
 
-## Fluxos principais
-1. Registro de producao:
-   cria item diario vinculado a cabra/fazenda.
-2. Correcao operacional:
-   `PATCH` ajusta volume/notas sem reescrever historico completo.
-3. Cancelamento:
-   `DELETE` marca cancelamento e preserva rastreabilidade.
+```http
+GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-10&includeCanceled=false&page=0&size=12
+```
 
-Observacoes de performance:
-- Listagem e paginada e ordenada no banco.
-- Filtros por periodo e escopo de fazenda reduzem carga de consulta.
+## Compatibilidade e paginação
+- As rotas canônicas são sempre publicadas em `/api/v1/...`.
+- O legado `/api/...` segue ativo apenas por compatibilidade temporária.
+- A listagem continua retornando `Page` do Spring para preservar compatibilidade com consumidores já publicados.
 
 ## Erros/Status
-- `400`: payload invalido ou parametros inconsistentes.
-- `401`: autenticacao ausente/invalida.
+- `400`: payload inválido, filtros inconsistentes ou paginação inválida.
+- `401`: autenticação ausente ou inválida.
 - `403`: ownership/perfil insuficiente.
-- `404`: producao nao encontrada.
-- `422`: regra de negocio violada (ex.: sem lactacao ativa).
-- Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+- `404`: produção não encontrada.
+- `422`: regra de negócio violada (ex.: sem lactação ativa).
+- Padrão de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
-## Referencias internas
+## Referências internas
 - Controller: [src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java)
 - DTOs: [src/main/java/com/devmaster/goatfarm/milk/api/dto](../../src/main/java/com/devmaster/goatfarm/milk/api/dto)
-
-
-
