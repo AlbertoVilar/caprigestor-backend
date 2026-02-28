@@ -10,6 +10,7 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
   - Canônico: `/api/v1/...`
   - Legado: `/api/...` (**DEPRECATED**)
   - Remoção planejada do legado: **2026-06-30** (versão alvo **v2.0.0**)
+- O legado existe apenas para compatibilidade temporária e não deve receber evolução funcional nova.
 
 ## Tabela de migração (OLD -> NEW)
 | Domínio | OLD (legado) | NEW (canônico) |
@@ -45,7 +46,6 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
 - Busca de cabras por nome:
   - legado: `/api/goatfarms/{farmId}/goats/search`
   - canônico: `/api/v1/goatfarms/{farmId}/goats/search`
-- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
 ## Detalhes Reproduction
 - Registro de cobertura:
@@ -60,7 +60,6 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
 - Alertas por fazenda:
   - legado: `/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis`
   - canônico: `/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis`
-- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
 ## Detalhes Lactation e Milk Production
 - Lactação ativa:
@@ -75,7 +74,6 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
 - Produção de leite por cabra:
   - legado: `/api/goatfarms/{farmId}/goats/{goatId}/milk-productions`
   - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`
-- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
 ## Detalhes Health
 - Eventos por cabra:
@@ -87,7 +85,6 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
 - Alertas da fazenda:
   - legado: `/api/goatfarms/{farmId}/health-events/alerts`
   - canônico: `/api/v1/goatfarms/{farmId}/health-events/alerts`
-- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
 ## Impacto no frontend (checklist)
 1. Atualizar `baseURL` para `/api/v1`.

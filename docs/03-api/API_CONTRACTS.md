@@ -35,6 +35,8 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Datas em formato ISO (`yyyy-MM-dd` ou `yyyy-MM-dd'T'HH:mm:ss`).
 - Mensagens de validação em PT-BR.
 
+As seções por domínio abaixo destacam apenas rotas, formatos e exceções específicas. Compatibilidade legada em `/api/...` e códigos HTTP transversais seguem as seções globais deste documento.
+
 ### Goat/Farm (cadastros base)
 Rotas canônicas:
 - `POST /api/v1/goatfarms`
@@ -51,20 +53,8 @@ Rotas canônicas:
 - `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}`
 
-Compatibilidade:
-- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
-
 Paginação atual:
 - As listagens continuam retornando `Page` do Spring (`content`, `totalElements`, `number`, etc.) para preservar compatibilidade com o frontend já publicado.
-
-Status principais:
-- `200` em consultas e atualizações
-- `201` em criações
-- `204` em exclusões
-- `403` em falha de ownership/perfil
-- `404` em recurso não encontrado
-- `409` em conflitos de unicidade
-- `422` em payload inválido
 
 ### Reproduction (gestação e alertas)
 Rotas canônicas:
@@ -80,20 +70,9 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation?referenceDate=`
 - `GET /api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis?referenceDate=&page=&size=`
 
-Compatibilidade:
-- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
-
 Paginação atual:
 - Os endpoints `events` e `pregnancies` continuam retornando `Page` do Spring para preservar compatibilidade com o frontend já publicado.
 - O endpoint `pregnancy-diagnosis` retorna envelope agregado com `totalPending` e `alerts`.
-
-Status principais:
-- `200` em consultas e atualizações
-- `201` em criações
-- `400` em payload inválido, parâmetros inconsistentes ou paginação inválida
-- `403` em falha de ownership/perfil
-- `404` em recurso não encontrado
-- `422` em regra de negócio violada
 
 Exemplo de alerta pendente:
 
@@ -134,21 +113,9 @@ Rotas canônicas de produção de leite:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions?from=&to=&includeCanceled=&page=&size=&sort=`
 - `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}`
 
-Compatibilidade:
-- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
-
 Paginação atual:
 - As listagens de lactação e produção continuam retornando `Page` do Spring para preservar compatibilidade.
 - O endpoint `dry-off` retorna envelope agregado com `totalPending` e `alerts`.
-
-Status principais:
-- `200` em consultas e atualizações
-- `201` em criações
-- `204` em cancelamentos lógicos
-- `400` em payload inválido, filtros inconsistentes ou paginação inválida
-- `403` em falha de ownership/perfil
-- `404` em recurso não encontrado
-- `422` em regra de negócio violada
 
 Exemplo de alerta de secagem:
 
@@ -181,21 +148,9 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms/{farmId}/health-events/calendar?from=&to=&type=&status=&page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/health-events/alerts?windowDays=`
 
-Compatibilidade:
-- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
-
 Paginação atual:
 - As listagens de eventos por cabra e o calendário da fazenda continuam retornando `Page` do Spring para preservar compatibilidade.
 - O endpoint `alerts` retorna contadores e listas resumidas, não um `Page`.
-
-Status principais:
-- `200` em consultas e atualizações
-- `201` em criações
-- `400` em payload inválido, filtros inconsistentes ou paginação inválida
-- `401` em falha de autenticação
-- `403` em falha de ownership/perfil
-- `404` em recurso não encontrado
-- `422` em regra de negócio violada
 
 Exemplo de alerta sanitário:
 
