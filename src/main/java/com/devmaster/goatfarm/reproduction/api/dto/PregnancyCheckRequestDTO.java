@@ -14,10 +14,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PregnancyCheckRequestDTO {
-    @NotNull(message = "Data do diagnÃ³stico de prenhez Ã© obrigatÃ³ria")
+    @NotNull(message = "Data do diagnóstico de prenhez é obrigatória")
     private LocalDate checkDate;
 
-    @NotNull(message = "Resultado do diagnÃ³stico de prenhez Ã© obrigatÃ³rio")
+    @NotNull(message = "Resultado do diagnóstico de prenhez é obrigatório")
     private PregnancyCheckResult checkResult;
 
     private String notes;
