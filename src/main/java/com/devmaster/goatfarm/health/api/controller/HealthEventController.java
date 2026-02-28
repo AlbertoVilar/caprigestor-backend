@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,10 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", "/api/goatfarms/{farmId}/goats/{goatId}/health-events"})
+@Tag(
+        name = "Health Events API",
+        description = "Gestão de eventos sanitários por cabra. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."
+)
 public class HealthEventController {
 
     private final HealthEventCommandUseCase commandUseCase;
@@ -42,8 +47,11 @@ public class HealthEventController {
 
     @Operation(summary = "Registrar evento de saúde", description = "Cria um evento agendado para a cabra informada.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Evento agendado com sucesso"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "201", description = "Evento agendado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou dados obrigatórios ausentes."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada para a fazenda informada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao agendar o evento.")
     })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
@@ -59,8 +67,11 @@ public class HealthEventController {
 
     @Operation(summary = "Atualizar evento de saúde", description = "Edita os dados de um evento que ainda está agendado.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Evento atualizado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Evento atualizado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao atualizar o evento.")
     })
     @PutMapping(value = "/{eventId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
@@ -77,8 +88,11 @@ public class HealthEventController {
 
     @Operation(summary = "Marcar como realizado", description = "Registra a conclusão do evento com responsáveis e notas.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Evento marcado como realizado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Evento marcado como realizado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao concluir o evento.")
     })
     @PatchMapping(value = "/{eventId}/done", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
@@ -95,8 +109,11 @@ public class HealthEventController {
 
     @Operation(summary = "Cancelar evento", description = "Registra o cancelamento de um evento ainda agendado.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Evento cancelado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Evento cancelado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao cancelar o evento.")
     })
     @PatchMapping(value = "/{eventId}/cancel", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
@@ -113,10 +130,10 @@ public class HealthEventController {
 
     @Operation(summary = "Reabrir evento", description = "Retorna um evento realizado ou cancelado para o status agendado.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Evento reaberto com sucesso"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado"),
-            @ApiResponse(responseCode = "404", description = "Evento não encontrado"),
-            @ApiResponse(responseCode = "422", description = "Regras de negócio violadas")
+            @ApiResponse(responseCode = "200", description = "Evento reaberto com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao reabrir o evento.")
     })
     @PatchMapping(value = "/{eventId}/reopen")
     @PreAuthorize("@ownershipService.canManageFarm(#farmId) and (hasRole('ADMIN') or hasRole('FARM_OWNER'))")
@@ -131,8 +148,9 @@ public class HealthEventController {
 
     @Operation(summary = "Detalhar evento de saúde", description = "Retorna os dados do evento solicitado da cabra informada.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Evento encontrado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Evento encontrado com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Evento não encontrado.")
     })
     @GetMapping("/{eventId}")
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
@@ -147,8 +165,9 @@ public class HealthEventController {
 
     @Operation(summary = "Listar eventos da cabra", description = "Busca eventos sanitários da cabra por período, tipo e status.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Página de eventos retornada"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "200", description = "Página de eventos retornada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Filtros ou paginação inválidos."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
     @GetMapping
     @PreAuthorize("@ownershipService.canManageFarm(#farmId)")

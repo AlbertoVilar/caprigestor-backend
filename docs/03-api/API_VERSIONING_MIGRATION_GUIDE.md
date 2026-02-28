@@ -77,6 +77,18 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Goat/Farm](../
   - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`
 - O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
 
+## Detalhes Health
+- Eventos por cabra:
+  - legado: `/api/goatfarms/{farmId}/goats/{goatId}/health-events`
+  - canônico: `/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events`
+- Calendário da fazenda:
+  - legado: `/api/goatfarms/{farmId}/health-events/calendar`
+  - canônico: `/api/v1/goatfarms/{farmId}/health-events/calendar`
+- Alertas da fazenda:
+  - legado: `/api/goatfarms/{farmId}/health-events/alerts`
+  - canônico: `/api/v1/goatfarms/{farmId}/health-events/alerts`
+- O legado segue apenas para compatibilidade e não deve receber evolução funcional nova.
+
 ## Impacto no frontend (checklist)
 1. Atualizar `baseURL` para `/api/v1`.
 2. Substituir rotas hardcoded de `/api/...` para `/api/v1/...`.
