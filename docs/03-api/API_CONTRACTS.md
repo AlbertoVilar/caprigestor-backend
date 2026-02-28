@@ -169,6 +169,49 @@ GET /api/v1/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size
 }
 ```
 
+### Health (eventos sanitários)
+Rotas canônicas:
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events`
+- `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/done`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/cancel`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}/reopen`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/{eventId}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events?from=&to=&type=&status=&page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/health-events/calendar?from=&to=&type=&status=&page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/health-events/alerts?windowDays=`
+
+Compatibilidade:
+- Rotas legadas equivalentes em `/api/...` seguem ativas como **DEPRECATED** até 2026-06-30.
+
+Paginação atual:
+- As listagens de eventos por cabra e o calendário da fazenda continuam retornando `Page` do Spring para preservar compatibilidade.
+- O endpoint `alerts` retorna contadores e listas resumidas, não um `Page`.
+
+Status principais:
+- `200` em consultas e atualizações
+- `201` em criações
+- `400` em payload inválido, filtros inconsistentes ou paginação inválida
+- `401` em falha de autenticação
+- `403` em falha de ownership/perfil
+- `404` em recurso não encontrado
+- `422` em regra de negócio violada
+
+Exemplo de alerta sanitário:
+
+```http
+GET /api/v1/goatfarms/1/health-events/alerts?windowDays=7
+```
+
+```json
+{
+  "dueTodayCount": 2,
+  "upcomingCount": 5,
+  "overdueCount": 1,
+  "windowDays": 7
+}
+```
+
 ### Idempotência de comandos
 Para endpoints que exigem idempotência (ex.: `POST /api/v1/goatfarms/{farmId}/inventory/movements`):
 - Header obrigatório: `Idempotency-Key`.
