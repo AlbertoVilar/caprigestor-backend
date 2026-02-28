@@ -1,5 +1,5 @@
 ﻿# API_CONTRACTS
-Última atualização: 2026-02-26
+Última atualização: 2026-02-28
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -27,7 +27,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 
 ### Paginação
 - Parâmetros padrão: `page` (base 0), `size`, `sort`.
-- Resposta padrão de página contém `content`, `number`, `size`, `totalElements`, `totalPages`.
+- Resposta padrão de página contém `content` e metadados em `page.number`, `page.size`, `page.totalElements`, `page.totalPages`.
 
 ### Convenções de payload
 - DTOs de request e response separados por modulo.
@@ -41,6 +41,12 @@ Para endpoints que exigem idempotência (ex.: `POST /api/v1/goatfarms/{farmId}/i
 - Mesma key + payload equivalente: replay (`200` com resposta persistida).
 - Mesma key + payload diferente: `409 Conflict`.
 - Ausência de key: `400 Bad Request`.
+
+### Inventory (itens de estoque)
+Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
+- Resposta de criação: `201 Created`.
+- Nome duplicado na mesma fazenda: `409 Conflict`.
+- Listagem paginada: `GET /api/v1/goatfarms/{farmId}/inventory/items`.
 
 ## Erros/Status
 ### Estrutura de erro padrão
@@ -79,4 +85,3 @@ Erros seguem estrutura `ValidationError`:
 - Entry point 401: [src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java)
 - Handler 403: [src/main/java/com/devmaster/goatfarm/config/security/CustomAccessDeniedHandler.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAccessDeniedHandler.java)
 - Modulos oficiais: [../02-modules](../02-modules)
-

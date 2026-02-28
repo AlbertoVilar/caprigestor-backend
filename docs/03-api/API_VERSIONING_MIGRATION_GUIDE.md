@@ -1,5 +1,5 @@
 ﻿# API_VERSIONING_MIGRATION_GUIDE
-Última atualização: 2026-02-26
+Última atualização: 2026-02-28
 Escopo: migração de rotas do padrão legado `/api/...` para o padrão canônico `/api/v1/...`.
 Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md)
 
@@ -24,7 +24,8 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Reproduction](
 | Milk Alerts | `/api/goatfarms/{farmId}/milk/alerts*` | `/api/v1/goatfarms/{farmId}/milk/alerts*` |
 | Health (goat) | `/api/goatfarms/{farmId}/goats/{goatId}/health-events*` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events*` |
 | Health (farm) | `/api/goatfarms/{farmId}/health-events*` | `/api/v1/goatfarms/{farmId}/health-events*` |
-| Inventory | `/api/v1/goatfarms/{farmId}/inventory/*` | `/api/v1/goatfarms/{farmId}/inventory/*` |
+| Inventory Items | `/api/goatfarms/{farmId}/inventory/items*` | `/api/v1/goatfarms/{farmId}/inventory/items*` |
+| Inventory Movements | `/api/goatfarms/{farmId}/inventory/movements*` | `/api/v1/goatfarms/{farmId}/inventory/movements*` |
 | Address | `/api/goatfarms/{farmId}/addresses*` | `/api/v1/goatfarms/{farmId}/addresses*` |
 | Phone | `/api/goatfarms/{farmId}/phones*` | `/api/v1/goatfarms/{farmId}/phones*` |
 | Events | `/api/goatfarms/{farmId}/goats/{goatId}/events*` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/events*` |
@@ -44,4 +45,3 @@ Links relacionados: [API_CONTRACTS](./API_CONTRACTS.md), [Módulo Reproduction](
 ## Observações
 - `/public/articles` permanece fora de versionamento por ser namespace público.
 - Durante a janela de compatibilidade, `/api/v1` deve ser tratado como único caminho de evolução funcional.
-
