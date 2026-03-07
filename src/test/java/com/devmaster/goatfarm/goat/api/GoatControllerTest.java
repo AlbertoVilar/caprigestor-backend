@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.goat.api;
 import com.devmaster.goatfarm.goat.api.controller.GoatController;
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
+import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
@@ -128,6 +130,33 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
 
         verify(goatUseCase).findAllGoatsByFarm(eq(1L), any(Pageable.class));
+    }
+
+    @Test
+    void shouldGetGoatHerdSummarySuccessfully() throws Exception {
+        GoatHerdSummaryVO summary = GoatHerdSummaryVO.builder()
+                .total(24)
+                .males(6)
+                .females(18)
+                .active(20)
+                .inactive(2)
+                .sold(1)
+                .deceased(1)
+                .breeds(List.of(
+                        GoatBreedSummaryVO.builder().label("SAANEN").count(10).build(),
+                        GoatBreedSummaryVO.builder().label("BOER").count(6).build()
+                ))
+                .build();
+        when(goatUseCase.getGoatHerdSummary(1L)).thenReturn(summary);
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(24))
+                .andExpect(jsonPath("$.males").value(6))
+                .andExpect(jsonPath("$.breeds[0].label").value("SAANEN"))
+                .andExpect(jsonPath("$.breeds[0].count").value(10));
+
+        verify(goatUseCase).getGoatHerdSummary(1L);
     }
 
     @Test
