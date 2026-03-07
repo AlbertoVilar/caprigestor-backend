@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.goat.persistence.repository;
 
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,6 +21,18 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
     Optional<Goat> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
 
     Page<Goat> findAllByFarmId(Long farmId, Pageable pageable);
+
+    long countByFarmId(Long farmId);
+
+    long countByFarmIdAndGender(Long farmId, Gender gender);
+
+    long countByFarmIdAndStatus(Long farmId, GoatStatus status);
+
+    @Query("SELECT COUNT(g) FROM Goat g WHERE g.farm.id = :farmId AND g.breed IS NULL")
+    long countByFarmIdWithoutBreed(@Param("farmId") Long farmId);
+
+    @Query("SELECT g.breed AS breed, COUNT(g) AS total FROM Goat g WHERE g.farm.id = :farmId AND g.breed IS NOT NULL GROUP BY g.breed ORDER BY COUNT(g) DESC, g.breed ASC")
+    java.util.List<GoatBreedCountProjection> countBreedsByFarmId(@Param("farmId") Long farmId);
 
     @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Goat> findByNameAndFarmId(@Param("farmId") Long farmId, @Param("name") String name, Pageable pageable);

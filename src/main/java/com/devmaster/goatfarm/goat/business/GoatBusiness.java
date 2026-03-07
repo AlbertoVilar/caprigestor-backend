@@ -6,11 +6,16 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import org.springframework.data.domain.Page;
@@ -18,6 +23,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -111,9 +119,59 @@ public class GoatBusiness implements GoatManagementUseCase {
         return goatPort.findByNameAndFarmId(farmId, name, pageable).map(goatBusinessMapper::toResponseVO);
     }
 
+    @Transactional(readOnly = true)
+    public GoatHerdSummaryVO getGoatHerdSummary(Long farmId) {
+        long total = goatPort.countByFarmId(farmId);
+        long males = goatPort.countByFarmIdAndGender(farmId, Gender.MACHO);
+        long females = goatPort.countByFarmIdAndGender(farmId, Gender.FEMEA);
+        long active = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.ATIVO);
+        long inactive = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.INATIVO);
+        long sold = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.VENDIDO);
+        long deceased = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.FALECIDO);
+
+        List<GoatBreedSummaryVO> breeds = new ArrayList<>(
+                goatPort.countBreedsByFarmId(farmId).stream()
+                        .map(this::toBreedSummary)
+                        .toList()
+        );
+
+        long withoutBreed = goatPort.countByFarmIdWithoutBreed(farmId);
+        if (withoutBreed > 0) {
+            breeds.add(GoatBreedSummaryVO.builder()
+                    .breed(null)
+                    .label("Não informada")
+                    .count(withoutBreed)
+                    .build());
+        }
+
+        breeds.sort(Comparator
+                .comparingLong(GoatBreedSummaryVO::getCount)
+                .reversed()
+                .thenComparing(GoatBreedSummaryVO::getLabel, String.CASE_INSENSITIVE_ORDER));
+
+        return GoatHerdSummaryVO.builder()
+                .total(total)
+                .males(males)
+                .females(females)
+                .active(active)
+                .inactive(inactive)
+                .sold(sold)
+                .deceased(deceased)
+                .breeds(breeds)
+                .build();
+    }
+
     private Optional<Goat> findOptionalGoat(String registrationNumber) {
         if (registrationNumber == null) return Optional.empty();
         return goatPort.findByRegistrationNumber(registrationNumber);
+    }
+
+    private GoatBreedSummaryVO toBreedSummary(GoatBreedCountProjection projection) {
+        return GoatBreedSummaryVO.builder()
+                .breed(projection.getBreed())
+                .label(projection.getBreed().getLabel())
+                .count(projection.getTotal())
+                .build();
     }
 }
 
