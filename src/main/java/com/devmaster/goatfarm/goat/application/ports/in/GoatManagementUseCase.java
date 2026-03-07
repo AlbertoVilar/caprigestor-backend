@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.application.ports.in;
 
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,4 +22,6 @@ public interface GoatManagementUseCase {
     Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable);
 
     Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable);
+
+    GoatHerdSummaryVO getGoatHerdSummary(Long farmId);
 }

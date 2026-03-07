@@ -23,6 +23,10 @@ public enum GoatBreed {
     public String getValue() {
                 return name();
     }
+
+    public String getLabel() {
+        return portugueseValue;
+    }
     
     @JsonCreator
     public static GoatBreed fromValue(String value) {

@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.api.controller;
 
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatHerdSummaryDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
@@ -115,6 +116,15 @@ public class GoatController {
         return ResponseEntity.ok(
                 goatUseCase.findGoatsByNameAndFarm(farmId, name, pageable).map(goatMapper::toResponseDTO)
         );
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "Retorna o resumo agregado do rebanho da fazenda")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Resumo do rebanho retornado com sucesso.")
+    })
+    public ResponseEntity<GoatHerdSummaryDTO> getGoatHerdSummary(@PathVariable("farmId") Long farmId) {
+        return ResponseEntity.ok(goatMapper.toHerdSummaryDTO(goatUseCase.getGoatHerdSummary(farmId)));
     }
 }
 

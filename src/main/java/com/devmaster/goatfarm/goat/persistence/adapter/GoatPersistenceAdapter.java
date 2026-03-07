@@ -4,7 +4,10 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -45,6 +48,31 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     public List<Goat> findByGoatFarmId(Long goatFarmId) {
         // Preferir consulta direta ao repositório para evitar filtragem em memória
         return goatRepository.findAllByFarmId(goatFarmId, org.springframework.data.domain.Pageable.unpaged()).getContent();
+    }
+
+    @Override
+    public long countByFarmId(Long goatFarmId) {
+        return goatRepository.countByFarmId(goatFarmId);
+    }
+
+    @Override
+    public long countByFarmIdAndGender(Long goatFarmId, Gender gender) {
+        return goatRepository.countByFarmIdAndGender(goatFarmId, gender);
+    }
+
+    @Override
+    public long countByFarmIdAndStatus(Long goatFarmId, GoatStatus status) {
+        return goatRepository.countByFarmIdAndStatus(goatFarmId, status);
+    }
+
+    @Override
+    public long countByFarmIdWithoutBreed(Long goatFarmId) {
+        return goatRepository.countByFarmIdWithoutBreed(goatFarmId);
+    }
+
+    @Override
+    public List<GoatBreedCountProjection> countBreedsByFarmId(Long goatFarmId) {
+        return goatRepository.countBreedsByFarmId(goatFarmId);
     }
 
     @Override

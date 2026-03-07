@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
@@ -15,6 +16,7 @@ import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -201,6 +204,60 @@ public class GoatBusinessTest {
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
         verify(goatBusinessMapper, times(1)).toResponseVO(goat);
+    }
+
+    @Test
+    @DisplayName("Deve montar o resumo agregado do rebanho com contagem por sexo, status e raça")
+    void shouldBuildGoatHerdSummarySuccessfully() {
+        GoatBreedCountProjection saanen = new GoatBreedCountProjection() {
+            @Override
+            public GoatBreed getBreed() {
+                return GoatBreed.SAANEN;
+            }
+
+            @Override
+            public long getTotal() {
+                return 8L;
+            }
+        };
+
+        GoatBreedCountProjection boer = new GoatBreedCountProjection() {
+            @Override
+            public GoatBreed getBreed() {
+                return GoatBreed.BOER;
+            }
+
+            @Override
+            public long getTotal() {
+                return 5L;
+            }
+        };
+
+        when(goatPort.countByFarmId(1L)).thenReturn(20L);
+        when(goatPort.countByFarmIdAndGender(1L, Gender.MACHO)).thenReturn(4L);
+        when(goatPort.countByFarmIdAndGender(1L, Gender.FEMEA)).thenReturn(16L);
+        when(goatPort.countByFarmIdAndStatus(1L, GoatStatus.ATIVO)).thenReturn(17L);
+        when(goatPort.countByFarmIdAndStatus(1L, GoatStatus.INATIVO)).thenReturn(1L);
+        when(goatPort.countByFarmIdAndStatus(1L, GoatStatus.VENDIDO)).thenReturn(1L);
+        when(goatPort.countByFarmIdAndStatus(1L, GoatStatus.FALECIDO)).thenReturn(1L);
+        when(goatPort.countBreedsByFarmId(1L)).thenReturn(List.of(saanen, boer));
+        when(goatPort.countByFarmIdWithoutBreed(1L)).thenReturn(2L);
+
+        GoatHerdSummaryVO summary = goatBusiness.getGoatHerdSummary(1L);
+
+        assertThat(summary).isNotNull();
+        assertThat(summary.getTotal()).isEqualTo(20L);
+        assertThat(summary.getMales()).isEqualTo(4L);
+        assertThat(summary.getFemales()).isEqualTo(16L);
+        assertThat(summary.getActive()).isEqualTo(17L);
+        assertThat(summary.getInactive()).isEqualTo(1L);
+        assertThat(summary.getSold()).isEqualTo(1L);
+        assertThat(summary.getDeceased()).isEqualTo(1L);
+        assertThat(summary.getBreeds()).hasSize(3);
+        assertThat(summary.getBreeds().get(0).getLabel()).isEqualTo("Saanen");
+        assertThat(summary.getBreeds().get(0).getCount()).isEqualTo(8L);
+        assertThat(summary.getBreeds().get(2).getLabel()).isEqualTo("Não informada");
+        assertThat(summary.getBreeds().get(2).getCount()).isEqualTo(2L);
     }
 }
 
