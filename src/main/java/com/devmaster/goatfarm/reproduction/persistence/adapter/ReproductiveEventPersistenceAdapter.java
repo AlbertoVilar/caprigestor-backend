@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
@@ -54,7 +55,12 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
 
     @Override
     public Optional<ReproductiveEvent> findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date) {
-        return repository.findLatestEffectiveCoverageOnOrBefore(farmId, goatId, date);
+        return repository.findLatestEffectiveCoverageOnOrBefore(
+                farmId,
+                goatId,
+                date,
+                PageRequest.of(0, 1)
+        ).stream().findFirst();
     }
 
     @Override
