@@ -6,6 +6,13 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCH
 ## Visão geral
 O módulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestação e alertas farm-level para diagnóstico pendente.
 
+## Cobertura: regra ativa do ciclo
+- Coberturas válidas em data posterior são permitidas e preservam o histórico do animal.
+- A referência ativa para diagnóstico, alertas e marcos do ciclo é sempre a cobertura efetiva mais recente na data de referência.
+- Duplicidade de cobertura efetiva na mesma data retorna `422` e orienta o uso da correção de cobertura.
+- Correção operacional deve usar `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/breeding/{coverageEventId}/corrections`; não deve ser simulada com nova cobertura retroativa.
+- O endpoint `GET /pregnancies/diagnosis-recommendation` resolve a cobertura efetiva mais recente de forma determinística mesmo quando existe mais de uma cobertura histórica válida.
+
 ## Regras / Contratos
 - Base por cabra: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction`.
 - Base de alertas por fazenda: `/api/v1/goatfarms/{farmId}/reproduction/alerts`.

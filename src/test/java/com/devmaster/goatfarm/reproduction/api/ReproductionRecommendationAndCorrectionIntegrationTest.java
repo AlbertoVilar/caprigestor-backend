@@ -155,6 +155,27 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     }
 
     @Test
+    void shouldUseMostRecentCoverageAsDiagnosisReference_whenHistoryHasMultipleValidCoverages() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate firstCoverageDate = LocalDate.of(2026, 3, 1);
+        LocalDate latestCoverageDate = LocalDate.of(2026, 3, 11);
+
+        saveCoverageEvent(firstCoverageDate);
+        ReproductiveEvent latestCoverage = saveCoverageEvent(latestCoverageDate);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation",
+                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
+                        .param("referenceDate", latestCoverageDate.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NOT_ELIGIBLE"))
+                .andExpect(jsonPath("$.eligibleDate").value(latestCoverageDate.plusDays(60).toString()))
+                .andExpect(jsonPath("$.lastCoverage.id").value(latestCoverage.getId()))
+                .andExpect(jsonPath("$.lastCoverage.eventDate").value(latestCoverageDate.toString()))
+                .andExpect(jsonPath("$.lastCoverage.effectiveDate").value(latestCoverageDate.toString()));
+    }
+
+    @Test
     void shouldCreateCoverageCorrectionEvent_whenRequestIsValid() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate coverageDate = LocalDate.now().minusDays(10);
