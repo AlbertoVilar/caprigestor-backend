@@ -68,11 +68,10 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     private static final int MIN_CONFIRMATION_DAYS = 60;
     private static final int DEFAULT_ALERT_PAGE_SIZE = 20;
     private static final String CONFIRMATION_MIN_DAYS_MESSAGE =
-            "Diagnóstico de prenhez só pode ser registrado a partir de 60 dias após a última cobertura.";
+            "Diagnostico de prenhez so pode ser registrado a partir de 60 dias apos a ultima cobertura.";
     private static final String WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK = "GESTACAO_ATIVA_SEM_CHECK_VALIDO";
-    private static final String BREEDING_BLOCKED_ACTIVE_PREGNANCY_MESSAGE =
-            "Não é permitido registrar nova cobertura: existe uma gestação ativa para esta cabra. " +
-                    "Encerre/corrija a gestação atual (ex.: falso positivo/aborto) para liberar novas coberturas.";
+    private static final String SAME_DAY_BREEDING_ALREADY_EXISTS_MESSAGE =
+            "Já existe uma cobertura registrada para esta cabra hoje. Use a correção de cobertura se precisar ajustar o lançamento.";
 
     @Override
     @Transactional
@@ -88,11 +87,20 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             throw new InvalidArgumentException("eventDate", "Data do evento não pode ser futura");
         }
 
-        Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
-        if (activePregnancy.isPresent()) {
-            LocalDate referenceDate = resolveActivePregnancyReferenceDate(farmId, goatId, activePregnancy.get());
-            if (referenceDate == null || !vo.getEventDate().isBefore(referenceDate)) {
-                throw new BusinessRuleException("eventDate", BREEDING_BLOCKED_ACTIVE_PREGNANCY_MESSAGE);
+        Optional<ReproductiveEvent> latestCoverage =
+                reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
+                        farmId,
+                        goatId,
+                        vo.getEventDate()
+                );
+        if (latestCoverage.isPresent()) {
+            LocalDate latestEffectiveDate = resolveEffectiveCoverageDate(
+                    farmId,
+                    goatId,
+                    latestCoverage.get()
+            );
+            if (latestEffectiveDate != null && latestEffectiveDate.isEqual(vo.getEventDate())) {
+                throw new BusinessRuleException("eventDate", SAME_DAY_BREEDING_ALREADY_EXISTS_MESSAGE);
             }
         }
 
@@ -468,20 +476,6 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return coverage.getEventDate();
     }
 
-    private LocalDate resolveActivePregnancyReferenceDate(Long farmId, String goatId, Pregnancy pregnancy) {
-        if (pregnancy.getCoverageEventId() != null) {
-            Optional<ReproductiveEvent> coverage = reproductiveEventPersistencePort
-                    .findByIdAndFarmIdAndGoatId(pregnancy.getCoverageEventId(), farmId, goatId);
-            if (coverage.isPresent() && coverage.get().getEventType() == ReproductiveEventType.COVERAGE) {
-                LocalDate effectiveCoverageDate = resolveEffectiveCoverageDate(farmId, goatId, coverage.get());
-                if (effectiveCoverageDate != null) {
-                    return effectiveCoverageDate;
-                }
-            }
-        }
-        return pregnancy.getBreedingDate();
-    }
-
     private boolean isValidCheck(ReproductiveEvent checkEvent, LocalDate effectiveCoverageDate, LocalDate eligibleDate) {
         if (checkEvent == null || checkEvent.getEventDate() == null) {
             return false;
@@ -551,3 +545,4 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
+
