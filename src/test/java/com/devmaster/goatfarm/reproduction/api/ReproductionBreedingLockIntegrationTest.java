@@ -11,10 +11,11 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.api.dto.BreedingRequestDTO;
-import com.devmaster.goatfarm.reproduction.api.dto.PregnancyCheckRequestDTO;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyConfirmRequestDTO;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
+import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +33,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,9 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class ReproductionBreedingLockIntegrationTest {
 
-    private static final String BLOCK_MESSAGE =
-            "Não é permitido registrar nova cobertura: existe uma gestação ativa para esta cabra. " +
-                    "Encerre/corrija a gestação atual (ex.: falso positivo/aborto) para liberar novas coberturas.";
+    private static final String SAME_DAY_BLOCK_MESSAGE =
+            "Já existe uma cobertura registrada para esta cabra hoje. Use a correção de cobertura se precisar ajustar o lançamento.";
 
     @Autowired
     private MockMvc mockMvc;
@@ -124,15 +125,25 @@ class ReproductionBreedingLockIntegrationTest {
     }
 
     @Test
-    void shouldBlockBreedingWhilePregnancyActiveAndUnlockAfterNegative() throws Exception {
+    void shouldBlockBreedingWhenCoverageAlreadyRegisteredForSameDay() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
 
-        LocalDate coverageDate = LocalDate.now().minusDays(80);
+        LocalDate coverageDate = LocalDate.now().minusDays(10);
         createBreeding(token, coverageDate).andExpect(status().isCreated());
+        createBreeding(token, coverageDate)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].message").value(SAME_DAY_BLOCK_MESSAGE));
+    }
 
-        LocalDate confirmDate = coverageDate.plusDays(60);
+    @Test
+    void shouldAllowLaterBreedingDateEvenWithActivePregnancy() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+
+        LocalDate firstCoverageDate = LocalDate.now().minusDays(90);
+        createBreeding(token, firstCoverageDate).andExpect(status().isCreated());
+
         PregnancyConfirmRequestDTO confirmRequest = PregnancyConfirmRequestDTO.builder()
-                .checkDate(confirmDate)
+                .checkDate(firstCoverageDate.plusDays(60))
                 .checkResult(PregnancyCheckResult.POSITIVE)
                 .notes("Confirmacao positiva")
                 .build();
@@ -144,25 +155,17 @@ class ReproductionBreedingLockIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        LocalDate blockedDate = coverageDate.plusDays(70);
-        createBreeding(token, blockedDate)
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errors[0].message").value(BLOCK_MESSAGE));
+        LocalDate secondCoverageDate = firstCoverageDate.plusDays(10);
+        createBreeding(token, secondCoverageDate).andExpect(status().isCreated());
 
-        PregnancyCheckRequestDTO negativeRequest = PregnancyCheckRequestDTO.builder()
-                .checkDate(LocalDate.now())
-                .checkResult(PregnancyCheckResult.NEGATIVE)
-                .notes("Falso positivo")
-                .build();
+        List<ReproductiveEvent> events = reproductiveEventRepository.findAll();
+        long coverageCount = events.stream()
+                .filter(event -> event.getEventType() == ReproductiveEventType.COVERAGE)
+                .count();
 
-        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/checks",
-                        ownerFarm.getId(), ownerGoat.getRegistrationNumber())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(negativeRequest))
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isCreated());
-
-        createBreeding(token, LocalDate.now()).andExpect(status().isCreated());
+        if (coverageCount < 2) {
+            throw new AssertionError("Esperado pelo menos 2 coberturas no histórico.");
+        }
     }
 
     private ResultActions createBreeding(String token, LocalDate eventDate) throws Exception {
@@ -191,4 +194,3 @@ class ReproductionBreedingLockIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
-
