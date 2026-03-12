@@ -37,6 +37,8 @@ import java.util.Optional;
 @Service
 public class LactationBusiness implements LactationCommandUseCase, LactationQueryUseCase {
 
+    private static final int DEFAULT_DRY_OFF_BEFORE_DUE_DAYS = 90;
+
     private final LactationPersistencePort lactationPersistencePort;
     private final MilkProductionPersistencePort milkProductionPersistencePort;
     private final PregnancySnapshotQueryPort pregnancySnapshotQueryPort;
@@ -248,9 +250,11 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
         int gestationDays = (int) ChronoUnit.DAYS.between(gestationReferenceDate, referenceDate);
         boolean lactationActive = lactation.getStatus() == LactationStatus.ACTIVE;
-        int dryAtDays = lactation.getDryAtPregnancyDays() != null ? lactation.getDryAtPregnancyDays() : 90;
-        boolean recommendDryOff = pregnancySnapshot.active() && lactationActive && gestationDays >= dryAtDays;
-        LocalDate recommendedDryOffDate = pregnancySnapshot.active() ? gestationReferenceDate.plusDays(dryAtDays) : null;
+        int dryAtDaysBeforeDue = lactation.getDryAtPregnancyDays() != null
+                ? lactation.getDryAtPregnancyDays()
+                : DEFAULT_DRY_OFF_BEFORE_DUE_DAYS;
+        boolean recommendDryOff = pregnancySnapshot.active() && lactationActive && gestationDays >= dryAtDaysBeforeDue;
+        LocalDate recommendedDryOffDate = pregnancySnapshot.active() ? gestationReferenceDate.plusDays(dryAtDaysBeforeDue) : null;
 
         String message;
         if (!pregnancySnapshot.active()) {
@@ -276,7 +280,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         if (gestationStartDate == null) {
             throw new IllegalStateException("startDatePregnancy deve estar preenchida para alerta de secagem");
         }
-        int dryAtPregnancyDays = alert.getDryAtPregnancyDays() != null ? alert.getDryAtPregnancyDays() : 90;
+        LocalDate dryOffDate = alert.getDryOffDate();
+        if (dryOffDate == null) {
+            throw new IllegalStateException("dryOffDate deve estar preenchida para alerta de secagem");
+        }
+        int dryAtPregnancyDays = alert.getDryAtPregnancyDays() != null
+                ? alert.getDryAtPregnancyDays()
+                : DEFAULT_DRY_OFF_BEFORE_DUE_DAYS;
         int gestationDays = (int) Math.max(0L, ChronoUnit.DAYS.between(gestationStartDate, referenceDate));
         int daysOverdue = Math.max(0, gestationDays - dryAtPregnancyDays);
         boolean dryOffRecommendation = gestationDays >= dryAtPregnancyDays;
@@ -287,7 +297,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                 .startDatePregnancy(gestationStartDate)
                 .breedingDate(alert.getBreedingDate())
                 .confirmDate(alert.getConfirmDate())
-                .dryOffDate(alert.getDryOffDate())
+                .dryOffDate(dryOffDate)
                 .dryAtPregnancyDays(dryAtPregnancyDays)
                 .gestationDays(gestationDays)
                 .daysOverdue(daysOverdue)
