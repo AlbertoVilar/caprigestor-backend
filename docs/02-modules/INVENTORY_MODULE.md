@@ -1,12 +1,12 @@
 # Módulo Inventory (Estoque)
-Última atualização: 2026-03-11
-Escopo: estado técnico e funcional do módulo Inventory após formalização do ciclo de vida de lotes.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
+Última atualização: 2026-03-12
+Escopo: estado técnico e funcional do módulo Inventory após a formalização do ciclo de vida de lotes e o alinhamento da cadeia Flyway.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API Contracts](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Status do documento
 - Natureza: especificação + status de implementação.
 - Estado atual do módulo: itens, lotes reais, ledger de movimentos, saldo materializado e idempotência implementados.
-- Objetivo: manter contratos, invariantes e estratégia de consistência sincronizados com o código.
+- Objetivo: manter contratos, invariantes e estratégia de consistência sincronizados com o código e com a cadeia de migrations.
 
 ## Visão geral
 O módulo `inventory` controla estoque por fazenda (`farmId`) com rastreabilidade de entradas, saídas e ajustes.
@@ -93,8 +93,14 @@ A tabela `inventory_lot` deixou de ser apenas `id` e passou a sustentar o fluxo 
 - `expiration_date`
 - `active`
 
-Migração aplicada:
-- `V24__evolve_inventory_lot_lifecycle.sql`
+Migrations relevantes:
+- `V24__normalize_capril_vilar_goat_colors.sql`
+- `V25__evolve_inventory_lot_lifecycle.sql`
+
+Correção formal de versionamento:
+- a versão `24` já havia sido aplicada em ambientes de desenvolvimento como normalização de cores do seed do Capril Vilar;
+- o ciclo de vida de lotes foi promovido inicialmente usando a mesma versão, o que gerou divergência de checksum no Flyway;
+- a cadeia correta passou a ser: manter `V24` para a normalização já aplicada e publicar a evolução de lotes em `V25`.
 
 Compatibilidade preservada:
 - `inventory_balance.lot_id` e `inventory_movement.lot_id` continuam sendo a referência técnica;
@@ -116,4 +122,4 @@ Todos os endpoints farm-level do módulo seguem:
 ## Observações
 - Não houve criação de módulo paralelo de lotes fora de `inventory`.
 - O fluxo de lotes foi encaixado na arquitetura já existente: controller -> port in -> business -> port out -> adapter/repository.
-- Próximas evoluções de UX devem continuar reaproveitando a `InventoryPage` existente.
+- A correção de Flyway é de integridade de versionamento; ela não altera o comportamento funcional do Bloco 3.
