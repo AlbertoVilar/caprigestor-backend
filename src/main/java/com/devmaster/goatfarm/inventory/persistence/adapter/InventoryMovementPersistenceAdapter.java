@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementP
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryLotSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryBalanceEntity;
@@ -12,6 +13,7 @@ import com.devmaster.goatfarm.inventory.persistence.entity.InventoryMovementEnti
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryBalanceRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryIdempotencyRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryItemRepository;
+import com.devmaster.goatfarm.inventory.persistence.repository.InventoryLotRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryMovementRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +29,7 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
     private final InventoryBalanceRepository balanceRepository;
     private final InventoryMovementRepository movementRepository;
     private final InventoryIdempotencyRepository idempotencyRepository;
+    private final InventoryLotRepository lotRepository;
     private final ObjectMapper objectMapper;
 
     public InventoryMovementPersistenceAdapter(
@@ -34,12 +37,14 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
             InventoryBalanceRepository balanceRepository,
             InventoryMovementRepository movementRepository,
             InventoryIdempotencyRepository idempotencyRepository,
+            InventoryLotRepository lotRepository,
             ObjectMapper objectMapper
     ) {
         this.itemRepository = itemRepository;
         this.balanceRepository = balanceRepository;
         this.movementRepository = movementRepository;
         this.idempotencyRepository = idempotencyRepository;
+        this.lotRepository = lotRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -47,6 +52,18 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
     public Optional<InventoryItemSnapshotVO> findItemSnapshot(Long farmId, Long itemId) {
         return itemRepository.findByFarmIdAndId(farmId, itemId)
                 .map(entity -> new InventoryItemSnapshotVO(entity.getId(), entity.isTrackLot()));
+    }
+
+    @Override
+    public Optional<InventoryLotSnapshotVO> findLotSnapshot(Long farmId, Long lotId) {
+        return lotRepository.findByFarmIdAndId(farmId, lotId)
+                .map(entity -> new InventoryLotSnapshotVO(
+                        entity.getId(),
+                        entity.getFarmId(),
+                        entity.getItemId(),
+                        entity.getCode(),
+                        entity.isActive()
+                ));
     }
 
     @Override
