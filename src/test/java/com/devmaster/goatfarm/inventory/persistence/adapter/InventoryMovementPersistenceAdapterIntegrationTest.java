@@ -6,9 +6,11 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryItemEntity;
+import com.devmaster.goatfarm.inventory.persistence.entity.InventoryLotEntity;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryBalanceRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryIdempotencyRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryItemRepository;
+import com.devmaster.goatfarm.inventory.persistence.repository.InventoryLotRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryMovementRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -40,6 +42,9 @@ class InventoryMovementPersistenceAdapterIntegrationTest {
     @Autowired
     private InventoryIdempotencyRepository idempotencyRepository;
 
+    @Autowired
+    private InventoryLotRepository lotRepository;
+
     private InventoryMovementPersistenceAdapter adapter;
 
     @BeforeEach
@@ -51,6 +56,7 @@ class InventoryMovementPersistenceAdapterIntegrationTest {
                 balanceRepository,
                 movementRepository,
                 idempotencyRepository,
+                lotRepository,
                 objectMapper
         );
     }
@@ -70,8 +76,9 @@ class InventoryMovementPersistenceAdapterIntegrationTest {
     @Test
     void lockBalanceAndUpsert_shouldHandleNullAndNonNullLotId() {
         Long farmId = 88L;
-        Long itemId = persistItem(farmId, "Vacina clostridiose", true).getId();
-        Long lotId = 500L;
+        InventoryItemEntity item = persistItem(farmId, "Vacina clostridiose", true);
+        Long itemId = item.getId();
+        Long lotId = persistLot(farmId, itemId, "VAC-2026-01").getId();
 
         InventoryBalanceSnapshotVO firstNullLot = adapter.upsertBalance(
                 new InventoryBalanceSnapshotVO(farmId, itemId, null, new BigDecimal("5.000"))
@@ -167,5 +174,14 @@ class InventoryMovementPersistenceAdapterIntegrationTest {
         item.setTrackLot(trackLot);
         item.setActive(true);
         return itemRepository.save(item);
+    }
+
+    private InventoryLotEntity persistLot(Long farmId, Long itemId, String code) {
+        InventoryLotEntity lot = new InventoryLotEntity();
+        lot.setFarmId(farmId);
+        lot.setItemId(itemId);
+        lot.setCode(code);
+        lot.setActive(true);
+        return lotRepository.save(lot);
     }
 }

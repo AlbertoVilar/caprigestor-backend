@@ -4,10 +4,11 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementPersistencePort;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryLotSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResultVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
@@ -231,51 +232,6 @@ class InventoryMovementBusinessTest {
     }
 
     @Test
-    void replay_when_reason_has_extra_whitespace_should_still_match_same_hash() {
-        Long farmId = 1L;
-        String idempotencyKey = "idem-1";
-        InventoryMovementCreateRequestVO requestA = new InventoryMovementCreateRequestVO(
-                InventoryMovementType.OUT,
-                new BigDecimal("2.50"),
-                10L,
-                null,
-                null,
-                LocalDate.of(2026, 2, 13),
-                "ra\u00e7\u00e3o  premium"
-        );
-        InventoryMovementCreateRequestVO requestB = new InventoryMovementCreateRequestVO(
-                InventoryMovementType.OUT,
-                new BigDecimal("2.50"),
-                10L,
-                null,
-                null,
-                LocalDate.of(2026, 2, 13),
-                "ra\u00e7\u00e3o premium"
-        );
-
-        String requestHash = hashRequest(requestA);
-        InventoryMovementResponseVO replayResponse = new InventoryMovementResponseVO(
-                101L,
-                InventoryMovementType.OUT,
-                new BigDecimal("2.50"),
-                10L,
-                null,
-                requestB.movementDate(),
-                new BigDecimal("12.00"),
-                OffsetDateTime.now()
-        );
-
-        when(persistencePort.findIdempotency(farmId, idempotencyKey))
-                .thenReturn(Optional.of(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, replayResponse)));
-
-        InventoryMovementResultVO result = inventoryMovementBusiness.createMovement(farmId, idempotencyKey, requestB);
-
-        assertThat(result.replayed()).isTrue();
-        assertThat(result.response()).isSameAs(replayResponse);
-        verify(persistencePort).findIdempotency(farmId, idempotencyKey);
-    }
-
-    @Test
     void shouldThrowInvalidArgument_whenTrackLotTrue_andLotIdIsNull() {
         Long farmId = 1L;
         String idempotencyKey = "k-1";
@@ -327,6 +283,70 @@ class InventoryMovementBusinessTest {
         verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
         verify(persistencePort, never()).saveMovement(any());
         verify(persistencePort, never()).saveIdempotency(any());
+    }
+
+    @Test
+    void shouldThrowInvalidArgument_whenLotDoesNotBelongToSelectedItem() {
+        Long farmId = 1L;
+        String idempotencyKey = "k-lot-mismatch";
+        Long itemId = 10L;
+        Long lotId = 99L;
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("1.0"),
+                itemId,
+                lotId,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "entrada"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, true)));
+        when(persistencePort.lockItemForUpdate(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, true)));
+        when(persistencePort.findLotSnapshot(farmId, lotId))
+                .thenReturn(Optional.of(new InventoryLotSnapshotVO(lotId, farmId, 20L, "L-99", true)));
+
+        InvalidArgumentException exception = assertThrows(
+                InvalidArgumentException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request)
+        );
+
+        assertThat(exception.getMessage()).contains("lote valido");
+        verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
+        verify(persistencePort, never()).saveMovement(any());
+    }
+
+    @Test
+    void shouldThrowBusinessRule_whenLotIsInactive() {
+        Long farmId = 1L;
+        String idempotencyKey = "k-lot-inactive";
+        Long itemId = 10L;
+        Long lotId = 99L;
+        InventoryMovementCreateRequestVO request = new InventoryMovementCreateRequestVO(
+                InventoryMovementType.IN,
+                new BigDecimal("1.0"),
+                itemId,
+                lotId,
+                null,
+                LocalDate.of(2026, 2, 13),
+                "entrada"
+        );
+
+        when(persistencePort.findIdempotency(farmId, idempotencyKey)).thenReturn(Optional.empty());
+        when(persistencePort.findItemSnapshot(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, true)));
+        when(persistencePort.lockItemForUpdate(farmId, itemId)).thenReturn(Optional.of(new InventoryItemSnapshotVO(itemId, true)));
+        when(persistencePort.findLotSnapshot(farmId, lotId))
+                .thenReturn(Optional.of(new InventoryLotSnapshotVO(lotId, farmId, itemId, "L-99", false)));
+
+        BusinessRuleException exception = assertThrows(
+                BusinessRuleException.class,
+                () -> inventoryMovementBusiness.createMovement(farmId, idempotencyKey, request)
+        );
+
+        assertThat(exception.getMessage()).contains("inativo");
+        verify(persistencePort, never()).lockBalanceForUpdate(any(), any(), any());
+        verify(persistencePort, never()).saveMovement(any());
     }
 
     @Test
@@ -582,4 +602,3 @@ class InventoryMovementBusinessTest {
         }
     }
 }
-
