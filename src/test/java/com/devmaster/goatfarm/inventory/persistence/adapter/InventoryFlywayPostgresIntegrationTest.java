@@ -38,8 +38,15 @@ class InventoryFlywayPostgresIntegrationTest {
                     .isTrue();
             assertThat(hasUniqueConstraint(connection, "inventory_balance", "uk_inventory_balance_farm_item_lot"))
                     .isTrue();
+            assertThat(hasUniqueConstraint(connection, "inventory_lot", "uk_inventory_lot_farm_item_code_normalized"))
+                    .isTrue();
             assertThat(hasPartialNullLotUniqueIndex(connection, "ux_inventory_balance_farm_item_null_lot"))
                     .isTrue();
+            assertThat(columnExists(connection, "inventory_lot", "farm_id")).isTrue();
+            assertThat(columnExists(connection, "inventory_lot", "item_id")).isTrue();
+            assertThat(columnExists(connection, "inventory_lot", "code")).isTrue();
+            assertThat(columnExists(connection, "inventory_lot", "expiration_date")).isTrue();
+            assertThat(columnExists(connection, "inventory_lot", "active")).isTrue();
         }
     }
 
@@ -81,6 +88,23 @@ class InventoryFlywayPostgresIntegrationTest {
                         && indexDef.toLowerCase().contains("unique")
                         && indexDef.toLowerCase().contains("where")
                         && indexDef.toLowerCase().contains("lot_id is null");
+            }
+        }
+    }
+
+    private boolean columnExists(Connection connection, String tableName, String columnName) throws SQLException {
+        String sql = """
+                select 1
+                from information_schema.columns
+                where table_name = ?
+                  and column_name = ?
+                """;
+
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, columnName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
             }
         }
     }
