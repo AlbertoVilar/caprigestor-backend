@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementP
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryIdempotencyVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
+import com.devmaster.goatfarm.inventory.business.bo.InventoryLotSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResultVO;
@@ -56,15 +57,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
         InventoryItemSnapshotVO itemSnapshot = resolveItemSnapshot(farmId, request.itemId());
         validateTrackLot(itemSnapshot, request);
-        Long effectiveLotId = itemSnapshot.trackLot() ? request.lotId() : null;
 
-        InventoryBalanceSnapshotVO currentBalance = lockItemThenBalance(farmId, request, effectiveLotId);
-        BigDecimal resultingBalance = computeNewBalance(request, currentBalance.quantity());
+        LockedBalanceContext lockedBalance = lockItemThenBalance(farmId, request);
+        BigDecimal resultingBalance = computeNewBalance(request, lockedBalance.balance().quantity());
 
         InventoryMovementResponseVO response = persistMovementAndBalance(
                 farmId,
                 request,
-                effectiveLotId,
+                lockedBalance.effectiveLotId(),
                 resultingBalance
         );
 
@@ -72,9 +72,6 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         return new InventoryMovementResultVO(response, false);
     }
 
-    /**
-     * Resolve replay idempotente ou conflito de payload para a mesma chave.
-     */
     private Optional<InventoryMovementResponseVO> resolveIdempotencyReplay(
             Long farmId,
             String idempotencyKey,
@@ -92,33 +89,26 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 });
     }
 
-    /**
-     * Carrega snapshot do item para validar regras de trackLot antes do lock.
-     */
     private InventoryItemSnapshotVO resolveItemSnapshot(Long farmId, Long itemId) {
         return persistencePort.findItemSnapshot(farmId, itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
     }
 
-    /**
-     * Executa lock na ordem obrigatoria: item e depois balance.
-     */
-    private InventoryBalanceSnapshotVO lockItemThenBalance(
+    private LockedBalanceContext lockItemThenBalance(
             Long farmId,
-            InventoryMovementCreateRequestVO request,
-            Long effectiveLotId
+            InventoryMovementCreateRequestVO request
     ) {
         InventoryItemSnapshotVO lockedItem = persistencePort.lockItemForUpdate(farmId, request.itemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
         validateTrackLot(lockedItem, request);
+        Long effectiveLotId = resolveEffectiveLotId(farmId, lockedItem, request);
 
-        return persistencePort.lockBalanceForUpdate(farmId, request.itemId(), effectiveLotId)
+        InventoryBalanceSnapshotVO balance = persistencePort.lockBalanceForUpdate(farmId, request.itemId(), effectiveLotId)
                 .orElse(new InventoryBalanceSnapshotVO(farmId, request.itemId(), effectiveLotId, BigDecimal.ZERO));
+
+        return new LockedBalanceContext(effectiveLotId, balance);
     }
 
-    /**
-     * Persiste ledger e saldo materializado dentro da mesma transacao.
-     */
     private InventoryMovementResponseVO persistMovementAndBalance(
             Long farmId,
             InventoryMovementCreateRequestVO request,
@@ -155,9 +145,6 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         );
     }
 
-    /**
-     * Persiste o resultado de idempotencia para suportar replay futuro.
-     */
     private void persistIdempotencyResult(
             Long farmId,
             String idempotencyKey,
@@ -167,9 +154,6 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         persistencePort.saveIdempotency(new InventoryIdempotencyVO(farmId, idempotencyKey, requestHash, response));
     }
 
-    /**
-     * Garante a regra de rastreio por lote no comando de movimento.
-     */
     private void validateTrackLot(InventoryItemSnapshotVO item, InventoryMovementCreateRequestVO request) {
         if (item.trackLot() && request.lotId() == null) {
             throw new InvalidArgumentException(
@@ -186,9 +170,32 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
     }
 
-    /**
-     * Calcula saldo final aplicando invariantes de nao negatividade.
-     */
+    private Long resolveEffectiveLotId(
+            Long farmId,
+            InventoryItemSnapshotVO item,
+            InventoryMovementCreateRequestVO request
+    ) {
+        if (!item.trackLot()) {
+            return null;
+        }
+
+        InventoryLotSnapshotVO lot = persistencePort.findLotSnapshot(farmId, request.lotId())
+                .orElseThrow(() -> new ResourceNotFoundException("Lote de estoque nao encontrado."));
+
+        if (!lot.itemId().equals(item.itemId())) {
+            throw new InvalidArgumentException(
+                    "lotId",
+                    "lotId deve referenciar um lote valido para o item informado."
+            );
+        }
+
+        if (!lot.active()) {
+            throw new BusinessRuleException("lotId", "Lote informado esta inativo.");
+        }
+
+        return lot.lotId();
+    }
+
     private BigDecimal computeNewBalance(InventoryMovementCreateRequestVO request, BigDecimal currentBalance) {
         if (InventoryMovementType.IN.equals(request.type())) {
             return currentBalance.add(request.quantity());
@@ -298,5 +305,8 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 + "|" + adjustDirectionOrEmpty
                 + "|" + movementDateOrEmpty
                 + "|" + reasonTrimOrEmpty;
+    }
+
+    private record LockedBalanceContext(Long effectiveLotId, InventoryBalanceSnapshotVO balance) {
     }
 }
