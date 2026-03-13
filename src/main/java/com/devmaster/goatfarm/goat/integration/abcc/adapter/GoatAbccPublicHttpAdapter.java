@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.integration.abcc.adapter;
 
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
@@ -46,6 +47,18 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
             "<xmp id=\"viewstate\" style=\"display:none\">(.*?)</xmp>",
             Pattern.DOTALL
     );
+
+    @Override
+    public List<GoatAbccRaceOptionVO> listRaces() {
+        try {
+            HttpClient client = newClient();
+            String searchPage = get(client, SEARCH_PAGE_URL);
+            return parseRaceOptions(searchPage);
+        } catch (Exception ex) {
+            LOGGER.warn("Falha ao carregar lista de raças da ABCC pública.", ex);
+            throw new RuntimeException("Falha ao carregar lista de raças da ABCC pública.", ex);
+        }
+    }
 
     @Override
     public GoatAbccRawSearchResultVO search(GoatAbccSearchRequestVO requestVO) {
@@ -119,6 +132,37 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
+    }
+
+    private List<GoatAbccRaceOptionVO> parseRaceOptions(String html) {
+        Document document = Jsoup.parse(html);
+        Element select = document.selectFirst("select[name=i_keyword_0]");
+        if (select == null) {
+            return List.of();
+        }
+
+        Map<Integer, String> deduplicated = new LinkedHashMap<>();
+        for (Element option : select.select("option")) {
+            String idValue = cleanText(option.attr("value"));
+            String name = cleanText(option.text());
+            if (idValue == null || name == null) {
+                continue;
+            }
+
+            try {
+                Integer id = Integer.parseInt(idValue);
+                deduplicated.put(id, name);
+            } catch (NumberFormatException ignored) {
+                // ignora opções não numéricas
+            }
+        }
+
+        return deduplicated.entrySet().stream()
+                .map(entry -> GoatAbccRaceOptionVO.builder()
+                        .id(entry.getKey())
+                        .name(entry.getValue())
+                        .build())
+                .toList();
     }
 
     private GoatAbccRawSearchResultVO parseSearchResult(String html) {
@@ -350,4 +394,3 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
                 .toLowerCase(java.util.Locale.ROOT);
     }
 }
-

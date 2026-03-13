@@ -13,6 +13,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
@@ -64,13 +65,37 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
 
     @Override
     @Transactional(readOnly = true)
+    public List<GoatAbccRaceOptionVO> listRaces(Long farmId) {
+        ownershipService.verifyFarmOwnership(farmId);
+
+        List<GoatAbccRaceOptionVO> raceOptions = fetchAbccRaceCatalog();
+        return raceOptions.stream()
+                .map(this::toNormalizedRaceOption)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public GoatAbccSearchResponseVO search(Long farmId, GoatAbccSearchRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateSearchRequest(requestVO);
 
+        Integer resolvedRaceId = resolveRaceId(requestVO);
+        GoatAbccSearchRequestVO normalizedRequest = GoatAbccSearchRequestVO.builder()
+                .raceId(resolvedRaceId)
+                .raceName(requestVO.getRaceName())
+                .affix(requestVO.getAffix())
+                .page(requestVO.getPage())
+                .sex(requestVO.getSex())
+                .tod(requestVO.getTod())
+                .toe(requestVO.getToe())
+                .name(requestVO.getName())
+                .dna(requestVO.getDna())
+                .build();
+
         GoatAbccRawSearchResultVO rawResult;
         try {
-            rawResult = abccPublicQueryPort.search(requestVO);
+            rawResult = abccPublicQueryPort.search(normalizedRequest);
         } catch (RuntimeException ex) {
             throw new BusinessRuleException("abcc", "Não foi possível consultar a ABCC pública no momento.");
         }
@@ -162,8 +187,8 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         if (requestVO == null) {
             throw new BusinessRuleException("payload", "Payload de busca ABCC é obrigatório.");
         }
-        if (requestVO.getRaceId() == null) {
-            throw new BusinessRuleException("raceId", "Raça ABCC é obrigatória.");
+        if (requestVO.getRaceId() == null && isBlank(requestVO.getRaceName())) {
+            throw new BusinessRuleException("raceName", "Raça ABCC é obrigatória.");
         }
         if (isBlank(requestVO.getAffix())) {
             throw new BusinessRuleException("affix", "Afixo é obrigatório para busca na ABCC.");
@@ -171,6 +196,51 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         if (requestVO.getPage() != null && requestVO.getPage() < 1) {
             throw new BusinessRuleException("page", "Página deve ser maior ou igual a 1.");
         }
+    }
+
+    private Integer resolveRaceId(GoatAbccSearchRequestVO requestVO) {
+        if (requestVO.getRaceId() != null && requestVO.getRaceId() > 0) {
+            return requestVO.getRaceId();
+        }
+
+        String requestedRaceName = trimOrNull(requestVO.getRaceName());
+        if (requestedRaceName == null) {
+            throw new BusinessRuleException("raceName", "Raça ABCC é obrigatória.");
+        }
+
+        List<GoatAbccRaceOptionVO> raceOptions = fetchAbccRaceCatalog();
+        String requestedToken = normalizedToken(requestedRaceName);
+
+        return raceOptions.stream()
+                .filter(option -> normalizedToken(option.getName()).equals(requestedToken))
+                .map(GoatAbccRaceOptionVO::getId)
+                .findFirst()
+                .orElseThrow(() -> new BusinessRuleException(
+                        "raceName",
+                        "Raça ABCC inválida. Consulte a lista de raças disponíveis antes de buscar."
+                ));
+    }
+
+    private List<GoatAbccRaceOptionVO> fetchAbccRaceCatalog() {
+        try {
+            List<GoatAbccRaceOptionVO> raceOptions = abccPublicQueryPort.listRaces();
+            if (raceOptions == null || raceOptions.isEmpty()) {
+                throw new BusinessRuleException("abcc", "Não foi possível carregar a lista de raças da ABCC.");
+            }
+            return raceOptions;
+        } catch (BusinessRuleException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new BusinessRuleException("abcc", "Não foi possível carregar a lista de raças da ABCC pública.");
+        }
+    }
+
+    private GoatAbccRaceOptionVO toNormalizedRaceOption(GoatAbccRaceOptionVO option) {
+        return GoatAbccRaceOptionVO.builder()
+                .id(option.getId())
+                .name(trimOrNull(option.getName()))
+                .normalizedBreed(normalizeBreedInternal(option.getName()))
+                .build();
     }
 
     private GoatAbccSearchItemVO normalizeSearchItem(GoatAbccRawSearchItemVO raw) {
@@ -217,30 +287,44 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             return null;
         }
 
+        GoatBreed mapped = normalizeBreedInternal(value);
+        if (mapped != null) {
+            return mapped;
+        }
+
+        warnings.add("Valor de " + fieldLabel + " da ABCC não mapeado: " + value);
+        return null;
+    }
+
+    private GoatBreed normalizeBreedInternal(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+
         String token = normalizedToken(value);
-        String mapped = switch (token) {
-            case "ALPINA", "ALPINA FRANCESA" -> "ALPINA";
-            case "ALPINE" -> "ALPINE";
-            case "ANGLONUBIANA", "ANGLO NUBIANA", "ANGLO-NUBIANA" -> "ANGLO_NUBIANA";
-            case "BOER" -> "BOER";
-            case "MESTICA", "MESTIÇA", "SRD" -> "MESTICA";
-            case "MURCIANA", "MURCIANA GRANADINA" -> "MURCIANA_GRANADINA";
-            case "SAANEN" -> "SAANEN";
-            case "TOGGENBURG" -> "TOGGENBURG";
+        return switch (token) {
+            case "ALPINA", "ALPINA FRANCESA" -> GoatBreed.ALPINA;
+            case "ALPINA AMERICANA" -> GoatBreed.ALPINA_AMERICANA;
+            case "ALPINA BRITANICA" -> GoatBreed.ALPINA_BRITANICA;
+            case "ALPINE" -> GoatBreed.ALPINE;
+            case "ANGLONUBIANA", "ANGLO NUBIANA", "ANGLO-NUBIANA" -> GoatBreed.ANGLO_NUBIANA;
+            case "ANGORA" -> GoatBreed.ANGORA;
+            case "BHUJ" -> GoatBreed.BHUJ;
+            case "BOER" -> GoatBreed.BOER;
+            case "CANINDE" -> GoatBreed.CANINDE;
+            case "JAMNAPARI" -> GoatBreed.JAMNAPARI;
+            case "KALAHARI" -> GoatBreed.KALAHARI;
+            case "MAMBRINA" -> GoatBreed.MAMBRINA;
+            case "MESTICA", "MESTICAO", "MESTIÇA" -> GoatBreed.MESTICA;
+            case "MOXOTO" -> GoatBreed.MOXOTO;
+            case "MURCIANA" -> GoatBreed.MURCIANA;
+            case "MURCIANA GRANADINA" -> GoatBreed.MURCIANA_GRANADINA;
+            case "SAANEN" -> GoatBreed.SAANEN;
+            case "SAVANA" -> GoatBreed.SAVANA;
+            case "SRD" -> GoatBreed.SRD;
+            case "TOGGENBURG" -> GoatBreed.TOGGENBURG;
             default -> null;
         };
-
-        if (mapped == null) {
-            warnings.add("Valor de " + fieldLabel + " da ABCC não mapeado: " + value);
-            return null;
-        }
-
-        try {
-            return GoatBreed.valueOf(mapped);
-        } catch (RuntimeException ex) {
-            warnings.add("Valor de " + fieldLabel + " da ABCC não suportado no domínio: " + value);
-            return null;
-        }
     }
 
     private GoatStatus normalizeStatus(String value, List<String> warnings, String fieldLabel) {

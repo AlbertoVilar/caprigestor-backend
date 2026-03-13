@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.api.controller;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccConfirmRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionsResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +42,21 @@ public class GoatAbccImportController {
         this.goatAbccImportUseCase = goatAbccImportUseCase;
         this.goatAbccImportMapper = goatAbccImportMapper;
         this.goatMapper = goatMapper;
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @GetMapping("/races")
+    @Operation(summary = "Lista as raças públicas da ABCC com seus respectivos IDs")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Raças da ABCC carregadas com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para importar nesta fazenda."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação ou regra de negócio.")
+    })
+    public ResponseEntity<GoatAbccRaceOptionsResponseDTO> listRaces(
+            @PathVariable("farmId") Long farmId
+    ) {
+        var responseVO = goatAbccImportUseCase.listRaces(farmId);
+        return ResponseEntity.ok(goatAbccImportMapper.toRaceOptionsResponseDTO(responseVO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
@@ -95,4 +112,3 @@ public class GoatAbccImportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(goatMapper.toResponseDTO(created));
     }
 }
-

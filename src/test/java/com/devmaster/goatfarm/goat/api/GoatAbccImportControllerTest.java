@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchResponseVO;
 import com.devmaster.goatfarm.goat.enums.Gender;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -67,6 +69,23 @@ class GoatAbccImportControllerTest {
 
     @Test
     @WithMockUser(roles = "OPERATOR")
+    void shouldListAbccRacesSuccessfully() throws Exception {
+        when(goatAbccImportUseCase.listRaces(eq(1L))).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").normalizedBreed(GoatBreed.SAANEN).build(),
+                GoatAbccRaceOptionVO.builder().id(2).name("BOER").normalizedBreed(GoatBreed.BOER).build()
+        ));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/imports/abcc/races"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(9))
+                .andExpect(jsonPath("$.items[0].name").value("SAANEN"))
+                .andExpect(jsonPath("$.items[0].normalizedBreed").value("SAANEN"));
+
+        verify(goatAbccImportUseCase).listRaces(eq(1L));
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERATOR")
     void shouldSearchAbccSuccessfully() throws Exception {
         when(goatAbccImportUseCase.search(eq(1L), any())).thenReturn(GoatAbccSearchResponseVO.builder()
                 .currentPage(1)
@@ -86,7 +105,7 @@ class GoatAbccImportControllerTest {
 
         String payload = """
                 {
-                  "raceId": 9,
+                  "raceName": "SAANEN",
                   "affix": "CRS",
                   "page": 1
                 }
@@ -188,7 +207,7 @@ class GoatAbccImportControllerTest {
     void shouldForbidViewerFromAbccImportEndpoints() throws Exception {
         String payload = """
                 {
-                  "raceId": 9,
+                  "raceName": "SAANEN",
                   "affix": "CRS",
                   "page": 1
                 }

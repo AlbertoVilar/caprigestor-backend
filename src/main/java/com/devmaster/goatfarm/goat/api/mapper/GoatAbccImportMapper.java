@@ -2,11 +2,14 @@ package com.devmaster.goatfarm.goat.api.mapper;
 
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionsResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchItemDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchResponseDTO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchResponseVO;
@@ -21,6 +24,7 @@ public class GoatAbccImportMapper {
         Integer page = dto.getPage() == null || dto.getPage() < 1 ? 1 : dto.getPage();
         return GoatAbccSearchRequestVO.builder()
                 .raceId(dto.getRaceId())
+                .raceName(dto.getRaceName())
                 .affix(dto.getAffix())
                 .page(page)
                 .sex(dto.getSex())
@@ -34,6 +38,16 @@ public class GoatAbccImportMapper {
     public GoatAbccPreviewRequestVO toPreviewRequestVO(GoatAbccPreviewRequestDTO dto) {
         return GoatAbccPreviewRequestVO.builder()
                 .externalId(dto.getExternalId())
+                .build();
+    }
+
+    public GoatAbccRaceOptionsResponseDTO toRaceOptionsResponseDTO(List<GoatAbccRaceOptionVO> raceOptions) {
+        List<GoatAbccRaceOptionDTO> items = raceOptions == null
+                ? List.of()
+                : raceOptions.stream().map(this::toRaceOptionDTO).toList();
+
+        return GoatAbccRaceOptionsResponseDTO.builder()
+                .items(items)
                 .build();
     }
 
@@ -74,6 +88,14 @@ public class GoatAbccImportMapper {
                 .build();
     }
 
+    private GoatAbccRaceOptionDTO toRaceOptionDTO(GoatAbccRaceOptionVO vo) {
+        return GoatAbccRaceOptionDTO.builder()
+                .id(vo.getId())
+                .name(vo.getName())
+                .normalizedBreed(vo.getNormalizedBreed())
+                .build();
+    }
+
     private GoatAbccSearchItemDTO toSearchItemDTO(GoatAbccSearchItemVO vo) {
         return GoatAbccSearchItemDTO.builder()
                 .externalSource(vo.getExternalSource())
@@ -96,4 +118,3 @@ public class GoatAbccImportMapper {
                 .build();
     }
 }
-

@@ -4,10 +4,15 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchResponseVO;
 
+import java.util.List;
+
 public interface GoatAbccImportUseCase {
+
+    List<GoatAbccRaceOptionVO> listRaces(Long farmId);
 
     GoatAbccSearchResponseVO search(Long farmId, GoatAbccSearchRequestVO requestVO);
 
@@ -15,4 +20,3 @@ public interface GoatAbccImportUseCase {
 
     GoatResponseVO confirm(Long farmId, String externalId, GoatRequestVO goatRequestVO);
 }
-

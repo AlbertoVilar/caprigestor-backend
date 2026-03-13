@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
@@ -114,6 +115,29 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void shouldResolveRaceIdByRaceNameWhenRaceIdIsNotProvided() {
+        doNothing().when(ownershipService).verifyFarmOwnership(1L);
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build(),
+                GoatAbccRaceOptionVO.builder().id(2).name("BOER").build()
+        ));
+        when(abccPublicQueryPort.search(any())).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .currentPage(1)
+                .totalPages(1)
+                .items(List.of())
+                .build());
+
+        business.search(1L, GoatAbccSearchRequestVO.builder()
+                .raceName("Saanen")
+                .affix("CRS")
+                .page(1)
+                .build());
+
+        verify(abccPublicQueryPort).listRaces();
+        verify(abccPublicQueryPort).search(any());
+    }
+
+    @Test
     void shouldPreviewAndNormalizeWithWarningsWhenNeeded() {
         GoatFarm farm = new GoatFarm();
         farm.setId(1L);
@@ -150,7 +174,7 @@ class GoatAbccImportBusinessTest {
         assertThat(response.getExternalSource()).isEqualTo("ABCC_PUBLIC");
         assertThat(response.getRegistrationNumber()).isEqualTo("1433214017");
         assertThat(response.getGender()).isEqualTo(Gender.MACHO);
-        assertThat(response.getBreed()).isNull();
+        assertThat(response.getBreed()).isEqualTo(GoatBreed.ANGORA);
         assertThat(response.getStatus()).isEqualTo(GoatStatus.ATIVO);
         assertThat(response.getCategory()).isEqualTo(Category.PC);
         assertThat(response.getBirthDate()).isNull();

@@ -2,7 +2,6 @@ package com.devmaster.goatfarm.goat.api.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -18,8 +17,11 @@ import lombok.Setter;
 @Builder
 public class GoatAbccSearchRequestDTO {
 
-    @NotNull(message = "Raça ABCC é obrigatória.")
+    @Min(value = 1, message = "Identificador da raça ABCC deve ser maior ou igual a 1.")
     private Integer raceId;
+
+    @Size(max = 80, message = "Nome da raça ABCC deve ter no máximo {max} caracteres.")
+    private String raceName;
 
     @NotBlank(message = "Afixo é obrigatório.")
     @Size(max = 80, message = "Afixo deve ter no máximo {max} caracteres.")
@@ -43,4 +45,3 @@ public class GoatAbccSearchRequestDTO {
     @Pattern(regexp = "0|1", message = "Filtro de DNA inválido. Use 1 para sim ou 0 para não.")
     private String dna;
 }
-
