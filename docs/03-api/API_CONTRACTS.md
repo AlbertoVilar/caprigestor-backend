@@ -52,9 +52,17 @@ Rotas canônicas:
 - `POST /api/v1/goatfarms/{farmId}/goats`
 - `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}`
+- `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`
+- `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/preview`
+- `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
 
 Paginação atual:
 - As listagens continuam retornando `Page` do Spring (`content`, `totalElements`, `number`, etc.) para preservar compatibilidade com o frontend já publicado.
+
+Importação ABCC:
+- Feature opcional do módulo Goat.
+- Não substitui nem deprecia o cadastro manual.
+- O endpoint `confirm` reutiliza internamente as regras de criação manual de cabra para evitar duplicação de domínio.
 
 ### Reproduction (gestação e alertas)
 Rotas canônicas:
