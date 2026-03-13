@@ -1,5 +1,9 @@
 package com.devmaster.goatfarm.goat.api.mapper;
 
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmItemDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmItemResultDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionDTO;
@@ -7,6 +11,9 @@ import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionsResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchItemDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchResponseDTO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
@@ -39,6 +46,15 @@ public class GoatAbccImportMapper {
         return GoatAbccPreviewRequestVO.builder()
                 .externalId(dto.getExternalId())
                 .build();
+    }
+
+    public List<GoatAbccBatchConfirmItemVO> toBatchConfirmItemsVO(GoatAbccBatchConfirmRequestDTO dto) {
+        if (dto == null || dto.getItems() == null) {
+            return List.of();
+        }
+        return dto.getItems().stream()
+                .map(this::toBatchConfirmItemVO)
+                .toList();
     }
 
     public GoatAbccRaceOptionsResponseDTO toRaceOptionsResponseDTO(List<GoatAbccRaceOptionVO> raceOptions) {
@@ -88,6 +104,27 @@ public class GoatAbccImportMapper {
                 .build();
     }
 
+    public GoatAbccBatchConfirmResponseDTO toBatchConfirmResponseDTO(GoatAbccBatchConfirmResponseVO vo) {
+        List<GoatAbccBatchConfirmItemResultDTO> results = vo.getResults() == null
+                ? List.of()
+                : vo.getResults().stream().map(this::toBatchConfirmItemResultDTO).toList();
+
+        return GoatAbccBatchConfirmResponseDTO.builder()
+                .totalSelected(vo.getTotalSelected())
+                .totalImported(vo.getTotalImported())
+                .totalSkippedDuplicate(vo.getTotalSkippedDuplicate())
+                .totalSkippedTodMismatch(vo.getTotalSkippedTodMismatch())
+                .totalError(vo.getTotalError())
+                .results(results)
+                .build();
+    }
+
+    private GoatAbccBatchConfirmItemVO toBatchConfirmItemVO(GoatAbccBatchConfirmItemDTO dto) {
+        return GoatAbccBatchConfirmItemVO.builder()
+                .externalId(dto != null ? dto.getExternalId() : null)
+                .build();
+    }
+
     private GoatAbccRaceOptionDTO toRaceOptionDTO(GoatAbccRaceOptionVO vo) {
         return GoatAbccRaceOptionDTO.builder()
                 .id(vo.getId())
@@ -115,6 +152,16 @@ public class GoatAbccImportMapper {
                 .normalizedBreed(vo.getNormalizedBreed())
                 .normalizedStatus(vo.getNormalizedStatus())
                 .normalizationWarnings(vo.getNormalizationWarnings())
+                .build();
+    }
+
+    private GoatAbccBatchConfirmItemResultDTO toBatchConfirmItemResultDTO(GoatAbccBatchConfirmItemResultVO vo) {
+        return GoatAbccBatchConfirmItemResultDTO.builder()
+                .externalId(vo.getExternalId())
+                .registrationNumber(vo.getRegistrationNumber())
+                .name(vo.getName())
+                .status(vo.getStatus())
+                .message(vo.getMessage())
                 .build();
     }
 }

@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchItemVO;
@@ -203,6 +205,71 @@ class GoatAbccImportControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "OPERATOR")
+    void shouldConfirmBatchAbccImportSuccessfully() throws Exception {
+        when(goatAbccImportUseCase.confirmBatch(eq(1L), any())).thenReturn(
+                GoatAbccBatchConfirmResponseVO.builder()
+                        .totalSelected(4)
+                        .totalImported(1)
+                        .totalSkippedDuplicate(1)
+                        .totalSkippedTodMismatch(1)
+                        .totalError(1)
+                        .results(List.of(
+                                GoatAbccBatchConfirmItemResultVO.builder()
+                                        .externalId("A-001")
+                                        .registrationNumber("1111111111")
+                                        .name("IMPORTAVEL")
+                                        .status("IMPORTED")
+                                        .message("Animal importado com sucesso.")
+                                        .build(),
+                                GoatAbccBatchConfirmItemResultVO.builder()
+                                        .externalId("A-002")
+                                        .registrationNumber("2222222222")
+                                        .name("DUPLICADA")
+                                        .status("SKIPPED_DUPLICATE")
+                                        .message("Registro já existente nesta fazenda. Item ignorado por duplicidade.")
+                                        .build(),
+                                GoatAbccBatchConfirmItemResultVO.builder()
+                                        .externalId("A-003")
+                                        .status("SKIPPED_TOD_MISMATCH")
+                                        .message("O animal selecionado possui TOD diferente do TOD da fazenda.")
+                                        .build(),
+                                GoatAbccBatchConfirmItemResultVO.builder()
+                                        .externalId("A-004")
+                                        .status("ERROR")
+                                        .message("Registro ABCC ausente para importar este item.")
+                                        .build()
+                        ))
+                        .build()
+        );
+
+        String payload = """
+                {
+                  "items": [
+                    { "externalId": "A-001" },
+                    { "externalId": "A-002" },
+                    { "externalId": "A-003" },
+                    { "externalId": "A-004" }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/imports/abcc/confirm-batch")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSelected").value(4))
+                .andExpect(jsonPath("$.totalImported").value(1))
+                .andExpect(jsonPath("$.totalSkippedDuplicate").value(1))
+                .andExpect(jsonPath("$.totalSkippedTodMismatch").value(1))
+                .andExpect(jsonPath("$.totalError").value(1))
+                .andExpect(jsonPath("$.results[2].status").value("SKIPPED_TOD_MISMATCH"));
+
+        verify(goatAbccImportUseCase).confirmBatch(eq(1L), any());
+    }
+
+    @Test
     @WithMockUser(roles = "VIEWER")
     void shouldForbidViewerFromAbccImportEndpoints() throws Exception {
         String payload = """
@@ -222,4 +289,3 @@ class GoatAbccImportControllerTest {
         verify(goatAbccImportUseCase, never()).search(eq(1L), any());
     }
 }
-

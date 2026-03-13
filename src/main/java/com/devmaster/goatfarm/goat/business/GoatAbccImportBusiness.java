@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
@@ -9,8 +10,12 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
@@ -40,6 +45,18 @@ import java.util.Locale;
 public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
 
     private static final String ABCC_SOURCE = "ABCC_PUBLIC";
+    private static final String STATUS_IMPORTED = "IMPORTED";
+    private static final String STATUS_SKIPPED_DUPLICATE = "SKIPPED_DUPLICATE";
+    private static final String STATUS_SKIPPED_TOD_MISMATCH = "SKIPPED_TOD_MISMATCH";
+    private static final String STATUS_ERROR = "ERROR";
+
+    private static final String FIELD_TOD = "tod";
+    private static final String MSG_ABCC_UNAVAILABLE = "Não foi possível consultar a ABCC pública no momento.";
+    private static final String MSG_PREVIEW_UNAVAILABLE = "Não foi possível obter o preview do animal na ABCC pública.";
+    private static final String MSG_MISSING_FARM_TOD = "A fazenda não possui TOD configurado. Configure o TOD da fazenda para usar a importação ABCC.";
+    private static final String MSG_TOD_MISMATCH = "O animal selecionado possui TOD diferente do TOD da fazenda. Importação ABCC permitida apenas para animais do mesmo TOD.";
+    private static final String MSG_REQUEST_TOD_MISMATCH = "Para importar pela ABCC, o TOD informado deve ser igual ao TOD da fazenda.";
+
     private static final DateTimeFormatter ABCC_DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
@@ -47,6 +64,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     private final GoatFarmPersistencePort goatFarmPort;
     private final GoatAbccPublicQueryPort abccPublicQueryPort;
     private final GoatManagementUseCase goatManagementUseCase;
+    private final GoatPersistencePort goatPersistencePort;
     private final EntityFinder entityFinder;
 
     public GoatAbccImportBusiness(
@@ -54,12 +72,14 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             GoatFarmPersistencePort goatFarmPort,
             GoatAbccPublicQueryPort abccPublicQueryPort,
             GoatManagementUseCase goatManagementUseCase,
+            GoatPersistencePort goatPersistencePort,
             EntityFinder entityFinder
     ) {
         this.ownershipService = ownershipService;
         this.goatFarmPort = goatFarmPort;
         this.abccPublicQueryPort = abccPublicQueryPort;
         this.goatManagementUseCase = goatManagementUseCase;
+        this.goatPersistencePort = goatPersistencePort;
         this.entityFinder = entityFinder;
     }
 
@@ -80,6 +100,10 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         ownershipService.verifyFarmOwnership(farmId);
         validateSearchRequest(requestVO);
 
+        boolean isAdmin = ownershipService.isCurrentUserAdmin();
+        GoatFarm farm = loadFarm(farmId);
+        String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
+
         Integer resolvedRaceId = resolveRaceId(requestVO);
         GoatAbccSearchRequestVO normalizedRequest = GoatAbccSearchRequestVO.builder()
                 .raceId(resolvedRaceId)
@@ -87,7 +111,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .affix(requestVO.getAffix())
                 .page(requestVO.getPage())
                 .sex(requestVO.getSex())
-                .tod(requestVO.getTod())
+                .tod(isAdmin ? requestVO.getTod() : farmTod)
                 .toe(requestVO.getToe())
                 .name(requestVO.getName())
                 .dna(requestVO.getDna())
@@ -97,12 +121,15 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         try {
             rawResult = abccPublicQueryPort.search(normalizedRequest);
         } catch (RuntimeException ex) {
-            throw new BusinessRuleException("abcc", "Não foi possível consultar a ABCC pública no momento.");
+            throw new BusinessRuleException("abcc", MSG_ABCC_UNAVAILABLE);
         }
 
         List<GoatAbccSearchItemVO> normalizedItems = rawResult.getItems() == null
                 ? List.of()
-                : rawResult.getItems().stream().map(this::normalizeSearchItem).toList();
+                : rawResult.getItems().stream()
+                .map(this::normalizeSearchItem)
+                .filter(item -> isAdmin || isSameTod(item.getTod(), farmTod))
+                .toList();
 
         return GoatAbccSearchResponseVO.builder()
                 .currentPage(rawResult.getCurrentPage())
@@ -120,17 +147,20 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             throw new BusinessRuleException("externalId", "Identificador externo da ABCC é obrigatório.");
         }
 
+        boolean isAdmin = ownershipService.isCurrentUserAdmin();
+        GoatFarm farm = loadFarm(farmId);
+        String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
+
         GoatAbccRawPreviewVO raw;
         try {
             raw = abccPublicQueryPort.preview(requestVO.getExternalId());
         } catch (RuntimeException ex) {
-            throw new BusinessRuleException("abcc", "Não foi possível obter o preview do animal na ABCC pública.");
+            throw new BusinessRuleException("abcc", MSG_PREVIEW_UNAVAILABLE);
         }
 
-        GoatFarm farm = entityFinder.findOrThrow(
-                () -> goatFarmPort.findById(farmId),
-                "Fazenda não encontrada."
-        );
+        String abccTod = trimOrNull(raw.getTod());
+        enforceTodMatchForNonAdmin(isAdmin, farmTod, abccTod);
+
         User currentUser = ownershipService.getCurrentUser();
 
         List<String> warnings = new ArrayList<>();
@@ -157,7 +187,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .color(trimOrNull(raw.getPelagem()))
                 .birthDate(birthDate)
                 .status(status)
-                .tod(trimOrNull(raw.getTod()))
+                .tod(abccTod)
                 .toe(trimOrNull(raw.getToe()))
                 .category(category)
                 .fatherName(trimOrNull(raw.getPaiNome()))
@@ -174,13 +204,226 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     @Override
     @Transactional
     public GoatResponseVO confirm(Long farmId, String externalId, GoatRequestVO goatRequestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
+
         if (isBlank(externalId)) {
             throw new BusinessRuleException("externalId", "Identificador externo da ABCC é obrigatório.");
         }
         if (goatRequestVO == null) {
             throw new BusinessRuleException("goat", "Dados do animal são obrigatórios para confirmar a importação.");
         }
+
+        boolean isAdmin = ownershipService.isCurrentUserAdmin();
+        GoatFarm farm = loadFarm(farmId);
+        String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
+
+        GoatAbccPreviewResponseVO abccPreview = preview(
+                farmId,
+                GoatAbccPreviewRequestVO.builder().externalId(externalId).build()
+        );
+        enforceTodMatchForNonAdmin(isAdmin, farmTod, trimOrNull(abccPreview.getTod()));
+
+        if (!isAdmin && !isSameTod(goatRequestVO.getTod(), farmTod)) {
+            throw new BusinessRuleException(FIELD_TOD, MSG_REQUEST_TOD_MISMATCH);
+        }
+
         return goatManagementUseCase.createGoat(farmId, goatRequestVO);
+    }
+
+    @Override
+    @Transactional
+    public GoatAbccBatchConfirmResponseVO confirmBatch(Long farmId, List<GoatAbccBatchConfirmItemVO> items) {
+        ownershipService.verifyFarmOwnership(farmId);
+
+        if (items == null || items.isEmpty()) {
+            throw new BusinessRuleException("items", "Selecione ao menos um animal da página atual para importar.");
+        }
+
+        boolean isAdmin = ownershipService.isCurrentUserAdmin();
+        GoatFarm farm = loadFarm(farmId);
+        requireFarmTodForNonAdmin(farm, isAdmin);
+
+        List<GoatAbccBatchConfirmItemResultVO> results = new ArrayList<>();
+        int imported = 0;
+        int skippedDuplicate = 0;
+        int skippedTodMismatch = 0;
+        int error = 0;
+
+        for (int index = 0; index < items.size(); index++) {
+            GoatAbccBatchConfirmItemVO item = items.get(index);
+            String externalId = item == null ? null : trimOrNull(item.getExternalId());
+            if (externalId == null) {
+                error++;
+                results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                        .status(STATUS_ERROR)
+                        .message("Item " + (index + 1) + " sem identificador externo válido.")
+                        .build());
+                continue;
+            }
+
+            try {
+                GoatAbccPreviewResponseVO previewVO = preview(
+                        farmId,
+                        GoatAbccPreviewRequestVO.builder().externalId(externalId).build()
+                );
+                GoatRequestVO goatRequestVO = buildGoatRequestFromPreview(previewVO);
+                String registrationNumber = goatRequestVO.getRegistrationNumber();
+
+                if (goatPersistencePort.findByIdAndFarmId(registrationNumber, farmId).isPresent()) {
+                    skippedDuplicate++;
+                    results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                            .externalId(externalId)
+                            .registrationNumber(registrationNumber)
+                            .name(goatRequestVO.getName())
+                            .status(STATUS_SKIPPED_DUPLICATE)
+                            .message("Registro já existente nesta fazenda. Item ignorado por duplicidade.")
+                            .build());
+                    continue;
+                }
+
+                GoatResponseVO created = confirm(farmId, externalId, goatRequestVO);
+                imported++;
+                results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                        .externalId(externalId)
+                        .registrationNumber(created.getRegistrationNumber())
+                        .name(created.getName())
+                        .status(STATUS_IMPORTED)
+                        .message("Animal importado com sucesso.")
+                        .build());
+            } catch (BusinessRuleException ex) {
+                if (isTodMismatchException(ex)) {
+                    skippedTodMismatch++;
+                    results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                            .externalId(externalId)
+                            .status(STATUS_SKIPPED_TOD_MISMATCH)
+                            .message(ex.getMessage())
+                            .build());
+                    continue;
+                }
+
+                error++;
+                results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                        .externalId(externalId)
+                        .status(STATUS_ERROR)
+                        .message(ex.getMessage())
+                        .build());
+            } catch (DuplicateEntityException ex) {
+                error++;
+                results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                        .externalId(externalId)
+                        .status(STATUS_ERROR)
+                        .message("Conflito de registro durante a importação: " + ex.getMessage())
+                        .build());
+            } catch (RuntimeException ex) {
+                error++;
+                results.add(GoatAbccBatchConfirmItemResultVO.builder()
+                        .externalId(externalId)
+                        .status(STATUS_ERROR)
+                        .message("Falha ao importar o item selecionado.")
+                        .build());
+            }
+        }
+
+        return GoatAbccBatchConfirmResponseVO.builder()
+                .totalSelected(items.size())
+                .totalImported(imported)
+                .totalSkippedDuplicate(skippedDuplicate)
+                .totalSkippedTodMismatch(skippedTodMismatch)
+                .totalError(error)
+                .results(results)
+                .build();
+    }
+
+    private GoatFarm loadFarm(Long farmId) {
+        return entityFinder.findOrThrow(
+                () -> goatFarmPort.findById(farmId),
+                "Fazenda não encontrada."
+        );
+    }
+
+    private String requireFarmTodForNonAdmin(GoatFarm farm, boolean isAdmin) {
+        if (isAdmin) {
+            return null;
+        }
+
+        String farmTod = trimOrNull(farm.getTod());
+        if (farmTod == null) {
+            throw new BusinessRuleException(FIELD_TOD, MSG_MISSING_FARM_TOD);
+        }
+        return farmTod;
+    }
+
+    private void enforceTodMatchForNonAdmin(boolean isAdmin, String farmTod, String abccTod) {
+        if (isAdmin) {
+            return;
+        }
+        if (!isSameTod(abccTod, farmTod)) {
+            throw new BusinessRuleException(FIELD_TOD, MSG_TOD_MISMATCH);
+        }
+    }
+
+    private boolean isTodMismatchException(BusinessRuleException ex) {
+        return FIELD_TOD.equals(ex.getFieldName()) && MSG_TOD_MISMATCH.equals(ex.getMessage());
+    }
+
+    private boolean isSameTod(String left, String right) {
+        String normalizedLeft = trimOrNull(left);
+        String normalizedRight = trimOrNull(right);
+        if (normalizedLeft == null || normalizedRight == null) {
+            return false;
+        }
+        return normalizedLeft.equalsIgnoreCase(normalizedRight);
+    }
+
+    private GoatRequestVO buildGoatRequestFromPreview(GoatAbccPreviewResponseVO previewVO) {
+        String registrationNumber = trimOrNull(previewVO.getRegistrationNumber());
+        String name = trimOrNull(previewVO.getName());
+        String color = trimOrNull(previewVO.getColor());
+        String tod = trimOrNull(previewVO.getTod());
+        String toe = trimOrNull(previewVO.getToe());
+
+        if (registrationNumber == null) {
+            throw new BusinessRuleException("registrationNumber", "Registro ABCC ausente para importar este item.");
+        }
+        if (name == null) {
+            throw new BusinessRuleException("name", "Nome ABCC ausente para importar este item.");
+        }
+        if (previewVO.getGender() == null) {
+            throw new BusinessRuleException("gender", "Sexo ABCC não mapeado para importar este item.");
+        }
+        if (previewVO.getBreed() == null) {
+            throw new BusinessRuleException("breed", "Raça ABCC não mapeada para importar este item.");
+        }
+        if (color == null) {
+            throw new BusinessRuleException("color", "Pelagem ABCC ausente para importar este item.");
+        }
+        if (previewVO.getBirthDate() == null) {
+            throw new BusinessRuleException("birthDate", "Data de nascimento ABCC inválida para importar este item.");
+        }
+        if (previewVO.getStatus() == null) {
+            throw new BusinessRuleException("status", "Situação ABCC não mapeada para importar este item.");
+        }
+        if (tod == null) {
+            throw new BusinessRuleException(FIELD_TOD, "TOD ABCC ausente para importar este item.");
+        }
+        if (toe == null) {
+            throw new BusinessRuleException("toe", "TOE ABCC ausente para importar este item.");
+        }
+
+        return GoatRequestVO.builder()
+                .registrationNumber(registrationNumber)
+                .name(name)
+                .gender(previewVO.getGender())
+                .breed(previewVO.getBreed())
+                .color(color)
+                .birthDate(previewVO.getBirthDate())
+                .status(previewVO.getStatus())
+                .tod(tod)
+                .toe(toe)
+                .category(previewVO.getCategory())
+                .fatherRegistrationNumber(trimOrNull(previewVO.getFatherRegistrationNumber()))
+                .motherRegistrationNumber(trimOrNull(previewVO.getMotherRegistrationNumber()))
+                .build();
     }
 
     private void validateSearchRequest(GoatAbccSearchRequestVO requestVO) {

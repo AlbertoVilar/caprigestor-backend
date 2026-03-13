@@ -2,6 +2,8 @@ package com.devmaster.goatfarm.goat.application.ports.in;
 
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
@@ -19,4 +21,6 @@ public interface GoatAbccImportUseCase {
     GoatAbccPreviewResponseVO preview(Long farmId, GoatAbccPreviewRequestVO requestVO);
 
     GoatResponseVO confirm(Long farmId, String externalId, GoatRequestVO goatRequestVO);
+
+    GoatAbccBatchConfirmResponseVO confirmBatch(Long farmId, List<GoatAbccBatchConfirmItemVO> items);
 }

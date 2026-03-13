@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.goat.api.controller;
 
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccConfirmRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewResponseDTO;
@@ -110,5 +112,24 @@ public class GoatAbccImportController {
                 goatMapper.toRequestVO(requestDTO.getGoat())
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(goatMapper.toResponseDTO(created));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PostMapping("/confirm-batch")
+    @Operation(summary = "Confirma importação ABCC em lote para os animais selecionados da página atual")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lote processado com resultado por item e resumo geral."),
+            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para importar nesta fazenda."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação ou regra de negócio.")
+    })
+    public ResponseEntity<GoatAbccBatchConfirmResponseDTO> confirmBatch(
+            @PathVariable("farmId") Long farmId,
+            @Valid @RequestBody GoatAbccBatchConfirmRequestDTO requestDTO
+    ) {
+        var responseVO = goatAbccImportUseCase.confirmBatch(
+                farmId,
+                goatAbccImportMapper.toBatchConfirmItemsVO(requestDTO)
+        );
+        return ResponseEntity.ok(goatAbccImportMapper.toBatchConfirmResponseDTO(responseVO));
     }
 }
