@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.goat.integration.abcc.adapter;
 
+import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
+import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
@@ -24,18 +26,21 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
-public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
+public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, GenealogyAbccQueryPort {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GoatAbccPublicHttpAdapter.class);
     private static final String BASE_URL = "https://siscapri.abccaprinos.com.br";
@@ -121,6 +126,39 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
         } catch (Exception ex) {
             LOGGER.warn("Falha ao carregar preview de genealogia ABCC para externalId={}", externalId, ex);
             throw new RuntimeException("Falha ao carregar preview da ABCC pública.", ex);
+        }
+    }
+
+    @Override
+    public Optional<GenealogyAbccSnapshotVO> findGenealogyByRegistrationNumber(String registrationNumber) {
+        if (isBlank(registrationNumber)) {
+            return Optional.empty();
+        }
+
+        try {
+            HttpClient client = newClient();
+            String searchPage = get(client, SEARCH_PAGE_URL);
+            String viewstate = extractViewstate(searchPage);
+            pause();
+
+            String previewHtml = post(client, PREVIEW_URL, Map.of(
+                    "viewstate", viewstate,
+                    "valueid", registrationNumber.trim()
+            ));
+
+            GenealogyAbccSnapshotVO snapshot = parseGenealogySnapshot(registrationNumber.trim(), previewHtml);
+            if (snapshot == null || isBlank(snapshot.getAnimalRegistrationNumber())) {
+                return Optional.empty();
+            }
+
+            if (!registrationNumber.trim().equalsIgnoreCase(snapshot.getAnimalRegistrationNumber().trim())) {
+                return Optional.empty();
+            }
+
+            return Optional.of(snapshot);
+        } catch (Exception ex) {
+            LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
+            throw new RuntimeException("Falha ao consultar genealogia complementar da ABCC pública.", ex);
         }
     }
 
@@ -267,6 +305,109 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
                 .build();
     }
 
+    private GenealogyAbccSnapshotVO parseGenealogySnapshot(String externalId, String html) {
+        Document document = Jsoup.parse(html);
+        Elements boxes = document.select("div#divArvore div.bordaBox table");
+        if (boxes.isEmpty()) {
+            return null;
+        }
+
+        Map<String, String> principal = parseKeyValues(boxes.getFirst());
+        Map<String, RelativeNode> relatives = parseRelativeNodes(boxes);
+
+        return GenealogyAbccSnapshotVO.builder()
+                .externalId(externalId)
+                .animalName(cleanText(principal.get("Nome")))
+                .animalRegistrationNumber(cleanText(principal.get("Registro")))
+                .fatherName(relName(relatives, "pai"))
+                .fatherRegistrationNumber(relRegistration(relatives, "pai"))
+                .motherName(relName(relatives, "mae"))
+                .motherRegistrationNumber(relRegistration(relatives, "mae"))
+                .paternalGrandfatherName(relName(relatives, "avoPaterno"))
+                .paternalGrandfatherRegistrationNumber(relRegistration(relatives, "avoPaterno"))
+                .paternalGrandmotherName(relName(relatives, "avoPaterna"))
+                .paternalGrandmotherRegistrationNumber(relRegistration(relatives, "avoPaterna"))
+                .maternalGrandfatherName(relName(relatives, "avoMaterno"))
+                .maternalGrandfatherRegistrationNumber(relRegistration(relatives, "avoMaterno"))
+                .maternalGrandmotherName(relName(relatives, "avoMaterna"))
+                .maternalGrandmotherRegistrationNumber(relRegistration(relatives, "avoMaterna"))
+                .bisavoPaternoPaiName(relName(relatives, "bisavoPaternoPai"))
+                .bisavoPaternoPaiRegistrationNumber(relRegistration(relatives, "bisavoPaternoPai"))
+                .bisavoPaternaPaiName(relName(relatives, "bisavoPaternaPai"))
+                .bisavoPaternaPaiRegistrationNumber(relRegistration(relatives, "bisavoPaternaPai"))
+                .bisavoPaternoMaeName(relName(relatives, "bisavoPaternoMae"))
+                .bisavoPaternoMaeRegistrationNumber(relRegistration(relatives, "bisavoPaternoMae"))
+                .bisavoPaternaMaeName(relName(relatives, "bisavoPaternaMae"))
+                .bisavoPaternaMaeRegistrationNumber(relRegistration(relatives, "bisavoPaternaMae"))
+                .bisavoMaternoPaiName(relName(relatives, "bisavoMaternoPai"))
+                .bisavoMaternoPaiRegistrationNumber(relRegistration(relatives, "bisavoMaternoPai"))
+                .bisavoMaternaPaiName(relName(relatives, "bisavoMaternaPai"))
+                .bisavoMaternaPaiRegistrationNumber(relRegistration(relatives, "bisavoMaternaPai"))
+                .bisavoMaternoMaeName(relName(relatives, "bisavoMaternoMae"))
+                .bisavoMaternoMaeRegistrationNumber(relRegistration(relatives, "bisavoMaternoMae"))
+                .bisavoMaternaMaeName(relName(relatives, "bisavoMaternaMae"))
+                .bisavoMaternaMaeRegistrationNumber(relRegistration(relatives, "bisavoMaternaMae"))
+                .build();
+    }
+
+    private Map<String, RelativeNode> parseRelativeNodes(Elements boxes) {
+        Map<String, RelativeNode> relatives = new HashMap<>();
+
+        for (int i = 1; i < boxes.size(); i++) {
+            Map<String, String> relative = parseKeyValues(boxes.get(i));
+            String relationship = normalizeRelationship(relative.get("Parentesco"));
+            if (relationship == null) {
+                continue;
+            }
+
+            relatives.put(relationship, new RelativeNode(
+                    cleanText(relative.get("Nome")),
+                    cleanText(relative.get("Registro"))
+            ));
+        }
+
+        return relatives;
+    }
+
+    private String normalizeRelationship(String rawValue) {
+        String token = normalizeToken(rawValue)
+                .replaceAll("[^a-z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (token.isEmpty()) {
+            return null;
+        }
+
+        return switch (token) {
+            case "pai" -> "pai";
+            case "mae" -> "mae";
+            case "avo paterno" -> "avoPaterno";
+            case "avo paterna" -> "avoPaterna";
+            case "avo materno" -> "avoMaterno";
+            case "avo materna" -> "avoMaterna";
+            case "bisavo paterno pai" -> "bisavoPaternoPai";
+            case "bisavo paterna pai" -> "bisavoPaternaPai";
+            case "bisavo paterno mae" -> "bisavoPaternoMae";
+            case "bisavo paterna mae" -> "bisavoPaternaMae";
+            case "bisavo materno pai" -> "bisavoMaternoPai";
+            case "bisavo materna pai" -> "bisavoMaternaPai";
+            case "bisavo materno mae" -> "bisavoMaternoMae";
+            case "bisavo materna mae" -> "bisavoMaternaMae";
+            default -> null;
+        };
+    }
+
+    private String relName(Map<String, RelativeNode> relatives, String key) {
+        RelativeNode node = relatives.get(key);
+        return node == null ? null : node.name();
+    }
+
+    private String relRegistration(Map<String, RelativeNode> relatives, String key) {
+        RelativeNode node = relatives.get(key);
+        return node == null ? null : node.registrationNumber();
+    }
+
     private Map<String, String> parseKeyValues(Element table) {
         Map<String, String> values = new HashMap<>();
         for (Element row : table.select("tr")) {
@@ -384,13 +525,20 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort {
         return normalized.isEmpty() ? null : normalized;
     }
 
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     private String normalizeToken(String value) {
         if (value == null) {
             return "";
         }
-        return java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .trim()
-                .toLowerCase(java.util.Locale.ROOT);
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private record RelativeNode(String name, String registrationNumber) {
     }
 }
