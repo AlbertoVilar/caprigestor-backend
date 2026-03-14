@@ -11,15 +11,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class GoatAbccSearchRequestVO {
+public class GoatAbccBatchConfirmItemResultVO {
 
-    private Integer raceId;
-    private String raceName;
-    private String affix;
-    private Integer page;
-    private String sex;
-    private String tod;
-    private String toe;
+    private String externalId;
+    private String registrationNumber;
     private String name;
-    private String dna;
+    private String status;
+    private String message;
 }

@@ -1,7 +1,12 @@
 package com.devmaster.goatfarm.genealogy.api.controller;
 
-import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyComplementaryQueryUseCase;
+import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCase;
+import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryIntegrationVO;
+import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryNodeVO;
+import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryResponseVO;
+import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +33,9 @@ public class GenealogyControllerTest {
     @MockBean
     private GenealogyQueryUseCase genealogyQueryUseCase;
 
+    @MockBean
+    private GenealogyComplementaryQueryUseCase genealogyComplementaryQueryUseCase;
+
     @Test
     void shouldReturnGenealogy_WhenGoatExists() throws Exception {
         GenealogyResponseVO responseVO = GenealogyResponseVO.builder()
@@ -45,6 +53,40 @@ public class GenealogyControllerTest {
     }
 
     @Test
+    void shouldReturnComplementaryGenealogy_WhenRequestedByQueryParam() throws Exception {
+        GenealogyComplementaryResponseVO responseVO = GenealogyComplementaryResponseVO.builder()
+                .animalPrincipal(GenealogyComplementaryNodeVO.builder()
+                        .relationship("animalPrincipal")
+                        .name("Test Goat")
+                        .registrationNumber("123")
+                        .source(GenealogyNodeSource.LOCAL)
+                        .localGoatId("123")
+                        .build())
+                .pai(GenealogyComplementaryNodeVO.builder()
+                        .relationship("pai")
+                        .name("Pai ABCC")
+                        .registrationNumber("999")
+                        .source(GenealogyNodeSource.ABCC)
+                        .build())
+                .integration(GenealogyComplementaryIntegrationVO.builder()
+                        .status("FOUND")
+                        .lookupKey("registrationNumber")
+                        .message("Genealogia complementar ABCC carregada com sucesso.")
+                        .build())
+                .build();
+
+        when(genealogyComplementaryQueryUseCase.findComplementaryGenealogy(anyLong(), anyString()))
+                .thenReturn(responseVO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/123/genealogies?complementaryAbcc=true")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.animalPrincipal.registrationNumber").value("123"))
+                .andExpect(jsonPath("$.pai.source").value("ABCC"))
+                .andExpect(jsonPath("$.integration.status").value("FOUND"));
+    }
+
+    @Test
     void shouldReturn404_WhenGoatNotFound() throws Exception {
         when(genealogyQueryUseCase.findGenealogy(anyLong(), anyString()))
                 .thenThrow(new ResourceNotFoundException("Not Found"));
@@ -54,5 +96,3 @@ public class GenealogyControllerTest {
                 .andExpect(status().isNotFound());
     }
 }
-
-
