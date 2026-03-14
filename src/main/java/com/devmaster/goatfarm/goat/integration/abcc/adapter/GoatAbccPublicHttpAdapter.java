@@ -136,30 +136,98 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
         }
 
         try {
+            String registrationLookup = normalizeRegistration(registrationNumber);
             HttpClient client = newClient();
             String searchPage = get(client, SEARCH_PAGE_URL);
             String viewstate = extractViewstate(searchPage);
             pause();
 
-            String previewHtml = post(client, PREVIEW_URL, Map.of(
-                    "viewstate", viewstate,
-                    "valueid", registrationNumber.trim()
-            ));
+            Optional<GenealogyAbccSnapshotVO> directByRegistration = loadSnapshotByValueId(
+                    client,
+                    viewstate,
+                    registrationNumber.trim(),
+                    registrationLookup
+            );
+            if (directByRegistration.isPresent()) {
+                return directByRegistration;
+            }
 
-            GenealogyAbccSnapshotVO snapshot = parseGenealogySnapshot(registrationNumber.trim(), previewHtml);
-            if (snapshot == null || isBlank(snapshot.getAnimalRegistrationNumber())) {
+            Optional<String> externalId = findExternalIdByRegistration(client, viewstate, registrationNumber.trim());
+            if (externalId.isEmpty()) {
                 return Optional.empty();
             }
 
-            if (!registrationNumber.trim().equalsIgnoreCase(snapshot.getAnimalRegistrationNumber().trim())) {
-                return Optional.empty();
-            }
-
-            return Optional.of(snapshot);
+            pause();
+            return loadSnapshotByValueId(client, viewstate, externalId.get(), registrationLookup);
         } catch (Exception ex) {
             LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
             throw new RuntimeException("Falha ao consultar genealogia complementar da ABCC pública.", ex);
         }
+    }
+
+    private Optional<String> findExternalIdByRegistration(
+            HttpClient client,
+            String viewstate,
+            String registrationNumber
+    ) throws IOException, InterruptedException {
+        String normalized = normalizeRegistration(registrationNumber);
+        if (isBlank(normalized) || normalized.length() < 10) {
+            return Optional.empty();
+        }
+
+        String tod = normalized.substring(0, 5);
+        String toe = normalized.substring(5);
+
+        Map<String, String> payload = new LinkedHashMap<>();
+        payload.put("viewstate", viewstate);
+        payload.put("i_keyword_0", "");
+        payload.put("i_keyword_2", "");
+        payload.put("i_keyword_6", "");
+        payload.put("i_keyword_1", tod);
+        payload.put("i_keyword_3", toe);
+        payload.put("i_keyword_5", "");
+        payload.put("i_keyword_4", "");
+
+        String resultHtml = post(client, SEARCH_URL, payload);
+        GoatAbccRawSearchResultVO searchResult = parseSearchResult(resultHtml);
+        if (searchResult.getItems() == null || searchResult.getItems().isEmpty()) {
+            return Optional.empty();
+        }
+
+        return searchResult.getItems().stream()
+                .filter(item -> normalizeRegistration(item.getTod()).equals(tod))
+                .filter(item -> normalizeRegistration(item.getToe()).equals(toe))
+                .map(item -> cleanText(item.getExternalId()))
+                .filter(Objects::nonNull)
+                .findFirst();
+    }
+
+    private Optional<GenealogyAbccSnapshotVO> loadSnapshotByValueId(
+            HttpClient client,
+            String viewstate,
+            String valueId,
+            String expectedRegistration
+    ) throws IOException, InterruptedException {
+        if (isBlank(valueId)) {
+            return Optional.empty();
+        }
+
+        String previewHtml = post(client, PREVIEW_URL, Map.of(
+                "viewstate", viewstate,
+                "valueid", valueId.trim()
+        ));
+
+        GenealogyAbccSnapshotVO snapshot = parseGenealogySnapshot(valueId.trim(), previewHtml);
+        if (snapshot == null || isBlank(snapshot.getAnimalRegistrationNumber())) {
+            return Optional.empty();
+        }
+
+        String returnedRegistration = normalizeRegistration(snapshot.getAnimalRegistrationNumber());
+        if (!isBlank(expectedRegistration) && !expectedRegistration.equals(returnedRegistration)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(snapshot);
     }
 
     private HttpClient newClient() {
@@ -352,10 +420,11 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
 
     private Map<String, RelativeNode> parseRelativeNodes(Elements boxes) {
         Map<String, RelativeNode> relatives = new HashMap<>();
+        Map<String, Integer> repeatedRelationshipCounter = new HashMap<>();
 
         for (int i = 1; i < boxes.size(); i++) {
             Map<String, String> relative = parseKeyValues(boxes.get(i));
-            String relationship = normalizeRelationship(relative.get("Parentesco"));
+            String relationship = normalizeRelationship(relative.get("Parentesco"), repeatedRelationshipCounter);
             if (relationship == null) {
                 continue;
             }
@@ -369,7 +438,7 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
         return relatives;
     }
 
-    private String normalizeRelationship(String rawValue) {
+    private String normalizeRelationship(String rawValue, Map<String, Integer> repeatedRelationshipCounter) {
         String token = normalizeToken(rawValue)
                 .replaceAll("[^a-z0-9 ]", " ")
                 .replaceAll("\\s+", " ")
@@ -394,8 +463,42 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
             case "bisavo materna pai" -> "bisavoMaternaPai";
             case "bisavo materno mae" -> "bisavoMaternoMae";
             case "bisavo materna mae" -> "bisavoMaternaMae";
+            case "bisavo paterno" -> selectRepeatedBisavoKey(
+                    "bisavo paterno",
+                    "bisavoPaternoPai",
+                    "bisavoPaternoMae",
+                    repeatedRelationshipCounter
+            );
+            case "bisavo paterna" -> selectRepeatedBisavoKey(
+                    "bisavo paterna",
+                    "bisavoPaternaPai",
+                    "bisavoPaternaMae",
+                    repeatedRelationshipCounter
+            );
+            case "bisavo materno" -> selectRepeatedBisavoKey(
+                    "bisavo materno",
+                    "bisavoMaternoPai",
+                    "bisavoMaternoMae",
+                    repeatedRelationshipCounter
+            );
+            case "bisavo materna" -> selectRepeatedBisavoKey(
+                    "bisavo materna",
+                    "bisavoMaternaPai",
+                    "bisavoMaternaMae",
+                    repeatedRelationshipCounter
+            );
             default -> null;
         };
+    }
+
+    private String selectRepeatedBisavoKey(
+            String counterKey,
+            String firstOccurrenceKey,
+            String secondOccurrenceKey,
+            Map<String, Integer> repeatedRelationshipCounter
+    ) {
+        int occurrence = repeatedRelationshipCounter.merge(counterKey, 1, Integer::sum);
+        return occurrence <= 1 ? firstOccurrenceKey : secondOccurrenceKey;
     }
 
     private String relName(Map<String, RelativeNode> relatives, String key) {
@@ -527,6 +630,19 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String normalizeRegistration(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String digits = value.replaceAll("\\D", "");
+        if (!digits.isEmpty()) {
+            return digits;
+        }
+
+        return value.trim();
     }
 
     private String normalizeToken(String value) {
