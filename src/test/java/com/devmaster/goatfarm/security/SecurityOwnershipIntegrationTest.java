@@ -313,6 +313,10 @@ public class SecurityOwnershipIntegrationTest {
         mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/genealogies"))
                 .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
+                + "/goats/" + ownerGoat.getRegistrationNumber() + "/genealogies")
+                .queryParam("complementaryAbcc", "true"))
+                .andExpect(status().isOk());
     }
 
     @Test
