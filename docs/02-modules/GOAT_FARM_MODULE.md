@@ -67,6 +67,29 @@ Regras de decisão por item no lote:
 - Item válido -> `IMPORTED`
 - Falha técnica/validação residual -> `ERROR`
 
+## Genealogia complementar ABCC (somente leitura)
+- Objetivo: complementar a árvore genealógica de um animal já cadastrado no CapriGestor usando dados públicos da ABCC.
+- Escopo:
+  - Somente consulta e exibição.
+  - Não persiste ancestrais externos.
+  - Não cria novos animais no rebanho.
+  - Não altera o fluxo patrimonial de importação ABCC.
+- Consulta:
+  - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
+  - Mantém o endpoint local atual sem alteração de contrato quando `complementaryAbcc` não é informado.
+- Chave de lookup ABCC:
+  - `registrationNumber` do animal local.
+  - Sem fallback por nome.
+- Status de integração:
+  - `FOUND`
+  - `NOT_FOUND`
+  - `UNAVAILABLE`
+  - `INSUFFICIENT_DATA`
+- Origem dos nós da árvore híbrida:
+  - `LOCAL`
+  - `ABCC`
+  - `AUSENTE`
+
 ## Compatibilidade temporária
 - As rotas legadas em `/api/...` continuam ativas por compatibilidade.
 - Essas rotas são **DEPRECATED** e devem ser removidas após 2026-06-30.
