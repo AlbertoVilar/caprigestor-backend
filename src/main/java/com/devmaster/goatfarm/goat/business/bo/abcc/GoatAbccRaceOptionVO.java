@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.goat.business.bo.abcc;
 
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,15 +12,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class GoatAbccSearchRequestVO {
+public class GoatAbccRaceOptionVO {
 
-    private Integer raceId;
-    private String raceName;
-    private String affix;
-    private Integer page;
-    private String sex;
-    private String tod;
-    private String toe;
+    private Integer id;
     private String name;
-    private String dna;
+    private GoatBreed normalizedBreed;
 }

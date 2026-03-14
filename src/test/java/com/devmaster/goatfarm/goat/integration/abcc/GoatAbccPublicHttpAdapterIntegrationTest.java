@@ -14,8 +14,17 @@ class GoatAbccPublicHttpAdapterIntegrationTest {
     void shouldSearchAndPreviewUsingRealAbccPublicService() {
         GoatAbccPublicHttpAdapter adapter = new GoatAbccPublicHttpAdapter();
 
+        var raceOptions = adapter.listRaces();
+        assertThat(raceOptions).isNotEmpty();
+
+        Integer raceId = raceOptions.stream()
+                .filter(option -> "SAANEN".equalsIgnoreCase(option.getName()))
+                .map(option -> option.getId())
+                .findFirst()
+                .orElse(9);
+
         var searchResult = adapter.search(GoatAbccSearchRequestVO.builder()
-                .raceId(9)
+                .raceId(raceId)
                 .affix("CRS")
                 .page(1)
                 .build());
