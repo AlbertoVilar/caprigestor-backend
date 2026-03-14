@@ -77,6 +77,10 @@ Regras de decisão por item no lote:
 - Consulta:
   - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
   - Mantém o endpoint local atual sem alteração de contrato quando `complementaryAbcc` não é informado.
+- Segurança e publicidade:
+  - Fluxo público de leitura, seguindo a mesma política pública da genealogia local.
+  - Não aplica regra patrimonial de TOD da importação ABCC.
+  - Não exige posse dos ancestrais externos para exibição da árvore.
 - Chave de lookup ABCC:
   - `registrationNumber` do animal local.
   - Sem fallback por nome.
