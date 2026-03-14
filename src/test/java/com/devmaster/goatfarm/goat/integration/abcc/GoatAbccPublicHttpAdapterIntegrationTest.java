@@ -40,6 +40,11 @@ class GoatAbccPublicHttpAdapterIntegrationTest {
         assertThat(preview.getExternalId()).isEqualTo(externalId);
         assertThat(preview.getNome()).isNotBlank();
         assertThat(preview.getRegistro()).isNotBlank();
+
+        var complementary = adapter.findGenealogyByRegistrationNumber(preview.getRegistro());
+        assertThat(complementary).isPresent();
+        assertThat(complementary.get().getAnimalRegistrationNumber()).isNotBlank();
+        assertThat(complementary.get().getFatherName()).isNotBlank();
     }
 }
 
