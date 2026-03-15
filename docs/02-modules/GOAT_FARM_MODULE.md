@@ -10,6 +10,18 @@ Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migra�
 - Cadastrar, consultar, atualizar e remover cabras vinculadas a uma fazenda.
 - Importar cabras da ABCC pública de forma opcional, sem obrigar o cadastro manual a depender da ABCC.
 
+## Regra de bloqueio operacional por status do animal
+- Animais com status diferente de `ATIVO` não podem sofrer escrita operacional.
+- A regra é aplicada em:
+  - reprodução
+  - lactação
+  - produção de leite
+  - sanidade
+- Mensagem de negócio padrão:
+  - `Apenas cabras com status ATIVO podem ser manipuladas. Status atual: <STATUS>`
+- Leitura e histórico continuam permitidos.
+- A correção cadastral do próprio animal (incluindo eventual ajuste de status) não faz parte desse bloqueio operacional.
+
 ## Rotas canônicas
 Fazenda:
 - `POST /api/v1/goatfarms`

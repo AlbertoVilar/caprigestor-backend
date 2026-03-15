@@ -76,7 +76,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional
     public ReproductiveEventResponseVO registerBreeding(Long farmId, String goatId, BreedingRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getEventDate() == null) {
             throw new InvalidArgumentException("eventDate", "Data do evento é obrigatória");
         }
@@ -121,7 +121,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional
     public ReproductiveEventResponseVO correctCoverage(Long farmId, String goatId, Long coverageEventId, CoverageCorrectionRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (coverageEventId == null || coverageEventId <= 0) {
             throw new InvalidArgumentException("coverageEventId", "Identificador de cobertura inválido");
         }
@@ -169,7 +169,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getCheckDate() == null) {
             throw new InvalidArgumentException("checkDate", "Data do exame de gestação é obrigatória");
         }
@@ -244,7 +244,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
     public ReproductiveEventResponseVO registerPregnancyCheck(Long farmId, String goatId, PregnancyCheckRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getCheckDate() == null) {
             throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez é obrigatória");
         }
@@ -313,7 +313,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional(noRollbackFor = {InvalidArgumentException.class, DuplicateEntityException.class})
     public PregnancyResponseVO closePregnancy(Long farmId, String goatId, Long pregnancyId, PregnancyCloseRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
 
