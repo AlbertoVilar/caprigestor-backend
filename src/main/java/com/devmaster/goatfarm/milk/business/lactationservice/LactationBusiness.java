@@ -59,7 +59,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
              throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
         }
@@ -82,7 +82,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO dryLactation(Long farmId, String goatId, Long lactationId, LactationDryRequestVO vo) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra"));
 

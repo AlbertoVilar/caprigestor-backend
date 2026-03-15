@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
@@ -27,17 +28,20 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
     private final HealthEventPersistencePort persistencePort;
     private final GoatPersistencePort goatPersistencePort;
+    private final GoatGenderValidator goatGenderValidator;
     private final HealthEventBusinessMapper mapper;
     private final EntityFinder entityFinder;
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
             GoatPersistencePort goatPersistencePort,
+            GoatGenderValidator goatGenderValidator,
             HealthEventBusinessMapper mapper,
             EntityFinder entityFinder
     ) {
         this.persistencePort = persistencePort;
         this.goatPersistencePort = goatPersistencePort;
+        this.goatGenderValidator = goatGenderValidator;
         this.mapper = mapper;
         this.entityFinder = entityFinder;
     }
@@ -46,11 +50,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
         // Controle de acesso deve ser feito no Controller via OwnershipService.canManageFarm(farmId)
-
-        entityFinder.findOrThrow(
-                () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
-                "Cabra não encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
-        );
+        goatGenderValidator.requireActive(farmId, goatId);
 
         var entity = mapper.toEntity(request);
         entity.setFarmId(farmId);
@@ -66,6 +66,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO update(Long farmId, String goatId, Long eventId, HealthEventUpdateRequestVO request) {
+        goatGenderValidator.requireActive(farmId, goatId);
         var healthEvent = findEventOrThrow(farmId, goatId, eventId);
 
         // Regra de negócio: só pode editar enquanto estiver AGENDADO
@@ -82,6 +83,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO markAsDone(Long farmId, String goatId, Long eventId, HealthEventDoneRequestVO request) {
+        goatGenderValidator.requireActive(farmId, goatId);
         var healthEvent = findEventOrThrow(farmId, goatId, eventId);
 
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
@@ -102,6 +104,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO cancel(Long farmId, String goatId, Long eventId, HealthEventCancelRequestVO request) {
+        goatGenderValidator.requireActive(farmId, goatId);
         var healthEvent = findEventOrThrow(farmId, goatId, eventId);
 
         if (healthEvent.getStatus() != HealthEventStatus.AGENDADO) {
@@ -120,6 +123,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO reopen(Long farmId, String goatId, Long eventId) {
+        goatGenderValidator.requireActive(farmId, goatId);
         var healthEvent = findEventOrThrow(farmId, goatId, eventId);
         HealthEventStatus currentStatus = healthEvent.getStatus();
 
