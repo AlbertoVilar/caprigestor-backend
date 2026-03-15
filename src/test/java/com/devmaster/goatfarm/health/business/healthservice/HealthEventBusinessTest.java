@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
@@ -13,7 +14,6 @@ import com.devmaster.goatfarm.health.business.bo.HealthEventUpdateRequestVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,16 +21,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class HealthEventBusinessTest {
@@ -40,31 +42,33 @@ class HealthEventBusinessTest {
     @Mock
     private GoatPersistencePort goatPersistencePort;
     @Mock
+    private GoatGenderValidator goatGenderValidator;
+    @Mock
     private HealthEventBusinessMapper mapper;
 
     private HealthEventBusiness healthEventBusiness;
 
-    private Long farmId = 1L;
-    private String goatId = "goat-123";
-    private Long eventId = 100L;
+    private final Long farmId = 1L;
+    private final String goatId = "goat-123";
+    private final Long eventId = 100L;
     private HealthEvent healthEvent;
-    private Goat goat;
 
     @BeforeEach
     void setUp() {
         EntityFinder entityFinder = new EntityFinder();
-        healthEventBusiness = new HealthEventBusiness(persistencePort, goatPersistencePort, mapper, entityFinder);
+        healthEventBusiness = new HealthEventBusiness(
+                persistencePort,
+                goatPersistencePort,
+                goatGenderValidator,
+                mapper,
+                entityFinder
+        );
 
         healthEvent = new HealthEvent();
         healthEvent.setId(eventId);
         healthEvent.setFarmId(farmId);
         healthEvent.setGoatId(goatId);
         healthEvent.setStatus(HealthEventStatus.AGENDADO);
-
-        goat = new Goat();
-        goat.setRegistrationNumber(goatId);
-        goat.setFarm(new com.devmaster.goatfarm.farm.persistence.entity.GoatFarm());
-        goat.getFarm().setId(farmId);
     }
 
     @Test
@@ -72,7 +76,6 @@ class HealthEventBusinessTest {
     void create_success() {
         HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
 
-        when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.of(goat));
         when(mapper.toEntity(request)).thenReturn(healthEvent);
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
@@ -80,7 +83,7 @@ class HealthEventBusinessTest {
         HealthEventResponseVO response = healthEventBusiness.create(farmId, goatId, request);
 
         assertNotNull(response);
-        verify(goatPersistencePort).findByIdAndFarmId(goatId, farmId);
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -89,13 +92,34 @@ class HealthEventBusinessTest {
     void create_fail_goatNotFound() {
         HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
 
-        when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.empty());
+        doThrow(new ResourceNotFoundException("Cabra não encontrada no capril informado."))
+                .when(goatGenderValidator)
+                .requireActive(farmId, goatId);
 
         assertThrows(ResourceNotFoundException.class, () ->
-            healthEventBusiness.create(farmId, goatId, request)
+                healthEventBusiness.create(farmId, goatId, request)
         );
 
         verify(persistencePort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should fail to create when goat is not active")
+    void create_fail_goatNotActive() {
+        HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
+
+        doThrow(new BusinessRuleException("status", "Apenas cabras com status ATIVO podem ser manipuladas. Status atual: VENDIDO"))
+                .when(goatGenderValidator)
+                .requireActive(farmId, goatId);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () ->
+                healthEventBusiness.create(farmId, goatId, request)
+        );
+
+        assertNotNull(ex.getMessage());
+        org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("ATIVO"));
+        verify(persistencePort, never()).save(any());
+        verify(mapper, never()).toEntity(any());
     }
 
     @Test
@@ -110,6 +134,7 @@ class HealthEventBusinessTest {
         HealthEventResponseVO response = healthEventBusiness.update(farmId, goatId, eventId, request);
 
         assertNotNull(response);
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(mapper).updateEntity(healthEvent, request);
         verify(persistencePort).save(healthEvent);
     }
@@ -123,9 +148,10 @@ class HealthEventBusinessTest {
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
 
         assertThrows(BusinessRuleException.class, () ->
-            healthEventBusiness.update(farmId, goatId, eventId, request)
+                healthEventBusiness.update(farmId, goatId, eventId, request)
         );
 
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort, never()).save(any());
     }
 
@@ -137,15 +163,17 @@ class HealthEventBusinessTest {
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-            healthEventBusiness.update(farmId, goatId, eventId, request)
+                healthEventBusiness.update(farmId, goatId, eventId, request)
         );
+
+        verify(goatGenderValidator).requireActive(farmId, goatId);
     }
 
     @Test
     @DisplayName("Should mark health event as done successfully")
     void markAsDone_success() {
         HealthEventDoneRequestVO request = HealthEventDoneRequestVO.builder().build();
-        
+
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
@@ -153,6 +181,7 @@ class HealthEventBusinessTest {
         HealthEventResponseVO response = healthEventBusiness.markAsDone(farmId, goatId, eventId, request);
 
         assertNotNull(response);
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -165,9 +194,10 @@ class HealthEventBusinessTest {
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
 
         assertThrows(BusinessRuleException.class, () ->
-            healthEventBusiness.markAsDone(farmId, goatId, eventId, request)
+                healthEventBusiness.markAsDone(farmId, goatId, eventId, request)
         );
 
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort, never()).save(any());
     }
 
@@ -175,7 +205,7 @@ class HealthEventBusinessTest {
     @DisplayName("Should cancel health event successfully")
     void cancel_success() {
         HealthEventCancelRequestVO request = HealthEventCancelRequestVO.builder().build();
-        
+
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
         when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
@@ -183,6 +213,7 @@ class HealthEventBusinessTest {
         HealthEventResponseVO response = healthEventBusiness.cancel(farmId, goatId, eventId, request);
 
         assertNotNull(response);
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -201,6 +232,7 @@ class HealthEventBusinessTest {
         assertNotNull(response);
         assertEquals(HealthEventStatus.AGENDADO, healthEvent.getStatus());
         assertNull(healthEvent.getPerformedAt());
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -219,6 +251,7 @@ class HealthEventBusinessTest {
         assertNotNull(response);
         assertEquals(HealthEventStatus.AGENDADO, healthEvent.getStatus());
         assertNull(healthEvent.getPerformedAt());
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -230,9 +263,10 @@ class HealthEventBusinessTest {
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
 
         assertThrows(BusinessRuleException.class, () ->
-            healthEventBusiness.reopen(farmId, goatId, eventId)
+                healthEventBusiness.reopen(farmId, goatId, eventId)
         );
 
+        verify(goatGenderValidator).requireActive(farmId, goatId);
         verify(persistencePort, never()).save(any());
     }
 }
