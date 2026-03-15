@@ -56,7 +56,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             String goatId,
             MilkProductionRequestVO requestVO
     ) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         //=======================
         // *** VALIDAÇÃO *** //
         //=======================
@@ -90,7 +90,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             Long id,
             MilkProductionUpdateRequestVO request
     ) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
         if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
@@ -125,7 +125,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     @Override
     public void delete(Long farmId, String goatId, Long id) {
-        goatGenderValidator.requireFemale(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
 
