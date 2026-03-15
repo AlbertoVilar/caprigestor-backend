@@ -55,6 +55,7 @@ Rotas canônicas:
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/preview`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
 
 Paginação atual:
 - As listagens continuam retornando `Page` do Spring (`content`, `totalElements`, `number`, etc.) para preservar compatibilidade com o frontend já publicado.
@@ -63,6 +64,14 @@ Importação ABCC:
 - Feature opcional do módulo Goat.
 - Não substitui nem deprecia o cadastro manual.
 - O endpoint `confirm` reutiliza internamente as regras de criação manual de cabra para evitar duplicação de domínio.
+
+Genealogia complementar ABCC:
+- Consulta pública e `read-only` para complementar a genealogia do animal local.
+- Não persiste ancestrais externos e não cria novo `Goat`.
+- Não aplica regra patrimonial de TOD da importação ABCC.
+- Lookup principal por `registrationNumber`, sem fallback por nome.
+- Status de integração: `FOUND`, `NOT_FOUND`, `UNAVAILABLE`, `INSUFFICIENT_DATA`.
+
 
 ### Reproduction (gestação e alertas)
 Rotas canônicas:

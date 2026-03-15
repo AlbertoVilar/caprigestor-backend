@@ -1,5 +1,5 @@
 ﻿# GOAT_FARM_MODULE
-Última atualização: 2026-03-13
+Última atualização: 2026-03-15
 Escopo: contratos e bordas HTTP do módulo base de Fazendas e Cabras (Goat/Farm).
 Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Padrão Market-Grade](../01-architecture/MODULE_STANDARD_MARKET_GRADE.md)
 
@@ -93,6 +93,14 @@ Regras de decisão por item no lote:
   - `LOCAL`
   - `ABCC`
   - `AUSENTE`
+
+## Resumo oficial da entrega — Genealogia complementar ABCC
+- Feature pública preservada, alinhada ao fluxo público de genealogia do produto.
+- Consulta complementar em modo `read-only`, sem persistência de ancestrais externos.
+- Sem criação de novo `Goat` e sem impacto patrimonial no rebanho.
+- Separação explícita da importação patrimonial ABCC (que continua com regra de TOD).
+- Árvore híbrida local + ABCC com origem por nó (`LOCAL`, `ABCC`, `AUSENTE`).
+- Lookup principal na ABCC por `registrationNumber`, sem heurística fraca por nome.
 
 ## Compatibilidade temporária
 - As rotas legadas em `/api/...` continuam ativas por compatibilidade.
