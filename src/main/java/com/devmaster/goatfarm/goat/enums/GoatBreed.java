@@ -50,6 +50,10 @@ public enum GoatBreed {
         }
 
         String token = normalizeToken(value);
+        if ("ALPINE".equals(token)) {
+            return ALPINA;
+        }
+
         for (GoatBreed breed : GoatBreed.values()) {
             if (normalizeToken(breed.portugueseValue).equals(token)
                     || normalizeToken(breed.name()).equals(token)
