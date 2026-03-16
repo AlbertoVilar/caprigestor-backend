@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
@@ -45,6 +46,16 @@ public class Goat {
         @Enumerated(EnumType.STRING)
         @Column(name = "status", nullable = false, length = 15)
         private GoatStatus status;
+
+        @Enumerated(EnumType.STRING)
+        @Column(name = "exit_type", length = 30)
+        private GoatExitType exitType;
+
+        @Column(name = "exit_date")
+        private LocalDate exitDate;
+
+        @Column(name = "exit_notes", length = 500)
+        private String exitNotes;
 
         @Column(name = "tod", length = 15)
         private String tod;
@@ -96,6 +107,15 @@ public class Goat {
     
     public GoatStatus getStatus() { return status; }
     public void setStatus(GoatStatus status) { this.status = status; }
+
+    public GoatExitType getExitType() { return exitType; }
+    public void setExitType(GoatExitType exitType) { this.exitType = exitType; }
+
+    public LocalDate getExitDate() { return exitDate; }
+    public void setExitDate(LocalDate exitDate) { this.exitDate = exitDate; }
+
+    public String getExitNotes() { return exitNotes; }
+    public void setExitNotes(String exitNotes) { this.exitNotes = exitNotes; }
     
     public String getTod() { return tod; }
     public void setTod(String tod) { this.tod = tod; }

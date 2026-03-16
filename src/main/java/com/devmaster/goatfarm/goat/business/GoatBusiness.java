@@ -1,11 +1,15 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
@@ -14,6 +18,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
@@ -24,6 +29,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -89,6 +95,57 @@ public class GoatBusiness implements GoatManagementUseCase {
         
         Goat updatedGoat = goatPort.save(goatToUpdate);
         return goatBusinessMapper.toResponseVO(updatedGoat);
+    }
+
+    @Transactional
+    public GoatExitResponseVO exitGoat(Long farmId, String goatId, GoatExitRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
+
+        Goat goat = entityFinder.findOrThrow(
+                () -> goatPort.findByIdAndFarmId(goatId, farmId),
+                "Cabra nao encontrada nesta fazenda."
+        );
+
+        if (requestVO.getExitType() == null) {
+            throw new InvalidArgumentException("exitType", "Tipo de saida e obrigatorio");
+        }
+        if (requestVO.getExitDate() == null) {
+            throw new InvalidArgumentException("exitDate", "Data de saida e obrigatoria");
+        }
+        if (requestVO.getExitDate().isAfter(LocalDate.now())) {
+            throw new InvalidArgumentException("exitDate", "Data de saida nao pode ser futura");
+        }
+        if (goat.getBirthDate() != null && requestVO.getExitDate().isBefore(goat.getBirthDate())) {
+            throw new InvalidArgumentException("exitDate", "Data de saida nao pode ser anterior a data de nascimento");
+        }
+        if (goat.getStatus() != GoatStatus.ATIVO) {
+            throw new BusinessRuleException(
+                    "status",
+                    "A saida controlada so e permitida para animais com status ATIVO. Status atual: " + goat.getStatus()
+            );
+        }
+        if (goat.getExitType() != null || goat.getExitDate() != null) {
+            throw new BusinessRuleException("exitDate", "Ja existe saida registrada para este animal");
+        }
+
+        GoatStatus previousStatus = goat.getStatus();
+        GoatStatus currentStatus = mapExitStatus(requestVO.getExitType());
+
+        goat.setStatus(currentStatus);
+        goat.setExitType(requestVO.getExitType());
+        goat.setExitDate(requestVO.getExitDate());
+        goat.setExitNotes(normalizeNotes(requestVO.getNotes()));
+
+        Goat savedGoat = goatPort.save(goat);
+
+        return GoatExitResponseVO.builder()
+                .goatId(savedGoat.getRegistrationNumber())
+                .exitType(savedGoat.getExitType())
+                .exitDate(savedGoat.getExitDate())
+                .notes(savedGoat.getExitNotes())
+                .previousStatus(previousStatus)
+                .currentStatus(savedGoat.getStatus())
+                .build();
     }
 
     @Transactional
@@ -191,6 +248,22 @@ public class GoatBusiness implements GoatManagementUseCase {
                 .label(projection.getBreed().getLabel())
                 .count(projection.getTotal())
                 .build();
+    }
+
+    private GoatStatus mapExitStatus(GoatExitType exitType) {
+        return switch (exitType) {
+            case VENDA -> GoatStatus.VENDIDO;
+            case MORTE -> GoatStatus.FALECIDO;
+            case DESCARTE, DOACAO, TRANSFERENCIA -> GoatStatus.INATIVO;
+        };
+    }
+
+    private String normalizeNotes(String notes) {
+        if (notes == null) {
+            return null;
+        }
+        String normalized = notes.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }
 

@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.goat.application.ports.in;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +17,8 @@ public interface GoatManagementUseCase {
     GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO);
 
     GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO);
+
+    GoatExitResponseVO exitGoat(Long farmId, String goatId, GoatExitRequestVO requestVO);
 
     void deleteGoat(Long farmId, String goatId);
 

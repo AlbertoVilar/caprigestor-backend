@@ -3,10 +3,12 @@ package com.devmaster.goatfarm.goat.api;
 import com.devmaster.goatfarm.goat.api.controller.GoatController;
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatExitRequestDTO;
 import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
@@ -364,6 +366,53 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
         verify(goatUseCase).updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERATOR")
+    void shouldRegisterGoatExitSuccessfully() throws Exception {
+        GoatExitRequestDTO requestDTO = GoatExitRequestDTO.builder()
+                .exitType(com.devmaster.goatfarm.goat.enums.GoatExitType.VENDA)
+                .exitDate(LocalDate.now().minusDays(1))
+                .notes("Venda para outra fazenda")
+                .build();
+
+        GoatExitResponseVO responseVO = GoatExitResponseVO.builder()
+                .goatId("001")
+                .exitType(com.devmaster.goatfarm.goat.enums.GoatExitType.VENDA)
+                .exitDate(requestDTO.getExitDate())
+                .notes(requestDTO.getNotes())
+                .previousStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO)
+                .currentStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.VENDIDO)
+                .build();
+
+        when(goatUseCase.exitGoat(eq(1L), eq("001"), any(com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO.class)))
+                .thenReturn(responseVO);
+
+        mockMvc.perform(patch("/api/v1/goatfarms/1/goats/001/exit")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value("001"))
+                .andExpect(jsonPath("$.exitType").value("Venda"))
+                .andExpect(jsonPath("$.currentStatus").value("VENDIDO"));
+
+        verify(goatUseCase).exitGoat(eq(1L), eq("001"), any(com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERATOR")
+    void shouldReturnUnprocessableEntityWhenExitPayloadIsInvalid() throws Exception {
+        GoatExitRequestDTO requestDTO = new GoatExitRequestDTO();
+
+        mockMvc.perform(patch("/api/v1/goatfarms/1/goats/001/exit")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isUnprocessableEntity());
+
+        verify(goatUseCase, never()).exitGoat(anyLong(), anyString(), any());
     }
 
     @Test
