@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
@@ -35,6 +37,12 @@ class ReproductionBusinessPendingAlertsTest {
     private GoatGenderValidator goatGenderValidator;
 
     @Mock
+    private GoatPersistencePort goatPersistencePort;
+
+    @Mock
+    private GoatManagementUseCase goatManagementUseCase;
+
+    @Mock
     private ReproductionBusinessMapper reproductionBusinessMapper;
 
     private ReproductionBusiness reproductionBusiness;
@@ -45,6 +53,8 @@ class ReproductionBusinessPendingAlertsTest {
         reproductionBusiness = new ReproductionBusiness(
                 pregnancyPersistencePort,
                 reproductiveEventPersistencePort,
+                goatPersistencePort,
+                goatManagementUseCase,
                 goatGenderValidator,
                 reproductionBusinessMapper,
                 clock

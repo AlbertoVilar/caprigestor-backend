@@ -40,6 +40,12 @@ Cabras:
 - `GET /api/v1/goatfarms/{farmId}/goats?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/search?name=&page=&size=&sort=`
 
+Reprodução (Sprint 1 - parto + cria(s)):
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/births`
+- Registra parto, encerra a gestação ativa com `BIRTH` e cadastra uma ou mais crias vinculadas.
+- Vínculo mãe é obrigatório (matriz do path).
+- Vínculo pai é opcional e só ocorre quando houver pai local válido na mesma fazenda.
+
 Importação ABCC (opcional):
 - `GET /api/v1/goatfarms/{farmId}/goats/imports/abcc/races`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`

@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.reproduction.application.ports.in;
 
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
@@ -14,4 +16,5 @@ public interface ReproductionCommandUseCase {
     PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo);
     PregnancyResponseVO closePregnancy(Long farmId, String goatId, Long pregnancyId, PregnancyCloseRequestVO vo);
     ReproductiveEventResponseVO correctCoverage(Long farmId, String goatId, Long coverageEventId, CoverageCorrectionRequestVO vo);
+    BirthResponseVO registerBirth(Long farmId, String goatId, Long pregnancyId, BirthRequestVO vo);
 }

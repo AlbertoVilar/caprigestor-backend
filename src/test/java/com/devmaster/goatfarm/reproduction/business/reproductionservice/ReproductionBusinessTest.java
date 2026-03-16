@@ -7,7 +7,17 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthKidRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthKidResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
@@ -35,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +53,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -55,6 +68,12 @@ class ReproductionBusinessTest {
 
     @Mock
     private ReproductiveEventPersistencePort reproductiveEventPersistencePort;
+
+    @Mock
+    private GoatPersistencePort goatPersistencePort;
+
+    @Mock
+    private GoatManagementUseCase goatManagementUseCase;
 
     @Mock
     private GoatGenderValidator goatGenderValidator;
@@ -76,6 +95,8 @@ class ReproductionBusinessTest {
         // Maintained to follow Milk module test style.
         org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemale(any(Long.class), any(String.class)))
                 .thenReturn(new Goat());
+        org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemaleAndActive(any(Long.class), any(String.class)))
+                .thenReturn(motherGoatEntity());
     }
 
     // ==================================================================================
@@ -808,6 +829,115 @@ class ReproductionBusinessTest {
     }
 
     // ==================================================================================
+    // REGISTER BIRTH
+    // ==================================================================================
+
+    @Test
+    void registerBirth_shouldClosePregnancyAndCreateSingleKid_whenValid() {
+        Long pregnancyId = 10L;
+        BirthRequestVO requestVO = validBirthRequestVO();
+        Pregnancy activePregnancy = activePregnancyEntity();
+        Goat father = fatherGoatEntity();
+        GoatResponseVO createdKid = createdKidResponse("KID-001");
+
+        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancy));
+        when(goatPersistencePort.findByIdAndFarmId(father.getRegistrationNumber(), FARM_ID))
+                .thenReturn(Optional.of(father));
+        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class)))
+                .thenReturn(createdKid);
+        when(reproductionBusinessMapper.toBirthKidResponseVO(createdKid))
+                .thenReturn(birthKidResponse(createdKid.getRegistrationNumber()));
+
+        Pregnancy savedPregnancy = closedPregnancyEntity();
+        savedPregnancy.setId(pregnancyId);
+        savedPregnancy.setClosedAt(requestVO.getBirthDate());
+        savedPregnancy.setCloseReason(PregnancyCloseReason.BIRTH);
+        when(pregnancyPersistencePort.save(any(Pregnancy.class))).thenReturn(savedPregnancy);
+
+        ReproductiveEvent savedCloseEvent = closeEventEntity(pregnancyId);
+        savedCloseEvent.setEventDate(requestVO.getBirthDate());
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedCloseEvent);
+        when(reproductionBusinessMapper.toPregnancyResponseVO(savedPregnancy)).thenReturn(pregnancyResponseVO());
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedCloseEvent)).thenReturn(reproductiveEventResponseVO());
+
+        BirthResponseVO result = reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, pregnancyId, requestVO);
+
+        ArgumentCaptor<GoatRequestVO> goatRequestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(FARM_ID), goatRequestCaptor.capture());
+
+        GoatRequestVO createdKidRequest = goatRequestCaptor.getValue();
+        assertThat(createdKidRequest.getMotherRegistrationNumber()).isEqualTo(GOAT_ID);
+        assertThat(createdKidRequest.getFatherRegistrationNumber()).isEqualTo(father.getRegistrationNumber());
+        assertThat(createdKidRequest.getBirthDate()).isEqualTo(requestVO.getBirthDate());
+        assertThat(createdKidRequest.getRegistrationNumber()).isEqualTo("KID-001");
+
+        assertThat(result.getKids()).hasSize(1);
+        verify(pregnancyPersistencePort).save(any(Pregnancy.class));
+        verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
+    }
+
+    @Test
+    void registerBirth_shouldCreateMultipleKids_whenMoreThanOneKidIsProvided() {
+        Long pregnancyId = 10L;
+        BirthRequestVO requestVO = BirthRequestVO.builder()
+                .birthDate(LocalDate.of(2026, 3, 10))
+                .kids(List.of(
+                        BirthKidRequestVO.builder()
+                                .registrationNumber("KID-101")
+                                .name("Cria 1")
+                                .gender(Gender.FEMEA)
+                                .breed(GoatBreed.SAANEN)
+                                .build(),
+                        BirthKidRequestVO.builder()
+                                .registrationNumber("KID-102")
+                                .name("Cria 2")
+                                .gender(Gender.MACHO)
+                                .breed(GoatBreed.SAANEN)
+                                .build()
+                ))
+                .build();
+
+        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancyEntity()));
+        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class)))
+                .thenReturn(createdKidResponse("KID-101"))
+                .thenReturn(createdKidResponse("KID-102"));
+        when(reproductionBusinessMapper.toBirthKidResponseVO(any(GoatResponseVO.class)))
+                .thenAnswer(invocation -> {
+                    GoatResponseVO goat = invocation.getArgument(0);
+                    return birthKidResponse(goat.getRegistrationNumber());
+                });
+        when(pregnancyPersistencePort.save(any(Pregnancy.class))).thenReturn(closedPregnancyEntity());
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(closeEventEntity(pregnancyId));
+        when(reproductionBusinessMapper.toPregnancyResponseVO(any(Pregnancy.class))).thenReturn(pregnancyResponseVO());
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(any(ReproductiveEvent.class))).thenReturn(reproductiveEventResponseVO());
+
+        BirthResponseVO result = reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, pregnancyId, requestVO);
+
+        verify(goatManagementUseCase, org.mockito.Mockito.times(2)).createGoat(eq(FARM_ID), any(GoatRequestVO.class));
+        assertThat(result.getKids()).hasSize(2);
+    }
+
+    @Test
+    void registerBirth_shouldRejectWhenFatherIsNotLocal() {
+        Long pregnancyId = 10L;
+        BirthRequestVO requestVO = validBirthRequestVO();
+
+        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
+                .thenReturn(Optional.of(activePregnancyEntity()));
+        when(goatPersistencePort.findByIdAndFarmId("SIRE-001", FARM_ID))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, pregnancyId, requestVO))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Pai local nao encontrado");
+
+        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class));
+        verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
+    }
+
+    // ==================================================================================
     // DIAGNOSIS RECOMMENDATION
     // ==================================================================================
 
@@ -980,6 +1110,22 @@ class ReproductionBusinessTest {
                 .build();
     }
 
+    private BirthRequestVO validBirthRequestVO() {
+        return BirthRequestVO.builder()
+                .birthDate(LocalDate.of(2026, 3, 10))
+                .fatherRegistrationNumber("SIRE-001")
+                .notes("Parto normal")
+                .kids(List.of(
+                        BirthKidRequestVO.builder()
+                                .registrationNumber("KID-001")
+                                .name("Cria principal")
+                                .gender(Gender.FEMEA)
+                                .breed(GoatBreed.SAANEN)
+                                .build()
+                ))
+                .build();
+    }
+
     private Pregnancy activePregnancyEntity() {
         return Pregnancy.builder()
                 .id(10L)
@@ -1007,6 +1153,49 @@ class ReproductionBusinessTest {
                 .closedAt(LocalDate.now().plusDays(5))
                 .closeReason(PregnancyCloseReason.BIRTH)
                 .notes("Closed pregnancy fixture")
+                .build();
+    }
+
+    private Goat motherGoatEntity() {
+        Goat goat = new Goat();
+        goat.setRegistrationNumber(GOAT_ID);
+        goat.setGender(Gender.FEMEA);
+        goat.setBreed(GoatBreed.SAANEN);
+        goat.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        goat.setTod("16432");
+        goat.setToe("18012");
+        return goat;
+    }
+
+    private Goat fatherGoatEntity() {
+        Goat goat = new Goat();
+        goat.setRegistrationNumber("SIRE-001");
+        goat.setGender(Gender.MACHO);
+        goat.setBreed(GoatBreed.SAANEN);
+        return goat;
+    }
+
+    private GoatResponseVO createdKidResponse(String registrationNumber) {
+        GoatResponseVO response = new GoatResponseVO();
+        response.setRegistrationNumber(registrationNumber);
+        response.setName("Cria " + registrationNumber);
+        response.setGender(Gender.FEMEA);
+        response.setBreed(GoatBreed.SAANEN);
+        response.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        response.setMotherRegistrationNumber(GOAT_ID);
+        response.setFatherRegistrationNumber("SIRE-001");
+        response.setBirthDate(LocalDate.of(2026, 3, 10));
+        return response;
+    }
+
+    private BirthKidResponseVO birthKidResponse(String registrationNumber) {
+        return BirthKidResponseVO.builder()
+                .registrationNumber(registrationNumber)
+                .name("Cria " + registrationNumber)
+                .gender(Gender.FEMEA)
+                .breed(GoatBreed.SAANEN)
+                .motherRegistrationNumber(GOAT_ID)
+                .fatherRegistrationNumber("SIRE-001")
                 .build();
     }
 
