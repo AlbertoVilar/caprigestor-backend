@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.goat.api.controller;
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatHerdSummaryDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatExitRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatExitResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
@@ -61,6 +63,26 @@ public class GoatController {
         return ResponseEntity.ok(
                 goatMapper.toResponseDTO(
                         goatUseCase.updateGoat(farmId, goatId, goatMapper.toRequestVO(goatRequestDTO))
+                )
+        );
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PatchMapping("/{goatId}/exit")
+    @Operation(summary = "Registra saida controlada do animal do rebanho")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Saida registrada com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Usuario sem permissao para operar nesta fazenda."),
+            @ApiResponse(responseCode = "404", description = "Cabra nao encontrada."),
+            @ApiResponse(responseCode = "422", description = "Falha de validacao/regra de negocio.")
+    })
+    public ResponseEntity<GoatExitResponseDTO> exitGoat(
+            @PathVariable("farmId") Long farmId,
+            @PathVariable("goatId") String goatId,
+            @Valid @RequestBody GoatExitRequestDTO requestDTO) {
+        return ResponseEntity.ok(
+                goatMapper.toExitResponseDTO(
+                        goatUseCase.exitGoat(farmId, goatId, goatMapper.toExitRequestVO(requestDTO))
                 )
         );
     }

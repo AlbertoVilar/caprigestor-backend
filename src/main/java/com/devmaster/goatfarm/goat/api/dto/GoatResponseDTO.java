@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.api.dto;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,9 @@ public class GoatResponseDTO {
     private String color;
     private LocalDate birthDate;
     private GoatStatus status;
+    private GoatExitType exitType;
+    private LocalDate exitDate;
+    private String exitNotes;
     private String tod;
     private String toe;
     private Category category;

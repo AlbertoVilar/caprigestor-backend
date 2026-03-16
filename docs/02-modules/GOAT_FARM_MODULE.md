@@ -39,6 +39,7 @@ Cabras:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `GET /api/v1/goatfarms/{farmId}/goats?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/search?name=&page=&size=&sort=`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/exit`
 
 Reprodução (Sprint 1 - parto + cria(s)):
 - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/births`
@@ -77,6 +78,25 @@ Importação ABCC (opcional):
 - O identificador estável para o fluxo é o `registrationNumber` ABCC.
 - No fluxo patrimonial ABCC, a situação `Sem RGD` é normalizada como `ATIVO` para manter coerência entre `preview`, `confirm` e `confirm-batch`.
 - A deduplicação por `registrationNumber` e a validação de `TOD` continuam obrigatórias sem alteração.
+
+## Saída controlada do animal do rebanho (backend-first)
+- Objetivo: registrar saída operacional com rastreabilidade mínima sem exclusão física do animal.
+- Endpoint:
+  - `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/exit`
+- Payload mínimo:
+  - `exitType`: `VENDA`, `MORTE`, `DESCARTE`, `DOACAO`, `TRANSFERENCIA`
+  - `exitDate`: data efetiva da saída
+  - `notes`: observação opcional
+- Regras:
+  - só permite saída para animal em status `ATIVO`
+  - bloqueia saída duplicada para o mesmo animal
+  - `exitDate` obrigatória, não futura e não anterior à data de nascimento
+- Transição de status:
+  - `VENDA` -> `VENDIDO`
+  - `MORTE` -> `FALECIDO`
+  - `DESCARTE`, `DOACAO`, `TRANSFERENCIA` -> `INATIVO`
+- Rastreabilidade persistida no `Goat`:
+  - `exitType`, `exitDate`, `exitNotes`
 
 ## Regra forte de segurança por TOD
 - Usuário comum (não `ROLE_ADMIN`) só pode usar importação ABCC para animais com `TOD` igual ao `TOD` da fazenda.

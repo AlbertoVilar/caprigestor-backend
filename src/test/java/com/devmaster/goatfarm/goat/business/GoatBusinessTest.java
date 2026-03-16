@@ -9,10 +9,13 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
@@ -32,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -295,6 +299,72 @@ public class GoatBusinessTest {
         assertThat(summary.getBreeds().get(0).getCount()).isEqualTo(8L);
         assertThat(summary.getBreeds().get(2).getLabel()).isEqualTo("Não informada");
         assertThat(summary.getBreeds().get(2).getCount()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Deve registrar saida controlada por venda e atualizar status para VENDIDO")
+    void shouldExitGoatAsSoldSuccessfully() {
+        GoatExitRequestVO requestVO = GoatExitRequestVO.builder()
+                .exitType(GoatExitType.VENDA)
+                .exitDate(LocalDate.now().minusDays(1))
+                .notes("Venda confirmada")
+                .build();
+
+        goat.setStatus(GoatStatus.ATIVO);
+        goat.setExitType(null);
+        goat.setExitDate(null);
+        goat.setExitNotes(null);
+
+        when(goatPort.findByIdAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        GoatExitResponseVO result = goatBusiness.exitGoat(1L, "164322002", requestVO);
+
+        assertThat(result.getGoatId()).isEqualTo("164322002");
+        assertThat(result.getExitType()).isEqualTo(GoatExitType.VENDA);
+        assertThat(result.getCurrentStatus()).isEqualTo(GoatStatus.VENDIDO);
+        assertThat(result.getPreviousStatus()).isEqualTo(GoatStatus.ATIVO);
+
+        verify(ownershipService).verifyFarmOwnership(1L);
+        verify(goatPort).save(any(Goat.class));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar saida controlada com data futura")
+    void shouldRejectGoatExitWithFutureDate() {
+        GoatExitRequestVO requestVO = GoatExitRequestVO.builder()
+                .exitType(GoatExitType.DESCARTE)
+                .exitDate(LocalDate.now().plusDays(1))
+                .build();
+
+        when(goatPort.findByIdAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+
+        assertThatThrownBy(() -> goatBusiness.exitGoat(1L, "164322002", requestVO))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException.class)
+                .hasMessageContaining("Data de saida nao pode ser futura");
+
+        verify(goatPort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar saida duplicada quando animal ja possui saida registrada")
+    void shouldRejectDuplicatedGoatExit() {
+        GoatExitRequestVO requestVO = GoatExitRequestVO.builder()
+                .exitType(GoatExitType.TRANSFERENCIA)
+                .exitDate(LocalDate.now().minusDays(1))
+                .build();
+
+        goat.setStatus(GoatStatus.ATIVO);
+        goat.setExitType(GoatExitType.VENDA);
+        goat.setExitDate(LocalDate.now().minusDays(10));
+
+        when(goatPort.findByIdAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+
+        assertThatThrownBy(() -> goatBusiness.exitGoat(1L, "164322002", requestVO))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("Ja existe saida registrada para este animal");
+
+        verify(goatPort, never()).save(any(Goat.class));
     }
 }
 
