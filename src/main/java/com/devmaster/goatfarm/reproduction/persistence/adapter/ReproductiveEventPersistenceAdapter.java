@@ -84,6 +84,15 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
     }
 
     @Override
+    public Optional<ReproductiveEvent> findLatestByFarmIdAndGoatIdAndEventType(Long farmId, String goatId, ReproductiveEventType eventType) {
+        return repository.findTopByFarmIdAndGoatIdAndEventTypeOrderByEventDateDescIdDesc(
+                farmId,
+                goatId,
+                eventType
+        );
+    }
+
+    @Override
     public Page<PregnancyDiagnosisAlertProjection> findPendingPregnancyDiagnosisAlerts(
             Long farmId,
             LocalDate referenceDate,

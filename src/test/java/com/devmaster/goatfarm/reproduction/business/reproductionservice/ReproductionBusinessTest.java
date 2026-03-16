@@ -25,6 +25,8 @@ import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
 import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
@@ -95,6 +97,8 @@ class ReproductionBusinessTest {
         // Maintained to follow Milk module test style.
         org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemale(any(Long.class), any(String.class)))
                 .thenReturn(new Goat());
+        org.mockito.Mockito.lenient().when(goatGenderValidator.requireActive(any(Long.class), any(String.class)))
+                .thenReturn(weanableKidEntity());
         org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemaleAndActive(any(Long.class), any(String.class)))
                 .thenReturn(motherGoatEntity());
     }
@@ -938,6 +942,133 @@ class ReproductionBusinessTest {
     }
 
     // ==================================================================================
+    // REGISTER WEANING
+    // ==================================================================================
+
+    @Test
+    void registerWeaning_shouldRegisterEventAndKeepOperationalStatus_whenValidRequest() {
+        LocalDate weaningDate = LocalDate.now(clock).minusDays(1);
+        WeaningRequestVO requestVO = WeaningRequestVO.builder()
+                .weaningDate(weaningDate)
+                .notes("Desmame sem intercorrencias")
+                .build();
+
+        Goat kid = weanableKidEntity();
+        when(goatGenderValidator.requireActive(FARM_ID, GOAT_ID)).thenReturn(kid);
+        when(reproductiveEventPersistencePort.findLatestByFarmIdAndGoatIdAndEventType(FARM_ID, GOAT_ID, ReproductiveEventType.WEANING))
+                .thenReturn(Optional.empty());
+        when(goatPersistencePort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReproductiveEvent savedEvent = ReproductiveEvent.builder()
+                .id(700L)
+                .farmId(FARM_ID)
+                .goatId(GOAT_ID)
+                .eventType(ReproductiveEventType.WEANING)
+                .eventDate(weaningDate)
+                .notes(requestVO.getNotes())
+                .build();
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedEvent);
+
+        ReproductiveEventResponseVO eventResponseVO = ReproductiveEventResponseVO.builder()
+                .id(savedEvent.getId())
+                .eventType(ReproductiveEventType.WEANING)
+                .eventDate(weaningDate)
+                .build();
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedEvent)).thenReturn(eventResponseVO);
+
+        WeaningResponseVO result = reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO);
+
+        ArgumentCaptor<ReproductiveEvent> eventCaptor = ArgumentCaptor.forClass(ReproductiveEvent.class);
+        verify(reproductiveEventPersistencePort).save(eventCaptor.capture());
+        ReproductiveEvent capturedEvent = eventCaptor.getValue();
+        assertThat(capturedEvent.getEventType()).isEqualTo(ReproductiveEventType.WEANING);
+        assertThat(capturedEvent.getEventDate()).isEqualTo(requestVO.getWeaningDate());
+
+        verify(goatPersistencePort).save(any(Goat.class));
+
+        assertThat(result.getGoatId()).isEqualTo(GOAT_ID);
+        assertThat(result.getWeaningDate()).isEqualTo(weaningDate);
+        assertThat(result.getPreviousStatus()).isEqualTo(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        assertThat(result.getCurrentStatus()).isEqualTo(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        assertThat(result.getEvent()).isSameAs(eventResponseVO);
+    }
+
+    @Test
+    void registerWeaning_shouldRejectWhenDateIsFuture() {
+        WeaningRequestVO requestVO = WeaningRequestVO.builder()
+                .weaningDate(LocalDate.now().plusDays(1))
+                .build();
+
+        assertThatThrownBy(() -> reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(InvalidArgumentException.class)
+                .hasMessageContaining("Data de desmame nao pode ser futura");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    void registerWeaning_shouldRejectWhenDateIsBeforeBirthDate() {
+        Goat kid = weanableKidEntity();
+        kid.setBirthDate(LocalDate.now(clock).minusDays(1));
+
+        WeaningRequestVO requestVO = WeaningRequestVO.builder()
+                .weaningDate(LocalDate.now(clock).minusDays(2))
+                .build();
+
+        when(goatGenderValidator.requireActive(FARM_ID, GOAT_ID)).thenReturn(kid);
+
+        assertThatThrownBy(() -> reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(InvalidArgumentException.class)
+                .hasMessageContaining("Data de desmame nao pode ser anterior a data de nascimento");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    void registerWeaning_shouldRejectWhenAlreadyRegistered() {
+        WeaningRequestVO requestVO = WeaningRequestVO.builder()
+                .weaningDate(LocalDate.now(clock).minusDays(1))
+                .build();
+
+        ReproductiveEvent existing = ReproductiveEvent.builder()
+                .id(701L)
+                .eventType(ReproductiveEventType.WEANING)
+                .eventDate(LocalDate.of(2026, 4, 18))
+                .build();
+
+        when(reproductiveEventPersistencePort.findLatestByFarmIdAndGoatIdAndEventType(FARM_ID, GOAT_ID, ReproductiveEventType.WEANING))
+                .thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Ja existe desmame registrado");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    void registerWeaning_shouldRejectWhenKidHasNoMotherLink() {
+        Goat kid = weanableKidEntity();
+        kid.setMother(null);
+
+        WeaningRequestVO requestVO = WeaningRequestVO.builder()
+                .weaningDate(LocalDate.now(clock).minusDays(1))
+                .build();
+
+        when(goatGenderValidator.requireActive(FARM_ID, GOAT_ID)).thenReturn(kid);
+
+        assertThatThrownBy(() -> reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Desmame so pode ser registrado para animal vinculado a uma matriz");
+
+        verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+    }
+
+    // ==================================================================================
     // DIAGNOSIS RECOMMENDATION
     // ==================================================================================
 
@@ -1154,6 +1285,22 @@ class ReproductionBusinessTest {
                 .closeReason(PregnancyCloseReason.BIRTH)
                 .notes("Closed pregnancy fixture")
                 .build();
+    }
+
+    private Goat weanableKidEntity() {
+        Goat kid = new Goat();
+        kid.setRegistrationNumber(GOAT_ID);
+        kid.setGender(Gender.FEMEA);
+        kid.setBreed(GoatBreed.SAANEN);
+        kid.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        kid.setBirthDate(LocalDate.of(2026, 1, 15));
+
+        Goat mother = new Goat();
+        mother.setRegistrationNumber("MOTHER-001");
+        mother.setGender(Gender.FEMEA);
+        kid.setMother(mother);
+
+        return kid;
     }
 
     private Goat motherGoatEntity() {

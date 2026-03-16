@@ -32,6 +32,8 @@ import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
 import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
@@ -432,6 +434,53 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .pregnancy(reproductionBusinessMapper.toPregnancyResponseVO(savedPregnancy))
                 .closeEvent(reproductionBusinessMapper.toReproductiveEventResponseVO(savedCloseEvent))
                 .kids(createdKids)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public WeaningResponseVO registerWeaning(Long farmId, String goatId, WeaningRequestVO vo) {
+        Goat kid = goatGenderValidator.requireActive(farmId, goatId);
+
+        if (vo.getWeaningDate() == null) {
+            throw new InvalidArgumentException("weaningDate", "Data de desmame e obrigatoria");
+        }
+        if (vo.getWeaningDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("weaningDate", "Data de desmame nao pode ser futura");
+        }
+        if (kid.getBirthDate() != null && vo.getWeaningDate().isBefore(kid.getBirthDate())) {
+            throw new InvalidArgumentException("weaningDate", "Data de desmame nao pode ser anterior a data de nascimento");
+        }
+        if (kid.getMother() == null) {
+            throw new BusinessRuleException("goatId", "Desmame so pode ser registrado para animal vinculado a uma matriz");
+        }
+
+        Optional<ReproductiveEvent> existingWeaning = reproductiveEventPersistencePort
+                .findLatestByFarmIdAndGoatIdAndEventType(farmId, goatId, ReproductiveEventType.WEANING);
+        if (existingWeaning.isPresent()) {
+            throw new BusinessRuleException("weaningDate", "Ja existe desmame registrado para este animal");
+        }
+
+        GoatStatus previousStatus = kid.getStatus();
+        kid.setStatus(GoatStatus.ATIVO);
+        Goat savedKid = goatPersistencePort.save(kid);
+
+        ReproductiveEvent weaningEvent = ReproductiveEvent.builder()
+                .farmId(farmId)
+                .goatId(goatId)
+                .eventType(ReproductiveEventType.WEANING)
+                .eventDate(vo.getWeaningDate())
+                .notes(vo.getNotes())
+                .build();
+
+        ReproductiveEvent savedWeaningEvent = reproductiveEventPersistencePort.save(weaningEvent);
+
+        return WeaningResponseVO.builder()
+                .goatId(savedKid.getRegistrationNumber())
+                .weaningDate(vo.getWeaningDate())
+                .previousStatus(previousStatus)
+                .currentStatus(savedKid.getStatus())
+                .event(reproductionBusinessMapper.toReproductiveEventResponseVO(savedWeaningEvent))
                 .build();
     }
 
