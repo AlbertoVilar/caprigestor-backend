@@ -23,6 +23,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -203,6 +206,40 @@ public class GoatBusinessTest {
         verify(goatBusinessMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
+        verify(goatBusinessMapper, times(1)).toResponseVO(goat);
+    }
+
+    @Test
+    @DisplayName("Deve filtrar cabras por raça na listagem da fazenda")
+    void shouldFilterGoatsByBreedInFarmList() {
+        PageRequest pageable = PageRequest.of(0, 12);
+        Page<Goat> goatsPage = new PageImpl<>(List.of(goat), pageable, 1);
+
+        when(goatPort.findAllByFarmIdAndBreed(1L, GoatBreed.SAANEN, pageable)).thenReturn(goatsPage);
+        when(goatBusinessMapper.toResponseVO(goat)).thenReturn(responseVO);
+
+        Page<GoatResponseVO> result = goatBusiness.findAllGoatsByFarm(1L, GoatBreed.SAANEN, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        verify(goatPort, times(1)).findAllByFarmIdAndBreed(1L, GoatBreed.SAANEN, pageable);
+        verify(goatBusinessMapper, times(1)).toResponseVO(goat);
+    }
+
+    @Test
+    @DisplayName("Deve filtrar busca por nome e raça na fazenda")
+    void shouldFilterGoatsByNameAndBreedInFarmSearch() {
+        PageRequest pageable = PageRequest.of(0, 12);
+        Page<Goat> goatsPage = new PageImpl<>(List.of(goat), pageable, 1);
+
+        when(goatPort.findByNameAndFarmIdAndBreed(1L, "Xeque", GoatBreed.ALPINA, pageable)).thenReturn(goatsPage);
+        when(goatBusinessMapper.toResponseVO(goat)).thenReturn(responseVO);
+
+        Page<GoatResponseVO> result = goatBusiness.findGoatsByNameAndFarm(1L, "Xeque", GoatBreed.ALPINA, pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalElements()).isEqualTo(1L);
+        verify(goatPort, times(1)).findByNameAndFarmIdAndBreed(1L, "Xeque", GoatBreed.ALPINA, pageable);
         verify(goatBusinessMapper, times(1)).toResponseVO(goat);
     }
 

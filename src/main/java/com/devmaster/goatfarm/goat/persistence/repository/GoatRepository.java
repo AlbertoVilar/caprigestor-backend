@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.goat.persistence.repository;
 
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,8 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
 
     Page<Goat> findAllByFarmId(Long farmId, Pageable pageable);
 
+    Page<Goat> findAllByFarmIdAndBreed(Long farmId, GoatBreed breed, Pageable pageable);
+
     long countByFarmId(Long farmId);
 
     long countByFarmIdAndGender(Long farmId, Gender gender);
@@ -36,6 +39,9 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
 
     @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Page<Goat> findByNameAndFarmId(@Param("farmId") Long farmId, @Param("name") String name, Pageable pageable);
+
+    @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')) AND g.breed = :breed")
+    Page<Goat> findByNameAndFarmIdAndBreed(@Param("farmId") Long farmId, @Param("name") String name, @Param("breed") GoatBreed breed, Pageable pageable);
 
     @Modifying
     @Transactional

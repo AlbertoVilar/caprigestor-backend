@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.goat.api.dto.GoatHerdSummaryDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
@@ -97,9 +98,12 @@ public class GoatController {
             @ApiResponse(responseCode = "200", description = "Listagem executada com sucesso."),
             @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos.")
     })
-    public ResponseEntity<Page<GoatResponseDTO>> findAllGoatsByFarm(@PathVariable("farmId") Long farmId, @PageableDefault(size = 12) Pageable pageable) {
+    public ResponseEntity<Page<GoatResponseDTO>> findAllGoatsByFarm(
+            @PathVariable("farmId") Long farmId,
+            @RequestParam(required = false) GoatBreed breed,
+            @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(
-                goatUseCase.findAllGoatsByFarm(farmId, pageable).map(goatMapper::toResponseDTO)
+                goatUseCase.findAllGoatsByFarm(farmId, breed, pageable).map(goatMapper::toResponseDTO)
         );
     }
 
@@ -112,9 +116,10 @@ public class GoatController {
     public ResponseEntity<Page<GoatResponseDTO>> findGoatsByNameAndFarm(
             @PathVariable("farmId") Long farmId,
             @RequestParam String name,
+            @RequestParam(required = false) GoatBreed breed,
             @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(
-                goatUseCase.findGoatsByNameAndFarm(farmId, name, pageable).map(goatMapper::toResponseDTO)
+                goatUseCase.findGoatsByNameAndFarm(farmId, name, breed, pageable).map(goatMapper::toResponseDTO)
         );
     }
 
