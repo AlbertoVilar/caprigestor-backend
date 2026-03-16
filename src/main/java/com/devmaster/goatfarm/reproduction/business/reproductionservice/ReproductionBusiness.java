@@ -9,6 +9,18 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthKidRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthKidResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.DiagnosisRecommendationCheckVO;
@@ -20,6 +32,8 @@ import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
 import com.devmaster.goatfarm.reproduction.enums.DiagnosisRecommendationStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
@@ -40,25 +54,33 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class ReproductionBusiness implements ReproductionCommandUseCase, ReproductionQueryUseCase {
 
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
+    private final GoatPersistencePort goatPersistencePort;
+    private final GoatManagementUseCase goatManagementUseCase;
     private final GoatGenderValidator goatGenderValidator;
     private final ReproductionBusinessMapper reproductionBusinessMapper;
     private final Clock clock;
 
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
+                                GoatPersistencePort goatPersistencePort,
+                                GoatManagementUseCase goatManagementUseCase,
                                 GoatGenderValidator goatGenderValidator,
                                 ReproductionBusinessMapper reproductionBusinessMapper,
                                 Clock clock) {
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
+        this.goatPersistencePort = goatPersistencePort;
+        this.goatManagementUseCase = goatManagementUseCase;
         this.goatGenderValidator = goatGenderValidator;
         this.reproductionBusinessMapper = reproductionBusinessMapper;
         this.clock = clock;
@@ -351,6 +373,118 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     }
 
     @Override
+    @Transactional
+    public BirthResponseVO registerBirth(Long farmId, String goatId, Long pregnancyId, BirthRequestVO vo) {
+        Goat mother = goatGenderValidator.requireFemaleAndActive(farmId, goatId);
+
+        if (pregnancyId == null || pregnancyId <= 0) {
+            throw new InvalidArgumentException("pregnancyId", "Identificador de gestacao invalido");
+        }
+        if (vo.getBirthDate() == null) {
+            throw new InvalidArgumentException("birthDate", "Data do parto e obrigatoria");
+        }
+        if (vo.getBirthDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("birthDate", "Data do parto nao pode ser futura");
+        }
+        if (vo.getKids() == null || vo.getKids().isEmpty()) {
+            throw new InvalidArgumentException("kids", "E necessario informar ao menos uma cria");
+        }
+
+        Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Gestacao nao encontrada para o identificador informado: " + pregnancyId));
+
+        if (pregnancy.getStatus() != PregnancyStatus.ACTIVE) {
+            throw new InvalidArgumentException("status", "Gestacao nao esta ativa");
+        }
+        if (pregnancy.getBreedingDate() != null && vo.getBirthDate().isBefore(pregnancy.getBreedingDate())) {
+            throw new InvalidArgumentException("birthDate", "Data do parto nao pode ser anterior a data de cobertura");
+        }
+
+        Goat father = resolveLocalFather(farmId, goatId, vo.getFatherRegistrationNumber());
+        ensureDistinctKidRegistrations(vo.getKids());
+
+        List<BirthKidResponseVO> createdKids = new ArrayList<>();
+        for (BirthKidRequestVO kid : vo.getKids()) {
+            GoatRequestVO kidRequest = buildKidRequestVO(farmId, goatId, mother, father, vo.getBirthDate(), kid);
+            GoatResponseVO savedKid = goatManagementUseCase.createGoat(farmId, kidRequest);
+            createdKids.add(reproductionBusinessMapper.toBirthKidResponseVO(savedKid));
+        }
+
+        pregnancy.setStatus(PregnancyStatus.CLOSED);
+        pregnancy.setClosedAt(vo.getBirthDate());
+        pregnancy.setCloseReason(PregnancyCloseReason.BIRTH);
+        if (vo.getNotes() != null && !vo.getNotes().isBlank()) {
+            pregnancy.setNotes(vo.getNotes());
+        }
+
+        Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
+
+        ReproductiveEvent closeEvent = ReproductiveEvent.builder()
+                .farmId(farmId)
+                .goatId(goatId)
+                .pregnancyId(savedPregnancy.getId())
+                .eventType(ReproductiveEventType.PREGNANCY_CLOSE)
+                .eventDate(vo.getBirthDate())
+                .notes(vo.getNotes())
+                .build();
+
+        ReproductiveEvent savedCloseEvent = reproductiveEventPersistencePort.save(closeEvent);
+
+        return BirthResponseVO.builder()
+                .pregnancy(reproductionBusinessMapper.toPregnancyResponseVO(savedPregnancy))
+                .closeEvent(reproductionBusinessMapper.toReproductiveEventResponseVO(savedCloseEvent))
+                .kids(createdKids)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public WeaningResponseVO registerWeaning(Long farmId, String goatId, WeaningRequestVO vo) {
+        Goat kid = goatGenderValidator.requireActive(farmId, goatId);
+
+        if (vo.getWeaningDate() == null) {
+            throw new InvalidArgumentException("weaningDate", "Data de desmame e obrigatoria");
+        }
+        if (vo.getWeaningDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("weaningDate", "Data de desmame nao pode ser futura");
+        }
+        if (kid.getBirthDate() != null && vo.getWeaningDate().isBefore(kid.getBirthDate())) {
+            throw new InvalidArgumentException("weaningDate", "Data de desmame nao pode ser anterior a data de nascimento");
+        }
+        if (kid.getMother() == null) {
+            throw new BusinessRuleException("goatId", "Desmame so pode ser registrado para animal vinculado a uma matriz");
+        }
+
+        Optional<ReproductiveEvent> existingWeaning = reproductiveEventPersistencePort
+                .findLatestByFarmIdAndGoatIdAndEventType(farmId, goatId, ReproductiveEventType.WEANING);
+        if (existingWeaning.isPresent()) {
+            throw new BusinessRuleException("weaningDate", "Ja existe desmame registrado para este animal");
+        }
+
+        GoatStatus previousStatus = kid.getStatus();
+        kid.setStatus(GoatStatus.ATIVO);
+        Goat savedKid = goatPersistencePort.save(kid);
+
+        ReproductiveEvent weaningEvent = ReproductiveEvent.builder()
+                .farmId(farmId)
+                .goatId(goatId)
+                .eventType(ReproductiveEventType.WEANING)
+                .eventDate(vo.getWeaningDate())
+                .notes(vo.getNotes())
+                .build();
+
+        ReproductiveEvent savedWeaningEvent = reproductiveEventPersistencePort.save(weaningEvent);
+
+        return WeaningResponseVO.builder()
+                .goatId(savedKid.getRegistrationNumber())
+                .weaningDate(vo.getWeaningDate())
+                .previousStatus(previousStatus)
+                .currentStatus(savedKid.getStatus())
+                .event(reproductionBusinessMapper.toReproductiveEventResponseVO(savedWeaningEvent))
+                .build();
+    }
+
+    @Override
     public PregnancyResponseVO getActivePregnancy(Long farmId, String goatId) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
@@ -522,6 +656,101 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .lastCoverageDate(projection.getLastCoverageDate())
                 .lastCheckDate(projection.getLastCheckDate())
                 .build();
+    }
+
+    private Goat resolveLocalFather(Long farmId, String motherGoatId, String fatherRegistrationNumber) {
+        String normalizedFatherRegistration = normalizeRegistration(fatherRegistrationNumber);
+        if (normalizedFatherRegistration == null) {
+            return null;
+        }
+
+        Goat father = goatPersistencePort.findByIdAndFarmId(normalizedFatherRegistration, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pai local nao encontrado para o registro informado: " + normalizedFatherRegistration));
+
+        if (motherGoatId.equals(father.getRegistrationNumber())) {
+            throw new InvalidArgumentException("fatherRegistrationNumber", "Pai nao pode ser o mesmo animal da matriz");
+        }
+        if (father.getGender() != Gender.MACHO) {
+            throw new BusinessRuleException("fatherRegistrationNumber", "O pai informado deve ser um animal MACHO");
+        }
+        return father;
+    }
+
+    private GoatRequestVO buildKidRequestVO(Long farmId,
+                                            String motherGoatId,
+                                            Goat mother,
+                                            Goat father,
+                                            LocalDate defaultBirthDate,
+                                            BirthKidRequestVO kid) {
+        String kidRegistration = normalizeRegistration(kid.getRegistrationNumber());
+        if (kidRegistration == null) {
+            throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria e obrigatorio");
+        }
+        String kidName = normalizeText(kid.getName());
+        if (kidName == null) {
+            throw new InvalidArgumentException("kids.name", "Nome da cria e obrigatorio");
+        }
+        if (kid.getGender() == null) {
+            throw new InvalidArgumentException("kids.gender", "Sexo da cria e obrigatorio");
+        }
+
+        LocalDate kidBirthDate = kid.getBirthDate() != null ? kid.getBirthDate() : defaultBirthDate;
+        if (kidBirthDate == null) {
+            throw new InvalidArgumentException("kids.birthDate", "Data de nascimento da cria e obrigatoria");
+        }
+        if (kidBirthDate.isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("kids.birthDate", "Data de nascimento da cria nao pode ser futura");
+        }
+
+        GoatBreed kidBreed = kid.getBreed() != null ? kid.getBreed() : mother.getBreed();
+        if (kidBreed == null) {
+            throw new InvalidArgumentException("kids.breed", "Raca da cria e obrigatoria quando a matriz nao possui raca cadastrada");
+        }
+
+        return GoatRequestVO.builder()
+                .registrationNumber(kidRegistration)
+                .name(kidName)
+                .gender(kid.getGender())
+                .breed(kidBreed)
+                .color(normalizeText(kid.getColor()))
+                .birthDate(kidBirthDate)
+                .status(GoatStatus.ATIVO)
+                .tod(mother.getTod())
+                .toe(mother.getToe())
+                .category(kid.getCategory())
+                .fatherRegistrationNumber(father != null ? father.getRegistrationNumber() : null)
+                .motherRegistrationNumber(motherGoatId)
+                .farmId(farmId)
+                .build();
+    }
+
+    private void ensureDistinctKidRegistrations(List<BirthKidRequestVO> kids) {
+        Set<String> seen = new HashSet<>();
+        for (BirthKidRequestVO kid : kids) {
+            String registration = normalizeRegistration(kid.getRegistrationNumber());
+            if (registration == null) {
+                throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria e obrigatorio");
+            }
+            if (!seen.add(registration)) {
+                throw new BusinessRuleException("kids.registrationNumber", "Nao e permitido informar crias com registro duplicado no mesmo parto");
+            }
+        }
+    }
+
+    private String normalizeRegistration(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private Pageable normalizeAlertsPageable(Pageable pageable) {
