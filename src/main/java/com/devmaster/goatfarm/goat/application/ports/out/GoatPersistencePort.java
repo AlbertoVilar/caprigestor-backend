@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.goat.application.ports.out;
 
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
 import org.springframework.data.domain.Page;
@@ -62,6 +63,8 @@ public interface GoatPersistencePort {
      */
     Page<Goat> findAllByFarmId(Long goatFarmId, Pageable pageable);
 
+    Page<Goat> findAllByFarmIdAndBreed(Long goatFarmId, GoatBreed breed, Pageable pageable);
+
     /**
      * Busca cabras por nome e capril com paginação
      * @param goatFarmId ID do capril
@@ -70,6 +73,8 @@ public interface GoatPersistencePort {
      * @return Página de cabras filtradas
      */
     Page<Goat> findByNameAndFarmId(Long goatFarmId, String name, Pageable pageable);
+
+    Page<Goat> findByNameAndFarmIdAndBreed(Long goatFarmId, String name, GoatBreed breed, Pageable pageable);
 
     /**
      * Busca cabra por registrationNumber e farmId

@@ -549,7 +549,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             case "ALPINA", "ALPINA FRANCESA" -> GoatBreed.ALPINA;
             case "ALPINA AMERICANA" -> GoatBreed.ALPINA_AMERICANA;
             case "ALPINA BRITANICA" -> GoatBreed.ALPINA_BRITANICA;
-            case "ALPINE" -> GoatBreed.ALPINE;
+            case "ALPINE" -> GoatBreed.ALPINA;
             case "ANGLONUBIANA", "ANGLO NUBIANA", "ANGLO-NUBIANA" -> GoatBreed.ANGLO_NUBIANA;
             case "ANGORA" -> GoatBreed.ANGORA;
             case "BHUJ" -> GoatBreed.BHUJ;

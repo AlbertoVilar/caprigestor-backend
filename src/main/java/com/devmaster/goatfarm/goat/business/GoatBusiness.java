@@ -13,6 +13,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
 import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
@@ -115,8 +116,26 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 
     @Transactional(readOnly = true)
+    public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, Pageable pageable) {
+        if (breed == null) {
+            return findAllGoatsByFarm(farmId, pageable);
+        }
+
+        return goatPort.findAllByFarmIdAndBreed(farmId, breed, pageable).map(goatBusinessMapper::toResponseVO);
+    }
+
+    @Transactional(readOnly = true)
     public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable) {
         return goatPort.findByNameAndFarmId(farmId, name, pageable).map(goatBusinessMapper::toResponseVO);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, Pageable pageable) {
+        if (breed == null) {
+            return findGoatsByNameAndFarm(farmId, name, pageable);
+        }
+
+        return goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, pageable).map(goatBusinessMapper::toResponseVO);
     }
 
     @Transactional(readOnly = true)
