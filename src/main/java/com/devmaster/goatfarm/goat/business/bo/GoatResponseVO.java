@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.business.bo;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +22,9 @@ public class GoatResponseVO {
     private String color;
     private LocalDate birthDate;
     private GoatStatus status;
+    private GoatExitType exitType;
+    private LocalDate exitDate;
+    private String exitNotes;
     private String tod;
     private String toe;
     private Category category;
@@ -38,8 +42,8 @@ public class GoatResponseVO {
     public GoatResponseVO() {
     }
 
-    public GoatResponseVO(String registrationNumber, String name, Gender gender, GoatBreed breed, 
-                         String color, LocalDate birthDate, GoatStatus status, String tod, String toe, 
+    public GoatResponseVO(String registrationNumber, String name, Gender gender, GoatBreed breed,
+                         String color, LocalDate birthDate, GoatStatus status, GoatExitType exitType, LocalDate exitDate, String exitNotes, String tod, String toe,
                          Category category, String fatherName, String fatherRegistrationNumber, 
                          String motherName, String motherRegistrationNumber, String userName, 
                          Long farmId, String farmName) {
@@ -50,6 +54,9 @@ public class GoatResponseVO {
         this.color = color;
         this.birthDate = birthDate;
         this.status = status;
+        this.exitType = exitType;
+        this.exitDate = exitDate;
+        this.exitNotes = exitNotes;
         this.tod = tod;
         this.toe = toe;
         this.category = category;
@@ -82,6 +89,15 @@ public class GoatResponseVO {
     
     public GoatStatus getStatus() { return status; }
     public void setStatus(GoatStatus status) { this.status = status; }
+
+    public GoatExitType getExitType() { return exitType; }
+    public void setExitType(GoatExitType exitType) { this.exitType = exitType; }
+
+    public LocalDate getExitDate() { return exitDate; }
+    public void setExitDate(LocalDate exitDate) { this.exitDate = exitDate; }
+
+    public String getExitNotes() { return exitNotes; }
+    public void setExitNotes(String exitNotes) { this.exitNotes = exitNotes; }
     
     public String getTod() { return tod; }
     public void setTod(String tod) { this.tod = tod; }
