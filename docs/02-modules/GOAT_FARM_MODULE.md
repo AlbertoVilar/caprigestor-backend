@@ -53,6 +53,12 @@ Importação ABCC (opcional):
 - `confirm`: confirma dados revisados e cria a cabra na fazenda reutilizando o fluxo de criação manual do módulo Goat.
 - `confirm-batch`: importa em lote os animais selecionados da página atual da busca, sem derrubar o lote inteiro quando houver incompatibilidades.
 
+## Regra de situação ABCC sem RGD
+- `Sem RGD` não impede importação patrimonial.
+- O identificador estável para o fluxo é o `registrationNumber` ABCC.
+- No fluxo patrimonial ABCC, a situação `Sem RGD` é normalizada como `ATIVO` para manter coerência entre `preview`, `confirm` e `confirm-batch`.
+- A deduplicação por `registrationNumber` e a validação de `TOD` continuam obrigatórias sem alteração.
+
 ## Regra forte de segurança por TOD
 - Usuário comum (não `ROLE_ADMIN`) só pode usar importação ABCC para animais com `TOD` igual ao `TOD` da fazenda.
 - `ROLE_ADMIN` global pode operar com qualquer TOD (override administrativo).
