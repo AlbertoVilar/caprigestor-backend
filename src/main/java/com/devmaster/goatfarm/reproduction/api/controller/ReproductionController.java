@@ -167,6 +167,43 @@ public class ReproductionController {
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
+    @PostMapping("/pregnancies/{pregnancyId}/births")
+    @Operation(summary = "Registrar parto e cadastrar cria(s) vinculada(s)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Parto registrado e cria(s) cadastrada(s) com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador de gestação inválido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Gestação, matriz ou pai local não encontrado."),
+            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao registrar parto/cria(s).")
+    })
+    public ResponseEntity<BirthResponseDTO> registerBirth(
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra matriz") @PathVariable String goatId,
+            @Parameter(description = "Identificador da gestação ativa") @PathVariable Long pregnancyId,
+            @Valid @RequestBody BirthRequestDTO request) {
+        BirthRequestVO vo = mapper.toBirthRequestVO(request);
+        BirthResponseVO responseVO = commandUseCase.registerBirth(farmId, goatId, pregnancyId, vo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toBirthResponseDTO(responseVO));
+    }
+
+    @PostMapping("/weaning")
+    @Operation(summary = "Registrar desmame de cria/animal jovem")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Desmame registrado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload invalido ou data de desmame inconsistente."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Animal nao encontrado para a fazenda informada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negocio violada ao registrar desmame.")
+    })
+    public ResponseEntity<WeaningResponseDTO> registerWeaning(
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cria/animal") @PathVariable String goatId,
+            @Valid @RequestBody WeaningRequestDTO request) {
+        WeaningRequestVO vo = mapper.toWeaningRequestVO(request);
+        WeaningResponseVO responseVO = commandUseCase.registerWeaning(farmId, goatId, vo);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toWeaningResponseDTO(responseVO));
+    }
+
     @GetMapping("/events")
     @Operation(summary = "Listar histórico de eventos reprodutivos (paginado)")
     @ApiResponses({

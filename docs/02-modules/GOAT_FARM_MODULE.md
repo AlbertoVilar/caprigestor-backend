@@ -1,5 +1,5 @@
 ﻿# GOAT_FARM_MODULE
-Última atualização: 2026-03-15
+Última atualização: 2026-03-16
 Escopo: contratos e bordas HTTP do módulo base de Fazendas e Cabras (Goat/Farm).
 Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Padrão Market-Grade](../01-architecture/MODULE_STANDARD_MARKET_GRADE.md)
 
@@ -39,6 +39,25 @@ Cabras:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `GET /api/v1/goatfarms/{farmId}/goats?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/search?name=&page=&size=&sort=`
+
+Reprodução (Sprint 1 - parto + cria(s)):
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/births`
+- Registra parto, encerra a gestação ativa com `BIRTH` e cadastra uma ou mais crias vinculadas.
+- Vínculo mãe é obrigatório (matriz do path).
+- Vínculo pai é opcional e só ocorre quando houver pai local válido na mesma fazenda.
+
+Reprodução (Sprint 2 - desmame):
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/weaning`
+- Registra desmame de cria/animal jovem por data e mantém o histórico no contexto de reprodução.
+- Regras mínimas:
+  - `weaningDate` obrigatória, não futura e não anterior à data de nascimento.
+  - Animal deve estar `ATIVO`.
+  - Animal precisa ter vínculo local de mãe para elegibilidade do fluxo.
+  - Não permite desmame duplicado para o mesmo animal.
+- Transição adotada nesta sprint:
+  - O domínio atual não possui categoria etária explícita para "desmamado".
+  - A transição operacional é representada pelo evento reprodutivo `WEANING`.
+  - `GoatStatus` permanece no modelo existente (sem criação de enum/tabela nova).
 
 Importação ABCC (opcional):
 - `GET /api/v1/goatfarms/{farmId}/goats/imports/abcc/races`

@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.reproduction.application.ports.out;
 
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
 import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
+import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -22,6 +23,8 @@ public interface ReproductiveEventPersistencePort {
     Optional<ReproductiveEvent> findLatestPregnancyCheckByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date);
 
     Optional<ReproductiveEvent> findCoverageCorrectionByRelatedEventId(Long farmId, String goatId, Long relatedEventId);
+
+    Optional<ReproductiveEvent> findLatestByFarmIdAndGoatIdAndEventType(Long farmId, String goatId, ReproductiveEventType eventType);
 
     Page<PregnancyDiagnosisAlertProjection> findPendingPregnancyDiagnosisAlerts(
             Long farmId,

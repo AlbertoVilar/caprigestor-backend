@@ -13,10 +13,15 @@ public interface ReproductionMapper {
     PregnancyConfirmRequestVO toPregnancyConfirmRequestVO(PregnancyConfirmRequestDTO dto);
     PregnancyCloseRequestVO toPregnancyCloseRequestVO(PregnancyCloseRequestDTO dto);
     CoverageCorrectionRequestVO toCoverageCorrectionRequestVO(CoverageCorrectionRequestDTO dto);
+    BirthRequestVO toBirthRequestVO(BirthRequestDTO dto);
+    WeaningRequestVO toWeaningRequestVO(WeaningRequestDTO dto);
 
     // VO -> DTO (Responses)
     PregnancyResponseDTO toPregnancyResponseDTO(PregnancyResponseVO vo);
     ReproductiveEventResponseDTO toReproductiveEventResponseDTO(ReproductiveEventResponseVO vo);
+    BirthResponseDTO toBirthResponseDTO(BirthResponseVO vo);
+    BirthKidResponseDTO toBirthKidResponseDTO(BirthKidResponseVO vo);
+    WeaningResponseDTO toWeaningResponseDTO(WeaningResponseVO vo);
 
     DiagnosisRecommendationResponseDTO toDiagnosisRecommendationResponseDTO(DiagnosisRecommendationResponseVO vo);
     DiagnosisRecommendationCoverageDTO toDiagnosisRecommendationCoverageDTO(DiagnosisRecommendationCoverageVO vo);

@@ -55,6 +55,12 @@ public interface ReproductiveEventRepository extends JpaRepository<ReproductiveE
             Long relatedEventId
     );
 
+    Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeOrderByEventDateDescIdDesc(
+            Long farmId,
+            String goatId,
+            ReproductiveEventType eventType
+    );
+
     @Query(
             value = """
                     with coverage_candidates as (

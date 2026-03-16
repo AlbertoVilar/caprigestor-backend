@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.reproduction.business.mapper;
 
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthKidResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
@@ -11,4 +13,6 @@ public interface ReproductionBusinessMapper {
     PregnancyResponseVO toPregnancyResponseVO(Pregnancy entity);
 
     ReproductiveEventResponseVO toReproductiveEventResponseVO(ReproductiveEvent entity);
+
+    BirthKidResponseVO toBirthKidResponseVO(GoatResponseVO entity);
 }

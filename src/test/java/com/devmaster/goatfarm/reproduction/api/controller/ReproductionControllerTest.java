@@ -4,8 +4,18 @@ import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionComm
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.reproduction.api.dto.BirthKidResponseDTO;
+import com.devmaster.goatfarm.reproduction.api.dto.BirthRequestDTO;
+import com.devmaster.goatfarm.reproduction.api.dto.BirthResponseDTO;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyResponseDTO;
+import com.devmaster.goatfarm.reproduction.api.dto.WeaningRequestDTO;
+import com.devmaster.goatfarm.reproduction.api.dto.WeaningResponseDTO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.BirthResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
+import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import org.junit.jupiter.api.Test;
@@ -17,11 +27,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -107,6 +120,110 @@ class ReproductionControllerTest {
                         farmId, goatId, invalidId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void registerBirth_shouldReturn201_whenPayloadIsValid() throws Exception {
+        Long farmId = 1L;
+        String goatId = "GOAT-001";
+        Long pregnancyId = 10L;
+
+        BirthRequestVO requestVO = BirthRequestVO.builder()
+                .birthDate(LocalDate.of(2026, 3, 10))
+                .kids(List.of())
+                .build();
+        BirthResponseVO responseVO = BirthResponseVO.builder().build();
+        BirthResponseDTO responseDTO = BirthResponseDTO.builder()
+                .pregnancy(PregnancyResponseDTO.builder().id(pregnancyId).build())
+                .kids(List.of(BirthKidResponseDTO.builder().registrationNumber("KID-001").build()))
+                .build();
+
+        when(mapper.toBirthRequestVO(any(BirthRequestDTO.class))).thenReturn(requestVO);
+        when(commandUseCase.registerBirth(farmId, goatId, pregnancyId, requestVO)).thenReturn(responseVO);
+        when(mapper.toBirthResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        String payload = """
+                {
+                  "birthDate": "2026-03-10",
+                  "kids": [
+                    {
+                      "registrationNumber": "KID-001",
+                      "name": "Cria 1",
+                      "gender": "FEMEA",
+                      "breed": "SAANEN"
+                    }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/births",
+                        farmId, goatId, pregnancyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.pregnancy.id").value(pregnancyId))
+                .andExpect(jsonPath("$.kids[0].registrationNumber").value("KID-001"));
+    }
+
+    @Test
+    void registerWeaning_shouldReturn201_whenPayloadIsValid() throws Exception {
+        Long farmId = 1L;
+        String goatId = "KID-001";
+
+        WeaningRequestVO requestVO = WeaningRequestVO.builder()
+                .weaningDate(LocalDate.of(2026, 5, 10))
+                .notes("Desmame realizado")
+                .build();
+
+        WeaningResponseVO responseVO = WeaningResponseVO.builder()
+                .goatId(goatId)
+                .weaningDate(LocalDate.of(2026, 5, 10))
+                .previousStatus(GoatStatus.ATIVO)
+                .currentStatus(GoatStatus.ATIVO)
+                .build();
+
+        WeaningResponseDTO responseDTO = WeaningResponseDTO.builder()
+                .goatId(goatId)
+                .weaningDate(LocalDate.of(2026, 5, 10))
+                .previousStatus(GoatStatus.ATIVO)
+                .currentStatus(GoatStatus.ATIVO)
+                .build();
+
+        when(mapper.toWeaningRequestVO(any(WeaningRequestDTO.class))).thenReturn(requestVO);
+        when(commandUseCase.registerWeaning(farmId, goatId, requestVO)).thenReturn(responseVO);
+        when(mapper.toWeaningResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        String payload = """
+                {
+                  "weaningDate": "2026-05-10",
+                  "notes": "Desmame realizado"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/weaning", farmId, goatId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.goatId").value(goatId))
+                .andExpect(jsonPath("$.weaningDate").value("2026-05-10"))
+                .andExpect(jsonPath("$.currentStatus").value("ATIVO"));
+    }
+
+    @Test
+    void registerWeaning_shouldReturn400_whenWeaningDateIsMissing() throws Exception {
+        Long farmId = 1L;
+        String goatId = "KID-001";
+
+        String payload = """
+                {
+                  "notes": "Sem data"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/weaning", farmId, goatId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnprocessableEntity());
     }
 }
 
