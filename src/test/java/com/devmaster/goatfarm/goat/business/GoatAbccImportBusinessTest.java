@@ -12,6 +12,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
@@ -217,6 +218,53 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void shouldMapSemRgdAsAtivoOnPreview() {
+        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(
+                buildRawPreview("A-001", "1111111111", "ANIMAL", "12345", "00001", "Sem RGD")
+        );
+
+        var response = business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-001").build());
+
+        assertThat(response.getStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(response.getNormalizationWarnings()).isEmpty();
+    }
+
+    @Test
+    void shouldConfirmIndividualWhenAbccSituationIsSemRgd() {
+        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(
+                buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012", "Sem RGD")
+        );
+
+        GoatResponseVO expected = new GoatResponseVO();
+        expected.setRegistrationNumber("1643218012");
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(expected);
+
+        GoatAbccPreviewResponseVO preview = business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-001").build());
+        GoatRequestVO requestVO = new GoatRequestVO();
+        requestVO.setRegistrationNumber(preview.getRegistrationNumber());
+        requestVO.setName(preview.getName());
+        requestVO.setGender(preview.getGender());
+        requestVO.setBreed(preview.getBreed());
+        requestVO.setColor(preview.getColor());
+        requestVO.setBirthDate(preview.getBirthDate());
+        requestVO.setStatus(preview.getStatus());
+        requestVO.setTod(preview.getTod());
+        requestVO.setToe(preview.getToe());
+        requestVO.setCategory(preview.getCategory());
+        requestVO.setFatherRegistrationNumber(preview.getFatherRegistrationNumber());
+        requestVO.setMotherRegistrationNumber(preview.getMotherRegistrationNumber());
+
+        GoatResponseVO response = business.confirm(1L, "A-001", requestVO);
+
+        assertThat(preview.getStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(response).isSameAs(expected);
+    }
+
+    @Test
     void shouldConfirmByReusingGoatCreateFlowWhenTodMatches() {
         when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
@@ -343,6 +391,37 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void shouldConfirmBatchWhenAbccSituationIsSemRgd() {
+        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(
+                buildRawPreview("A-001", "1111111111", "IMPORTAVEL", "12345", "11111", "Sem RGD")
+        );
+        when(goatPersistencePort.findByIdAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
+
+        GoatResponseVO created = new GoatResponseVO();
+        created.setRegistrationNumber("1111111111");
+        created.setName("IMPORTAVEL");
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(created);
+
+        var response = business.confirmBatch(1L, List.of(
+                GoatAbccBatchConfirmItemVO.builder().externalId("A-001").build()
+        ));
+
+        assertThat(response.getTotalSelected()).isEqualTo(1);
+        assertThat(response.getTotalImported()).isEqualTo(1);
+        assertThat(response.getTotalSkippedDuplicate()).isEqualTo(0);
+        assertThat(response.getTotalSkippedTodMismatch()).isEqualTo(0);
+        assertThat(response.getTotalError()).isEqualTo(0);
+        assertThat(response.getResults().getFirst().getStatus()).isEqualTo("IMPORTED");
+
+        ArgumentCaptor<GoatRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getStatus()).isEqualTo(GoatStatus.ATIVO);
+    }
+
+    @Test
     void shouldBlockBatchWhenFarmTodIsMissingForNonAdmin() {
         when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", null)));
@@ -376,6 +455,17 @@ class GoatAbccImportBusinessTest {
     }
 
     private GoatAbccRawPreviewVO buildRawPreview(String externalId, String registro, String nome, String tod, String toe) {
+        return buildRawPreview(externalId, registro, nome, tod, toe, "RGD");
+    }
+
+    private GoatAbccRawPreviewVO buildRawPreview(
+            String externalId,
+            String registro,
+            String nome,
+            String tod,
+            String toe,
+            String situacao
+    ) {
         return GoatAbccRawPreviewVO.builder()
                 .externalId(externalId)
                 .registro(registro)
@@ -383,7 +473,7 @@ class GoatAbccImportBusinessTest {
                 .sexo("Macho")
                 .raca("SAANEN")
                 .pelagem("BRANCA")
-                .situacao("RGD")
+                .situacao(situacao)
                 .categoria("PO")
                 .dataNascimento("10/01/2020")
                 .tod(tod)
