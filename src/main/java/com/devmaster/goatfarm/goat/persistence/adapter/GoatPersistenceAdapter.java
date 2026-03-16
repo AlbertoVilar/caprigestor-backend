@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
@@ -81,8 +82,18 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public Page<Goat> findAllByFarmIdAndBreed(Long goatFarmId, GoatBreed breed, Pageable pageable) {
+        return goatRepository.findAllByFarmIdAndBreed(goatFarmId, breed, pageable);
+    }
+
+    @Override
     public Page<Goat> findByNameAndFarmId(Long goatFarmId, String name, Pageable pageable) {
         return goatRepository.findByNameAndFarmId(goatFarmId, name, pageable);
+    }
+
+    @Override
+    public Page<Goat> findByNameAndFarmIdAndBreed(Long goatFarmId, String name, GoatBreed breed, Pageable pageable) {
+        return goatRepository.findByNameAndFarmIdAndBreed(goatFarmId, name, breed, pageable);
     }
 
     @Override
