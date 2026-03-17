@@ -60,6 +60,13 @@ Reprodução (Sprint 2 - desmame):
   - A transição operacional é representada pelo evento reprodutivo `WEANING`.
   - `GoatStatus` permanece no modelo existente (sem criação de enum/tabela nova).
 
+Invariantes fortes do fluxo reprodutivo (hotfix):
+- Não é permitido registrar nova cobertura para matriz com gestação `ACTIVE`.
+- Não é permitido reutilizar `coverage_event_id` já consumido por gestação anterior.
+- Fechamento com `BIRTH` é exclusivo de `registerBirth` (não pode passar por `closePregnancy` genérico).
+- `closePregnancy` exige `closeDate` não futura.
+- Cobertura na mesma data (ou antes) de parto já registrado para a matriz é bloqueada.
+
 Importação ABCC (opcional):
 - `GET /api/v1/goatfarms/{farmId}/goats/imports/abcc/races`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`

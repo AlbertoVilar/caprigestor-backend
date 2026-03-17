@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +52,16 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     @Override
     public Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId) {
         return pregnancyRepository.findByFarmIdAndCoverageEventId(farmId, coverageEventId);
+    }
+
+    @Override
+    public boolean existsByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId) {
+        return pregnancyRepository.existsByFarmIdAndCoverageEventId(farmId, coverageEventId);
+    }
+
+    @Override
+    public Optional<LocalDate> findLatestBirthCloseDate(Long farmId, String goatId) {
+        return pregnancyRepository.findLatestBirthCloseDate(farmId, goatId);
     }
 
     @Override
