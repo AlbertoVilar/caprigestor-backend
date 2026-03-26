@@ -551,6 +551,22 @@ para `develop` e `main`:
 
 Use o mesmo comando localmente antes de abrir PR ou promover `develop -> main`.
 
+### Health check operacional
+
+O backend expõe probes operacionais via Spring Boot Actuator:
+
+```bash
+curl http://localhost:8080/actuator/health/liveness
+curl http://localhost:8080/actuator/health/readiness
+curl http://localhost:8080/actuator/health
+```
+
+- `liveness`: valida que o processo Spring subiu e está vivo.
+- `readiness`: valida que a aplicação está pronta para receber tráfego.
+- `health`: visão agregada do estado do serviço e dependências expostas pelo Actuator.
+
+Os endpoints acima são somente leitura e podem ser usados em smoke checks locais/HML.
+
 ---
 
 ## 🐳 Docker

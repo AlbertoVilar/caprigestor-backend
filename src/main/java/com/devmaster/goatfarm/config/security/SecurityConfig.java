@@ -72,7 +72,8 @@ public class SecurityConfig {
                     "/api/v1/auth/refresh", "/api/auth/refresh",
                     "/api/v1/auth/register-farm", "/api/auth/register-farm",
                     "/api/v1/goatfarms/full", "/api/goatfarms/full",
-                    "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+                    "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**",
+                    "/actuator/health", "/actuator/health/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions().disable())
