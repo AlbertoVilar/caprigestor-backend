@@ -540,6 +540,17 @@ Para executar os testes:
 ./mvnw clean test
 ```
 
+### CI backend
+
+O workflow `backend_ci` roda o gate oficial do backend em `push` e `pull_request`
+para `develop` e `main`:
+
+```bash
+./mvnw -U -T 1C clean test
+```
+
+Use o mesmo comando localmente antes de abrir PR ou promover `develop -> main`.
+
 ---
 
 ## 🐳 Docker
