@@ -704,6 +704,97 @@ O fluxo recomendado é totalmente manual e está documentado em:
 
     - Com o banco já corrigido, a aplicação subirá e o Flyway aplicará a `V16` com sucesso.
 
+### Backup e restore local/hml (PostgreSQL Docker)
+
+O repositório agora possui dois scripts operacionais mínimos para ambiente local/hml:
+
+- `scripts/backup-postgres.ps1`
+- `scripts/restore-postgres.ps1`
+
+Os scripts assumem o container padrão `caprigestor-postgres` e funcionam com `pg_dump` / `psql` via `docker exec`.
+
+**Gerar backup SQL do banco local atual:**
+
+```powershell
+.\scripts\backup-postgres.ps1 -Database caprigestor_dev
+```
+
+**Gerar backup em diretório explícito:**
+
+```powershell
+.\scripts\backup-postgres.ps1 -Database caprigestor_dev -OutputDir .\backups
+```
+
+**Restaurar backup em um banco já existente:**
+
+```powershell
+.\scripts\restore-postgres.ps1 -InputFile .\backups\caprigestor_dev-YYYYMMDD-HHMMSS.sql -Database caprigestor_dev
+```
+
+**Recriar o banco antes do restore:**
+
+```powershell
+.\scripts\restore-postgres.ps1 -InputFile .\backups\caprigestor_dev-YYYYMMDD-HHMMSS.sql -Database caprigestor_dev_restore -RecreateDatabase
+```
+
+Regras operacionais:
+- usar backup antes de qualquer intervenção manual em `flyway_schema_history`;
+- usar `-RecreateDatabase` apenas em banco local/hml controlado;
+- não usar esse fluxo como substituto de estratégia de backup de produção.
+
+### Flyway V25 - checksum drift em banco local/hml
+
+Foi confirmado um caso real de drift em `caprigestor_dev`:
+
+- checksum aplicado no banco para `V25`: `1438893664`
+- checksum atual resolvido pelo código: `-1126156828`
+- causa no histórico do repositório: o arquivo `V25__evolve_inventory_lot_lifecycle.sql` foi alterado depois de já ter sido aplicado localmente (commit `8d9702e`)
+- diferença confirmada no Git: apenas texto da mensagem de erro e newline final, sem mudança estrutural de schema
+
+Comandos úteis de diagnóstico:
+
+```sql
+SELECT installed_rank, version, description, script, checksum, success
+FROM flyway_schema_history
+WHERE version = '25';
+```
+
+```powershell
+.\mvnw.cmd --% -Dflyway.url=jdbc:postgresql://localhost:5432/caprigestor_dev -Dflyway.user=admin -Dflyway.password=admin123 flyway:info
+```
+
+**Regra de decisão segura:**
+
+1. Se o banco local/hml é descartável ou pode ser restaurado a partir de backup:
+   - preferir backup;
+   - recriar o banco;
+   - subir a aplicação para reaplicar as migrations do zero.
+
+2. Se o banco local/hml precisa ser preservado e o diff da migration foi auditado como não estrutural:
+   - fazer backup antes;
+   - executar `repair` explicitamente;
+   - validar em seguida com `flyway:validate` ou com a subida normal da aplicação.
+
+3. Não fazer:
+   - editar novamente a migration histórica para "combinar" com o banco;
+   - rodar `repair` em produção para esconder drift não auditado;
+   - atualizar `flyway_schema_history` manualmente sem backup e sem evidência do diff.
+
+**Fluxo recomendado para este drift específico da V25 em local/hml:**
+
+```powershell
+.\scripts\backup-postgres.ps1 -Database caprigestor_dev
+.\mvnw.cmd --% -Dflyway.url=jdbc:postgresql://localhost:5432/caprigestor_dev -Dflyway.user=admin -Dflyway.password=admin123 flyway:repair
+.\mvnw.cmd --% -Dflyway.url=jdbc:postgresql://localhost:5432/caprigestor_dev -Dflyway.user=admin -Dflyway.password=admin123 flyway:validate
+```
+
+**Checklist pós-remediação:**
+
+- `flyway:validate` sem erro;
+- aplicação sobe normalmente no profile `dev`;
+- `SELECT ... FROM flyway_schema_history WHERE version = '25'` reflete o checksum atual;
+- nenhum arquivo histórico adicional foi alterado para "forçar" compatibilidade.
+
 ---
 
 ## 🔐 Segurança
