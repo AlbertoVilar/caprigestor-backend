@@ -9,6 +9,8 @@ import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
+
 /**
  * Porta de entrada (Use Case) para operações de gerenciamento de cabras.
  */
@@ -31,6 +33,8 @@ public interface GoatManagementUseCase {
     Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable);
 
     Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, Pageable pageable);
+
+    List<GoatResponseVO> listOffspring(Long farmId, String goatId);
 
     GoatHerdSummaryVO getGoatHerdSummary(Long farmId);
 }

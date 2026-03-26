@@ -21,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping({"/api/v1/goatfarms/{farmId}/goats", "/api/goatfarms/{farmId}/goats"})
 @Tag(name = "Goat API", description = "Gerenciamento de cabras da fazenda. Caminho canônico /api/v1; legado /api em descontinuação.")
@@ -111,6 +113,20 @@ public class GoatController {
                 goatMapper.toResponseDTO(
                         goatUseCase.findGoatById(farmId, goatId)
                 )
+        );
+    }
+
+    @GetMapping("/{goatId}/offspring")
+    @Operation(summary = "Lista as crias locais vinculadas ao animal")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Crias retornadas com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada.")
+    })
+    public ResponseEntity<List<GoatResponseDTO>> listOffspring(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
+        return ResponseEntity.ok(
+                goatUseCase.listOffspring(farmId, goatId).stream()
+                        .map(goatMapper::toResponseDTO)
+                        .toList()
         );
     }
 

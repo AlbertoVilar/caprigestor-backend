@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface GoatRepository extends JpaRepository<Goat, String> {
@@ -42,6 +43,18 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
 
     @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')) AND g.breed = :breed")
     Page<Goat> findByNameAndFarmIdAndBreed(@Param("farmId") Long farmId, @Param("name") String name, @Param("breed") GoatBreed breed, Pageable pageable);
+
+    @Query("""
+            SELECT g
+            FROM Goat g
+            WHERE g.farm.id = :farmId
+              AND (
+                  g.mother.registrationNumber = :parentRegistrationNumber
+                  OR g.father.registrationNumber = :parentRegistrationNumber
+              )
+            ORDER BY CASE WHEN g.birthDate IS NULL THEN 1 ELSE 0 END, g.birthDate DESC, g.registrationNumber ASC
+            """)
+    List<Goat> findOffspringByParentRegistration(@Param("farmId") Long farmId, @Param("parentRegistrationNumber") String parentRegistrationNumber);
 
     @Modifying
     @Transactional

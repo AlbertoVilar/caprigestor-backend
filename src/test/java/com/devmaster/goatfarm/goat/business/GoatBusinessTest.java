@@ -248,6 +248,30 @@ public class GoatBusinessTest {
     }
 
     @Test
+    @DisplayName("Deve listar crias vinculadas ao animal dentro da fazenda")
+    void shouldListOffspringByParentRegistration() {
+        Goat kid = new Goat();
+        kid.setRegistrationNumber("164322900");
+        kid.setName("Cria Teste");
+
+        GoatResponseVO kidResponse = new GoatResponseVO();
+        kidResponse.setRegistrationNumber("164322900");
+        kidResponse.setName("Cria Teste");
+
+        when(goatPort.findByIdAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findOffspringByParentRegistration(1L, "164322002")).thenReturn(List.of(kid));
+        when(goatBusinessMapper.toResponseVO(kid)).thenReturn(kidResponse);
+
+        List<GoatResponseVO> result = goatBusiness.listOffspring(1L, "164322002");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getRegistrationNumber()).isEqualTo("164322900");
+        verify(goatPort).findByIdAndFarmId("164322002", 1L);
+        verify(goatPort).findOffspringByParentRegistration(1L, "164322002");
+        verify(goatBusinessMapper).toResponseVO(kid);
+    }
+
+    @Test
     @DisplayName("Deve montar o resumo agregado do rebanho com contagem por sexo, status e raça")
     void shouldBuildGoatHerdSummarySuccessfully() {
         GoatBreedCountProjection saanen = new GoatBreedCountProjection() {
