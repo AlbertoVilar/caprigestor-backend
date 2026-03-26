@@ -76,6 +76,8 @@ public interface GoatPersistencePort {
 
     Page<Goat> findByNameAndFarmIdAndBreed(Long goatFarmId, String name, GoatBreed breed, Pageable pageable);
 
+    List<Goat> findOffspringByParentRegistration(Long goatFarmId, String parentRegistrationNumber);
+
     /**
      * Busca cabra por registrationNumber e farmId
      * @param id Número de registro

@@ -97,6 +97,11 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public List<Goat> findOffspringByParentRegistration(Long goatFarmId, String parentRegistrationNumber) {
+        return goatRepository.findOffspringByParentRegistration(goatFarmId, parentRegistrationNumber);
+    }
+
+    @Override
     public Optional<Goat> findByIdAndFarmId(String id, Long farmId) {
         return goatRepository.findByIdAndFarmId(id, farmId);
     }
