@@ -92,21 +92,37 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     private static final String CONFIRMATION_MIN_DAYS_MESSAGE =
             "Diagnostico de prenhez so pode ser registrado a partir de 60 dias apos a ultima cobertura.";
     private static final String WARNING_ACTIVE_PREGNANCY_WITHOUT_VALID_CHECK = "GESTACAO_ATIVA_SEM_CHECK_VALIDO";
+    private static final String ACTIVE_PREGNANCY_BLOCKS_OPERATION_MESSAGE =
+            "Nao e permitido registrar nova cobertura quando existe gestacao ativa para esta cabra.";
+    private static final String COVERAGE_ALREADY_CONSUMED_MESSAGE =
+            "A cobertura selecionada ja foi utilizada em uma gestacao e nao pode ser reutilizada.";
+    private static final String CLOSE_REASON_BIRTH_FORBIDDEN_MESSAGE =
+            "Encerramento com motivo BIRTH e exclusivo do endpoint de parto.";
+    private static final String BREEDING_DATE_ON_OR_BEFORE_BIRTH_MESSAGE =
+            "Nao e permitido registrar cobertura na mesma data ou antes de um parto ja registrado para esta cabra.";
     private static final String SAME_DAY_BREEDING_ALREADY_EXISTS_MESSAGE =
-            "Já existe uma cobertura registrada para esta cabra hoje. Use a correção de cobertura se precisar ajustar o lançamento.";
+            "JÃ¡ existe uma cobertura registrada para esta cabra hoje. Use a correÃ§Ã£o de cobertura se precisar ajustar o lanÃ§amento.";
 
     @Override
     @Transactional
     public ReproductiveEventResponseVO registerBreeding(Long farmId, String goatId, BreedingRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getEventDate() == null) {
-            throw new InvalidArgumentException("eventDate", "Data do evento é obrigatória");
+            throw new InvalidArgumentException("eventDate", "Data do evento Ã© obrigatÃ³ria");
         }
         if (vo.getBreedingType() == null) {
-            throw new InvalidArgumentException("breedingType", "Tipo de cobertura é obrigatório");
+            throw new InvalidArgumentException("breedingType", "Tipo de cobertura Ã© obrigatÃ³rio");
         }
         if (vo.getEventDate().isAfter(LocalDate.now(clock))) {
-            throw new InvalidArgumentException("eventDate", "Data do evento não pode ser futura");
+            throw new InvalidArgumentException("eventDate", "Data do evento nÃ£o pode ser futura");
+        }
+
+        if (pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId).isPresent()) {
+            throw new BusinessRuleException("status", ACTIVE_PREGNANCY_BLOCKS_OPERATION_MESSAGE);
+        }
+        Optional<LocalDate> latestBirthDate = pregnancyPersistencePort.findLatestBirthCloseDate(farmId, goatId);
+        if (latestBirthDate.isPresent() && !vo.getEventDate().isAfter(latestBirthDate.get())) {
+            throw new BusinessRuleException("eventDate", BREEDING_DATE_ON_OR_BEFORE_BIRTH_MESSAGE);
         }
 
         Optional<ReproductiveEvent> latestCoverage =
@@ -145,33 +161,33 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public ReproductiveEventResponseVO correctCoverage(Long farmId, String goatId, Long coverageEventId, CoverageCorrectionRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (coverageEventId == null || coverageEventId <= 0) {
-            throw new InvalidArgumentException("coverageEventId", "Identificador de cobertura inválido");
+            throw new InvalidArgumentException("coverageEventId", "Identificador de cobertura invÃ¡lido");
         }
         if (vo.getCorrectedDate() == null) {
-            throw new InvalidArgumentException("correctedDate", "Data corrigida é obrigatória");
+            throw new InvalidArgumentException("correctedDate", "Data corrigida Ã© obrigatÃ³ria");
         }
         if (vo.getCorrectedDate().isAfter(LocalDate.now(clock))) {
-            throw new InvalidArgumentException("correctedDate", "Data corrigida não pode ser futura");
+            throw new InvalidArgumentException("correctedDate", "Data corrigida nÃ£o pode ser futura");
         }
 
         ReproductiveEvent coverage = reproductiveEventPersistencePort
                 .findByIdAndFarmIdAndGoatId(coverageEventId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cobertura não encontrada para o identificador informado: " + coverageEventId));
+                .orElseThrow(() -> new ResourceNotFoundException("Cobertura nÃ£o encontrada para o identificador informado: " + coverageEventId));
 
         if (coverage.getEventType() != ReproductiveEventType.COVERAGE) {
-            throw new BusinessRuleException("coverageEventId", "Evento informado não é uma cobertura");
+            throw new BusinessRuleException("coverageEventId", "Evento informado nÃ£o Ã© uma cobertura");
         }
 
         Optional<ReproductiveEvent> existingCorrection = reproductiveEventPersistencePort
                 .findCoverageCorrectionByRelatedEventId(farmId, goatId, coverageEventId);
         if (existingCorrection.isPresent()) {
-            throw new BusinessRuleException("coverageEventId", "Cobertura já possui correção registrada");
+            throw new BusinessRuleException("coverageEventId", "Cobertura jÃ¡ possui correÃ§Ã£o registrada");
         }
 
         Optional<Pregnancy> linkedPregnancy = pregnancyPersistencePort
                 .findByFarmIdAndCoverageEventId(farmId, coverageEventId);
         if (linkedPregnancy.isPresent()) {
-            throw new BusinessRuleException("coverageEventId", "Não é possível corrigir uma cobertura associada a uma gestação");
+            throw new BusinessRuleException("coverageEventId", "NÃ£o Ã© possÃ­vel corrigir uma cobertura associada a uma gestaÃ§Ã£o");
         }
 
         ReproductiveEvent correctionEvent = ReproductiveEvent.builder()
@@ -193,19 +209,19 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public PregnancyResponseVO confirmPregnancy(Long farmId, String goatId, PregnancyConfirmRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getCheckDate() == null) {
-            throw new InvalidArgumentException("checkDate", "Data do exame de gestação é obrigatória");
+            throw new InvalidArgumentException("checkDate", "Data do exame de gestaÃ§Ã£o Ã© obrigatÃ³ria");
         }
         if (vo.getCheckDate().isAfter(LocalDate.now(clock))) {
-            throw new InvalidArgumentException("checkDate", "Data do exame de gestação não pode ser futura");
+            throw new InvalidArgumentException("checkDate", "Data do exame de gestaÃ§Ã£o nÃ£o pode ser futura");
         }
         if (vo.getCheckResult() == null) {
-            throw new InvalidArgumentException("checkResult", "Resultado do exame de gestação é obrigatório");
+            throw new InvalidArgumentException("checkResult", "Resultado do exame de gestaÃ§Ã£o Ã© obrigatÃ³rio");
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
             var activeList = pregnancyPersistencePort.findAllActiveByFarmIdAndGoatIdOrdered(farmId, goatId);
             if (activeList.size() > 1) {
-                throw new DuplicateEntityException("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
+                throw new DuplicateEntityException("status", "Foram encontradas mÃºltiplas gestaÃ§Ãµes ativas para a mesma cabra na fazenda");
             }
         }
 
@@ -213,23 +229,26 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, goatId, vo.getCheckDate());
 
         if (latestCoverage.isEmpty()) {
-            throw new InvalidArgumentException("checkDate", "Não foi encontrada cobertura anterior à data do exame de gestação");
+            throw new InvalidArgumentException("checkDate", "NÃ£o foi encontrada cobertura anterior Ã  data do exame de gestaÃ§Ã£o");
         }
 
         ReproductiveEvent coverageEvent = latestCoverage.get();
         LocalDate breedingDate = resolveEffectiveCoverageDate(farmId, goatId, coverageEvent);
         if (vo.getCheckResult() == PregnancyCheckResult.POSITIVE) {
+            if (pregnancyPersistencePort.existsByFarmIdAndCoverageEventId(farmId, coverageEvent.getId())) {
+                throw new BusinessRuleException("checkDate", COVERAGE_ALREADY_CONSUMED_MESSAGE);
+            }
             if (vo.getCheckDate().isBefore(breedingDate.plusDays(MIN_CONFIRMATION_DAYS))) {
                 throw new BusinessRuleException("checkDate", CONFIRMATION_MIN_DAYS_MESSAGE);
             }
             Optional<Pregnancy> activePregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
             if (activePregnancy.isPresent()) {
-                throw new InvalidArgumentException("checkResult", "Já existe uma gestação ativa para esta cabra nesta fazenda");
+                throw new InvalidArgumentException("checkResult", "JÃ¡ existe uma gestaÃ§Ã£o ativa para esta cabra nesta fazenda");
             }
         }
 
         if (vo.getCheckResult() == PregnancyCheckResult.NEGATIVE) {
-            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE não é permitido neste endpoint de confirmação. Utilize o endpoint de diagnóstico negativo.");
+            throw new InvalidArgumentException("checkResult", "Resultado NEGATIVE nÃ£o Ã© permitido neste endpoint de confirmaÃ§Ã£o. Utilize o endpoint de diagnÃ³stico negativo.");
         }
 
         ReproductiveEvent checkEvent = ReproductiveEvent.builder()
@@ -268,16 +287,16 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public ReproductiveEventResponseVO registerPregnancyCheck(Long farmId, String goatId, PregnancyCheckRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getCheckDate() == null) {
-            throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez é obrigatória");
+            throw new InvalidArgumentException("checkDate", "Data do diagnÃ³stico de prenhez Ã© obrigatÃ³ria");
         }
         if (vo.getCheckDate().isAfter(LocalDate.now(clock))) {
-            throw new InvalidArgumentException("checkDate", "Data do diagnóstico de prenhez não pode ser futura");
+            throw new InvalidArgumentException("checkDate", "Data do diagnÃ³stico de prenhez nÃ£o pode ser futura");
         }
         if (vo.getCheckResult() == null) {
-            throw new InvalidArgumentException("checkResult", "Resultado do diagnóstico de prenhez é obrigatório");
+            throw new InvalidArgumentException("checkResult", "Resultado do diagnÃ³stico de prenhez Ã© obrigatÃ³rio");
         }
         if (vo.getCheckResult() != PregnancyCheckResult.NEGATIVE) {
-            throw new InvalidArgumentException("checkResult", "Resultado deve ser NEGATIVE neste endpoint de diagnóstico.");
+            throw new InvalidArgumentException("checkResult", "Resultado deve ser NEGATIVE neste endpoint de diagnÃ³stico.");
         }
 
         Optional<ReproductiveEvent> latestCoverage = reproductiveEventPersistencePort
@@ -285,7 +304,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
         if (latestCoverage.isEmpty()) {
             throw new BusinessRuleException("checkDate",
-                    "Não foi encontrada cobertura anterior à data do diagnóstico de prenhez");
+                    "NÃ£o foi encontrada cobertura anterior Ã  data do diagnÃ³stico de prenhez");
         }
 
         ReproductiveEvent coverageEvent = latestCoverage.get();
@@ -337,19 +356,25 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public PregnancyResponseVO closePregnancy(Long farmId, String goatId, Long pregnancyId, PregnancyCloseRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
+                .orElseThrow(() -> new ResourceNotFoundException("GestaÃ§Ã£o nÃ£o encontrada para o identificador informado: " + pregnancyId));
 
         if (pregnancy.getStatus() != PregnancyStatus.ACTIVE) {
-            throw new InvalidArgumentException("status", "Gestação não está ativa");
+            throw new InvalidArgumentException("status", "GestaÃ§Ã£o nÃ£o estÃ¡ ativa");
         }
         if (vo.getCloseDate() == null) {
-            throw new InvalidArgumentException("closeDate", "Data de encerramento é obrigatória");
+            throw new InvalidArgumentException("closeDate", "Data de encerramento Ã© obrigatÃ³ria");
+        }
+        if (vo.getCloseDate().isAfter(LocalDate.now(clock))) {
+            throw new InvalidArgumentException("closeDate", "Data de encerramento nao pode ser futura");
         }
         if (vo.getCloseReason() == null) {
-            throw new InvalidArgumentException("closeReason", "Motivo de encerramento é obrigatório");
+            throw new InvalidArgumentException("closeReason", "Motivo de encerramento Ã© obrigatÃ³rio");
+        }
+        if (vo.getCloseReason() == PregnancyCloseReason.BIRTH) {
+            throw new BusinessRuleException("closeReason", CLOSE_REASON_BIRTH_FORBIDDEN_MESSAGE);
         }
         if (pregnancy.getBreedingDate() != null && vo.getCloseDate().isBefore(pregnancy.getBreedingDate())) {
-            throw new InvalidArgumentException("closeDate", "Data de encerramento não pode ser anterior à data de cobertura");
+            throw new InvalidArgumentException("closeDate", "Data de encerramento nÃ£o pode ser anterior Ã  data de cobertura");
         }
 
         pregnancy.setStatus(PregnancyStatus.CLOSED);
@@ -395,6 +420,13 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
         if (pregnancy.getStatus() != PregnancyStatus.ACTIVE) {
             throw new InvalidArgumentException("status", "Gestacao nao esta ativa");
+        }
+        if (pregnancy.getCoverageEventId() != null) {
+            Optional<Pregnancy> linkedToCoverage = pregnancyPersistencePort
+                    .findByFarmIdAndCoverageEventId(farmId, pregnancy.getCoverageEventId());
+            if (linkedToCoverage.isPresent() && !linkedToCoverage.get().getId().equals(pregnancy.getId())) {
+                throw new BusinessRuleException("pregnancyId", "Cobertura da gestacao ja esta vinculada a outra gestacao.");
+            }
         }
         if (pregnancy.getBreedingDate() != null && vo.getBirthDate().isBefore(pregnancy.getBreedingDate())) {
             throw new InvalidArgumentException("birthDate", "Data do parto nao pode ser anterior a data de cobertura");
@@ -488,7 +520,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public PregnancyResponseVO getActivePregnancy(Long farmId, String goatId) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Pregnancy pregnancy = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma gestação ativa encontrada para esta cabra"));
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma gestaÃ§Ã£o ativa encontrada para esta cabra"));
         return reproductionBusinessMapper.toPregnancyResponseVO(pregnancy);
     }
 
@@ -496,10 +528,10 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public PregnancyResponseVO getPregnancyById(Long farmId, String goatId, Long pregnancyId) {
         goatGenderValidator.requireFemale(farmId, goatId);
         if (pregnancyId == null || pregnancyId <= 0) {
-            throw new InvalidArgumentException("Identificador de gestação inválido");
+            throw new InvalidArgumentException("Identificador de gestaÃ§Ã£o invÃ¡lido");
         }
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Gestação não encontrada para o identificador informado: " + pregnancyId));
+                .orElseThrow(() -> new ResourceNotFoundException("GestaÃ§Ã£o nÃ£o encontrada para o identificador informado: " + pregnancyId));
         return reproductionBusinessMapper.toPregnancyResponseVO(pregnancy);
     }
 
@@ -774,4 +806,5 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
+
 

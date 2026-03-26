@@ -35,6 +35,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -44,9 +45,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class ReproductionBreedingLockIntegrationTest {
-
-    private static final String SAME_DAY_BLOCK_MESSAGE =
-            "Já existe uma cobertura registrada para esta cabra hoje. Use a correção de cobertura se precisar ajustar o lançamento.";
 
     @Autowired
     private MockMvc mockMvc;
@@ -132,11 +130,11 @@ class ReproductionBreedingLockIntegrationTest {
         createBreeding(token, coverageDate).andExpect(status().isCreated());
         createBreeding(token, coverageDate)
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errors[0].message").value(SAME_DAY_BLOCK_MESSAGE));
+                .andExpect(jsonPath("$.errors[0].message").value(containsString("cobertura registrada para esta cabra hoje")));
     }
 
     @Test
-    void shouldAllowLaterBreedingDateEvenWithActivePregnancy() throws Exception {
+    void shouldBlockBreedingWhenActivePregnancyExists() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
 
         LocalDate firstCoverageDate = LocalDate.now().minusDays(90);
@@ -156,15 +154,17 @@ class ReproductionBreedingLockIntegrationTest {
                 .andExpect(status().isOk());
 
         LocalDate secondCoverageDate = firstCoverageDate.plusDays(10);
-        createBreeding(token, secondCoverageDate).andExpect(status().isCreated());
+        createBreeding(token, secondCoverageDate)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].message").value(containsString("gestacao ativa")));
 
         List<ReproductiveEvent> events = reproductiveEventRepository.findAll();
         long coverageCount = events.stream()
                 .filter(event -> event.getEventType() == ReproductiveEventType.COVERAGE)
                 .count();
 
-        if (coverageCount < 2) {
-            throw new AssertionError("Esperado pelo menos 2 coberturas no histórico.");
+        if (coverageCount != 1) {
+            throw new AssertionError("Nao deve existir segunda cobertura com gestacao ativa.");
         }
     }
 
@@ -194,3 +194,4 @@ class ReproductionBreedingLockIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
+

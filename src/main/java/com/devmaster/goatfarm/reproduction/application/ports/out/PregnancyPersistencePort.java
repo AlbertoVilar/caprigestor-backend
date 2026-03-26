@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 public interface PregnancyPersistencePort {
     Pregnancy save(Pregnancy entity);
@@ -14,6 +15,8 @@ public interface PregnancyPersistencePort {
     Optional<Pregnancy> findByIdAndFarmIdAndGoatId(Long pregnancyId, Long farmId, String goatId);
     Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long pregnancyId);
     Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
+    boolean existsByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
+    Optional<LocalDate> findLatestBirthCloseDate(Long farmId, String goatId);
     Page<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
     List<Pregnancy> findAllActiveByFarmIdAndGoatIdOrdered(Long farmId, String goatId);
 }
