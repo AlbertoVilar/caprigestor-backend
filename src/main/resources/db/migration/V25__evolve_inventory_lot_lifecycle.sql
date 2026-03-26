@@ -54,7 +54,7 @@ BEGIN
         WHERE farm_id IS NULL
            OR item_id IS NULL
     ) THEN
-        RAISE EXCEPTION U&'N\00E3o foi poss\00EDvel inferir farm_id e item_id para todos os lotes legados de inventory_lot.';
+        RAISE EXCEPTION 'Nao foi possivel inferir farm_id e item_id para todos os lotes legados de inventory_lot.';
     END IF;
 END $$;
 
