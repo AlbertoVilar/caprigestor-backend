@@ -54,9 +54,6 @@ class GoatControllerTest {
     @Autowired
     private GoatController goatController;
 
-    @Autowired
-    private org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping handlerMapping;
-
     @MockBean
     private GoatManagementUseCase goatUseCase;
 
