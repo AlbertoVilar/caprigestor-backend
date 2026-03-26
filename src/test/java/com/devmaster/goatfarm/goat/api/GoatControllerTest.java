@@ -214,6 +214,24 @@ class GoatControllerTest {
 
     @Test
     @WithMockUser(roles = "OPERATOR")
+    void shouldListGoatOffspringSuccessfully() throws Exception {
+        GoatResponseVO kid = new GoatResponseVO();
+        kid.setRegistrationNumber("010");
+        kid.setName("Cria da Matriz");
+        kid.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+
+        when(goatUseCase.listOffspring(1L, "001")).thenReturn(List.of(kid));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/001/offspring"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].registrationNumber").value("010"))
+                .andExpect(jsonPath("$[0].name").value("Cria da Matriz"));
+
+        verify(goatUseCase).listOffspring(1L, "001");
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERATOR")
     void shouldReturnNotFoundWhenGoatDoesNotExist() throws Exception {
         // Arrange
         when(goatUseCase.findGoatById(eq(1L), eq("999"))).thenThrow(new ResourceNotFoundException("Goat not found with id: 999"));

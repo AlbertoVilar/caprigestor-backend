@@ -196,6 +196,18 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 
     @Transactional(readOnly = true)
+    public List<GoatResponseVO> listOffspring(Long farmId, String goatId) {
+        Goat goat = entityFinder.findOrThrow(
+                () -> goatPort.findByIdAndFarmId(goatId, farmId),
+                "Cabra nÃ£o encontrada nesta fazenda."
+        );
+
+        return goatPort.findOffspringByParentRegistration(farmId, goat.getRegistrationNumber()).stream()
+                .map(goatBusinessMapper::toResponseVO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public GoatHerdSummaryVO getGoatHerdSummary(Long farmId) {
         long total = goatPort.countByFarmId(farmId);
         long males = goatPort.countByFarmIdAndGender(farmId, Gender.MACHO);
