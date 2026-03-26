@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
+import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
@@ -76,6 +77,9 @@ class ReproductionBreedingLockIntegrationTest {
     @Autowired
     private PregnancyRepository pregnancyRepository;
 
+    @Autowired
+    private EventRepository eventRepository;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private Goat ownerGoat;
@@ -84,6 +88,7 @@ class ReproductionBreedingLockIntegrationTest {
     void setUp() {
         pregnancyRepository.deleteAll();
         reproductiveEventRepository.deleteAll();
+        eventRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
         userRepository.deleteAll();

@@ -116,7 +116,7 @@ class HealthEventControllerTest {
     @Test
     void markAsDone_shouldReturn200_whenPerformedAtIsPast() throws Exception {
         HealthEventDoneRequestDTO request = HealthEventDoneRequestDTO.builder()
-                .performedAt(LocalDateTime.now().minusMinutes(1))
+                .performedAt(LocalDateTime.now().minusDays(1))
                 .responsible("John Doe")
                 .build();
 
