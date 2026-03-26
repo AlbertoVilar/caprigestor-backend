@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.reproduction.api;
 
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.repository.FarmOperatorRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
@@ -83,6 +84,9 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Autowired
     private EventRepository eventRepository;
 
+    @Autowired
+    private FarmOperatorRepository farmOperatorRepository;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private Goat ownerGoat;
@@ -92,6 +96,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         pregnancyRepository.deleteAll();
         reproductiveEventRepository.deleteAll();
         eventRepository.deleteAll();
+        farmOperatorRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
         userRepository.deleteAll();
