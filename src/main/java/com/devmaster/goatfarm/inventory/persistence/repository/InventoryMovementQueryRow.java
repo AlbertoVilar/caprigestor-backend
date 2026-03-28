@@ -18,6 +18,10 @@ public record InventoryMovementQueryRow(
         LocalDate movementDate,
         String reason,
         BigDecimal resultingBalance,
+        BigDecimal unitCost,
+        BigDecimal totalCost,
+        LocalDate purchaseDate,
+        String supplierName,
         OffsetDateTime createdAt
 ) {
 }

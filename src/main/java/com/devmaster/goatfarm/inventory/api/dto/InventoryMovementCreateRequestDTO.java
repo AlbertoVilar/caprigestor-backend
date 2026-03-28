@@ -42,6 +42,33 @@ public record InventoryMovementCreateRequestDTO(
 
         @Size(max = 500, message = "reason deve ter no maximo 500 caracteres.")
         @Schema(description = "Motivo ou observacao do movimento.", example = "Baixa por aplicacao sanitaria")
-        String reason
+        String reason,
+
+        @Positive(message = "unitCost deve ser maior que zero quando informado.")
+        @Schema(description = "Custo unitario da compra. Usado apenas em entradas por compra.", example = "18.5000")
+        BigDecimal unitCost,
+
+        @Positive(message = "totalCost deve ser maior que zero quando informado.")
+        @Schema(description = "Custo total da compra. Usado apenas em entradas por compra.", example = "185.00")
+        BigDecimal totalCost,
+
+        @Schema(description = "Data da compra, quando a entrada representar uma aquisicao.", example = "2026-03-28")
+        LocalDate purchaseDate,
+
+        @Size(max = 120, message = "supplierName deve ter no maximo 120 caracteres.")
+        @Schema(description = "Fornecedor da compra, quando houver.", example = "Casa do Campo")
+        String supplierName
 ) {
+
+    public InventoryMovementCreateRequestDTO(
+            InventoryMovementType type,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            InventoryAdjustDirection adjustDirection,
+            LocalDate movementDate,
+            String reason
+    ) {
+        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason, null, null, null, null);
+    }
 }
