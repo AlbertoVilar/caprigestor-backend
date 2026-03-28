@@ -71,6 +71,8 @@ public class SecurityConfig {
                     "/api/v1/auth/register", "/api/auth/register",
                     "/api/v1/auth/refresh", "/api/auth/refresh",
                     "/api/v1/auth/register-farm", "/api/auth/register-farm",
+                    "/api/v1/auth/password-reset/request", "/api/auth/password-reset/request",
+                    "/api/v1/auth/password-reset/confirm", "/api/auth/password-reset/confirm",
                     "/api/v1/goatfarms/full", "/api/goatfarms/full",
                     "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**",
                     "/actuator/health", "/actuator/health/**")
