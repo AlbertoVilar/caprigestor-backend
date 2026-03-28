@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.commercial.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
+import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
+import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort;
 import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleRequestVO;
 import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleResponseVO;
@@ -62,6 +65,8 @@ class CommercialBusinessTest {
     private OwnershipService ownershipService;
     @Mock
     private EntityFinder entityFinder;
+    @Mock
+    private OperationalAuditUseCase operationalAuditUseCase;
 
     @BeforeEach
     void setUp() {
@@ -70,7 +75,8 @@ class CommercialBusinessTest {
                 goatFarmPersistencePort,
                 goatManagementUseCase,
                 ownershipService,
-                entityFinder
+                entityFinder,
+                operationalAuditUseCase
         );
 
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
@@ -79,6 +85,7 @@ class CommercialBusinessTest {
             String message = invocation.getArgument(1);
             return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(message));
         });
+        lenient().when(ownershipService.canManageFarm(anyLong())).thenReturn(true);
     }
 
     @Test
@@ -117,10 +124,13 @@ class CommercialBusinessTest {
         assertNull(response.paymentDate());
 
         ArgumentCaptor<AnimalSale> saleCaptor = ArgumentCaptor.forClass(AnimalSale.class);
+        ArgumentCaptor<OperationalAuditRecordVO> auditCaptor = ArgumentCaptor.forClass(OperationalAuditRecordVO.class);
         verify(commercialPersistencePort).saveAnimalSale(saleCaptor.capture());
         verify(goatManagementUseCase).exitGoat(anyLong(), anyString(), any());
+        verify(operationalAuditUseCase).record(auditCaptor.capture());
         assertEquals("Cabra Teste", saleCaptor.getValue().getGoatName());
         assertEquals(new BigDecimal("1800.00"), saleCaptor.getValue().getAmount());
+        assertEquals(OperationalAuditActionType.ANIMAL_SALE_CREATED, auditCaptor.getValue().actionType());
     }
 
     @Test
@@ -198,6 +208,7 @@ class CommercialBusinessTest {
         assertEquals(new BigDecimal("4.80"), response.unitPrice());
         assertEquals(new BigDecimal("156.00"), response.totalAmount());
         assertEquals(SalePaymentStatus.PAID, response.paymentStatus());
+        verify(operationalAuditUseCase).record(any(OperationalAuditRecordVO.class));
     }
 
     @Test
@@ -229,6 +240,7 @@ class CommercialBusinessTest {
 
         assertEquals(SalePaymentStatus.PAID, response.paymentStatus());
         assertEquals(LocalDate.now().minusDays(1), response.paymentDate());
+        verify(operationalAuditUseCase).record(any(OperationalAuditRecordVO.class));
     }
 
     @Test

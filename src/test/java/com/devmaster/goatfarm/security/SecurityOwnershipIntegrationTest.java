@@ -389,6 +389,25 @@ public class SecurityOwnershipIntegrationTest {
     }
 
     @Test
+    void commercialEndpoints_shouldAllowOperatorLinkedToFarm() throws Exception {
+        String operatorToken = loginAndGetToken("operator@example.com", "password");
+
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/commercial/summary")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void auditEndpoint_shouldAllowOperatorLinkedToFarm() throws Exception {
+        String operatorToken = loginAndGetToken("operator@example.com", "password");
+
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/audit/entries")
+                        .header("Authorization", "Bearer " + operatorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
     void privateEndpoints_shouldBypassOwnershipForAdmin() throws Exception {
         String token = loginAndGetToken("admin@example.com", "password");
 
