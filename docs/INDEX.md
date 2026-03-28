@@ -29,6 +29,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 - [MILK_PRODUCTION_MODULE.md](./02-modules/MILK_PRODUCTION_MODULE.md)
 - [REPRODUCTION_MODULE.md](./02-modules/REPRODUCTION_MODULE.md)
 - [INVENTORY_MODULE.md](./02-modules/INVENTORY_MODULE.md)
+- [AUTHORITY_ACCESS_MODULE.md](./02-modules/AUTHORITY_ACCESS_MODULE.md)
 
 ### 03-api
 - [API_CONTRACTS.md](./03-api/API_CONTRACTS.md)
