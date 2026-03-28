@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
+import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
+import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -42,14 +45,17 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final OwnershipService ownershipService;
     private final GoatBusinessMapper goatBusinessMapper;
     private final EntityFinder entityFinder;
+    private final OperationalAuditUseCase operationalAuditUseCase;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
-                        OwnershipService ownershipService, GoatBusinessMapper goatBusinessMapper, EntityFinder entityFinder) {
+                        OwnershipService ownershipService, GoatBusinessMapper goatBusinessMapper, EntityFinder entityFinder,
+                        OperationalAuditUseCase operationalAuditUseCase) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
         this.goatBusinessMapper = goatBusinessMapper;
         this.entityFinder = entityFinder;
+        this.operationalAuditUseCase = operationalAuditUseCase;
     }
 
     @Transactional
@@ -137,6 +143,14 @@ public class GoatBusiness implements GoatManagementUseCase {
         goat.setExitNotes(normalizeNotes(requestVO.getNotes()));
 
         Goat savedGoat = goatPort.save(goat);
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(
+                farmId,
+                savedGoat.getRegistrationNumber(),
+                OperationalAuditActionType.GOAT_EXIT,
+                savedGoat.getRegistrationNumber(),
+                "Saida do rebanho registrada como " + requestVO.getExitType().getPortugueseValue()
+                        + " com status final " + savedGoat.getStatus() + "."
+        ));
 
         return GoatExitResponseVO.builder()
                 .goatId(savedGoat.getRegistrationNumber())
