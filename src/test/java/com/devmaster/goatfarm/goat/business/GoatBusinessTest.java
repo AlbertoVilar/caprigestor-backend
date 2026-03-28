@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.goat.business.GoatBusiness;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -47,6 +48,7 @@ public class GoatBusinessTest {
     @Mock private OwnershipService ownershipService;
     @Mock private GoatBusinessMapper goatBusinessMapper;
     @Mock private EntityFinder entityFinder;
+    @Mock private OperationalAuditUseCase operationalAuditUseCase;
 
     private GoatBusiness goatBusiness;
 
@@ -58,7 +60,7 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatBusinessMapper, entityFinder);
+        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatBusinessMapper, entityFinder, operationalAuditUseCase);
 
         // Configure default EntityFinder behavior
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
@@ -351,6 +353,7 @@ public class GoatBusinessTest {
 
         verify(ownershipService).verifyFarmOwnership(1L);
         verify(goatPort).save(any(Goat.class));
+        verify(operationalAuditUseCase).record(any());
     }
 
     @Test

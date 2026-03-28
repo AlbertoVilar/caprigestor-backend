@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.commercial.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
+import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
+import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.commercial.application.ports.in.CommercialUseCase;
 import com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort;
 import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleRequestVO;
@@ -29,6 +32,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -51,19 +55,22 @@ public class CommercialBusiness implements CommercialUseCase {
     private final GoatManagementUseCase goatManagementUseCase;
     private final OwnershipService ownershipService;
     private final EntityFinder entityFinder;
+    private final OperationalAuditUseCase operationalAuditUseCase;
 
     public CommercialBusiness(
             CommercialPersistencePort commercialPersistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
             GoatManagementUseCase goatManagementUseCase,
             OwnershipService ownershipService,
-            EntityFinder entityFinder
+            EntityFinder entityFinder,
+            OperationalAuditUseCase operationalAuditUseCase
     ) {
         this.commercialPersistencePort = commercialPersistencePort;
         this.goatFarmPersistencePort = goatFarmPersistencePort;
         this.goatManagementUseCase = goatManagementUseCase;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
+        this.operationalAuditUseCase = operationalAuditUseCase;
     }
 
     @Override
@@ -122,7 +129,18 @@ public class CommercialBusiness implements CommercialUseCase {
                 .notes(normalizeOptionalText(requestVO.notes()))
                 .build();
 
-        return toAnimalSaleResponse(commercialPersistencePort.saveAnimalSale(animalSale));
+        AnimalSale savedAnimalSale = commercialPersistencePort.saveAnimalSale(animalSale);
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(
+                farmId,
+                savedAnimalSale.getGoatRegistrationNumber(),
+                OperationalAuditActionType.ANIMAL_SALE_CREATED,
+                String.valueOf(savedAnimalSale.getId()),
+                "Venda do animal " + savedAnimalSale.getGoatRegistrationNumber()
+                        + " registrada para " + savedAnimalSale.getCustomer().getName()
+                        + " no valor de R$ " + savedAnimalSale.getAmount().toPlainString() + "."
+        ));
+
+        return toAnimalSaleResponse(savedAnimalSale);
     }
 
     @Override
@@ -146,7 +164,17 @@ public class CommercialBusiness implements CommercialUseCase {
         animalSale.setPaymentStatus(SalePaymentStatus.PAID);
         animalSale.setPaymentDate(requestVO.paymentDate());
 
-        return toAnimalSaleResponse(commercialPersistencePort.saveAnimalSale(animalSale));
+        AnimalSale savedAnimalSale = commercialPersistencePort.saveAnimalSale(animalSale);
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(
+                farmId,
+                savedAnimalSale.getGoatRegistrationNumber(),
+                OperationalAuditActionType.ANIMAL_SALE_PAYMENT_REGISTERED,
+                String.valueOf(savedAnimalSale.getId()),
+                "Recebimento da venda do animal " + savedAnimalSale.getGoatRegistrationNumber()
+                        + " registrado em " + requestVO.paymentDate() + "."
+        ));
+
+        return toAnimalSaleResponse(savedAnimalSale);
     }
 
     @Override
@@ -174,7 +202,17 @@ public class CommercialBusiness implements CommercialUseCase {
                 .notes(normalizeOptionalText(requestVO.notes()))
                 .build();
 
-        return toMilkSaleResponse(commercialPersistencePort.saveMilkSale(milkSale));
+        MilkSale savedMilkSale = commercialPersistencePort.saveMilkSale(milkSale);
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(
+                farmId,
+                null,
+                OperationalAuditActionType.MILK_SALE_CREATED,
+                String.valueOf(savedMilkSale.getId()),
+                "Venda de leite registrada para " + savedMilkSale.getCustomer().getName()
+                        + " com total de R$ " + savedMilkSale.getTotalAmount().toPlainString() + "."
+        ));
+
+        return toMilkSaleResponse(savedMilkSale);
     }
 
     @Override
@@ -198,7 +236,17 @@ public class CommercialBusiness implements CommercialUseCase {
         milkSale.setPaymentStatus(SalePaymentStatus.PAID);
         milkSale.setPaymentDate(requestVO.paymentDate());
 
-        return toMilkSaleResponse(commercialPersistencePort.saveMilkSale(milkSale));
+        MilkSale savedMilkSale = commercialPersistencePort.saveMilkSale(milkSale);
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(
+                farmId,
+                null,
+                OperationalAuditActionType.MILK_SALE_PAYMENT_REGISTERED,
+                String.valueOf(savedMilkSale.getId()),
+                "Recebimento da venda de leite " + savedMilkSale.getId()
+                        + " registrado em " + requestVO.paymentDate() + "."
+        ));
+
+        return toMilkSaleResponse(savedMilkSale);
     }
 
     @Override
@@ -292,7 +340,9 @@ public class CommercialBusiness implements CommercialUseCase {
     }
 
     private GoatFarm requireFarm(Long farmId) {
-        ownershipService.verifyFarmOwnership(farmId);
+        if (!ownershipService.canManageFarm(farmId)) {
+            throw new AccessDeniedException("Usuario nao pode gerenciar esta fazenda.");
+        }
         return entityFinder.findOrThrow(
                 () -> goatFarmPersistencePort.findById(farmId),
                 "Fazenda nao encontrada."
