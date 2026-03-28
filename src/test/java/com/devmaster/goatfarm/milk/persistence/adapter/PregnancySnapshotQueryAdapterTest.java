@@ -38,6 +38,7 @@ class PregnancySnapshotQueryAdapterTest {
                     status VARCHAR(50) NOT NULL,
                     breeding_date DATE,
                     confirm_date DATE,
+                    close_reason VARCHAR(50),
                     closed_at DATE
                 )
                 """);
@@ -108,11 +109,12 @@ class PregnancySnapshotQueryAdapterTest {
                 .addValue("status", status)
                 .addValue("breedingDate", breedingDate)
                 .addValue("confirmDate", confirmDate)
+                .addValue("closeReason", null)
                 .addValue("closedAt", closedAt);
 
         jdbcTemplate.update("""
-                INSERT INTO pregnancy (farm_id, goat_id, status, breeding_date, confirm_date, closed_at)
-                VALUES (:farmId, :goatId, :status, :breedingDate, :confirmDate, :closedAt)
+                INSERT INTO pregnancy (farm_id, goat_id, status, breeding_date, confirm_date, close_reason, closed_at)
+                VALUES (:farmId, :goatId, :status, :breedingDate, :confirmDate, :closeReason, :closedAt)
                 """, params);
     }
 }

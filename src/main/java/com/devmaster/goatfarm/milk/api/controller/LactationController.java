@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations", "/api/goatfarms/{farmId}/goats/{goatId}/lactations"})
 @Tag(
         name = "Lactation API",
-        description = "Gestão de lactações por cabra. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."
+        description = "GestÃ£o de lactaÃ§Ãµes por cabra. O caminho canÃ´nico Ã© /api/v1; o legado /api segue ativo apenas durante a janela de descontinuaÃ§Ã£o."
 )
 public class LactationController {
 
@@ -46,13 +46,13 @@ public class LactationController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping
-    @Operation(summary = "Abrir uma nova lactação para uma cabra")
+    @Operation(summary = "Abrir uma nova lactaÃ§Ã£o para uma cabra")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Lactação aberta com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Payload inválido ou dados obrigatórios ausentes."),
+            @ApiResponse(responseCode = "201", description = "LactaÃ§Ã£o aberta com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload invÃ¡lido ou dados obrigatÃ³rios ausentes."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
-            @ApiResponse(responseCode = "404", description = "Cabra não encontrada para a fazenda informada."),
-            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao abrir a lactação.")
+            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada para a fazenda informada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negÃ³cio violada ao abrir a lactaÃ§Ã£o.")
     })
     public ResponseEntity<LactationResponseDTO> openLactation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -65,11 +65,11 @@ public class LactationController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/active")
-    @Operation(summary = "Buscar lactação ativa de uma cabra")
+    @Operation(summary = "Buscar lactaÃ§Ã£o ativa de uma cabra")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lactação ativa retornada com sucesso."),
+            @ApiResponse(responseCode = "200", description = "LactaÃ§Ã£o ativa retornada com sucesso."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
-            @ApiResponse(responseCode = "404", description = "Lactação ativa não encontrada.")
+            @ApiResponse(responseCode = "404", description = "LactaÃ§Ã£o ativa nÃ£o encontrada.")
     })
     public ResponseEntity<LactationResponseDTO> getActiveLactation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -80,11 +80,11 @@ public class LactationController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/active/summary")
-    @Operation(summary = "Buscar sumário da lactação ativa da cabra")
+    @Operation(summary = "Buscar sumÃ¡rio da lactaÃ§Ã£o ativa da cabra")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Sumário da lactação ativa retornado com sucesso."),
+            @ApiResponse(responseCode = "200", description = "SumÃ¡rio da lactaÃ§Ã£o ativa retornado com sucesso."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
-            @ApiResponse(responseCode = "404", description = "Lactação ativa não encontrada.")
+            @ApiResponse(responseCode = "404", description = "LactaÃ§Ã£o ativa nÃ£o encontrada.")
     })
     public ResponseEntity<LactationSummaryResponseDTO> getActiveLactationSummary(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -95,18 +95,18 @@ public class LactationController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/{lactationId}/dry")
-    @Operation(summary = "Marcar uma lactação como seca")
+    @Operation(summary = "Marcar uma lactaÃ§Ã£o como seca")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lactação encerrada como seca com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Payload inválido ou identificador de lactação inválido."),
+            @ApiResponse(responseCode = "200", description = "LactaÃ§Ã£o encerrada como seca com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Payload invÃ¡lido ou identificador de lactaÃ§Ã£o invÃ¡lido."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
-            @ApiResponse(responseCode = "404", description = "Lactação não encontrada."),
-            @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao secar a lactação.")
+            @ApiResponse(responseCode = "404", description = "LactaÃ§Ã£o nÃ£o encontrada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negÃ³cio violada ao secar a lactaÃ§Ã£o.")
     })
     public ResponseEntity<LactationResponseDTO> dryLactation(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
-            @Parameter(description = "Identificador da lactação") @PathVariable Long lactationId,
+            @Parameter(description = "Identificador da lactaÃ§Ã£o") @PathVariable Long lactationId,
             @Valid @RequestBody LactationDryRequestDTO request) {
         LactationDryRequestVO requestVO = lactationMapper.toDryRequestVO(request);
         LactationResponseVO responseVO = lactationCommandUseCase.dryLactation(farmId, goatId, lactationId, requestVO);
@@ -114,45 +114,63 @@ public class LactationController {
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
-    @GetMapping("/{lactationId}")
-    @Operation(summary = "Buscar lactação por identificador")
+    @PatchMapping("/{lactationId}/resume")
+    @Operation(summary = "Retomar uma lactacao previamente secada")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Lactação retornada com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Identificador de lactação inválido."),
+            @ApiResponse(responseCode = "200", description = "Lactacao retomada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Identificador de lactacao invalido."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
-            @ApiResponse(responseCode = "404", description = "Lactação não encontrada.")
+            @ApiResponse(responseCode = "404", description = "Lactacao nao encontrada."),
+            @ApiResponse(responseCode = "422", description = "Regra de negocio violada ao retomar a lactacao.")
+    })
+    public ResponseEntity<LactationResponseDTO> resumeLactation(
+            @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
+            @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
+            @Parameter(description = "Identificador da lactacao") @PathVariable Long lactationId) {
+        LactationResponseVO responseVO = lactationCommandUseCase.resumeLactation(farmId, goatId, lactationId);
+        return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @GetMapping("/{lactationId}")
+    @Operation(summary = "Buscar lactaÃ§Ã£o por identificador")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "LactaÃ§Ã£o retornada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Identificador de lactaÃ§Ã£o invÃ¡lido."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "LactaÃ§Ã£o nÃ£o encontrada.")
     })
     public ResponseEntity<LactationResponseDTO> getLactationById(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
-            @Parameter(description = "Identificador da lactação") @PathVariable Long lactationId) {
+            @Parameter(description = "Identificador da lactaÃ§Ã£o") @PathVariable Long lactationId) {
         LactationResponseVO responseVO = lactationQueryUseCase.getLactationById(farmId, goatId, lactationId);
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/{lactationId}/summary")
-    @Operation(summary = "Buscar sumário da lactação por identificador")
+    @Operation(summary = "Buscar sumÃ¡rio da lactaÃ§Ã£o por identificador")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Sumário da lactação retornado com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Identificador de lactação inválido."),
+            @ApiResponse(responseCode = "200", description = "SumÃ¡rio da lactaÃ§Ã£o retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Identificador de lactaÃ§Ã£o invÃ¡lido."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
-            @ApiResponse(responseCode = "404", description = "Lactação não encontrada.")
+            @ApiResponse(responseCode = "404", description = "LactaÃ§Ã£o nÃ£o encontrada.")
     })
     public ResponseEntity<LactationSummaryResponseDTO> getLactationSummary(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
-            @Parameter(description = "Identificador da lactação") @PathVariable Long lactationId) {
+            @Parameter(description = "Identificador da lactaÃ§Ã£o") @PathVariable Long lactationId) {
         LactationSummaryResponseVO responseVO = lactationQueryUseCase.getLactationSummary(farmId, goatId, lactationId);
         return ResponseEntity.ok(lactationMapper.toSummaryResponseDTO(responseVO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping
-    @Operation(summary = "Listar histórico de lactações de uma cabra")
+    @Operation(summary = "Listar histÃ³rico de lactaÃ§Ãµes de uma cabra")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Histórico de lactações retornado com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos."),
+            @ApiResponse(responseCode = "200", description = "HistÃ³rico de lactaÃ§Ãµes retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "ParÃ¢metros de paginaÃ§Ã£o invÃ¡lidos."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
     })
     public ResponseEntity<Page<LactationResponseDTO>> getAllLactations(
