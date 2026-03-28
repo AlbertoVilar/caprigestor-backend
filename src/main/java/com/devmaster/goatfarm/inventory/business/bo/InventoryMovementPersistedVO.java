@@ -19,6 +19,10 @@ public record InventoryMovementPersistedVO(
         LocalDate movementDate,
         String reason,
         BigDecimal resultingBalance,
+        BigDecimal unitCost,
+        BigDecimal totalCost,
+        LocalDate purchaseDate,
+        String supplierName,
         OffsetDateTime createdAt
 ) {
     public InventoryMovementPersistedVO {
@@ -29,5 +33,37 @@ public record InventoryMovementPersistedVO(
         Objects.requireNonNull(movementDate, "movementDate nao pode ser nulo.");
         Objects.requireNonNull(resultingBalance, "resultingBalance nao pode ser nulo.");
         Objects.requireNonNull(createdAt, "createdAt nao pode ser nulo.");
+    }
+
+    public InventoryMovementPersistedVO(
+            Long movementId,
+            Long farmId,
+            InventoryMovementType type,
+            InventoryAdjustDirection adjustDirection,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            LocalDate movementDate,
+            String reason,
+            BigDecimal resultingBalance,
+            OffsetDateTime createdAt
+    ) {
+        this(
+                movementId,
+                farmId,
+                type,
+                adjustDirection,
+                quantity,
+                itemId,
+                lotId,
+                movementDate,
+                reason,
+                resultingBalance,
+                null,
+                null,
+                null,
+                null,
+                createdAt
+        );
     }
 }

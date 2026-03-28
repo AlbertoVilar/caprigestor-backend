@@ -14,6 +14,23 @@ public record InventoryMovementResponseVO(
         Long lotId,
         LocalDate movementDate,
         BigDecimal resultingBalance,
+        BigDecimal unitCost,
+        BigDecimal totalCost,
+        LocalDate purchaseDate,
+        String supplierName,
         OffsetDateTime createdAt
 ) {
+
+    public InventoryMovementResponseVO(
+            Long movementId,
+            InventoryMovementType type,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            LocalDate movementDate,
+            BigDecimal resultingBalance,
+            OffsetDateTime createdAt
+    ) {
+        this(movementId, type, quantity, itemId, lotId, movementDate, resultingBalance, null, null, null, null, createdAt);
+    }
 }

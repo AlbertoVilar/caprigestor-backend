@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Repository
@@ -27,6 +28,10 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
                         m.movementDate,
                         m.reason,
                         m.resultingBalance,
+                        m.unitCost,
+                        m.totalCost,
+                        m.purchaseDate,
+                        m.supplierName,
                         m.createdAt
                     )
                     from InventoryMovementEntity m
@@ -62,5 +67,20 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate,
             Pageable pageable
+    );
+
+    @Query("""
+            select coalesce(sum(m.totalCost), 0)
+            from InventoryMovementEntity m
+            where m.farmId = :farmId
+              and m.type = com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType.IN
+              and m.totalCost is not null
+              and m.purchaseDate >= :fromDate
+              and m.purchaseDate <= :toDate
+            """)
+    BigDecimal sumPurchaseCostsByFarmIdAndPeriod(
+            @Param("farmId") Long farmId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
     );
 }
