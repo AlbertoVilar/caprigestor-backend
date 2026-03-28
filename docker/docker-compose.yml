@@ -47,6 +47,16 @@ services:
     networks:
       - caprigestor-network
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: caprigestor-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: always
+    networks:
+      - caprigestor-network
+
 volumes:
   pgdata:
   pgadmin_data:
