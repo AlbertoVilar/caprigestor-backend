@@ -13,6 +13,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 - [PROJECT_STATUS.md](./00-overview/PROJECT_STATUS.md)
 - [ROADMAP.md](./00-overview/ROADMAP.md)
 - [AGENT_CONTEXT.md](./00-overview/AGENT_CONTEXT.md)
+- [HOMOLOGATION_OPERATION_RUNBOOK.md](./00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
 
 ### 01-architecture
 - [ARCHITECTURE.md](./01-architecture/ARCHITECTURE.md)
