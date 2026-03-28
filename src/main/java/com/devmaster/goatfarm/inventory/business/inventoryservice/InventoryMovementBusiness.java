@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -48,22 +49,23 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             InventoryMovementCreateRequestVO request
     ) {
         validateRequest(farmId, idempotencyKey, request);
-        String requestHash = hashRequest(request);
+        InventoryMovementCreateRequestVO normalizedRequest = normalizePurchaseRequest(request);
+        String requestHash = hashRequest(normalizedRequest);
 
         Optional<InventoryMovementResponseVO> replay = resolveIdempotencyReplay(farmId, idempotencyKey, requestHash);
         if (replay.isPresent()) {
             return new InventoryMovementResultVO(replay.get(), true);
         }
 
-        InventoryItemSnapshotVO itemSnapshot = resolveItemSnapshot(farmId, request.itemId());
-        validateTrackLot(itemSnapshot, request);
+        InventoryItemSnapshotVO itemSnapshot = resolveItemSnapshot(farmId, normalizedRequest.itemId());
+        validateTrackLot(itemSnapshot, normalizedRequest);
 
-        LockedBalanceContext lockedBalance = lockItemThenBalance(farmId, request);
-        BigDecimal resultingBalance = computeNewBalance(request, lockedBalance.balance().quantity());
+        LockedBalanceContext lockedBalance = lockItemThenBalance(farmId, normalizedRequest);
+        BigDecimal resultingBalance = computeNewBalance(normalizedRequest, lockedBalance.balance().quantity());
 
         InventoryMovementResponseVO response = persistMovementAndBalance(
                 farmId,
-                request,
+                normalizedRequest,
                 lockedBalance.effectiveLotId(),
                 resultingBalance
         );
@@ -126,6 +128,10 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 resolveMovementDate(request),
                 normalizeReason(request.reason()),
                 resultingBalance,
+                request.unitCost(),
+                request.totalCost(),
+                request.purchaseDate(),
+                normalizeSupplierName(request.supplierName()),
                 OffsetDateTime.now(clock)
         ));
 
@@ -141,6 +147,10 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 persistedMovement.lotId(),
                 persistedMovement.movementDate(),
                 persistedBalance.quantity(),
+                persistedMovement.unitCost(),
+                persistedMovement.totalCost(),
+                persistedMovement.purchaseDate(),
+                persistedMovement.supplierName(),
                 persistedMovement.createdAt()
         );
     }
@@ -237,6 +247,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         return normalized.isBlank() ? null : normalized;
     }
 
+    private String normalizeSupplierName(String supplierName) {
+        if (supplierName == null) {
+            return null;
+        }
+        String normalized = supplierName.trim().replaceAll("\\s+", " ");
+        return normalized.isBlank() ? null : normalized;
+    }
+
     private void validateRequest(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {
         if (farmId == null) {
             throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
@@ -276,6 +294,97 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                     "adjustDirection deve ser nulo quando o tipo e IN ou OUT."
             );
         }
+
+        validatePurchaseMetadata(request);
+    }
+
+    private void validatePurchaseMetadata(InventoryMovementCreateRequestVO request) {
+        boolean hasPurchaseMetadata = hasPurchaseMetadata(request);
+
+        if (!hasPurchaseMetadata) {
+            return;
+        }
+
+        if (!InventoryMovementType.IN.equals(request.type())) {
+            throw new InvalidArgumentException(
+                    "type",
+                    "Custo de compra so pode ser informado em entradas de estoque (type=IN)."
+            );
+        }
+
+        if (request.purchaseDate() == null) {
+            throw new InvalidArgumentException(
+                    "purchaseDate",
+                    "purchaseDate e obrigatoria quando a entrada representar uma compra."
+            );
+        }
+
+        if (request.unitCost() == null && request.totalCost() == null) {
+            throw new InvalidArgumentException(
+                    "unitCost",
+                    "Informe unitCost ou totalCost quando a entrada representar uma compra."
+            );
+        }
+
+        if (request.unitCost() != null && request.unitCost().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidArgumentException("unitCost", "unitCost deve ser maior que zero.");
+        }
+
+        if (request.totalCost() != null && request.totalCost().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidArgumentException("totalCost", "totalCost deve ser maior que zero.");
+        }
+
+        if (request.unitCost() != null && request.totalCost() != null) {
+            BigDecimal expectedTotalCost = request.unitCost()
+                    .multiply(request.quantity())
+                    .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal informedTotalCost = request.totalCost().setScale(2, RoundingMode.HALF_UP);
+
+            if (expectedTotalCost.compareTo(informedTotalCost) != 0) {
+                throw new InvalidArgumentException(
+                        "totalCost",
+                        "totalCost deve ser consistente com quantity x unitCost."
+                );
+            }
+        }
+    }
+
+    private InventoryMovementCreateRequestVO normalizePurchaseRequest(InventoryMovementCreateRequestVO request) {
+        if (!hasPurchaseMetadata(request)) {
+            return request;
+        }
+
+        BigDecimal normalizedUnitCost = request.unitCost();
+        BigDecimal normalizedTotalCost = request.totalCost();
+
+        if (normalizedUnitCost == null && normalizedTotalCost != null) {
+            normalizedUnitCost = normalizedTotalCost.divide(request.quantity(), 4, RoundingMode.HALF_UP);
+        }
+
+        if (normalizedTotalCost == null && normalizedUnitCost != null) {
+            normalizedTotalCost = normalizedUnitCost.multiply(request.quantity()).setScale(2, RoundingMode.HALF_UP);
+        }
+
+        return new InventoryMovementCreateRequestVO(
+                request.type(),
+                request.quantity(),
+                request.itemId(),
+                request.lotId(),
+                request.adjustDirection(),
+                request.movementDate(),
+                request.reason(),
+                normalizedUnitCost,
+                normalizedTotalCost,
+                request.purchaseDate(),
+                normalizeSupplierName(request.supplierName())
+        );
+    }
+
+    private boolean hasPurchaseMetadata(InventoryMovementCreateRequestVO request) {
+        return request.unitCost() != null
+                || request.totalCost() != null
+                || request.purchaseDate() != null
+                || normalizeSupplierName(request.supplierName()) != null;
     }
 
     private String hashRequest(InventoryMovementCreateRequestVO request) {
@@ -297,14 +406,30 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         String reasonTrimOrEmpty = request.reason() == null
                 ? ""
                 : request.reason().trim().replaceAll("\\s+", " ");
-
-        return request.type().name()
+        String baseCanonical = request.type().name()
                 + "|" + quantityNormalized
                 + "|" + request.itemId()
                 + "|" + lotIdOrEmpty
                 + "|" + adjustDirectionOrEmpty
                 + "|" + movementDateOrEmpty
                 + "|" + reasonTrimOrEmpty;
+
+        if (!hasPurchaseMetadata(request)) {
+            return baseCanonical;
+        }
+
+        String unitCostOrEmpty = request.unitCost() == null ? "" : request.unitCost().stripTrailingZeros().toPlainString();
+        String totalCostOrEmpty = request.totalCost() == null ? "" : request.totalCost().stripTrailingZeros().toPlainString();
+        String purchaseDateOrEmpty = request.purchaseDate() == null ? "" : request.purchaseDate().toString();
+        String supplierTrimOrEmpty = normalizeSupplierName(request.supplierName()) == null
+                ? ""
+                : normalizeSupplierName(request.supplierName());
+
+        return baseCanonical
+                + "|" + unitCostOrEmpty
+                + "|" + totalCostOrEmpty
+                + "|" + purchaseDateOrEmpty
+                + "|" + supplierTrimOrEmpty;
     }
 
     private record LockedBalanceContext(Long effectiveLotId, InventoryBalanceSnapshotVO balance) {

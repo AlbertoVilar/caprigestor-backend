@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.inventory.persistence.entity.InventoryItemEntity;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryMovementEntity;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryItemRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryMovementRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,11 +32,14 @@ class InventoryMovementQueryPersistenceAdapterIntegrationTest {
     @Autowired
     private InventoryMovementRepository movementRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
     private InventoryMovementQueryPersistenceAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new InventoryMovementQueryPersistenceAdapter(movementRepository);
+        adapter = new InventoryMovementQueryPersistenceAdapter(movementRepository, entityManager);
     }
 
     @Test

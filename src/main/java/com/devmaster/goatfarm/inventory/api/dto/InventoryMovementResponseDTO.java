@@ -31,7 +31,32 @@ public record InventoryMovementResponseDTO(
         @Schema(description = "Saldo resultante apos o movimento.", example = "18.750")
         BigDecimal resultingBalance,
 
+        @Schema(description = "Custo unitario da compra quando a entrada representar uma aquisicao.", example = "18.5000")
+        BigDecimal unitCost,
+
+        @Schema(description = "Custo total da compra quando a entrada representar uma aquisicao.", example = "185.00")
+        BigDecimal totalCost,
+
+        @Schema(description = "Data da compra quando houver custo associado.", example = "2026-03-28")
+        LocalDate purchaseDate,
+
+        @Schema(description = "Nome do fornecedor da compra.", example = "Casa do Campo")
+        String supplierName,
+
         @Schema(description = "Data/hora de criacao do movimento.", example = "2026-02-18T12:00:00Z")
         OffsetDateTime createdAt
 ) {
+
+    public InventoryMovementResponseDTO(
+            Long movementId,
+            InventoryMovementType type,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            LocalDate movementDate,
+            BigDecimal resultingBalance,
+            OffsetDateTime createdAt
+    ) {
+        this(movementId, type, quantity, itemId, lotId, movementDate, resultingBalance, null, null, null, null, createdAt);
+    }
 }

@@ -58,6 +58,18 @@ public class InventoryMovementEntity {
     @Column(name = "resulting_balance", nullable = false, precision = 19, scale = 3)
     private BigDecimal resultingBalance;
 
+    @Column(name = "unit_cost", precision = 14, scale = 4)
+    private BigDecimal unitCost;
+
+    @Column(name = "total_cost", precision = 14, scale = 2)
+    private BigDecimal totalCost;
+
+    @Column(name = "purchase_date")
+    private LocalDate purchaseDate;
+
+    @Column(name = "supplier_name", length = 120)
+    private String supplierName;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 }
