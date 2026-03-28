@@ -18,6 +18,7 @@ import java.time.LocalDate;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -94,5 +95,36 @@ class LactationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(13));
+    }
+
+    @Test
+    void resumeLactation_shouldReturn200_forCanonicalRoute() throws Exception {
+        Long farmId = 1L;
+        String goatId = "BR123";
+        Long lactationId = 14L;
+
+        LactationResponseVO responseVO = LactationResponseVO.builder()
+                .id(lactationId)
+                .farmId(farmId)
+                .goatId(goatId)
+                .status(LactationStatus.ACTIVE)
+                .startDate(LocalDate.of(2025, 11, 15))
+                .build();
+        LactationResponseDTO responseDTO = LactationResponseDTO.builder()
+                .id(responseVO.getId())
+                .farmId(responseVO.getFarmId())
+                .goatId(responseVO.getGoatId())
+                .status(responseVO.getStatus())
+                .startDate(responseVO.getStartDate())
+                .build();
+
+        when(lactationCommandUseCase.resumeLactation(farmId, goatId, lactationId)).thenReturn(responseVO);
+        when(lactationMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(patch("/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/{lactationId}/resume", farmId, goatId, lactationId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(14))
+                .andExpect(jsonPath("$.status").value(LactationStatus.ACTIVE.name()));
     }
 }

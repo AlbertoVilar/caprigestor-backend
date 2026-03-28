@@ -1,22 +1,22 @@
 package com.devmaster.goatfarm.milk.business.lactationservice;
 
-import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
+import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
+import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
-import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
+import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
 import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,15 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LactationBusinessTest {
@@ -61,51 +69,40 @@ class LactationBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // Método executado antes de cada teste.
-        // Útil para resetar mocks ou configurar comportamento padrão se necessário.
         lenient().when(goatGenderValidator.requireFemale(anyLong(), anyString())).thenReturn(new Goat());
+        lenient().when(goatGenderValidator.requireFemaleAndActive(anyLong(), anyString())).thenReturn(new Goat());
     }
-
-    // ==================================================================================
-    // CREATE (OPEN LACTATION)
-    // ==================================================================================
 
     @Test
     void openLactation_shouldCreateActiveLactation_whenNoActiveExists() {
-        // given: não existe lactação ativa
-        // when: openLactation é chamado
-        // then: salva entity com status ACTIVE, endDate null e startDate do request; retorna ResponseVO
-
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         LactationRequestVO requestVO = validRequestVO();
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.empty());
+        when(lactationPersistencePort.findAllByFarmIdAndGoatId(eq(farmId), eq(goatId), any(Pageable.class)))
+                .thenReturn(Page.empty());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(farmId, goatId, requestVO.getStartDate()))
+                .thenReturn(Optional.empty());
 
         Lactation savedEntity = savedLactationEntity();
         savedEntity.setFarmId(farmId);
         savedEntity.setGoatId(goatId);
 
-        when(lactationPersistencePort.save(any(Lactation.class)))
-                .thenReturn(savedEntity);
+        when(lactationPersistencePort.save(any(Lactation.class))).thenReturn(savedEntity);
 
         LactationResponseVO expectedVO = responseVO();
-        when(lactationMapper.toResponseVO(savedEntity))
-                .thenReturn(expectedVO);
+        when(lactationMapper.toResponseVO(savedEntity)).thenReturn(expectedVO);
 
         ArgumentCaptor<Lactation> captor = ArgumentCaptor.forClass(Lactation.class);
 
-        // Act
         LactationResponseVO result = lactationBusiness.openLactation(farmId, goatId, requestVO);
 
-        // Assert
         assertNotNull(result);
         assertEquals(expectedVO.getId(), result.getId());
         assertEquals(expectedVO.getStatus(), result.getStatus());
 
-        // Verify
         verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
         verify(lactationPersistencePort).save(captor.capture());
 
@@ -119,10 +116,6 @@ class LactationBusinessTest {
 
     @Test
     void openLactation_shouldThrowValidationException_whenActiveLactationAlreadyExists() {
-        // given: findActive retorna lactação ACTIVE
-        // then: lança BusinessRuleException e não chama save
-
-        // Arrange
         Long farmId = 1L;
         String goatId = "1643218012";
 
@@ -132,51 +125,66 @@ class LactationBusinessTest {
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.of(activeEntity));
 
-        // Act & Assert
         assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, requestVO));
 
-        // Verify
         verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
         verify(lactationPersistencePort, never()).save(any(Lactation.class));
         verifyNoInteractions(lactationMapper);
     }
 
     @Test
-    void openLactation_shouldThrowValidationException_whenStartDateIsInFuture() {
-        // given: request com data futura
-        // then: lança InvalidArgumentException e não chama banco
+    void openLactation_shouldThrowValidationException_whenLatestLactationIsDryAndPregnancyStillActive() {
+        Long farmId = 1L;
+        String goatId = "123";
+        LactationRequestVO requestVO = validRequestVO();
 
-        // Arrange
+        Lactation dryLactation = new Lactation();
+        dryLactation.setId(20L);
+        dryLactation.setFarmId(farmId);
+        dryLactation.setGoatId(goatId);
+        dryLactation.setStatus(LactationStatus.DRY);
+        dryLactation.setStartDate(LocalDate.of(2025, 11, 1));
+        dryLactation.setEndDate(LocalDate.of(2026, 3, 28));
+        dryLactation.setDryStartDate(LocalDate.of(2026, 3, 28));
+
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+                .thenReturn(Optional.empty());
+        when(lactationPersistencePort.findAllByFarmIdAndGoatId(eq(farmId), eq(goatId), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(dryLactation)));
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(farmId, goatId, requestVO.getStartDate()))
+                .thenReturn(Optional.of(new PregnancySnapshot(
+                        true,
+                        LocalDate.of(2025, 12, 28),
+                        LocalDate.of(2026, 3, 1),
+                        null
+                )));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> lactationBusiness.openLactation(farmId, goatId, requestVO));
+
+        assertEquals("Nao e permitido abrir nova lactacao enquanto houver prenhez ativa apos secagem confirmada.", ex.getMessage());
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
+    }
+
+    @Test
+    void openLactation_shouldThrowValidationException_whenStartDateIsInFuture() {
         Long farmId = 1L;
         String goatId = "123";
 
-        // Cria request inline para garantir data futura
         LactationRequestVO futureRequest = new LactationRequestVO();
         futureRequest.setStartDate(LocalDate.now().plusDays(1));
 
-        // Act & Assert
         InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, futureRequest));
-        
-        assertEquals("startDate", ex.getFieldName());
 
-        // Verify
+        assertEquals("startDate", ex.getFieldName());
         verifyNoInteractions(lactationPersistencePort);
         verifyNoInteractions(lactationMapper);
     }
 
-    // ==================================================================================
-    // UPDATE (DRY/CLOSE LACTATION)
-    // ==================================================================================
-
     @Test
-    void dryLactation_shouldCloseLactation_whenValidRequest() {
-        // given: lactação ACTIVE existe, request com data válida
-        // when: dryLactation é chamado
-        // then: atualiza status para CLOSED, set endDate e dryStartDate, salva e retorna ResponseVO
-
-        // Arrange
+    void dryLactation_shouldMarkLactationAsDry_whenValidRequest() {
         Long farmId = 1L;
         String goatId = "123";
         Long lactationId = 10L;
@@ -195,37 +203,31 @@ class LactationBusinessTest {
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(existingLactation));
-
         when(lactationPersistencePort.save(any(Lactation.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0)); // retorna o próprio objeto salvo
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         LactationResponseVO expectedVO = responseVO();
-        expectedVO.setStatus(LactationStatus.CLOSED);
+        expectedVO.setStatus(LactationStatus.DRY);
         expectedVO.setEndDate(endDate);
+        when(lactationMapper.toResponseVO(any(Lactation.class))).thenReturn(expectedVO);
 
-        when(lactationMapper.toResponseVO(any(Lactation.class)))
-                .thenReturn(expectedVO);
-
-        // Act
         LactationResponseVO result = lactationBusiness.dryLactation(farmId, goatId, lactationId, dryRequestVO);
 
-        // Assert
         assertNotNull(result);
-        assertEquals(LactationStatus.CLOSED, result.getStatus());
+        assertEquals(LactationStatus.DRY, result.getStatus());
         assertEquals(endDate, result.getEndDate());
 
         ArgumentCaptor<Lactation> captor = ArgumentCaptor.forClass(Lactation.class);
         verify(lactationPersistencePort).save(captor.capture());
 
         Lactation savedEntity = captor.getValue();
-        assertEquals(LactationStatus.CLOSED, savedEntity.getStatus());
+        assertEquals(LactationStatus.DRY, savedEntity.getStatus());
         assertEquals(endDate, savedEntity.getEndDate());
-        assertEquals(endDate, savedEntity.getDryStartDate()); // Regra: dryStartDate = endDate
+        assertEquals(endDate, savedEntity.getDryStartDate());
     }
 
     @Test
     void dryLactation_shouldThrowResourceNotFound_whenLactationNotFound() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         Long lactationId = 999L;
@@ -234,20 +236,18 @@ class LactationBusinessTest {
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(ResourceNotFoundException.class,
                 () -> lactationBusiness.dryLactation(farmId, goatId, lactationId, dryRequestVO));
-        
+
         verify(lactationPersistencePort, never()).save(any());
     }
 
     @Test
     void dryLactation_shouldThrowValidationException_whenLactationNotActive() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         Long lactationId = 10L;
-        
+
         Lactation closedLactation = new Lactation();
         closedLactation.setStatus(LactationStatus.CLOSED);
 
@@ -256,19 +256,17 @@ class LactationBusinessTest {
 
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
 
-        // Act & Assert
         assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.dryLactation(farmId, goatId, lactationId, dryRequestVO));
     }
 
     @Test
     void dryLactation_shouldThrowValidationException_whenEndDateBeforeStartDate() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         Long lactationId = 10L;
         LocalDate startDate = LocalDate.of(2026, 5, 1);
-        
+
         Lactation activeLactation = new Lactation();
         activeLactation.setStatus(LactationStatus.ACTIVE);
         activeLactation.setStartDate(startDate);
@@ -277,20 +275,113 @@ class LactationBusinessTest {
                 .thenReturn(Optional.of(activeLactation));
 
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
-        dryRequestVO.setEndDate(startDate.minusDays(1)); // Data anterior ao início
+        dryRequestVO.setEndDate(startDate.minusDays(1));
 
-        // Act & Assert
         assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.dryLactation(farmId, goatId, lactationId, dryRequestVO));
     }
 
-    // ==================================================================================
-    // READ (GET ACTIVE, GET BY ID, LIST)
-    // ==================================================================================
+    @Test
+    void resumeLactation_shouldReactivateDryLactation_whenPregnancyIsClosedWithoutBirth() {
+        Long farmId = 1L;
+        String goatId = "123";
+        Long lactationId = 10L;
+
+        Lactation dryLactation = new Lactation();
+        dryLactation.setId(lactationId);
+        dryLactation.setFarmId(farmId);
+        dryLactation.setGoatId(goatId);
+        dryLactation.setStatus(LactationStatus.DRY);
+        dryLactation.setStartDate(LocalDate.of(2025, 11, 15));
+        dryLactation.setEndDate(LocalDate.of(2026, 3, 28));
+        dryLactation.setDryStartDate(LocalDate.of(2026, 3, 28));
+
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+                .thenReturn(Optional.of(dryLactation));
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+                .thenReturn(Optional.empty());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
+                .thenReturn(Optional.of(new PregnancySnapshot(
+                        false,
+                        LocalDate.of(2025, 12, 28),
+                        LocalDate.of(2026, 3, 1),
+                        "FALSE_POSITIVE"
+                )));
+        when(lactationPersistencePort.save(any(Lactation.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(lactationMapper.toResponseVO(any(Lactation.class))).thenReturn(responseVO());
+
+        LactationResponseVO result = lactationBusiness.resumeLactation(farmId, goatId, lactationId);
+
+        assertNotNull(result);
+        ArgumentCaptor<Lactation> captor = ArgumentCaptor.forClass(Lactation.class);
+        verify(lactationPersistencePort).save(captor.capture());
+        Lactation savedEntity = captor.getValue();
+        assertEquals(LactationStatus.ACTIVE, savedEntity.getStatus());
+        assertNull(savedEntity.getEndDate());
+        assertNull(savedEntity.getDryStartDate());
+    }
+
+    @Test
+    void resumeLactation_shouldThrowValidationException_whenPregnancyIsStillActive() {
+        Long farmId = 1L;
+        String goatId = "123";
+        Long lactationId = 10L;
+
+        Lactation dryLactation = new Lactation();
+        dryLactation.setId(lactationId);
+        dryLactation.setStatus(LactationStatus.DRY);
+
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+                .thenReturn(Optional.of(dryLactation));
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+                .thenReturn(Optional.empty());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
+                .thenReturn(Optional.of(new PregnancySnapshot(
+                        true,
+                        LocalDate.of(2025, 12, 28),
+                        LocalDate.of(2026, 3, 1),
+                        null
+                )));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> lactationBusiness.resumeLactation(farmId, goatId, lactationId));
+
+        assertEquals("Nao e permitido retomar lactacao com prenhez ativa.", ex.getMessage());
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
+    }
+
+    @Test
+    void resumeLactation_shouldThrowValidationException_whenPregnancyClosedWithBirth() {
+        Long farmId = 1L;
+        String goatId = "123";
+        Long lactationId = 10L;
+
+        Lactation dryLactation = new Lactation();
+        dryLactation.setId(lactationId);
+        dryLactation.setStatus(LactationStatus.DRY);
+
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+                .thenReturn(Optional.of(dryLactation));
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+                .thenReturn(Optional.empty());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
+                .thenReturn(Optional.of(new PregnancySnapshot(
+                        false,
+                        LocalDate.of(2025, 12, 28),
+                        LocalDate.of(2026, 3, 1),
+                        "BIRTH"
+                )));
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class,
+                () -> lactationBusiness.resumeLactation(farmId, goatId, lactationId));
+
+        assertEquals("Nao e permitido retomar lactacao apos parto. Inicie uma nova lactacao para o novo ciclo.", ex.getMessage());
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
+    }
 
     @Test
     void getActiveLactation_shouldReturnLactation_whenExists() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         Lactation activeLactation = activeLactationEntity();
@@ -300,30 +391,25 @@ class LactationBusinessTest {
                 .thenReturn(Optional.of(activeLactation));
         when(lactationMapper.toResponseVO(activeLactation)).thenReturn(expectedVO);
 
-        // Act
         LactationResponseVO result = lactationBusiness.getActiveLactation(farmId, goatId);
 
-        // Assert
         assertNotNull(result);
         assertEquals(expectedVO.getId(), result.getId());
     }
 
     @Test
     void getActiveLactation_shouldThrowResourceNotFound_whenNotExists() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThrows(ResourceNotFoundException.class,
                 () -> lactationBusiness.getActiveLactation(farmId, goatId));
     }
 
     @Test
     void getLactationById_shouldReturnLactation_whenExists() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         Long lactationId = 10L;
@@ -334,34 +420,29 @@ class LactationBusinessTest {
                 .thenReturn(Optional.of(lactation));
         when(lactationMapper.toResponseVO(lactation)).thenReturn(expectedVO);
 
-        // Act
         LactationResponseVO result = lactationBusiness.getLactationById(farmId, goatId, lactationId);
 
-        // Assert
         assertNotNull(result);
         assertEquals(expectedVO.getId(), result.getId());
     }
 
     @Test
     void getAllLactations_shouldReturnPageOfLactations() {
-        // Arrange
         Long farmId = 1L;
         String goatId = "123";
         Pageable pageable = PageRequest.of(0, 10);
-        
+
         List<Lactation> lactationList = List.of(activeLactationEntity());
         Page<Lactation> lactationPage = new PageImpl<>(lactationList);
-        
+
         LactationResponseVO responseVO = responseVO();
 
         when(lactationPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable))
                 .thenReturn(lactationPage);
         when(lactationMapper.toResponseVO(any(Lactation.class))).thenReturn(responseVO);
 
-        // Act
         Page<LactationResponseVO> result = lactationBusiness.getAllLactations(farmId, goatId, pageable);
 
-        // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(responseVO.getId(), result.getContent().get(0).getId());
@@ -488,10 +569,6 @@ class LactationBusinessTest {
         assertFalse(alert.isDryOffRecommendation());
     }
 
-    // ==================================================================================
-    // HELPERS
-    // ==================================================================================
-
     private LactationRequestVO validRequestVO() {
         return LactationRequestVO.builder()
                 .startDate(LocalDate.of(2026, 1, 1))
@@ -524,3 +601,5 @@ class LactationBusinessTest {
                 .build();
     }
 }
+
+

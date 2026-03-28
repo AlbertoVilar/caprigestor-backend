@@ -18,6 +18,7 @@ public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryPort
             SELECT p.status,
                    p.breeding_date,
                    p.confirm_date,
+                   p.close_reason,
                    p.closed_at,
                    COALESCE(p.breeding_date, p.confirm_date) AS start_date
               FROM pregnancy p
@@ -58,7 +59,8 @@ public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryPort
             return new PregnancySnapshot(
                     isActiveAsOf(rs.getString("status"), startDate, closedAt, asOfReferenceDate),
                     breedingDate,
-                    confirmDate
+                    confirmDate,
+                    rs.getString("close_reason")
             );
         });
 

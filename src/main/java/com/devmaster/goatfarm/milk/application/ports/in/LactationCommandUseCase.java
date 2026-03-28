@@ -9,4 +9,6 @@ public interface LactationCommandUseCase {
     LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo);
 
     LactationResponseVO dryLactation(Long farmId, String goatId, Long lactationId, LactationDryRequestVO vo);
+
+    LactationResponseVO resumeLactation(Long farmId, String goatId, Long lactationId);
 }
