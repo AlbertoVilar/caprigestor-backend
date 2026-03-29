@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -54,5 +55,15 @@ public class HealthEventPersistenceAdapter implements HealthEventPersistencePort
             Pageable pageable
     ) {
         return repository.searchCalendar(farmId, from, to, type, status, pageable);
+    }
+
+    @Override
+    public List<HealthEvent> findPerformedWithWithdrawalByFarmIdAndGoatId(Long farmId, String goatId) {
+        return repository.findPerformedWithWithdrawalByFarmIdAndGoatId(farmId, goatId);
+    }
+
+    @Override
+    public List<HealthEvent> findPerformedWithWithdrawalByFarmId(Long farmId) {
+        return repository.findPerformedWithWithdrawalByFarmId(farmId);
     }
 }

@@ -1,10 +1,13 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.health.application.ports.in.FarmHealthAlertsQueryUseCase;
+import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertItemVO;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertsResponseVO;
+import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
+import com.devmaster.goatfarm.health.business.bo.WithdrawalAlertItemVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import org.springframework.data.domain.Page;
@@ -24,10 +27,16 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
     private static final int MAX_WINDOW_DAYS = 30;
 
     private final HealthEventPersistencePort persistencePort;
+    private final HealthWithdrawalQueryUseCase withdrawalQueryUseCase;
     private final HealthEventBusinessMapper mapper;
 
-    public FarmHealthAlertsBusiness(HealthEventPersistencePort persistencePort, HealthEventBusinessMapper mapper) {
+    public FarmHealthAlertsBusiness(
+            HealthEventPersistencePort persistencePort,
+            HealthWithdrawalQueryUseCase withdrawalQueryUseCase,
+            HealthEventBusinessMapper mapper
+    ) {
         this.persistencePort = persistencePort;
+        this.withdrawalQueryUseCase = withdrawalQueryUseCase;
         this.mapper = mapper;
     }
 
@@ -54,13 +63,34 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
                 .findByFarmIdAndPeriod(farmId, null, toOverdue, null, HealthEventStatus.AGENDADO, topPageable)
                 .map(mapper::toResponseVO);
 
+        List<GoatWithdrawalStatusVO> activeWithdrawalStatuses = withdrawalQueryUseCase
+                .listActiveWithdrawalStatuses(farmId, today);
+
+        List<WithdrawalAlertItemVO> milkWithdrawalTop = activeWithdrawalStatuses.stream()
+                .filter(GoatWithdrawalStatusVO::hasActiveMilkWithdrawal)
+                .map(status -> toWithdrawalAlertItem(status.goatId(), status.milkWithdrawal(), today))
+                .sorted(java.util.Comparator.comparing(WithdrawalAlertItemVO::withdrawalEndDate))
+                .limit(5)
+                .toList();
+
+        List<WithdrawalAlertItemVO> meatWithdrawalTop = activeWithdrawalStatuses.stream()
+                .filter(GoatWithdrawalStatusVO::hasActiveMeatWithdrawal)
+                .map(status -> toWithdrawalAlertItem(status.goatId(), status.meatWithdrawal(), today))
+                .sorted(java.util.Comparator.comparing(WithdrawalAlertItemVO::withdrawalEndDate))
+                .limit(5)
+                .toList();
+
         return FarmHealthAlertsResponseVO.builder()
                 .dueTodayCount((int) dueToday.getTotalElements())
                 .upcomingCount((int) upcoming.getTotalElements())
                 .overdueCount((int) overdue.getTotalElements())
+                .activeMilkWithdrawalCount((int) activeWithdrawalStatuses.stream().filter(GoatWithdrawalStatusVO::hasActiveMilkWithdrawal).count())
+                .activeMeatWithdrawalCount((int) activeWithdrawalStatuses.stream().filter(GoatWithdrawalStatusVO::hasActiveMeatWithdrawal).count())
                 .dueTodayTop(toAlertItems(dueToday))
                 .upcomingTop(toAlertItems(upcoming))
                 .overdueTop(toAlertItems(overdue))
+                .milkWithdrawalTop(milkWithdrawalTop)
+                .meatWithdrawalTop(meatWithdrawalTop)
                 .windowDays(safeWindowDays)
                 .build();
     }
@@ -80,6 +110,23 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
                 .title(vo.title())
                 .scheduledDate(vo.scheduledDate())
                 .overdue(vo.overdue())
+                .build();
+    }
+
+    private WithdrawalAlertItemVO toWithdrawalAlertItem(
+            String goatId,
+            com.devmaster.goatfarm.health.business.bo.HealthWithdrawalOriginVO origin,
+            LocalDate referenceDate
+    ) {
+        return WithdrawalAlertItemVO.builder()
+                .eventId(origin.eventId())
+                .goatId(goatId)
+                .title(origin.title())
+                .productName(origin.productName())
+                .activeIngredient(origin.activeIngredient())
+                .performedDate(origin.performedDate())
+                .withdrawalEndDate(origin.withdrawalEndDate())
+                .daysRemaining((int) java.time.temporal.ChronoUnit.DAYS.between(referenceDate, origin.withdrawalEndDate()))
                 .build();
     }
 

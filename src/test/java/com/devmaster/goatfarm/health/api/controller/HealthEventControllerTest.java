@@ -4,10 +4,15 @@ import com.devmaster.goatfarm.health.api.dto.HealthEventCancelRequestDTO;
 import com.devmaster.goatfarm.health.api.dto.HealthEventCreateRequestDTO;
 import com.devmaster.goatfarm.health.api.dto.HealthEventDoneRequestDTO;
 import com.devmaster.goatfarm.health.api.dto.HealthEventResponseDTO;
+import com.devmaster.goatfarm.health.api.dto.GoatWithdrawalStatusDTO;
+import com.devmaster.goatfarm.health.api.dto.HealthWithdrawalOriginDTO;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
+import com.devmaster.goatfarm.health.api.mapper.HealthWithdrawalApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
+import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -25,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,6 +52,12 @@ class HealthEventControllerTest {
 
     @MockBean
     private HealthEventApiMapper apiMapper;
+
+    @MockBean
+    private HealthWithdrawalQueryUseCase withdrawalQueryUseCase;
+
+    @MockBean
+    private HealthWithdrawalApiMapper withdrawalApiMapper;
 
     @MockBean(name = "ownershipService")
     private Object ownershipService;
@@ -150,5 +162,31 @@ class HealthEventControllerTest {
                 .andExpect(status().isOk());
 
         verify(commandUseCase).reopen(1L, "GOAT-001", 100L);
+    }
+
+    @Test
+    void getWithdrawalStatus_shouldReturn200_whenCanonicalRouteIsUsed() throws Exception {
+        GoatWithdrawalStatusVO responseVO = GoatWithdrawalStatusVO.builder().build();
+        GoatWithdrawalStatusDTO responseDTO = GoatWithdrawalStatusDTO.builder()
+                .goatId("GOAT-001")
+                .hasActiveMilkWithdrawal(true)
+                .hasActiveMeatWithdrawal(false)
+                .milkWithdrawal(HealthWithdrawalOriginDTO.builder()
+                        .eventId(33L)
+                        .productName("Antibiotico QA")
+                        .withdrawalEndDate(java.time.LocalDate.of(2026, 3, 31))
+                        .build())
+                .build();
+
+        when(withdrawalQueryUseCase.getGoatWithdrawalStatus(1L, "GOAT-001", java.time.LocalDate.of(2026, 3, 29)))
+                .thenReturn(responseVO);
+        when(withdrawalApiMapper.toDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/withdrawal-status", 1L, "GOAT-001")
+                        .param("referenceDate", "2026-03-29"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value("GOAT-001"))
+                .andExpect(jsonPath("$.hasActiveMilkWithdrawal").value(true))
+                .andExpect(jsonPath("$.milkWithdrawal.productName").value("Antibiotico QA"));
     }
 }

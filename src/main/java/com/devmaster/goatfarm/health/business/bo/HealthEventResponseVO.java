@@ -31,6 +31,10 @@ public record HealthEventResponseVO(
     String batchNumber,
     Integer withdrawalMilkDays,
     Integer withdrawalMeatDays,
+    LocalDate milkWithdrawalEndDate,
+    boolean milkWithdrawalActive,
+    LocalDate meatWithdrawalEndDate,
+    boolean meatWithdrawalActive,
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
     boolean overdue

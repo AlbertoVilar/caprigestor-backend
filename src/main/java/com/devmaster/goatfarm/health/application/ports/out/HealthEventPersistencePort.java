@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface HealthEventPersistencePort {
@@ -18,5 +19,9 @@ public interface HealthEventPersistencePort {
 
     Page<HealthEvent> findByFarmIdAndPeriod(Long farmId, LocalDate from, LocalDate to,
                                             HealthEventType type, HealthEventStatus status, Pageable pageable);
+
+    List<HealthEvent> findPerformedWithWithdrawalByFarmIdAndGoatId(Long farmId, String goatId);
+
+    List<HealthEvent> findPerformedWithWithdrawalByFarmId(Long farmId);
 
 }

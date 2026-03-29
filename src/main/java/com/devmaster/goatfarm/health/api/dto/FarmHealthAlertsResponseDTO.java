@@ -10,10 +10,14 @@ public record FarmHealthAlertsResponseDTO(
         int dueTodayCount,
         int upcomingCount,
         int overdueCount,
+        int activeMilkWithdrawalCount,
+        int activeMeatWithdrawalCount,
 
         List<AlertItemDTO> dueTodayTop,
         List<AlertItemDTO> upcomingTop,
         List<AlertItemDTO> overdueTop,
+        List<WithdrawalAlertItemDTO> milkWithdrawalTop,
+        List<WithdrawalAlertItemDTO> meatWithdrawalTop,
 
         Integer windowDays
 ) {
@@ -26,5 +30,16 @@ public record FarmHealthAlertsResponseDTO(
             String title,
             LocalDate scheduledDate,
             boolean overdue
+    ) {}
+
+    public record WithdrawalAlertItemDTO(
+            Long eventId,
+            String goatId,
+            String title,
+            String productName,
+            String activeIngredient,
+            LocalDate performedDate,
+            LocalDate withdrawalEndDate,
+            int daysRemaining
     ) {}
 }

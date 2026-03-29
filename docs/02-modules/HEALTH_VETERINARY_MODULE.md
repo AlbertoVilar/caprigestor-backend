@@ -111,3 +111,20 @@ GET /api/v1/goatfarms/1/health-events/alerts?windowDays=7
 - Controller por cabra: [src/main/java/com/devmaster/goatfarm/health/api/controller/HealthEventController.java](../../src/main/java/com/devmaster/goatfarm/health/api/controller/HealthEventController.java)
 - Controller por fazenda: [src/main/java/com/devmaster/goatfarm/health/api/controller/FarmHealthEventController.java](../../src/main/java/com/devmaster/goatfarm/health/api/controller/FarmHealthEventController.java)
 - DTOs de entrada/saída: [src/main/java/com/devmaster/goatfarm/health/api/dto](../../src/main/java/com/devmaster/goatfarm/health/api/dto)
+## Carencia sanitaria operacional (2026-03-29)
+- A carencia operacional e derivada dos eventos sanitarios `REALIZADO` com `withdrawalMilkDays` e/ou `withdrawalMeatDays`.
+- Nao existe tabela nova para carencia nesta etapa; o status e calculado a partir de `performedAt + withdrawalDays`.
+- O detalhe do evento e o status por cabra agora expoem:
+  - `milkWithdrawalActive`
+  - `milkWithdrawalEndDate`
+  - `meatWithdrawalActive`
+  - `meatWithdrawalEndDate`
+  - origem resumida do tratamento responsavel pela carencia
+- Novo endpoint por cabra:
+  - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/withdrawal-status`
+- O agregado farm-level de alertas passou a retornar tambem:
+  - `activeMilkWithdrawalCount`
+  - `activeMeatWithdrawalCount`
+  - `milkWithdrawalTop`
+  - `meatWithdrawalTop`
+- Nesta etapa, carencia de carne entra como alerta forte operacional. O bloqueio minimo exigido ficou concentrado na operacao de leite.

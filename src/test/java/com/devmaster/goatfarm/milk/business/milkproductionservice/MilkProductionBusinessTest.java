@@ -8,6 +8,8 @@ import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
+import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
@@ -46,6 +48,9 @@ class MilkProductionBusinessTest {
     private GoatGenderValidator goatGenderValidator;
 
     @Mock
+    private HealthWithdrawalQueryUseCase healthWithdrawalQueryUseCase;
+
+    @Mock
     private MilkProductionBusinessMapper milkProductionMapper;
 
     @InjectMocks
@@ -53,9 +58,16 @@ class MilkProductionBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // Método executado antes de cada teste.
-        // Útil para resetar mocks ou configurar comportamento padrão se necessário.
+        // MÃƒÂ©todo executado antes de cada teste.
+        // ÃƒÅ¡til para resetar mocks ou configurar comportamento padrÃƒÂ£o se necessÃƒÂ¡rio.
         lenient().when(goatGenderValidator.requireFemale(anyLong(), anyString())).thenReturn(new Goat());
+        lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(anyLong(), anyString(), any(LocalDate.class)))
+                .thenReturn(GoatWithdrawalStatusVO.builder()
+                        .goatId("GOAT-DEFAULT")
+                        .referenceDate(LocalDate.now())
+                        .hasActiveMilkWithdrawal(false)
+                        .hasActiveMeatWithdrawal(false)
+                        .build());
     }
 
     // ==================================================================================
@@ -72,7 +84,7 @@ class MilkProductionBusinessTest {
 
         MilkProduction entity = validEntity();
         MilkProductionResponseVO responseVO = validResponseVO();
-        // Se tem lactação ativa
+        // Se tem lactaÃƒÂ§ÃƒÂ£o ativa
         Lactation lactation = new Lactation(); 
         lactation.setId(10L);
 
@@ -178,6 +190,40 @@ class MilkProductionBusinessTest {
         verify(milkProductionPersistencePort, never()).save(any());
     }
 
+    @Test
+    void shouldBlockMilkProduction_whenActiveMilkWithdrawalExists() {
+        Long farmId = 1L;
+        String goatId = "1643218012";
+        MilkProductionRequestVO request = validCreateVO();
+
+        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
+                farmId, goatId, request.getDate(), request.getShift()
+        )).thenReturn(false);
+
+        when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(farmId, goatId, request.getDate()))
+                .thenReturn(GoatWithdrawalStatusVO.builder()
+                        .goatId(goatId)
+                        .referenceDate(request.getDate())
+                        .hasActiveMilkWithdrawal(true)
+                        .hasActiveMeatWithdrawal(false)
+                        .milkWithdrawal(com.devmaster.goatfarm.health.business.bo.HealthWithdrawalOriginVO.builder()
+                                .eventId(88L)
+                                .title("Tratamento QA")
+                                .productName("Antibiotico")
+                                .withdrawalEndDate(request.getDate().plusDays(3))
+                                .build())
+                        .build());
+
+        BusinessRuleException exception = assertThrows(
+                BusinessRuleException.class,
+                () -> milkProductionBusiness.createMilkProduction(farmId, goatId, request)
+        );
+
+        assertTrue(exception.getMessage().contains("carencia ativa"));
+        verify(milkProductionPersistencePort, never()).save(any());
+        verify(lactationPersistencePort, never()).findActiveByFarmIdAndGoatId(anyLong(), anyString());
+    }
+
     // ==================================================================================
     // FIND BY ID
     // ==================================================================================
@@ -269,7 +315,7 @@ class MilkProductionBusinessTest {
 
         // Assert
         assertEquals(newVolume, entityBefore.getVolumeLiters());
-        assertEquals("Ordenha da manhã", entityBefore.getNotes());
+        assertEquals("Ordenha da manhÃƒÂ£", entityBefore.getNotes());
 
         assertNotNull(result);
         assertEquals(newVolume, result.getVolumeLiters());
@@ -290,7 +336,7 @@ class MilkProductionBusinessTest {
 
         MilkProduction entityBefore = validEntity();
         BigDecimal oldVolume = entityBefore.getVolumeLiters();
-        String newNotes = "Atualização de observação";
+        String newNotes = "AtualizaÃƒÂ§ÃƒÂ£o de observaÃƒÂ§ÃƒÂ£o";
 
         MilkProductionUpdateRequestVO updateVO = MilkProductionUpdateRequestVO.builder()
                 .volumeLiters(null)
@@ -366,7 +412,7 @@ class MilkProductionBusinessTest {
         MilkProduction entityBefore = validEntity();
 
         BigDecimal newVolume = new BigDecimal("3.20");
-        String newNotes = "Atualização de volume e observação";
+        String newNotes = "AtualizaÃƒÂ§ÃƒÂ£o de volume e observaÃƒÂ§ÃƒÂ£o";
 
         MilkProductionUpdateRequestVO updateVO = MilkProductionUpdateRequestVO.builder()
                 .volumeLiters(newVolume)
@@ -498,7 +544,7 @@ class MilkProductionBusinessTest {
         entity.setDate(LocalDate.of(2026, 1, 1));
         entity.setShift(MilkingShift.MORNING);
         entity.setVolumeLiters(new BigDecimal("2.50"));
-        entity.setNotes("Ordenha da manhã");
+        entity.setNotes("Ordenha da manhÃƒÂ£");
         entity.setStatus(MilkProductionStatus.ACTIVE);
         return entity;
     }
@@ -508,7 +554,7 @@ class MilkProductionBusinessTest {
                 .date(LocalDate.of(2026, 1, 1))
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
-                .notes("Ordenha da manhã")
+                .notes("Ordenha da manhÃƒÂ£")
                 .build();
     }
 
@@ -518,7 +564,7 @@ class MilkProductionBusinessTest {
                 .date(LocalDate.of(2026, 1, 1))
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
-                .notes("Ordenha da manhã")
+                .notes("Ordenha da manhÃƒÂ£")
                 .status(MilkProductionStatus.ACTIVE)
                 .build();
     }
@@ -529,13 +575,13 @@ class MilkProductionBusinessTest {
                 .date(LocalDate.now().plusDays(1))
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
-                .notes("Ordenha da manhã")
+                .notes("Ordenha da manhÃƒÂ£")
                 .build();
     }
 
 
     private MilkProductionUpdateRequestVO validUpdateVO() {
-        // Retorna um VO de atualização válido
+        // Retorna um VO de atualizaÃƒÂ§ÃƒÂ£o vÃƒÂ¡lido
         return null;
     }
 }
