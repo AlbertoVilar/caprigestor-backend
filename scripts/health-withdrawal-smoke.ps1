@@ -173,16 +173,24 @@ if ($null -eq $meatAlert) {
     throw "O evento nao apareceu no alerta farm-level de carencia de carne."
 }
 
-$blockedMilkProduction = Invoke-GoatFarmApi -Method Post -Uri "$BaseUrl/api/v1/goatfarms/$FarmId/goats/$GoatId/milk-productions" -Headers $headers -Body @{
+$milkProductionDuringWithdrawal = Invoke-GoatFarmApi -Method Post -Uri "$BaseUrl/api/v1/goatfarms/$FarmId/goats/$GoatId/milk-productions" -Headers $headers -Body @{
     date = $scheduledDate
     shift = "MORNING"
     volumeLiters = 1.25
-    notes = "Smoke bloqueado por carencia ativa"
+    notes = "Smoke registrado durante carencia ativa"
 }
-Assert-StatusCode -Label "Bloqueio de producao durante carencia de leite" -Response $blockedMilkProduction -ExpectedStatusCode 422
+Assert-StatusCode -Label "Registro de producao durante carencia de leite" -Response $milkProductionDuringWithdrawal -ExpectedStatusCode 201
 
-if ($blockedMilkProduction.Raw -notlike "*carencia ativa*") {
-    throw "A resposta de bloqueio de leite nao mencionou carencia ativa."
+if (-not $milkProductionDuringWithdrawal.Json.recordedDuringMilkWithdrawal) {
+    throw "A producao registrada durante carencia nao retornou snapshot de carencia."
+}
+
+if ($milkProductionDuringWithdrawal.Json.milkWithdrawalEventId -ne $eventId) {
+    throw "A producao registrada nao retornou o evento sanitario responsavel pela carencia."
+}
+
+if ([string]::IsNullOrWhiteSpace($milkProductionDuringWithdrawal.Json.milkWithdrawalSource)) {
+    throw "A producao registrada nao retornou a origem resumida da carencia."
 }
 
 $futureStatus = Invoke-GoatFarmApi -Method Get -Uri "$BaseUrl/api/v1/goatfarms/$FarmId/goats/$GoatId/health-events/withdrawal-status?referenceDate=$futureReferenceDate" -Headers $headers
@@ -197,3 +205,4 @@ Write-Host "Cabra validada: $GoatId"
 Write-Host "Evento realizado: $eventId"
 Write-Host "Fim da carencia de leite: $(($withdrawalStatus.Json.milkWithdrawal.withdrawalEndDate))"
 Write-Host "Fim da carencia de carne: $(($withdrawalStatus.Json.meatWithdrawal.withdrawalEndDate))"
+Write-Host "Producao registrada em carencia: $(($milkProductionDuringWithdrawal.Json.id))"

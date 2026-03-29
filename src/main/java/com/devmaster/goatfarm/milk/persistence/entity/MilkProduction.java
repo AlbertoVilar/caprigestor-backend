@@ -56,6 +56,18 @@ public class MilkProduction {
     @Column(name = "canceled_reason", length = 500)
     private String canceledReason;
 
+    @Column(name = "recorded_during_milk_withdrawal", nullable = false)
+    private boolean recordedDuringMilkWithdrawal;
+
+    @Column(name = "milk_withdrawal_event_id")
+    private Long milkWithdrawalEventId;
+
+    @Column(name = "milk_withdrawal_end_date")
+    private LocalDate milkWithdrawalEndDate;
+
+    @Column(name = "milk_withdrawal_source", length = 120)
+    private String milkWithdrawalSource;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

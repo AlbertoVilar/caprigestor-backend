@@ -48,6 +48,10 @@ class MilkProductionControllerTest {
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.45"))
                 .status(MilkProductionStatus.ACTIVE)
+                .recordedDuringMilkWithdrawal(true)
+                .milkWithdrawalEventId(90L)
+                .milkWithdrawalEndDate(LocalDate.of(2026, 2, 24))
+                .milkWithdrawalSource("Antibiotico QA")
                 .build();
         MilkProductionResponseDTO responseDTO = MilkProductionResponseDTO.builder()
                 .id(responseVO.getId())
@@ -55,6 +59,10 @@ class MilkProductionControllerTest {
                 .shift(responseVO.getShift())
                 .volumeLiters(responseVO.getVolumeLiters())
                 .status(responseVO.getStatus())
+                .recordedDuringMilkWithdrawal(responseVO.isRecordedDuringMilkWithdrawal())
+                .milkWithdrawalEventId(responseVO.getMilkWithdrawalEventId())
+                .milkWithdrawalEndDate(responseVO.getMilkWithdrawalEndDate())
+                .milkWithdrawalSource(responseVO.getMilkWithdrawalSource())
                 .build();
 
         when(milkProductionUseCase.findById(farmId, goatId, productionId)).thenReturn(responseVO);
@@ -64,7 +72,9 @@ class MilkProductionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(21))
-                .andExpect(jsonPath("$.shift").value(MilkingShift.MORNING.name()));
+                .andExpect(jsonPath("$.shift").value(MilkingShift.MORNING.name()))
+                .andExpect(jsonPath("$.recordedDuringMilkWithdrawal").value(true))
+                .andExpect(jsonPath("$.milkWithdrawalSource").value("Antibiotico QA"));
     }
 
     @Test
