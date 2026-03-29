@@ -2,8 +2,10 @@ package com.devmaster.goatfarm.health.api.controller;
 
 import com.devmaster.goatfarm.health.api.dto.*;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
+import com.devmaster.goatfarm.health.api.mapper.HealthWithdrawalApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
@@ -33,16 +35,22 @@ public class HealthEventController {
 
     private final HealthEventCommandUseCase commandUseCase;
     private final HealthEventQueryUseCase queryUseCase;
+    private final HealthWithdrawalQueryUseCase withdrawalQueryUseCase;
     private final HealthEventApiMapper apiMapper;
+    private final HealthWithdrawalApiMapper withdrawalApiMapper;
 
     public HealthEventController(
             HealthEventCommandUseCase commandUseCase,
             HealthEventQueryUseCase queryUseCase,
-            HealthEventApiMapper apiMapper
+            HealthWithdrawalQueryUseCase withdrawalQueryUseCase,
+            HealthEventApiMapper apiMapper,
+            HealthWithdrawalApiMapper withdrawalApiMapper
     ) {
         this.commandUseCase = commandUseCase;
         this.queryUseCase = queryUseCase;
+        this.withdrawalQueryUseCase = withdrawalQueryUseCase;
         this.apiMapper = apiMapper;
+        this.withdrawalApiMapper = withdrawalApiMapper;
     }
 
     @Operation(summary = "Registrar evento de saúde", description = "Cria um evento agendado para a cabra informada.")
@@ -182,5 +190,22 @@ public class HealthEventController {
     ) {
         Page<HealthEventResponseVO> page = queryUseCase.listByGoat(farmId, goatId, from, to, type, status, pageable);
         return ResponseEntity.ok(page.map(apiMapper::toDTO));
+    }
+
+    @Operation(summary = "Consultar carencia sanitaria ativa", description = "Deriva o status de carencia ativa de leite e carne para a cabra informada.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Status de carencia retornado com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Acesso negado."),
+            @ApiResponse(responseCode = "404", description = "Cabra nao encontrada.")
+    })
+    @GetMapping("/withdrawal-status")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    public ResponseEntity<GoatWithdrawalStatusDTO> getWithdrawalStatus(
+            @PathVariable Long farmId,
+            @PathVariable String goatId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate referenceDate
+    ) {
+        var status = withdrawalQueryUseCase.getGoatWithdrawalStatus(farmId, goatId, referenceDate);
+        return ResponseEntity.ok(withdrawalApiMapper.toDTO(status));
     }
 }

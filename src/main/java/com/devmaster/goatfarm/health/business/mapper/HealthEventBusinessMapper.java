@@ -35,6 +35,10 @@ public interface HealthEventBusinessMapper {
     void updateEntity(@MappingTarget HealthEvent entity, HealthEventUpdateRequestVO vo);
 
     @Mapping(target = "overdue", expression = "java(isOverdue(entity))")
+    @Mapping(target = "milkWithdrawalEndDate", expression = "java(resolveWithdrawalEndDate(entity.getPerformedAt(), entity.getWithdrawalMilkDays()))")
+    @Mapping(target = "milkWithdrawalActive", expression = "java(isWithdrawalActive(entity.getPerformedAt(), entity.getWithdrawalMilkDays()))")
+    @Mapping(target = "meatWithdrawalEndDate", expression = "java(resolveWithdrawalEndDate(entity.getPerformedAt(), entity.getWithdrawalMeatDays()))")
+    @Mapping(target = "meatWithdrawalActive", expression = "java(isWithdrawalActive(entity.getPerformedAt(), entity.getWithdrawalMeatDays()))")
     HealthEventResponseVO toResponseVO(HealthEvent entity);
 
     default boolean isOverdue(HealthEvent entity) {
@@ -43,5 +47,17 @@ public interface HealthEventBusinessMapper {
             return false;
         }
         return entity.getScheduledDate().isBefore(LocalDate.now());
+    }
+
+    default LocalDate resolveWithdrawalEndDate(java.time.LocalDateTime performedAt, Integer withdrawalDays) {
+        if (performedAt == null || withdrawalDays == null || withdrawalDays <= 0) {
+            return null;
+        }
+        return performedAt.toLocalDate().plusDays(withdrawalDays);
+    }
+
+    default boolean isWithdrawalActive(java.time.LocalDateTime performedAt, Integer withdrawalDays) {
+        LocalDate endDate = resolveWithdrawalEndDate(performedAt, withdrawalDays);
+        return endDate != null && !LocalDate.now().isAfter(endDate);
     }
 }
