@@ -14,6 +14,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 - [ROADMAP.md](./00-overview/ROADMAP.md)
 - [AGENT_CONTEXT.md](./00-overview/AGENT_CONTEXT.md)
 - [HOMOLOGATION_OPERATION_RUNBOOK.md](./00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
+- [PILOT_FREEZE_PLAYBOOK.md](./00-overview/PILOT_FREEZE_PLAYBOOK.md)
 
 ### 01-architecture
 - [ARCHITECTURE.md](./01-architecture/ARCHITECTURE.md)
@@ -44,4 +45,3 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 ## Observacoes
 - Nao existem docs oficiais em `docs/04-operations` e `docs/05-testing` neste snapshot.
 - Novas secoes devem seguir cabecalho padrao e links relativos ao repositorio.
-
