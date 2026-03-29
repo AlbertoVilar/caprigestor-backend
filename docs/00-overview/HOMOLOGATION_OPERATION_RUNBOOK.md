@@ -15,6 +15,19 @@ Garantir que o ambiente local/HML consiga:
 - executar uma leitura autenticada basica;
 - validar o comportamento critico de lactacao, secagem e bloqueios com prenhez ativa.
 
+## Fase atual do produto
+
+O produto entrou em `freeze de escopo` em `2026-03-29`.
+
+Referencia oficial desta fase:
+
+- [PILOT_FREEZE_PLAYBOOK.md](./PILOT_FREEZE_PLAYBOOK.md)
+
+Regra pratica desta fase:
+
+- entra bug real, hotfix curto e ajuste operacional;
+- nao entra frente nova de produto sem evidenciar que o piloto bloqueou a entrega.
+
 ## Pre-requisitos
 
 - Docker em execucao
