@@ -1,4 +1,4 @@
-﻿# Homologacao e operacao minima
+# Homologacao e operacao minima
 
 Ultima atualizacao: 2026-03-28  
 Escopo: rotina minima, objetiva e reproduzivel para smoke de restore, smoke de homologacao do backend e smoke funcional critico de lactacao x prenhez x secagem.
@@ -118,3 +118,44 @@ Quando usar:
 - nao promover sem health, login e leitura autenticada funcionando;
 - nao tratar secagem como encerramento definitivo do ciclo quando ainda existir prenhez ativa;
 - nao liberar nova lactacao ou retomada durante prenhez ativa apos secagem confirmada.
+
+## Smoke funcional: carencia sanitaria operacional
+
+Script oficial:
+
+```powershell
+.\scripts\health-withdrawal-smoke.ps1
+```
+
+Objetivo:
+
+- criar um evento sanitario com carencia em uma cabra com lactacao ativa;
+- marcar o evento como realizado;
+- provar que a carencia fica ativa no detalhe do evento e no status da cabra;
+- provar que o alerta farm-level passa a exibir carencia de leite e carne;
+- provar que o backend bloqueia producao de leite durante carencia ativa;
+- provar que a derivacao temporal libera a carencia em uma data de referencia futura.
+
+Fluxo executado pelo script:
+
+1. valida `health`;
+2. faz login real;
+3. valida que a cabra alvo possui lactacao ativa;
+4. cria evento sanitario com `withdrawalMilkDays` e `withdrawalMeatDays`;
+5. marca o evento como realizado;
+6. valida o detalhe do evento e o status de carencia da cabra;
+7. valida os alertas farm-level de carencia;
+8. tenta registrar producao de leite e exige `422`;
+9. consulta o status com `referenceDate` futura e exige carencia expirada.
+
+Parametros uteis:
+
+```powershell
+.\scripts\health-withdrawal-smoke.ps1 -FarmId 17 -GoatId QAT03281450
+```
+
+Quando usar:
+
+- qualquer alteracao em `health` que toque `withdrawalMilkDays` ou `withdrawalMeatDays`;
+- qualquer alteracao em `milk` que possa afrouxar o bloqueio operacional durante carencia;
+- qualquer mudanca visual em detalhe da cabra, alertas de fazenda ou pagina de producao que dependa da leitura de carencia.

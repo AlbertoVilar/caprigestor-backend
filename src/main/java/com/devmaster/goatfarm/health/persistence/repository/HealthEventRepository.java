@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -56,5 +57,33 @@ public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> 
             @Param("status") HealthEventStatus status,
             Pageable pageable
     );
+
+    @Query("""
+        select e
+        from HealthEvent e
+        where e.farmId = :farmId
+          and e.goatId = :goatId
+          and e.status = com.devmaster.goatfarm.health.domain.enums.HealthEventStatus.REALIZADO
+          and e.performedAt is not null
+          and ((e.withdrawalMilkDays is not null and e.withdrawalMilkDays > 0)
+            or (e.withdrawalMeatDays is not null and e.withdrawalMeatDays > 0))
+        order by e.performedAt desc, e.id desc
+        """)
+    List<HealthEvent> findPerformedWithWithdrawalByFarmIdAndGoatId(
+            @Param("farmId") Long farmId,
+            @Param("goatId") String goatId
+    );
+
+    @Query("""
+        select e
+        from HealthEvent e
+        where e.farmId = :farmId
+          and e.status = com.devmaster.goatfarm.health.domain.enums.HealthEventStatus.REALIZADO
+          and e.performedAt is not null
+          and ((e.withdrawalMilkDays is not null and e.withdrawalMilkDays > 0)
+            or (e.withdrawalMeatDays is not null and e.withdrawalMeatDays > 0))
+        order by e.performedAt desc, e.id desc
+        """)
+    List<HealthEvent> findPerformedWithWithdrawalByFarmId(@Param("farmId") Long farmId);
 }
 

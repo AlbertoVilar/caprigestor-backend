@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
@@ -29,26 +30,29 @@ import java.util.List;
 @Service
 public class MilkProductionBusiness implements MilkProductionUseCase {
 
-    /** Ports (infra abstraída) */
+    /** Ports (infra abstraÃ­da) */
     private final MilkProductionPersistencePort milkProductionPersistencePort;
     private final LactationPersistencePort lactationPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
+    private final HealthWithdrawalQueryUseCase healthWithdrawalQueryUseCase;
 
-    /** Mapper de domínio */
+    /** Mapper de domÃ­nio */
     private final MilkProductionBusinessMapper milkProductionMapper;
 
     public MilkProductionBusiness(MilkProductionPersistencePort milkProductionPersistencePort,
                                   LactationPersistencePort lactationPersistencePort,
                                   GoatGenderValidator goatGenderValidator,
+                                  HealthWithdrawalQueryUseCase healthWithdrawalQueryUseCase,
                                   MilkProductionBusinessMapper milkProductionMapper) {
         this.milkProductionPersistencePort = milkProductionPersistencePort;
         this.lactationPersistencePort = lactationPersistencePort;
         this.goatGenderValidator = goatGenderValidator;
+        this.healthWithdrawalQueryUseCase = healthWithdrawalQueryUseCase;
         this.milkProductionMapper = milkProductionMapper;
     }
 
     /**
-     * Criação de produção diária de leite
+     * CriaÃ§Ã£o de produÃ§Ã£o diÃ¡ria de leite
      */
     @Override
     public MilkProductionResponseVO createMilkProduction(
@@ -58,18 +62,19 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     ) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         //=======================
-        // *** VALIDAÇÃO *** //
+        // *** VALIDAÃ‡ÃƒO *** //
         //=======================
         
         if (requestVO.getDate() == null) {
-            throw new InvalidArgumentException("date", "Data da ordenha é obrigatória");
+            throw new InvalidArgumentException("date", "Data da ordenha Ã© obrigatÃ³ria");
         }
         if (requestVO.getDate().isAfter(LocalDate.now())) {
-            throw new InvalidArgumentException("date", "Data da ordenha não pode ser futura");
+            throw new InvalidArgumentException("date", "Data da ordenha nÃ£o pode ser futura");
         }
 
-        // Regra 1: Não permitir produção duplicada para a mesma data e turno
+        // Regra 1: NÃ£o permitir produÃ§Ã£o duplicada para a mesma data e turno
         validateNoDuplicateProduction(farmId, goatId, requestVO.getDate(), requestVO.getShift());
+        validateNoActiveMilkWithdrawal(farmId, goatId, requestVO.getDate());
         Lactation lactation = getRequiredActiveLactation(farmId, goatId, requestVO.getDate());
 
         MilkProduction milkProduction = milkProductionMapper.toEntity(requestVO);
@@ -92,13 +97,14 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     ) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
-                .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("ProduÃ§Ã£o de leite nÃ£o encontrada com o ID: " + id));
         if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
             throw new BusinessRuleException("status", "Registro cancelado nao pode ser alterado.");
         }
 
 
         if (request.getVolumeLiters() != null) {
+            validateNoActiveMilkWithdrawal(farmId, goatId, milkProduction.getDate());
             milkProduction.setVolumeLiters(request.getVolumeLiters());
         }
         if (request.getNotes() != null) {
@@ -115,7 +121,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Produção de leite não encontrada com o ID: " + id
+                                "ProduÃ§Ã£o de leite nÃ£o encontrada com o ID: " + id
                         )
                 );
 
@@ -127,7 +133,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     public void delete(Long farmId, String goatId, Long id) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
-                .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("ProduÃ§Ã£o de leite nÃ£o encontrada com o ID: " + id));
 
         if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
             return;
@@ -141,7 +147,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     }
 
     /**
-     * Consulta de produções por período
+     * Consulta de produÃ§Ãµes por perÃ­odo
      */
     @Override
     public Page<MilkProductionResponseVO> getMilkProductions(
@@ -167,12 +173,12 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
 
     /* ==========================================================
-       Regras de domínio (assinaturas internas)
+       Regras de domÃ­nio (assinaturas internas)
        ========================================================== */
 
     /**
      * Regra 1:
-     * Não permitir produção duplicada para a mesma data e turno
+     * NÃ£o permitir produÃ§Ã£o duplicada para a mesma data e turno
      */
     private void validateNoDuplicateProduction(
             Long farmId,
@@ -180,7 +186,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             LocalDate date,
             MilkingShift shift
     ) {
-        // implementação futura
+        // implementaÃ§Ã£o futura
         if (milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(farmId, goatId, date, shift)) {
             throw new DuplicateMilkProductionException();
         }
@@ -188,7 +194,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     /**
      * Regra 2:
-     * Produção só pode existir se houver lactação ativa
+     * ProduÃ§Ã£o sÃ³ pode existir se houver lactaÃ§Ã£o ativa
      */
     private Lactation getRequiredActiveLactation(
             Long farmId,
@@ -200,4 +206,25 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
                 .orElseThrow(NoActiveLactationException::new);
     }
 
+    private void validateNoActiveMilkWithdrawal(Long farmId, String goatId, LocalDate referenceDate) {
+        var status = healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(farmId, goatId, referenceDate);
+        if (!status.hasActiveMilkWithdrawal() || status.milkWithdrawal() == null) {
+            return;
+        }
+
+        String productName = status.milkWithdrawal().productName() != null && !status.milkWithdrawal().productName().isBlank()
+                ? status.milkWithdrawal().productName()
+                : status.milkWithdrawal().title();
+
+        throw new BusinessRuleException(
+                "milkWithdrawal",
+                "Nao e permitido registrar producao de leite durante carencia ativa. Bloqueio ate "
+                        + status.milkWithdrawal().withdrawalEndDate()
+                        + " por conta do tratamento "
+                        + productName
+                        + "."
+        );
+    }
+
 }
+

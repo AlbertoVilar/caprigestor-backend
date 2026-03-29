@@ -47,12 +47,28 @@ class FarmHealthEventControllerTest {
                 .dueTodayCount(2)
                 .upcomingCount(5)
                 .overdueCount(1)
+                .activeMilkWithdrawalCount(1)
+                .activeMeatWithdrawalCount(0)
                 .dueTodayTop(List.of())
                 .upcomingTop(List.of())
                 .overdueTop(List.of())
+                .milkWithdrawalTop(List.of())
+                .meatWithdrawalTop(List.of())
                 .windowDays(7)
                 .build();
-        FarmHealthAlertsResponseDTO responseDTO = new FarmHealthAlertsResponseDTO(2, 5, 1, List.of(), List.of(), List.of(), 7);
+        FarmHealthAlertsResponseDTO responseDTO = new FarmHealthAlertsResponseDTO(
+                2,
+                5,
+                1,
+                1,
+                0,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                7
+        );
 
         when(alertsQueryUseCase.getAlerts(farmId, 7)).thenReturn(responseVO);
         when(alertsMapper.toDTO(responseVO)).thenReturn(responseDTO);
@@ -62,6 +78,7 @@ class FarmHealthEventControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dueTodayCount").value(2))
+                .andExpect(jsonPath("$.activeMilkWithdrawalCount").value(1))
                 .andExpect(jsonPath("$.windowDays").value(7));
     }
 
@@ -72,12 +89,28 @@ class FarmHealthEventControllerTest {
                 .dueTodayCount(1)
                 .upcomingCount(3)
                 .overdueCount(0)
+                .activeMilkWithdrawalCount(0)
+                .activeMeatWithdrawalCount(2)
                 .dueTodayTop(List.of())
                 .upcomingTop(List.of())
                 .overdueTop(List.of())
+                .milkWithdrawalTop(List.of())
+                .meatWithdrawalTop(List.of())
                 .windowDays(5)
                 .build();
-        FarmHealthAlertsResponseDTO responseDTO = new FarmHealthAlertsResponseDTO(1, 3, 0, List.of(), List.of(), List.of(), 5);
+        FarmHealthAlertsResponseDTO responseDTO = new FarmHealthAlertsResponseDTO(
+                1,
+                3,
+                0,
+                0,
+                2,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                5
+        );
 
         when(alertsQueryUseCase.getAlerts(farmId, 5)).thenReturn(responseVO);
         when(alertsMapper.toDTO(responseVO)).thenReturn(responseDTO);
@@ -87,6 +120,7 @@ class FarmHealthEventControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dueTodayCount").value(1))
+                .andExpect(jsonPath("$.activeMeatWithdrawalCount").value(2))
                 .andExpect(jsonPath("$.windowDays").value(5));
     }
 }
