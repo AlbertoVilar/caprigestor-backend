@@ -127,4 +127,5 @@ GET /api/v1/goatfarms/1/health-events/alerts?windowDays=7
   - `activeMeatWithdrawalCount`
   - `milkWithdrawalTop`
   - `meatWithdrawalTop`
-- Nesta etapa, carencia de carne entra como alerta forte operacional. O bloqueio minimo exigido ficou concentrado na operacao de leite.
+- Nesta etapa, carencia de carne entra como alerta forte operacional.
+- Para leite, a carencia passa a ser leitura e marcacao operacional viva: o sistema permite registrar a producao, mas identifica explicitamente o volume produzido em carencia para manter a separacao entre historico zootecnico e uso comercial.

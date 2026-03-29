@@ -133,7 +133,7 @@ Objetivo:
 - marcar o evento como realizado;
 - provar que a carencia fica ativa no detalhe do evento e no status da cabra;
 - provar que o alerta farm-level passa a exibir carencia de leite e carne;
-- provar que o backend bloqueia producao de leite durante carencia ativa;
+- provar que o backend permite registrar a producao durante carencia ativa, mas marca o registro com snapshot sanitario e alerta forte;
 - provar que a derivacao temporal libera a carencia em uma data de referencia futura.
 
 Fluxo executado pelo script:
@@ -145,7 +145,7 @@ Fluxo executado pelo script:
 5. marca o evento como realizado;
 6. valida o detalhe do evento e o status de carencia da cabra;
 7. valida os alertas farm-level de carencia;
-8. tenta registrar producao de leite e exige `422`;
+8. registra producao de leite durante carencia e exige `201` com snapshot sanitario no payload;
 9. consulta o status com `referenceDate` futura e exige carencia expirada.
 
 Parametros uteis:
@@ -157,5 +157,5 @@ Parametros uteis:
 Quando usar:
 
 - qualquer alteracao em `health` que toque `withdrawalMilkDays` ou `withdrawalMeatDays`;
-- qualquer alteracao em `milk` que possa afrouxar o bloqueio operacional durante carencia;
+- qualquer alteracao em `milk` que possa perder o snapshot sanitario da producao durante carencia;
 - qualquer mudanca visual em detalhe da cabra, alertas de fazenda ou pagina de producao que dependa da leitura de carencia.

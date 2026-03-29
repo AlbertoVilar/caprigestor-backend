@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
+import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
@@ -74,7 +75,11 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
         // Regra 1: NÃ£o permitir produÃ§Ã£o duplicada para a mesma data e turno
         validateNoDuplicateProduction(farmId, goatId, requestVO.getDate(), requestVO.getShift());
-        validateNoActiveMilkWithdrawal(farmId, goatId, requestVO.getDate());
+        GoatWithdrawalStatusVO withdrawalStatus = healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(
+                farmId,
+                goatId,
+                requestVO.getDate()
+        );
         Lactation lactation = getRequiredActiveLactation(farmId, goatId, requestVO.getDate());
 
         MilkProduction milkProduction = milkProductionMapper.toEntity(requestVO);
@@ -84,6 +89,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         milkProduction.setStatus(MilkProductionStatus.ACTIVE);
         milkProduction.setCanceledAt(null);
         milkProduction.setCanceledReason(null);
+        applyMilkWithdrawalSnapshot(milkProduction, withdrawalStatus);
         MilkProduction saved = milkProductionPersistencePort.save(milkProduction);
         return milkProductionMapper.toResponseVO(saved);
     }
@@ -104,7 +110,6 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
 
         if (request.getVolumeLiters() != null) {
-            validateNoActiveMilkWithdrawal(farmId, goatId, milkProduction.getDate());
             milkProduction.setVolumeLiters(request.getVolumeLiters());
         }
         if (request.getNotes() != null) {
@@ -206,24 +211,22 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
                 .orElseThrow(NoActiveLactationException::new);
     }
 
-    private void validateNoActiveMilkWithdrawal(Long farmId, String goatId, LocalDate referenceDate) {
-        var status = healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(farmId, goatId, referenceDate);
-        if (!status.hasActiveMilkWithdrawal() || status.milkWithdrawal() == null) {
+    private void applyMilkWithdrawalSnapshot(MilkProduction milkProduction, GoatWithdrawalStatusVO status) {
+        if (status == null || !status.hasActiveMilkWithdrawal() || status.milkWithdrawal() == null) {
+            milkProduction.setRecordedDuringMilkWithdrawal(false);
+            milkProduction.setMilkWithdrawalEventId(null);
+            milkProduction.setMilkWithdrawalEndDate(null);
+            milkProduction.setMilkWithdrawalSource(null);
             return;
         }
 
         String productName = status.milkWithdrawal().productName() != null && !status.milkWithdrawal().productName().isBlank()
                 ? status.milkWithdrawal().productName()
                 : status.milkWithdrawal().title();
-
-        throw new BusinessRuleException(
-                "milkWithdrawal",
-                "Nao e permitido registrar producao de leite durante carencia ativa. Bloqueio ate "
-                        + status.milkWithdrawal().withdrawalEndDate()
-                        + " por conta do tratamento "
-                        + productName
-                        + "."
-        );
+        milkProduction.setRecordedDuringMilkWithdrawal(true);
+        milkProduction.setMilkWithdrawalEventId(status.milkWithdrawal().eventId());
+        milkProduction.setMilkWithdrawalEndDate(status.milkWithdrawal().withdrawalEndDate());
+        milkProduction.setMilkWithdrawalSource(productName);
     }
 
 }

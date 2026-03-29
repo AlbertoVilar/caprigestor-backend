@@ -24,6 +24,10 @@ public class MilkProductionResponseDTO {
     private BigDecimal volumeLiters;
     private String notes;
     private MilkProductionStatus status;
+    private boolean recordedDuringMilkWithdrawal;
+    private Long milkWithdrawalEventId;
+    private LocalDate milkWithdrawalEndDate;
+    private String milkWithdrawalSource;
     private LocalDateTime canceledAt;
     private String canceledReason;
 }
