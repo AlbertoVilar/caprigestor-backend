@@ -18,6 +18,10 @@ public interface MilkProductionBusinessMapper {
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "canceledAt", ignore = true)
     @Mapping(target = "canceledReason", ignore = true)
+    @Mapping(target = "recordedDuringMilkWithdrawal", ignore = true)
+    @Mapping(target = "milkWithdrawalEventId", ignore = true)
+    @Mapping(target = "milkWithdrawalEndDate", ignore = true)
+    @Mapping(target = "milkWithdrawalSource", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     MilkProduction toEntity(MilkProductionRequestVO vo);

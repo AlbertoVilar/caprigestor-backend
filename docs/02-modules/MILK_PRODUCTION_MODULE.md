@@ -71,9 +71,14 @@ GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-
 ## Referências internas
 - Controller: [src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java)
 - DTOs: [src/main/java/com/devmaster/goatfarm/milk/api/dto](../../src/main/java/com/devmaster/goatfarm/milk/api/dto)
-## Bloqueio por carencia sanitaria ativa (2026-03-29)
+## Carencia sanitaria operacional no leite (2026-03-29)
 - O registro de producao continua exigindo lactacao ativa.
-- Alem disso, o backend passou a bloquear `POST /milk-productions` quando a cabra possui carencia de leite ativa derivada de evento sanitario realizado.
-- O bloqueio e validado no backend, com mensagem operacional explicita informando o fim da carencia e a origem resumida do tratamento.
-- A liberacao ocorre automaticamente por regra temporal simples quando a carencia expira.
-- Esta etapa nao cria motor generico de restricoes zootecnicas; apenas reaproveita o modulo `health` como fonte da regra operacional.
+- Quando existir carencia de leite ativa derivada de evento sanitario realizado, o backend continua permitindo o registro da ordenha para preservar o historico biologico real do animal.
+- Nesses casos, a producao e salva com snapshot sanitario proprio:
+  - `recordedDuringMilkWithdrawal`
+  - `milkWithdrawalEventId`
+  - `milkWithdrawalEndDate`
+  - `milkWithdrawalSource`
+- Esse snapshot preserva a rastreabilidade historica mesmo depois da expiracao temporal da carencia.
+- A UI deve alertar fortemente que o leite segue restrito para uso comercial enquanto a carencia estiver ativa.
+- Esta etapa nao cria motor generico de restricoes zootecnicas; apenas reaproveita o modulo `health` como fonte da leitura operacional.
