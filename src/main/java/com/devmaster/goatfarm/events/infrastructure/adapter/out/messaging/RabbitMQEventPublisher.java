@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
@@ -16,6 +17,7 @@ import java.time.OffsetDateTime;
  * Adapter que publica eventos no RabbitMQ implementando o port de saída.
  */
 @Component
+@ConditionalOnProperty(value = "caprigestor.messaging.enabled", havingValue = "true", matchIfMissing = true)
 public class RabbitMQEventPublisher implements EventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMQEventPublisher.class);

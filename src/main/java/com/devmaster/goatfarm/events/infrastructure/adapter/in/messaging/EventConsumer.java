@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.events.infrastructure.adapter.messaging.dto.EventM
 import com.devmaster.goatfarm.events.enums.EventType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(value = "caprigestor.messaging.enabled", havingValue = "true", matchIfMissing = true)
 public class EventConsumer {
 
     @RabbitListener(queues = "${caprigestor.rabbitmq.queue}")
