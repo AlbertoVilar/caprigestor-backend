@@ -17,6 +17,8 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 - [PILOT_FREEZE_PLAYBOOK.md](./00-overview/PILOT_FREEZE_PLAYBOOK.md)
 - [USER_MANUAL_PT-BR.md](./00-overview/USER_MANUAL_PT-BR.md)
 - [USER_MANUAL_EN.md](./00-overview/USER_MANUAL_EN.md)
+- [ONBOARDING_GUIDE_PT-BR.md](./00-overview/ONBOARDING_GUIDE_PT-BR.md)
+- [ONBOARDING_GUIDE_EN.md](./00-overview/ONBOARDING_GUIDE_EN.md)
 
 ### 01-architecture
 - [ARCHITECTURE.md](./01-architecture/ARCHITECTURE.md)
