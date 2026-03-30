@@ -1,4 +1,4 @@
-# Homologacao e operacao minima
+﻿# Homologacao e operacao minima
 
 Ultima atualizacao: 2026-03-28  
 Escopo: rotina minima, objetiva e reproduzivel para smoke de restore, smoke de homologacao do backend e smoke funcional critico de lactacao x prenhez x secagem.
@@ -172,3 +172,39 @@ Quando usar:
 - qualquer alteracao em `health` que toque `withdrawalMilkDays` ou `withdrawalMeatDays`;
 - qualquer alteracao em `milk` que possa perder o snapshot sanitario da producao durante carencia;
 - qualquer mudanca visual em detalhe da cabra, alertas de fazenda ou pagina de producao que dependa da leitura de carencia.
+
+## Validacao funcional: producao diaria consolidada da fazenda
+
+Objetivo:
+
+- provar que o consolidado diario da fazenda pode ser salvo com semantica separada entre total, restrito e liberado;
+- provar que a leitura diaria, mensal e anual responde com os mesmos volumes;
+- provar que o controle individual continua funcionando em paralelo, inclusive em carencia.
+
+Fluxo minimo recomendado:
+
+1. validar `health`;
+2. fazer login real;
+3. usar uma fazenda QA isolada;
+4. confirmar um animal com carencia de leite ativa;
+5. registrar uma producao individual nessa cabra e exigir snapshot sanitario no payload;
+6. salvar um consolidado diario da fazenda via `PUT /api/v1/goatfarms/{farmId}/milk-consolidated-productions/{productionDate}`;
+7. consultar:
+   - `daily`
+   - `monthly`
+   - `annual`
+8. validar que:
+   - `totalProduced` bate com o registro salvo;
+   - `withdrawalProduced` fica separado;
+   - `marketableProduced` nao inclui o volume restrito.
+
+Checklist minimo antes de promover alteracoes nesta frente:
+
+1. `./mvnw.cmd -U -T 1C clean test`
+2. `npm test -- --run`
+3. `npm run lint`
+4. `npm run build`
+5. backend em execucao com `health = UP`
+6. login real funcionando
+7. validacao manual do consolidado em `day/month/year`
+8. validacao de que a producao individual continua operando normalmente
