@@ -1,5 +1,5 @@
 ﻿# Portal de Documentacao GoatFarm/CapriGestor Backend
-Ultima atualizacao: 2026-03-28
+Ultima atualizacao: 2026-03-30
 Escopo: ponto unico de navegacao para a documentacao oficial do backend.
 Links relacionados: [Visao geral](./00-overview/BUSINESS_DOMAIN.md), [Arquitetura](./01-architecture/ARCHITECTURE.md), [Modulos](./02-modules), [API_CONTRACTS](./03-api/API_CONTRACTS.md)
 
@@ -49,3 +49,6 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 ## Observacoes
 - Nao existem docs oficiais em `docs/04-operations` e `docs/05-testing` neste snapshot.
 - Novas secoes devem seguir cabecalho padrao e links relativos ao repositorio.
+
+- O modulo de leite agora documenta explicitamente a diferenca entre producao individual por cabra e producao diaria consolidada da fazenda.
+
