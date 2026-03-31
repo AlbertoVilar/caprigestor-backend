@@ -25,4 +25,10 @@ class ActuatorHealthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
     }
+
+    @Test
+    void actuatorRoot_shouldNotBePublic() throws Exception {
+        mockMvc.perform(get("/actuator"))
+                .andExpect(status().isForbidden());
+    }
 }
