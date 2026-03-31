@@ -1,26 +1,26 @@
-# Runbook de deploy Docker em produção
+# Runbook de deploy Docker em producao
 
 ## Objetivo
 
 Executar o primeiro cutover real do CapriGestor com:
 
-- frontend e backend no mesmo domínio
-- Nginx do host como único ponto público
-- backend Spring Boot privado atrás do proxy
+- frontend e backend no mesmo dominio
+- Nginx do host como unico ponto publico
+- backend Spring Boot privado atras do proxy
 - PostgreSQL privado
 - RabbitMQ desligado
 - base restaurada a partir do backup saneado
-- smoke fechado antes de abrir o domínio ao público
+- smoke fechado antes de abrir o dominio ao publico
 
-## Decisões fixas
+## Decisoes fixas
 
-- `prod` é o profile real
+- `prod` e o profile real
 - `CAPRIGESTOR_MESSAGING_ENABLED=false`
 - Docker Hub/registry guarda apenas imagens
-- segredos reais ficam fora do repositório
+- segredos reais ficam fora do repositorio
 - o banco promovido nasce do backup saneado validado
-- o backend não publica porta pública
-- PostgreSQL não fica exposto à internet
+- o backend nao publica porta publica
+- PostgreSQL nao fica exposto a internet
 - `/actuator` deve ficar bloqueado externamente
 - somente `/actuator/health` pode ser consultado no smoke
 
@@ -44,7 +44,7 @@ Vai:
 - imagem do backend
 - imagem do frontend
 
-Não vai:
+Nao vai:
 
 - `DB_PASSWORD`
 - `MAIL_PASSWORD`
@@ -73,18 +73,18 @@ docker build ^
 docker push seu-usuario/caprigestor-frontend:2026-03-31
 ```
 
-## Preparação da VPS
+## Preparacao da VPS
 
-### Runtime mínimo
+### Runtime minimo
 
 1. instalar Docker e Docker Compose plugin
 2. instalar Nginx no host
 3. instalar PostgreSQL no host ou em rede privada estritamente controlada
-4. garantir que apenas `80/443` estejam públicos
-5. garantir que o backend não tenha porta pública publicada
-6. garantir que `5432` não esteja pública
+4. garantir que apenas `80/443` estejam publicos
+5. garantir que o backend nao tenha porta publica publicada
+6. garantir que `5432` nao esteja publica
 
-### Estrutura de diretórios
+### Estrutura de diretorios
 
 ```bash
 sudo mkdir -p /opt/caprigestor/docker
@@ -99,13 +99,13 @@ Copiar para a VPS:
 - `docker/docker-compose.prod.yml`
 - `docker/.env.prod.example` como base para `.env.prod`
 - `docker/caprigestor.app.conf.example`
-- `app.pub` e `app.key` de produção para `/opt/caprigestor/secrets/jwt`
+- `app.pub` e `app.key` de producao para `/opt/caprigestor/secrets/jwt`
 
-## Secrets e variáveis
+## Secrets e variaveis
 
 Criar `/opt/caprigestor/docker/.env.prod` a partir do exemplo.
 
-Preencher, no mínimo:
+Preencher, no minimo:
 
 - `BACKEND_IMAGE`
 - `FRONTEND_IMAGE`
@@ -124,11 +124,11 @@ Preencher, no mínimo:
 - `CAPRIGESTOR_BOOTSTRAP_ADMIN_RESET_PASSWORD=false`
 - `CAPRIGESTOR_MESSAGING_ENABLED=false`
 
-## Promoção da base saneada
+## Promocao da base saneada
 
-### Regra obrigatória
+### Regra obrigatoria
 
-A produção não nasce de banco vazio nem da base local alterada manualmente.
+A producao nao nasce de banco vazio nem da base local alterada manualmente.
 
 Fluxo correto:
 
@@ -136,7 +136,7 @@ Fluxo correto:
 2. gerar backup final da base saneada
 3. restaurar esse backup em banco candidato/prod
 4. validar a base restaurada
-5. só depois subir a aplicação
+5. so depois subir a aplicacao
 
 ### Restore
 
@@ -147,9 +147,9 @@ createdb -U postgres caprigestor_prod
 psql -U postgres -d caprigestor_prod -f /caminho/backup-saneado.sql
 ```
 
-### Checks obrigatórios no banco restaurado
+### Checks obrigatorios no banco restaurado
 
-Executar antes de subir a aplicação:
+Executar antes de subir a aplicacao:
 
 ```sql
 SELECT id, nome FROM capril ORDER BY id;
@@ -163,16 +163,16 @@ SELECT COUNT(*) FROM reproductive_event;
 SELECT COUNT(*) FROM health_events;
 ```
 
-Critério de sucesso:
+Criterio de sucesso:
 
-- existem apenas `Capril Vilar` e `Capril Alto Paraíso`
-- existem apenas os usuários reais necessários
-- os animais preservados seguem íntegros
+- existem apenas `Capril Vilar` e `Capril Alto Paraiso`
+- existem apenas os usuarios reais necessarios
+- os animais preservados seguem integros
 - dados transacionais fake seguem zerados
 
 ## Subida do stack em modo fechado
 
-No diretório `/opt/caprigestor/docker`:
+No diretorio `/opt/caprigestor/docker`:
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.prod.yml pull
@@ -190,7 +190,7 @@ curl -s http://127.0.0.1:8088/actuator/health
 curl -I http://127.0.0.1:8088/
 ```
 
-Critério de sucesso:
+Criterio de sucesso:
 
 - backend sem erro estrutural no boot
 - sem tentativa de Rabbit bloqueando subida
@@ -202,7 +202,7 @@ Critério de sucesso:
 
 1. copiar o virtual host de exemplo
 2. ajustar:
-   - domínio real
+   - dominio real
    - caminhos do certificado
    - porta local do frontend
 3. validar:
@@ -221,63 +221,63 @@ curl -i https://app.seu-dominio.com/actuator
 curl -s https://app.seu-dominio.com/actuator/health
 ```
 
-Critério de sucesso:
+Criterio de sucesso:
 
 - HTTP redireciona para HTTPS
 - `/actuator` fica bloqueado
 - `/actuator/health` responde
-- frontend abre pelo domínio final
+- frontend abre pelo dominio final
 
-## Smoke fechado obrigatório
+## Smoke fechado obrigatorio
 
-Executar com o domínio ainda não divulgado publicamente.
+Executar com o dominio ainda nao divulgado publicamente.
 
-### Autenticação
+### Autenticacao
 
 1. login com `Alberto Vilar`
 2. confirmar `accessToken`
-3. confirmar sessão operacional válida
+3. confirmar sessao operacional valida
 
 ### Fazendas e ownership
 
 1. abrir `Capril Vilar`
-2. abrir `Capril Alto Paraíso`
-3. validar ausência de vazamento cross-farm
-4. validar payload público sanitizado
-5. validar payload privado completo somente para usuário autorizado
+2. abrir `Capril Alto Paraiso`
+3. validar ausencia de vazamento cross-farm
+4. validar payload publico sanitizado
+5. validar payload privado completo somente para usuario autorizado
 
-### Aplicação
+### Aplicacao
 
 1. dashboard
 2. listagem de animais
 3. detalhe do animal
-4. genealogia pública
-5. reprodução
-6. lactação
-7. saúde
-8. produção consolidada
-9. ausência de histórico fake
+4. genealogia publica
+5. reproducao
+6. lactacao
+7. saude
+8. producao consolidada
+9. ausencia de historico fake
 
 ### Infra
 
 1. `/actuator` bloqueado
 2. `/actuator/health` ok
-3. backend sem erro crítico em logs
+3. backend sem erro critico em logs
 4. frontend apontando para a API real
-5. sem erro crítico de console
+5. sem erro critico de console
 
 ## GO / NO-GO
 
 ### GO somente se
 
 - secrets reais estiverem configurados no servidor
-- banco restaurado estiver íntegro
-- apenas `Capril Vilar` e `Capril Alto Paraíso` existirem
-- usuários reais necessários estiverem corretos
-- animais preservados estiverem íntegros
+- banco restaurado estiver integro
+- apenas `Capril Vilar` e `Capril Alto Paraiso` existirem
+- usuarios reais necessarios estiverem corretos
+- animais preservados estiverem integros
 - `/actuator` estiver bloqueado
 - `/actuator/health` estiver ok
-- payload público estiver sanitizado
+- payload publico estiver sanitizado
 - ownership estiver correto
 - smoke fechado estiver limpo
 - rollback estiver pronto
@@ -288,11 +288,11 @@ Executar com o domínio ainda não divulgado publicamente.
 - backend estiver exposto diretamente
 - secrets estiverem inseguros
 - base restaurada estiver inconsistente
-- houver vazamento de dados públicos
+- houver vazamento de dados publicos
 - houver falha de ownership
-- módulos críticos quebrarem
-- houver resquício operacional fake relevante
-- rollback não estiver definido
+- modulos criticos quebrarem
+- houver resquicio operacional fake relevante
+- rollback nao estiver definido
 
 ## Rollback
 
@@ -304,12 +304,12 @@ Abortar o cutover se houver:
 - falha de login
 - base inconsistente
 - `/actuator` exposto
-- vazamento público de dados
+- vazamento publico de dados
 - falha cross-farm
 
 ### Passos
 
-1. manter o domínio fechado ao público
+1. manter o dominio fechado ao publico
 2. voltar as tags anteriores no `.env.prod`
 3. subir novamente:
 
@@ -318,11 +318,11 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 ```
 
 4. se o problema estiver no banco:
-   - parar a aplicação
+   - parar a aplicacao
    - restaurar o backup anterior ao cutover
    - validar o restore
-   - só então reconsiderar nova tentativa
+   - so entao reconsiderar nova tentativa
 
 ## Gate final
 
-Só seguir para abertura pública quando todos os checkpoints acima estiverem verdes.
+So seguir para abertura publica quando todos os checkpoints acima estiverem verdes.
