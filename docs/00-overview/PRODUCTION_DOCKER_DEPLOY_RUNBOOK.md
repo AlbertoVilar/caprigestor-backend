@@ -36,6 +36,9 @@ Executar o primeiro cutover real do CapriGestor com:
 - base:
   - [PRODUCTION_BASE_SANITIZATION_RUNBOOK.md](C:\Dev\GoatFarm\docs\00-overview\PRODUCTION_BASE_SANITIZATION_RUNBOOK.md)
   - [PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md](C:\Dev\GoatFarm\docs\00-overview\PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md)
+- scripts:
+  - [production-db-integrity-check.sql](C:\Dev\GoatFarm\scripts\production-db-integrity-check.sql)
+  - [production-cutover-smoke.ps1](C:\Dev\GoatFarm\scripts\production-cutover-smoke.ps1)
 
 ## O que vai para o registry
 
@@ -152,15 +155,7 @@ psql -U postgres -d caprigestor_prod -f /caminho/backup-saneado.sql
 Executar antes de subir a aplicacao:
 
 ```sql
-SELECT id, nome FROM capril ORDER BY id;
-SELECT id, name, email FROM users ORDER BY id;
-SELECT farm_id, COUNT(*) AS goats FROM cabras GROUP BY farm_id ORDER BY farm_id;
-SELECT COUNT(*) FROM lactation;
-SELECT COUNT(*) FROM milk_production;
-SELECT COUNT(*) FROM farm_milk_production;
-SELECT COUNT(*) FROM pregnancy;
-SELECT COUNT(*) FROM reproductive_event;
-SELECT COUNT(*) FROM health_events;
+psql -U <usuario> -d <banco> -f scripts/production-db-integrity-check.sql
 ```
 
 Criterio de sucesso:
@@ -231,6 +226,15 @@ Criterio de sucesso:
 ## Smoke fechado obrigatorio
 
 Executar com o dominio ainda nao divulgado publicamente.
+
+Script de apoio:
+
+```powershell
+.\scripts\production-cutover-smoke.ps1 `
+  -PublicBaseUrl https://app.seu-dominio.com `
+  -AdminEmail albertovilar1@gmail.com `
+  -AdminPassword '<senha-real>'
+```
 
 ### Autenticacao
 
