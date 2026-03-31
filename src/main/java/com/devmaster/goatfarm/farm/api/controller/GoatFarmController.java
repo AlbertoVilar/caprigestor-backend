@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.farm.api.controller;
 
+import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
+import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmFullResponseDTO;
 import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
@@ -9,6 +11,7 @@ import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
 import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -35,17 +38,20 @@ public class GoatFarmController {
     private final UserMapper userMapper;
     private final AddressMapper addressMapper;
     private final PhoneMapper phoneMapper;
+    private final OwnershipService ownershipService;
 
     public GoatFarmController(GoatFarmManagementUseCase farmUseCase,
                               GoatFarmMapper farmMapper,
                               UserMapper userMapper,
                               AddressMapper addressMapper,
-                              PhoneMapper phoneMapper) {
+                              PhoneMapper phoneMapper,
+                              OwnershipService ownershipService) {
         this.farmUseCase = farmUseCase;
         this.farmMapper = farmMapper;
         this.userMapper = userMapper;
         this.addressMapper = addressMapper;
         this.phoneMapper = phoneMapper;
+        this.ownershipService = ownershipService;
     }
 
     @PostMapping
@@ -88,7 +94,7 @@ public class GoatFarmController {
             @ApiResponse(responseCode = "404", description = "Fazenda não encontrada.")
     })
     public ResponseEntity<GoatFarmFullResponseDTO> findGoatFarmById(@PathVariable Long id) {
-        return ResponseEntity.ok(farmMapper.toFullDTO(farmUseCase.findGoatFarmById(id)));
+        return ResponseEntity.ok(toPublicSafeDTO(farmMapper.toFullDTO(farmUseCase.findGoatFarmById(id))));
     }
 
     @GetMapping("/name")
@@ -101,7 +107,9 @@ public class GoatFarmController {
             @Parameter(description = "Trecho do nome da fazenda para busca.", example = "Capril")
             @RequestParam(value = "name", defaultValue = "") String name,
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
-        return ResponseEntity.ok(farmUseCase.searchGoatFarmByName(name, pageable).map(farmMapper::toFullDTO));
+        return ResponseEntity.ok(farmUseCase.searchGoatFarmByName(name, pageable)
+                .map(farmMapper::toFullDTO)
+                .map(this::toPublicSafeDTO));
     }
 
     @GetMapping
@@ -111,7 +119,9 @@ public class GoatFarmController {
             @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos.")
     })
     public ResponseEntity<Page<GoatFarmFullResponseDTO>> findAllGoatFarm(@PageableDefault(size = 12, page = 0) Pageable pageable) {
-        return ResponseEntity.ok(farmUseCase.findAllGoatFarm(pageable).map(farmMapper::toFullDTO));
+        return ResponseEntity.ok(farmUseCase.findAllGoatFarm(pageable)
+                .map(farmMapper::toFullDTO)
+                .map(this::toPublicSafeDTO));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
@@ -138,5 +148,47 @@ public class GoatFarmController {
         FarmPermissionsDTO dto = new FarmPermissionsDTO();
         dto.setCanCreateGoat(vo.isCanCreateGoat());
         return ResponseEntity.ok(dto);
+    }
+
+    private GoatFarmFullResponseDTO toPublicSafeDTO(GoatFarmFullResponseDTO dto) {
+        if (dto == null || canManageFarm(dto.getId())) {
+            return dto;
+        }
+
+        GoatFarmFullResponseDTO sanitized = new GoatFarmFullResponseDTO();
+        sanitized.setId(dto.getId());
+        sanitized.setName(dto.getName());
+        sanitized.setTod(dto.getTod());
+        sanitized.setLogoUrl(dto.getLogoUrl());
+        sanitized.setCreatedAt(dto.getCreatedAt());
+        sanitized.setUpdatedAt(dto.getUpdatedAt());
+        sanitized.setVersion(dto.getVersion());
+        sanitized.setPhones(dto.getPhones());
+
+        if (dto.getUser() != null) {
+            UserResponseDTO user = new UserResponseDTO();
+            user.setId(dto.getUser().getId());
+            user.setName(dto.getUser().getName());
+            sanitized.setUser(user);
+        }
+
+        if (dto.getAddress() != null) {
+            AddressResponseDTO address = new AddressResponseDTO(
+                    dto.getAddress().getId(),
+                    null,
+                    null,
+                    dto.getAddress().getCity(),
+                    dto.getAddress().getState(),
+                    null,
+                    dto.getAddress().getCountry()
+            );
+            sanitized.setAddress(address);
+        }
+
+        return sanitized;
+    }
+
+    private boolean canManageFarm(Long farmId) {
+        return farmId != null && ownershipService.canManageFarm(farmId);
     }
 }

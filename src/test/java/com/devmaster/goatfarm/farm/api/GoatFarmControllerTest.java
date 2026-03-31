@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -75,6 +76,7 @@ class GoatFarmControllerTest {
         );
 
         when(farmUseCase.findAllGoatFarm(any(Pageable.class))).thenReturn(farms);
+        when(ownershipService.canManageFarm(1L)).thenReturn(false);
 
         mockMvc.perform(get("/api/v1/goatfarms")
                         .param("page", "0")
@@ -82,6 +84,8 @@ class GoatFarmControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1))
                 .andExpect(jsonPath("$.content[0].name").value("Capril Vilar"))
+                .andExpect(jsonPath("$.content[0].user.email").doesNotExist())
+                .andExpect(jsonPath("$.content[0].user.cpf").doesNotExist())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
         verify(farmUseCase).findAllGoatFarm(any(Pageable.class));
@@ -96,6 +100,7 @@ class GoatFarmControllerTest {
         );
 
         when(farmUseCase.findAllGoatFarm(any(Pageable.class))).thenReturn(farms);
+        when(ownershipService.canManageFarm(1L)).thenReturn(false);
 
         mockMvc.perform(get("/api/goatfarms")
                         .param("page", "0")
@@ -105,6 +110,61 @@ class GoatFarmControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
 
         verify(farmUseCase).findAllGoatFarm(any(Pageable.class));
+    }
+
+    @Test
+    void shouldKeepSensitiveFarmDataForManagerAccess() throws Exception {
+        farmResponse.setUserId(10L);
+        farmResponse.setUserName("Alberto");
+        farmResponse.setUserEmail("alberto@example.com");
+        farmResponse.setUserCpf("12345678900");
+        farmResponse.setAddressId(30L);
+        farmResponse.setStreet("Rua Principal");
+        farmResponse.setDistrict("Centro");
+        farmResponse.setCity("Monteiro");
+        farmResponse.setState("PB");
+        farmResponse.setZipCode("58500-000");
+        when(farmUseCase.findGoatFarmById(1L)).thenReturn(farmResponse);
+        when(ownershipService.canManageFarm(1L)).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/goatfarms/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value("alberto@example.com"))
+                .andExpect(jsonPath("$.user.cpf").value("12345678900"))
+                .andExpect(jsonPath("$.address.street").value("Rua Principal"))
+                .andExpect(jsonPath("$.address.zipCode").value("58500-000"));
+
+        verify(farmUseCase).findGoatFarmById(1L);
+    }
+
+    @Test
+    void shouldRedactSensitiveFarmDataForPublicAccess() throws Exception {
+        farmResponse.setUserId(10L);
+        farmResponse.setUserName("Alberto");
+        farmResponse.setUserEmail("alberto@example.com");
+        farmResponse.setUserCpf("12345678900");
+        farmResponse.setAddressId(30L);
+        farmResponse.setStreet("Rua Principal");
+        farmResponse.setDistrict("Centro");
+        farmResponse.setCity("Monteiro");
+        farmResponse.setState("PB");
+        farmResponse.setZipCode("58500-000");
+        when(farmUseCase.findGoatFarmById(1L)).thenReturn(farmResponse);
+        when(ownershipService.canManageFarm(1L)).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/goatfarms/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.id").value(10))
+                .andExpect(jsonPath("$.user.name").value("Alberto"))
+                .andExpect(jsonPath("$.user.email").doesNotExist())
+                .andExpect(jsonPath("$.user.cpf").doesNotExist())
+                .andExpect(jsonPath("$.address.city").value("Monteiro"))
+                .andExpect(jsonPath("$.address.state").value("PB"))
+                .andExpect(jsonPath("$.address.street").doesNotExist())
+                .andExpect(jsonPath("$.address.zipCode").doesNotExist());
+
+        verify(farmUseCase).findGoatFarmById(1L);
+        verify(ownershipService, never()).verifyFarmOwnership(1L);
     }
 
     @Test
