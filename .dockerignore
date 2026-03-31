@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.mvn/wrapper/maven-wrapper.jar
+target
+logs
+backups
+docker/.env.prod
+docker/.env
+docker/secrets
+*.log
+hs_err_pid*
+.tmp*
+

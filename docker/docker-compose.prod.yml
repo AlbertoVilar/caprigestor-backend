@@ -1,0 +1,46 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: caprigestor-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JDBC_URL: ${JDBC_URL}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS}
+      MAIL_TIMEOUT_MS: ${MAIL_TIMEOUT_MS}
+      PASSWORD_RESET_FRONTEND_BASE_URL: ${PASSWORD_RESET_FRONTEND_BASE_URL}
+      PASSWORD_RESET_FROM_ADDRESS: ${PASSWORD_RESET_FROM_ADDRESS}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      CAPRIGESTOR_BOOTSTRAP_ADMIN_ENABLED: ${CAPRIGESTOR_BOOTSTRAP_ADMIN_ENABLED:-false}
+      CAPRIGESTOR_BOOTSTRAP_ADMIN_RESET_PASSWORD: ${CAPRIGESTOR_BOOTSTRAP_ADMIN_RESET_PASSWORD:-false}
+      CAPRIGESTOR_MESSAGING_ENABLED: ${CAPRIGESTOR_MESSAGING_ENABLED:-false}
+      JWT_PUBLIC_KEY: file:/run/secrets/jwt/app.pub
+      JWT_PRIVATE_KEY: file:/run/secrets/jwt/app.key
+    volumes:
+      - ${JWT_KEYS_DIR}:/run/secrets/jwt:ro
+    expose:
+      - "8080"
+    networks:
+      - caprigestor
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: caprigestor-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${FRONTEND_BIND_PORT:-8088}:80"
+    networks:
+      - caprigestor
+
+networks:
+  caprigestor:
+    driver: bridge
