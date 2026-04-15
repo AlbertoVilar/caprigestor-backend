@@ -118,7 +118,7 @@ cd ..
 
 Serviços locais:
 
-- API: `http://localhost:8080`
+- API base: `http://localhost:8080/api/v1`
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - PostgreSQL: `localhost:5432`
 - RabbitMQ UI: `http://localhost:15672`
