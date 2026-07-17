@@ -52,3 +52,6 @@ criptsshellIntegration.ps1*
 
 ### Docs ###
 docs/UX_UPDATE_GUIDE.md
+
+# Estado operacional local usado para continuidade das tarefas do Codex
+docs/00-overview/CAPRIGESTOR_CURRENT_STATE.md
