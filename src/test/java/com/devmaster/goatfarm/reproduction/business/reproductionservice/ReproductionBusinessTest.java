@@ -992,7 +992,7 @@ class ReproductionBusinessTest {
     void registerBirth_shouldCreateMultipleKids_whenMoreThanOneKidIsProvided() {
         Long pregnancyId = 10L;
         BirthRequestVO requestVO = BirthRequestVO.builder()
-                .birthDate(LocalDate.of(2026, 3, 10))
+                .birthDate(LocalDate.now(clock))
                 .kids(List.of(
                         BirthKidRequestVO.builder()
                                 .registrationNumber("KID-101")
@@ -1350,7 +1350,7 @@ class ReproductionBusinessTest {
 
     private BirthRequestVO validBirthRequestVO() {
         return BirthRequestVO.builder()
-                .birthDate(LocalDate.of(2026, 3, 10))
+                .birthDate(LocalDate.now(clock))
                 .fatherRegistrationNumber("SIRE-001")
                 .notes("Parto normal")
                 .kids(List.of(
