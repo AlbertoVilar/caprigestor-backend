@@ -18,37 +18,37 @@ import java.time.LocalDate;
 @Builder
 public class GoatRequestDTO {
 
-    @NotBlank(message = "O nÃºmero de registro nÃ£o pode estar em branco.")
+    @NotBlank(message = "O número de registro não pode estar em branco.")
         @Size(min = 1, max = 12, message = "O registro deve ter entre {min} e {max} caracteres.")
     private String registrationNumber;
 
-    @NotBlank(message = "O nome nÃ£o pode estar em branco.")
+    @NotBlank(message = "O nome não pode estar em branco.")
     @Size(min = 3, max = 60, message = "O nome deve ter entre {min} e {max} caracteres.")
     private String name;
 
-    @NotNull(message = "O sexo nÃ£o pode estar em branco.")
+    @NotNull(message = "O sexo não pode estar em branco.")
     private Gender gender;
 
-    @NotNull(message = "A raÃ§a nÃ£o pode estar em branco.")
+    @NotNull(message = "A raça não pode estar em branco.")
     private GoatBreed breed;
 
-    @NotBlank(message = "A cor nÃ£o pode estar em branco.")
+    @NotBlank(message = "A cor não pode estar em branco.")
     private String color;
 
-    @NotNull(message = "A data de nascimento nÃ£o pode estar em branco.")
+    @NotNull(message = "A data de nascimento não pode estar em branco.")
     private LocalDate birthDate;
 
-    @NotNull(message = "O status nÃ£o pode estar em branco.")
+    @NotNull(message = "O status não pode estar em branco.")
     private GoatStatus status;
 
         private String tod;
     private String toe;
     private Category category;
 
-    @Size(min = 10, max = 12, message = "O nÃºmero de registro do pai deve ter entre {min} e {max} caracteres.")
+    @Size(min = 10, max = 12, message = "O número de registro do pai deve ter entre {min} e {max} caracteres.")
     private String fatherRegistrationNumber;
 
-    @Size(min = 10, max = 12, message = "O nÃºmero de registro da mÃ£e deve ter entre {min} e {max} caracteres.")
+    @Size(min = 10, max = 12, message = "O número de registro da mãe deve ter entre {min} e {max} caracteres.")
     private String motherRegistrationNumber;
 
         private Long farmId;

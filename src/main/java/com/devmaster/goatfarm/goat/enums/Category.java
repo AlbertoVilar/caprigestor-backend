@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum Category {
-    PO("Puro de Origem"),     PA("Puro por AvaliaÃ§Ã£o"),     PC("Puro por Cruza");     
+    PO("Puro de Origem"),     PA("Puro por Avaliação"),     PC("Puro por Cruza");
     private final String portugueseValue;
     
     Category(String portugueseValue) {
@@ -28,7 +28,7 @@ public enum Category {
                 return category;
             }
         }
-        throw new IllegalArgumentException("Valor invÃ¡lido para Category: " + value);
+        throw new IllegalArgumentException("Valor inválido para Category: " + value);
     }
 }
 

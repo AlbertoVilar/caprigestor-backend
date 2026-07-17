@@ -112,29 +112,29 @@ public class InventoryMovementController {
     }
 
     @Operation(
-            summary = "Registrar movimentacao de estoque",
-            description = "Cria um movimento do tipo IN, OUT ou ADJUST com idempotencia por header."
+            summary = "Registrar movimentação de estoque",
+            description = "Cria um movimento do tipo IN, OUT ou ADJUST com idempotência por header."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Replay idempotente retornado com sucesso."),
             @ApiResponse(responseCode = "201", description = "Movimento criado com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Requisicao invalida."),
-            @ApiResponse(responseCode = "404", description = "Item de estoque nao encontrado."),
-            @ApiResponse(responseCode = "409", description = "Idempotency-Key ja usada com payload diferente."),
+            @ApiResponse(responseCode = "400", description = "Requisição inválida."),
+            @ApiResponse(responseCode = "404", description = "Item de estoque não encontrado."),
+            @ApiResponse(responseCode = "409", description = "Idempotency-Key já usada com payload diferente."),
             @ApiResponse(
                     responseCode = "422",
-                    description = "Regra de negocio violada (ex.: saldo insuficiente).",
+                    description = "Regra de negócio violada (ex.: saldo insuficiente).",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
                                             {
                                               "status": 422,
-                                              "error": "Regra de negocio violada",
+                                              "error": "Regra de negócio violada",
                                               "errors": [
                                                 {
                                                   "fieldName": "quantity",
-                                                  "message": "Saldo insuficiente para realizar a movimentacao."
+                                                  "message": "Saldo insuficiente para realizar a movimentação."
                                                 }
                                               ]
                                             }
@@ -149,9 +149,9 @@ public class InventoryMovementController {
             @Parameter(description = "Identificador da fazenda.")
             @PathVariable Long farmId,
 
-            @Parameter(description = "Chave de idempotencia obrigatoria para replay seguro.")
+            @Parameter(description = "Chave de idempotência obrigatória para replay seguro.")
             @RequestHeader("Idempotency-Key")
-            @NotBlank(message = "Idempotency-Key e obrigatorio.")
+            @NotBlank(message = "Idempotency-Key é obrigatório.")
             String idempotencyKey,
 
             @Valid @RequestBody InventoryMovementCreateRequestDTO request

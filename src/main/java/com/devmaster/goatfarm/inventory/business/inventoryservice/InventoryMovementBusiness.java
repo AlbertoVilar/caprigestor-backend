@@ -86,14 +86,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                     }
                     throw new DuplicateEntityException(
                             "idempotencyKey",
-                            "Idempotency-Key ja foi usada com payload diferente."
+                            "Idempotency-Key já foi usada com payload diferente."
                     );
                 });
     }
 
     private InventoryItemSnapshotVO resolveItemSnapshot(Long farmId, Long itemId) {
         return persistencePort.findItemSnapshot(farmId, itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
     }
 
     private LockedBalanceContext lockItemThenBalance(
@@ -101,7 +101,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             InventoryMovementCreateRequestVO request
     ) {
         InventoryItemSnapshotVO lockedItem = persistencePort.lockItemForUpdate(farmId, request.itemId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
         validateTrackLot(lockedItem, request);
         Long effectiveLotId = resolveEffectiveLotId(farmId, lockedItem, request);
 
@@ -168,14 +168,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         if (item.trackLot() && request.lotId() == null) {
             throw new InvalidArgumentException(
                     "lotId",
-                    "lotId e obrigatorio quando o item possui rastreio por lote (trackLot=true)."
+                    "lotId é obrigatório quando o item possui rastreio por lote (trackLot=true)."
             );
         }
 
         if (!item.trackLot() && request.lotId() != null) {
             throw new InvalidArgumentException(
                     "lotId",
-                    "lotId deve ser nulo quando o item nao possui rastreio por lote (trackLot=false)."
+                    "lotId deve ser nulo quando o item não possui rastreio por lote (trackLot=false)."
             );
         }
     }
@@ -213,7 +213,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
         if (InventoryMovementType.OUT.equals(request.type())) {
             return decreaseWithNonNegativeCheck(currentBalance, request.quantity(),
-                    "Saldo insuficiente para realizar a movimentacao.");
+                    "Saldo insuficiente para realizar a movimentação.");
         }
 
         if (InventoryAdjustDirection.INCREASE.equals(request.adjustDirection())) {
@@ -221,7 +221,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
 
         return decreaseWithNonNegativeCheck(currentBalance, request.quantity(),
-                "Ajuste (DECREASE) nao permitido: saldo ficaria negativo.");
+                "Ajuste (DECREASE) não permitido: saldo ficaria negativo.");
     }
 
     private BigDecimal decreaseWithNonNegativeCheck(BigDecimal currentBalance, BigDecimal quantity, String message) {
@@ -257,19 +257,19 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
     private void validateRequest(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {
         if (farmId == null) {
-            throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
+            throw new InvalidArgumentException("farmId", "farmId é obrigatório.");
         }
 
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key e obrigatorio.");
+            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key é obrigatório.");
         }
 
         if (request == null) {
-            throw new InvalidArgumentException("request", "Payload da requisicao e obrigatorio.");
+            throw new InvalidArgumentException("request", "Payload da requisição é obrigatório.");
         }
 
         if (request.type() == null) {
-            throw new InvalidArgumentException("type", "Tipo do movimento e obrigatorio.");
+            throw new InvalidArgumentException("type", "Tipo do movimento é obrigatório.");
         }
 
         if (request.quantity() == null || request.quantity().compareTo(BigDecimal.ZERO) <= 0) {
@@ -277,13 +277,13 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
 
         if (request.itemId() == null) {
-            throw new InvalidArgumentException("itemId", "itemId e obrigatorio.");
+            throw new InvalidArgumentException("itemId", "itemId é obrigatório.");
         }
 
         if (InventoryMovementType.ADJUST.equals(request.type()) && request.adjustDirection() == null) {
             throw new InvalidArgumentException(
                     "adjustDirection",
-                    "adjustDirection e obrigatorio quando o tipo e ADJUST."
+                    "adjustDirection é obrigatório quando o tipo é ADJUST."
             );
         }
 
@@ -291,7 +291,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 && request.adjustDirection() != null) {
             throw new InvalidArgumentException(
                     "adjustDirection",
-                    "adjustDirection deve ser nulo quando o tipo e IN ou OUT."
+                    "adjustDirection deve ser nulo quando o tipo é IN ou OUT."
             );
         }
 
@@ -394,7 +394,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             byte[] hash = digest.digest(canonical.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Algoritmo SHA-256 nao disponivel.", e);
+            throw new IllegalStateException("Algoritmo SHA-256 não disponível.", e);
         }
     }
 

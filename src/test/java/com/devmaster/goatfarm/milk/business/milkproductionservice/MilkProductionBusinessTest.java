@@ -58,8 +58,8 @@ class MilkProductionBusinessTest {
 
     @BeforeEach
     void setUp() {
-        // MÃƒÆ’Ã‚Â©todo executado antes de cada teste.
-        // ÃƒÆ’Ã…Â¡til para resetar mocks ou configurar comportamento padrÃƒÆ’Ã‚Â£o se necessÃƒÆ’Ã‚Â¡rio.
+        // Método executado antes de cada teste.
+        // Útil para resetar mocks ou configurar comportamento padrão se necessário.
         lenient().when(goatGenderValidator.requireFemale(anyLong(), anyString())).thenReturn(new Goat());
         lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(anyLong(), anyString(), any(LocalDate.class)))
                 .thenReturn(GoatWithdrawalStatusVO.builder()
@@ -84,7 +84,7 @@ class MilkProductionBusinessTest {
 
         MilkProduction entity = validEntity();
         MilkProductionResponseVO responseVO = validResponseVO();
-        // Se tem lactaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ativa
+        // Se tem lactação ativa
         Lactation lactation = new Lactation(); 
         lactation.setId(10L);
 
@@ -336,7 +336,7 @@ class MilkProductionBusinessTest {
 
         // Assert
         assertEquals(newVolume, entityBefore.getVolumeLiters());
-        assertEquals("Ordenha da manhÃƒÆ’Ã‚Â£", entityBefore.getNotes());
+        assertEquals("Ordenha da manhã", entityBefore.getNotes());
 
         assertNotNull(result);
         assertEquals(newVolume, result.getVolumeLiters());
@@ -357,7 +357,7 @@ class MilkProductionBusinessTest {
 
         MilkProduction entityBefore = validEntity();
         BigDecimal oldVolume = entityBefore.getVolumeLiters();
-        String newNotes = "AtualizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de observaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o";
+        String newNotes = "Atualização de observação";
 
         MilkProductionUpdateRequestVO updateVO = MilkProductionUpdateRequestVO.builder()
                 .volumeLiters(null)
@@ -433,7 +433,7 @@ class MilkProductionBusinessTest {
         MilkProduction entityBefore = validEntity();
 
         BigDecimal newVolume = new BigDecimal("3.20");
-        String newNotes = "AtualizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de volume e observaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o";
+        String newNotes = "Atualização de volume e observação";
 
         MilkProductionUpdateRequestVO updateVO = MilkProductionUpdateRequestVO.builder()
                 .volumeLiters(newVolume)
@@ -565,7 +565,7 @@ class MilkProductionBusinessTest {
         entity.setDate(LocalDate.of(2026, 1, 1));
         entity.setShift(MilkingShift.MORNING);
         entity.setVolumeLiters(new BigDecimal("2.50"));
-        entity.setNotes("Ordenha da manhÃƒÆ’Ã‚Â£");
+        entity.setNotes("Ordenha da manhã");
         entity.setRecordedDuringMilkWithdrawal(false);
         entity.setStatus(MilkProductionStatus.ACTIVE);
         return entity;
@@ -576,7 +576,7 @@ class MilkProductionBusinessTest {
                 .date(LocalDate.of(2026, 1, 1))
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
-                .notes("Ordenha da manhÃƒÆ’Ã‚Â£")
+                .notes("Ordenha da manhã")
                 .build();
     }
 
@@ -586,7 +586,7 @@ class MilkProductionBusinessTest {
                 .date(LocalDate.of(2026, 1, 1))
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
-                .notes("Ordenha da manhÃƒÆ’Ã‚Â£")
+                .notes("Ordenha da manhã")
                 .recordedDuringMilkWithdrawal(false)
                 .status(MilkProductionStatus.ACTIVE)
                 .build();
@@ -598,13 +598,13 @@ class MilkProductionBusinessTest {
                 .date(LocalDate.now().plusDays(1))
                 .shift(MilkingShift.MORNING)
                 .volumeLiters(new BigDecimal("2.50"))
-                .notes("Ordenha da manhÃƒÆ’Ã‚Â£")
+                .notes("Ordenha da manhã")
                 .build();
     }
 
 
     private MilkProductionUpdateRequestVO validUpdateVO() {
-        // Retorna um VO de atualizaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o vÃƒÆ’Ã‚Â¡lido
+        // Retorna um VO de atualização válido
         return null;
     }
 }
