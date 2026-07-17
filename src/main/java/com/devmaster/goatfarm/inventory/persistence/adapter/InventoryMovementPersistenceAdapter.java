@@ -164,7 +164,7 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
         try {
             return objectMapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Falha ao serializar resposta de idempotencia.", e);
+            throw new IllegalStateException("Falha ao serializar resposta de idempotência.", e);
         }
     }
 
@@ -172,7 +172,7 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
         try {
             return objectMapper.readValue(payload, InventoryMovementResponseVO.class);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Falha ao desserializar resposta de idempotencia.", e);
+            throw new IllegalStateException("Falha ao desserializar resposta de idempotência.", e);
         }
     }
 }

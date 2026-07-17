@@ -25,25 +25,25 @@ public class JwtDebugFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String authHeader = request.getHeader("Authorization");
         
-        logger.debug("ðŸ” JWT DEBUG: {} {}", method, requestURI);
+        logger.debug("🔍 JWT DEBUG: {} {}", method, requestURI);
         
         if (authHeader != null) {
-            logger.debug("ðŸ” JWT DEBUG: Authorization header presente: {}...", authHeader.substring(0, Math.min(50, authHeader.length())));
+            logger.debug("🔍 JWT DEBUG: Authorization header presente: {}...", authHeader.substring(0, Math.min(50, authHeader.length())));
         } else {
-            logger.debug("ðŸ” JWT DEBUG: Authorization header ausente");
+            logger.debug("🔍 JWT DEBUG: Authorization header ausente");
         }
         
                 filterChain.doFilter(request, response);
         
                 Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
-            logger.debug("ðŸ” JWT DEBUG: UsuÃ¡rio autenticado: {}", auth.getName());
-            logger.debug("ðŸ” JWT DEBUG: Authorities: {}", auth.getAuthorities());
+            logger.debug("🔍 JWT DEBUG: Usuário autenticado: {}", auth.getName());
+            logger.debug("🔍 JWT DEBUG: Authorities: {}", auth.getAuthorities());
         } else {
-            logger.debug("ðŸ” JWT DEBUG: Nenhuma autenticaÃ§Ã£o encontrada");
+            logger.debug("🔍 JWT DEBUG: Nenhuma autenticação encontrada");
         }
         
-        logger.debug("ðŸ” JWT DEBUG: Response status: {}", response.getStatus());
-        logger.debug("ðŸ” JWT DEBUG: ===========================================");
+        logger.debug("🔍 JWT DEBUG: Response status: {}", response.getStatus());
+        logger.debug("🔍 JWT DEBUG: ===========================================");
     }
 }

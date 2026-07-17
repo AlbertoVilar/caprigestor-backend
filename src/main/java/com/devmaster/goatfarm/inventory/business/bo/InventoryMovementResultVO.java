@@ -7,6 +7,6 @@ public record InventoryMovementResultVO(
         boolean replayed
 ) {
     public InventoryMovementResultVO {
-        Objects.requireNonNull(response, "response nao pode ser nulo.");
+        Objects.requireNonNull(response, "response não pode ser nulo.");
     }
 }

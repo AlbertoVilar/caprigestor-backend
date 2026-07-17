@@ -22,27 +22,27 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Nome Ã© obrigatÃ³rio")
+    @NotBlank(message = "Nome é obrigatório")
     @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")
     @Column(nullable = false, length = 100)
     private String name;
 
-    @NotBlank(message = "Email Ã© obrigatÃ³rio")
-    @Email(message = "Email deve ter formato vÃ¡lido")
+    @NotBlank(message = "Email é obrigatório")
+    @Email(message = "Email deve ter formato válido")
     @Column(unique = true, nullable = false, length = 150)
     private String email;
 
-    @NotBlank(message = "Senha Ã© obrigatÃ³ria")
+    @NotBlank(message = "Senha é obrigatória")
     @Size(min = 6, message = "Senha deve ter pelo menos 6 caracteres")
     @Column(nullable = false, length = 60)
     private String password;
 
-    @NotBlank(message = "CPF Ã© obrigatÃ³rio")
-    @Size(min = 11, max = 11, message = "CPF deve ter exatamente 11 dÃ­gitos")
+    @NotBlank(message = "CPF é obrigatório")
+    @Size(min = 11, max = 11, message = "CPF deve ter exatamente 11 dígitos")
     @Column(unique = true, nullable = false, length = 11)
     private String cpf;
 
-    @NotNull(message = "UsuÃ¡rio deve ter pelo menos uma role")
+    @NotNull(message = "Usuário deve ter pelo menos uma role")
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "tb_user_role",
             joinColumns = @JoinColumn(name = "user_id"),

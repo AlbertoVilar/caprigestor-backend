@@ -25,18 +25,18 @@ public class JwtService {
 
     public String generateToken(User user) {
         try {
-            logger.debug("ðŸ” JWT: Iniciando geraÃ§Ã£o de token para usuÃ¡rio: {}", user.getEmail());
+            logger.debug("🔍 JWT: Iniciando geração de token para usuário: {}", user.getEmail());
             
             Instant now = Instant.now();
             long expiry = 24L;             
-            logger.debug("ðŸ” JWT: Coletando roles do usuÃ¡rio...");
+            logger.debug("🔍 JWT: Coletando roles do usuário...");
             String scope = user.getRoles()
                     .stream()
                     .map(role -> role.getAuthority())
                     .collect(Collectors.joining(" "));
-            logger.debug("ðŸ” JWT: Scope gerado: {}", scope);
+            logger.debug("🔍 JWT: Scope gerado: {}", scope);
 
-            logger.debug("ðŸ” JWT: Construindo claims...");
+            logger.debug("🔍 JWT: Construindo claims...");
             JwtClaimsSet claims = JwtClaimsSet.builder()
                     .issuer("goatfarm-api")
                     .issuedAt(now)
@@ -48,13 +48,13 @@ public class JwtService {
                     .claim("email", user.getEmail())
                     .build();
             
-            logger.debug("ðŸ” JWT: Codificando token...");
+            logger.debug("🔍 JWT: Codificando token...");
             String token = this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-            logger.debug("ðŸ” JWT: Token gerado com sucesso, tamanho: {}", token.length());
+            logger.debug("🔍 JWT: Token gerado com sucesso, tamanho: {}", token.length());
             
             return token;
         } catch (Exception e) {
-            logger.error("ðŸ” JWT ERROR: Erro ao gerar token - {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            logger.error("🔍 JWT ERROR: Erro ao gerar token - {}: {}", e.getClass().getSimpleName(), e.getMessage());
             e.printStackTrace();
             throw e;
         }

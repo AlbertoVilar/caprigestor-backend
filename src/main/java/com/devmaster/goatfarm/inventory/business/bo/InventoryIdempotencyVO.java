@@ -9,9 +9,9 @@ public record InventoryIdempotencyVO(
         InventoryMovementResponseVO response
 ) {
     public InventoryIdempotencyVO {
-        Objects.requireNonNull(farmId, "farmId nao pode ser nulo.");
-        Objects.requireNonNull(idempotencyKey, "idempotencyKey nao pode ser nulo.");
-        Objects.requireNonNull(requestHash, "requestHash nao pode ser nulo.");
-        Objects.requireNonNull(response, "response nao pode ser nulo.");
+        Objects.requireNonNull(farmId, "farmId não pode ser nulo.");
+        Objects.requireNonNull(idempotencyKey, "idempotencyKey não pode ser nulo.");
+        Objects.requireNonNull(requestHash, "requestHash não pode ser nulo.");
+        Objects.requireNonNull(response, "response não pode ser nulo.");
     }
 }
