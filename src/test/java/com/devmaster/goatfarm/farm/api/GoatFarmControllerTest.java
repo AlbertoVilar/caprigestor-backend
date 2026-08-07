@@ -69,6 +69,7 @@ class GoatFarmControllerTest {
 
     @Test
     void shouldListGoatFarmsThroughCanonicalRoute() throws Exception {
+        farmResponse.setUserEmail("contato@caprilvilar.com.br");
         Page<GoatFarmFullResponseVO> farms = new PageImpl<>(
                 List.of(farmResponse),
                 PageRequest.of(0, 10),
@@ -84,7 +85,7 @@ class GoatFarmControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1))
                 .andExpect(jsonPath("$.content[0].name").value("Capril Vilar"))
-                .andExpect(jsonPath("$.content[0].user.email").doesNotExist())
+                .andExpect(jsonPath("$.content[0].user.email").value("contato@caprilvilar.com.br"))
                 .andExpect(jsonPath("$.content[0].user.cpf").doesNotExist())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
@@ -156,7 +157,7 @@ class GoatFarmControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.id").value(10))
                 .andExpect(jsonPath("$.user.name").value("Alberto"))
-                .andExpect(jsonPath("$.user.email").doesNotExist())
+                .andExpect(jsonPath("$.user.email").value("alberto@example.com"))
                 .andExpect(jsonPath("$.user.cpf").doesNotExist())
                 .andExpect(jsonPath("$.address.city").value("Monteiro"))
                 .andExpect(jsonPath("$.address.state").value("PB"))
