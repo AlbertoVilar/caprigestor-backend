@@ -1,14 +1,13 @@
 # Roadmap do Projeto GoatFarm/CapriGestor Backend
-Última atualização: 2026-02-26  
+Última atualização: 2026-08-07
 Escopo: próximos ciclos após fechamento técnico do MVP backend.
 
 Links relacionados: [Status do Projeto](./PROJECT_STATUS.md), [Prontidão do MVP](./MVP_READY.md), [Contratos API](../03-api/API_CONTRACTS.md), [Guia de Versionamento](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## 1. Estado atual
 - MVP backend concluído nos módulos: Security/Ownership, Goat/Farm, Reproduction, Lactation/MilkProduction, Health e Inventory.
-- Convenção de rotas padronizada com `/api/v1` canônica.
-- Compatibilidade `/api` ativa apenas de forma temporária e marcada como **deprecated**.
-- Alvo de remoção da compatibilidade legado: **2026-06-30** (`v2.0.0`), condicionado ao frontend 100% migrado.
+- Convenção de rotas padronizada exclusivamente em `/api/v1`.
+- Migração do frontend concluída e compatibilidade não versionada removida em 2026-08-07.
 
 ## 2. Próximos marcos (pós-MVP)
 ### Marco 1 - Hardening operacional
@@ -16,12 +15,7 @@ Links relacionados: [Status do Projeto](./PROJECT_STATUS.md), [Prontidão do MVP
 - Consolidar monitoramento de erros funcionais e técnicos.
 - Reduzir warnings recorrentes de tooling em testes (Mockito/ByteBuddy).
 
-### Marco 2 - Fechamento da compatibilidade legado
-- Confirmar migração total do frontend para `/api/v1`.
-- Monitorar e zerar uso de `/api/...` em logs.
-- Remover dual mapping legado nos controllers e atualizar documentação para rota única.
-
-### Marco 3 - Evolução de domínio (após estabilização)
+### Marco 2 - Evolução de domínio (após estabilização)
 - Compras e vendas com integração de estoque.
 - Consolidação financeira mínima por fazenda.
 - Painéis farm-level com agregação no backend, sem lógica pesada no frontend.

@@ -12,7 +12,7 @@ Este mÃ³dulo gerencia produÃ§Ãµes de leite por cabra, com operaÃ§Ãµes 
 - Registro de produÃ§Ã£o depende de lactaÃ§Ã£o ativa.
 - `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
 - `DELETE` realiza cancelamento lÃ³gico (nÃ£o remove histÃ³rico fÃ­sico).
-- Compatibilidade temporÃ¡ria: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remoÃ§Ã£o planejada: 2026-06-30, v2.0.0).
+- As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.
 
 ## Endpoints
 | MÃ©todo | URL | Query params | Retorno |
@@ -55,9 +55,8 @@ Exemplo curto (listagem):
 GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-10&includeCanceled=false&page=0&size=12
 ```
 
-## Compatibilidade e paginaÃ§Ã£o
-- As rotas canÃ´nicas sÃ£o sempre publicadas em `/api/v1/...`.
-- O legado `/api/...` segue ativo apenas por compatibilidade temporÃ¡ria.
+## Paginação
+- As rotas são publicadas exclusivamente em `/api/v1/...`.
 - A listagem continua retornando `Page` do Spring para preservar compatibilidade com consumidores jÃ¡ publicados.
 
 ## Erros/Status

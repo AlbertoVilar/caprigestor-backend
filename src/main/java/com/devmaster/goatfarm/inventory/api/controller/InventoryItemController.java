@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/inventory/items", "/api/goatfarms/{farmId}/inventory/items"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/inventory/items")
 @Tag(
         name = "Inventory Items API",
         description = "Cadastro e listagem de itens de estoque da fazenda. Caminho canônico /api/v1; legado /api em descontinuação."

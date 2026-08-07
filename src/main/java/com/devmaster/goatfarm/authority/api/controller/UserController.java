@@ -18,7 +18,7 @@ import com.devmaster.goatfarm.authority.api.dto.UserPasswordUpdateDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserRolesUpdateDTO;
 
 @RestController
-@RequestMapping({"/api/v1/users", "/api/users"})
+@RequestMapping("/api/v1/users")
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);

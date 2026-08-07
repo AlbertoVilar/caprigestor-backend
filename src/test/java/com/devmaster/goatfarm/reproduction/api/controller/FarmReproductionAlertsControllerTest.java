@@ -89,7 +89,7 @@ class FarmReproductionAlertsControllerTest {
                 .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
         when(mapper.toPregnancyDiagnosisAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", farmId)
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", farmId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalPending").value(1))

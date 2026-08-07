@@ -1,5 +1,5 @@
 # API_CONTRACTS
-Última atualização: 2026-02-28
+Última atualização: 2026-08-07
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -12,10 +12,9 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Rotas públicas sem autenticação (quando aplicável) usam namespace separado, por exemplo: `/public/articles`.
 
-### Versionamento e compatibilidade
-- Rotas canônicas: sempre em `/api/v1/...`.
-- Compatibilidade temporária: rotas legadas em `/api/...` permanecem ativas por 1 ciclo como **DEPRECATED**.
-- Remoção planejada das rotas legadas: **2026-06-30** (versão alvo **v2.0.0**).
+### Versionamento
+- Endpoints de aplicação são publicados exclusivamente em `/api/v1/...`.
+- O prefixo não versionado foi removido em 2026-08-07 e não possui fallback.
 - Novos endpoints não devem ser publicados fora de `/api/v1`.
 
 ### Segurança
@@ -35,7 +34,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Datas em formato ISO (`yyyy-MM-dd` ou `yyyy-MM-dd'T'HH:mm:ss`).
 - Mensagens de validação em PT-BR.
 
-As seções por domínio abaixo destacam apenas rotas, formatos e exceções específicas. Compatibilidade legada em `/api/...` e códigos HTTP transversais seguem as seções globais deste documento.
+As seções por domínio abaixo destacam apenas rotas, formatos e exceções específicas. Os códigos HTTP transversais seguem as seções globais deste documento.
 
 ### Goat/Farm (cadastros base)
 Rotas canônicas:

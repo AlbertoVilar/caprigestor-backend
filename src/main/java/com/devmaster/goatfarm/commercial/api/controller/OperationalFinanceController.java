@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/commercial", "/api/goatfarms/{farmId}/commercial"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/commercial")
 @Tag(name = "Operational Finance API", description = "Financeiro operacional minimo por fazenda.")
 public class OperationalFinanceController {
 

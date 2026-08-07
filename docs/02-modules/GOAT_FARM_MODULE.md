@@ -166,9 +166,9 @@ Regras de decisão por item no lote:
 - Árvore híbrida local + ABCC com origem por nó (`LOCAL`, `ABCC`, `AUSENTE`).
 - Lookup principal na ABCC por `registrationNumber`, sem heurística fraca por nome.
 
-## Compatibilidade temporária
-- As rotas legadas em `/api/...` continuam ativas por compatibilidade.
-- Essas rotas são **DEPRECATED** e devem ser removidas após 2026-06-30.
+## Versionamento
+- As rotas de fazendas, animais e importação ABCC são publicadas exclusivamente em `/api/v1/...`.
+- O prefixo não versionado foi removido em 2026-08-07.
 - O frontend e novos consumidores devem usar apenas `/api/v1/...`.
 
 ## Paginação e filtros

@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/imports/abcc", "/api/goatfarms/{farmId}/goats/imports/abcc"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/goats/imports/abcc")
 @Tag(name = "Goat ABCC Import API", description = "Importação opcional de cabras via ABCC pública. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GoatAbccImportController {
 

@@ -9,7 +9,7 @@ O modulo de artigos expone endpoints publicos sem autenticacao e endpoints admin
 ## Regras / Contratos
 - Rotas publicas usam base `/public/articles`.
 - Rotas administrativas usam base `/api/v1/articles` e exigem `ROLE_ADMIN`.
-- Compatibilidade temporária: `/api/articles` permanece ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
+- A administração de artigos é publicada exclusivamente em `/api/v1/articles`.
 - Apenas artigos com `published=true` aparecem no catalogo publico.
 - `slug` e derivado do titulo e deve ser unico.
 
@@ -92,4 +92,3 @@ Observacao de performance:
 ## Referencias internas
 - Controller publico: [src/main/java/com/devmaster/goatfarm/article/api/controller/PublicArticleController.java](../../src/main/java/com/devmaster/goatfarm/article/api/controller/PublicArticleController.java)
 - Controller admin: [src/main/java/com/devmaster/goatfarm/article/api/controller/ArticleAdminController.java](../../src/main/java/com/devmaster/goatfarm/article/api/controller/ArticleAdminController.java)
-

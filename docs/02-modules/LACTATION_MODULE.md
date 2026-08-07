@@ -26,7 +26,7 @@ O modulo de lactacao pertence ao contexto `milk` e controla o ciclo produtivo da
 - Retomada (`resume`) so e aceita para uma lactacao `DRY` cuja prenhez nao esteja mais ativa.
 - Consultas de sumario combinam dados da lactacao, producao e recomendacao de secagem.
 - Rotas sao farm-level com ownership por `farmId`.
-- Compatibilidade temporaria: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remocao planejada: 2026-06-30, v2.0.0).
+- As rotas deste modulo sao publicadas exclusivamente em `/api/v1/...`.
 
 ## Endpoints
 ### Escopo por cabra
@@ -104,9 +104,8 @@ GET /api/v1/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size
 }
 ```
 
-## Compatibilidade e paginacao
-- As rotas canonicas sao sempre publicadas em `/api/v1/...`.
-- O legado `/api/...` segue ativo apenas por compatibilidade temporaria.
+## Paginacao
+- As rotas sao publicadas exclusivamente em `/api/v1/...`.
 - O historico de lactacoes continua retornando `Page` do Spring para preservar compatibilidade com consumidores ja publicados.
 - O endpoint de alertas retorna um envelope agregado proprio (`totalPending` + `alerts`).
 

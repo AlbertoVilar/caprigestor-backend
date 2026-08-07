@@ -26,7 +26,7 @@ O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status
 - Ownership por `farmId` em todas as rotas do modulo.
 - Fluxos de gestacao seguem estado de dominio (ativa, encerrada, motivo de encerramento).
 - Integracao com `milk` ocorre por shared kernel (snapshot de prenhez), sem acoplamento direto de entidades.
-- Compatibilidade temporaria: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remocao planejada: 2026-06-30, v2.0.0).
+- As rotas deste modulo sao publicadas exclusivamente em `/api/v1/...`.
 
 ## Endpoints
 ### Escopo por cabra
@@ -118,9 +118,8 @@ GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=20
 }
 ```
 
-## Compatibilidade e paginacao
-- As rotas canonicas sao sempre publicadas em `/api/v1/...`.
-- O legado `/api/...` segue ativo apenas por compatibilidade temporaria.
+## Paginacao
+- As rotas sao publicadas exclusivamente em `/api/v1/...`.
 - Os historicos por cabra (`events` e `pregnancies`) continuam retornando `Page` do Spring para preservar compatibilidade com consumidores ja publicados.
 - O endpoint de alertas retorna um envelope agregado proprio (`totalPending` + `alerts`) e nao deve ser reinterpretado como `Page` no cliente.
 

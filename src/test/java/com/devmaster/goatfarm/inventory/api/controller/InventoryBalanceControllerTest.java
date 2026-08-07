@@ -80,13 +80,12 @@ class InventoryBalanceControllerTest {
     }
 
     @Test
-    void controller_shouldExposeDualMapping_andFarmOwnershipGuard() throws NoSuchMethodException {
+    void controller_shouldExposeCanonicalMapping_andFarmOwnershipGuard() throws NoSuchMethodException {
         RequestMapping requestMapping = InventoryBalanceController.class.getAnnotation(RequestMapping.class);
 
         assertThat(requestMapping).isNotNull();
-        assertThat(requestMapping.value()).containsExactlyInAnyOrder(
-                "/api/v1/goatfarms/{farmId}/inventory/balances",
-                "/api/goatfarms/{farmId}/inventory/balances"
+        assertThat(requestMapping.value()).containsExactly(
+                "/api/v1/goatfarms/{farmId}/inventory/balances"
         );
 
         PreAuthorize listGuard = InventoryBalanceController.class
