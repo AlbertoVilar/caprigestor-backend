@@ -29,7 +29,7 @@ class GlobalExceptionHandlerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        when(httpServletRequest.getRequestURI()).thenReturn("/api/test");
+        when(httpServletRequest.getRequestURI()).thenReturn("/api/v1/test");
     }
 
     @Test
@@ -75,7 +75,7 @@ class GlobalExceptionHandlerTest {
         ValidationError body = response.getBody();
         assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
         assertEquals("Recurso não encontrado", body.getError());
-        assertEquals("/api/test", body.getPath());
+        assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "resource".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 
@@ -91,7 +91,7 @@ class GlobalExceptionHandlerTest {
         ValidationError body = response.getBody();
         assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
         assertEquals("Argumento inválido", body.getError());
-        assertEquals("/api/test", body.getPath());
+        assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "argument".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 
@@ -107,7 +107,7 @@ class GlobalExceptionHandlerTest {
         ValidationError body = response.getBody();
         assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
         assertEquals("Conflito de dados", body.getError());
-        assertEquals("/api/test", body.getPath());
+        assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "duplicate".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 
@@ -123,7 +123,7 @@ class GlobalExceptionHandlerTest {
         ValidationError body = response.getBody();
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY.value(), body.getStatus());
         assertEquals("Regra de negócio violada", body.getError());
-        assertEquals("/api/test", body.getPath());
+        assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "business_rule".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
     }
 }
