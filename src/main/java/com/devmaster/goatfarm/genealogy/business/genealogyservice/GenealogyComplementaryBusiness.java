@@ -35,11 +35,11 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
     @Transactional(readOnly = true)
     public GenealogyComplementaryResponseVO findComplementaryGenealogy(Long farmId, String goatId) {
         Goat goat = goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra nÃ£o encontrada para a fazenda informada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (isBlank(goat.getRegistrationNumber())) {
             return buildResponse(goat, null, integration("INSUFFICIENT_DATA",
-                    "Registro do animal ausente ou invÃ¡lido para consulta complementar na ABCC."));
+                    "Registro do animal ausente ou inválido para consulta complementar na ABCC."));
         }
 
         try {
@@ -49,14 +49,14 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
             if (abccSnapshot.isEmpty()) {
                 return buildResponse(goat, null, integration("NOT_FOUND",
-                        "NÃ£o foi possÃ­vel localizar genealogia complementar na ABCC para este registro."));
+                        "Não foi possível localizar genealogia complementar na ABCC para este registro."));
             }
 
             return buildResponse(goat, abccSnapshot.get(), integration("FOUND",
                     "Genealogia complementar ABCC carregada com sucesso."));
         } catch (RuntimeException ex) {
             return buildResponse(goat, null, integration("UNAVAILABLE",
-                    "NÃ£o foi possÃ­vel consultar a ABCC no momento. Exibindo apenas a genealogia local."));
+                    "Não foi possível consultar a ABCC no momento. Exibindo apenas a genealogia local."));
         }
     }
 

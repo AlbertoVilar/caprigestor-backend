@@ -120,7 +120,7 @@ public class GoatController {
     @Operation(summary = "Lista as crias locais vinculadas ao animal")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Crias retornadas com sucesso."),
-            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada.")
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
     })
     public ResponseEntity<List<GoatResponseDTO>> listOffspring(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
         return ResponseEntity.ok(

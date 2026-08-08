@@ -63,12 +63,12 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
-             throw new InvalidArgumentException("startDate", "Data de inÃ­cio da lactaÃ§Ã£o nÃ£o pode ser futura.");
+             throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
         }
 
         Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
         if (activeLactation.isPresent()) {
-            throw new BusinessRuleException("JÃ¡ existe uma lactaÃ§Ã£o ativa para esta cabra.");
+            throw new BusinessRuleException("Já existe uma lactação ativa para esta cabra.");
         }
         
         Optional<Lactation> latestLactation = lactationPersistencePort.findAllByFarmIdAndGoatId(
@@ -101,23 +101,23 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     public LactationResponseVO dryLactation(Long farmId, String goatId, Long lactationId, LactationDryRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("LactaÃ§Ã£o nÃ£o encontrada para esta cabra"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra"));
 
         if (lactation.getStatus() != LactationStatus.ACTIVE) {
-            throw new BusinessRuleException("LactaÃ§Ã£o nÃ£o estÃ¡ ativa.");
+            throw new BusinessRuleException("Lactação não está ativa.");
         }
 
         if (vo.getEndDate() == null) {
-            throw new BusinessRuleException("Data de fim da lactaÃ§Ã£o Ã© obrigatÃ³ria.");
+            throw new BusinessRuleException("Data de fim da lactação é obrigatória.");
         }
 
         if (vo.getEndDate().isBefore(lactation.getStartDate())) {
-            throw new BusinessRuleException("Data de fim da lactaÃ§Ã£o nÃ£o pode ser anterior Ã  data de inÃ­cio.");
+            throw new BusinessRuleException("Data de fim da lactação não pode ser anterior à data de início.");
         }
 
         lactation.setStatus(LactationStatus.DRY);
         lactation.setEndDate(vo.getEndDate());
-        lactation.setDryStartDate(vo.getEndDate()); // Assumindo dryStartDate = endDate da lactaÃ§Ã£o
+        lactation.setDryStartDate(vo.getEndDate()); // Assumindo dryStartDate = endDate da lactação
 
         Lactation saved = lactationPersistencePort.save(lactation);
         return lactationMapper.toResponseVO(saved);
@@ -163,7 +163,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     public LactationResponseVO getActiveLactation(Long farmId, String goatId) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactaÃ§Ã£o ativa encontrada para esta cabra"));
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactação ativa encontrada para esta cabra"));
         return lactationMapper.toResponseVO(lactation);
     }
 
@@ -171,7 +171,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     public LactationSummaryResponseVO getActiveLactationSummary(Long farmId, String goatId) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactaÃ§Ã£o ativa encontrada para esta cabra"));
+                .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactação ativa encontrada para esta cabra"));
         return buildSummary(farmId, goatId, lactation);
     }
 
@@ -179,14 +179,14 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     public LactationResponseVO getLactationById(Long farmId, String goatId, Long lactationId) {
         goatGenderValidator.requireFemale(farmId, goatId);
         Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("LactaÃ§Ã£o nÃ£o encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada"));
         return lactationMapper.toResponseVO(lactation);
     }
 
     @Override
     public LactationSummaryResponseVO getLactationSummary(Long farmId, String goatId, Long lactationId) {
         Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
-                .orElseThrow(() -> new ResourceNotFoundException("LactaÃ§Ã£o nÃ£o encontrada para esta cabra/fazenda."));
+                .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra/fazenda."));
         goatGenderValidator.requireFemale(farmId, goatId);
         return buildSummary(farmId, goatId, lactation);
     }
@@ -311,13 +311,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
         String message;
         if (!pregnancySnapshot.active()) {
-            message = "NÃ£o hÃ¡ prenhez ativa para recomendar secagem.";
+            message = "Não há prenhez ativa para recomendar secagem.";
         } else if (recommendDryOff) {
             message = "Prenhez confirmada com " + gestationDays + " dias. Recomenda-se secagem.";
         } else if (!lactationActive) {
-            message = "Prenhez confirmada com " + gestationDays + " dias. LactaÃ§Ã£o nÃ£o estÃ¡ ativa.";
+            message = "Prenhez confirmada com " + gestationDays + " dias. Lactação não está ativa.";
         } else {
-            message = "Prenhez confirmada com " + gestationDays + " dias. Secagem ainda nÃ£o recomendada.";
+            message = "Prenhez confirmada com " + gestationDays + " dias. Secagem ainda não recomendada.";
         }
 
         return LactationSummaryResponseVO.LactationSummaryPregnancyVO.builder()

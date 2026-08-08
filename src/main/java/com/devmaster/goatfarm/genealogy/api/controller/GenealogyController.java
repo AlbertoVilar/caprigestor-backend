@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies")
-@Tag(name = "Genealogy", description = "Endpoints para consulta de genealogia de caprinos. Caminho canÃ´nico /api/v1; legado /api em descontinuaÃ§Ã£o.")
+@Tag(name = "Genealogy", description = "Endpoints para consulta de genealogia de caprinos. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GenealogyController {
 
     private final GenealogyQueryUseCase genealogyQueryUseCase;
@@ -27,10 +27,10 @@ public class GenealogyController {
         this.genealogyComplementaryQueryUseCase = genealogyComplementaryQueryUseCase;
     }
 
-    @Operation(summary = "Consultar Genealogia", description = "Retorna a Ã¡rvore genealÃ³gica completa de uma cabra (pais, avÃ³s e bisavÃ³s)")
+    @Operation(summary = "Consultar Genealogia", description = "Retorna a árvore genealógica completa de uma cabra (pais, avós e bisavós)")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Genealogia recuperada com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada na fazenda informada")
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada na fazenda informada")
     })
     @GetMapping(params = "!complementaryAbcc")
     public ResponseEntity<GenealogyResponseVO> getGenealogy(
@@ -42,11 +42,11 @@ public class GenealogyController {
 
     @Operation(
             summary = "Consultar Genealogia Complementar ABCC",
-            description = "Retorna a Ã¡rvore genealÃ³gica local com complemento externo da ABCC em modo somente leitura"
+            description = "Retorna a árvore genealógica local com complemento externo da ABCC em modo somente leitura"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Genealogia complementar recuperada com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada na fazenda informada")
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada na fazenda informada")
     })
     @GetMapping(params = "complementaryAbcc=true")
     public ResponseEntity<GenealogyComplementaryResponseVO> getComplementaryGenealogy(

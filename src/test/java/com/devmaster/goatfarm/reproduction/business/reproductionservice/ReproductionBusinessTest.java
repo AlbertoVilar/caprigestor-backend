@@ -670,7 +670,7 @@ class ReproductionBusinessTest {
     @Test
     void getActivePregnancy_shouldThrowValidation_whenMultipleActivePregnanciesExist() {
         // Arrange
-        DuplicateEntityException duplicateException = new DuplicateEntityException("Foram encontradas mÃºltiplas gestaÃ§Ãµes ativas");
+        DuplicateEntityException duplicateException = new DuplicateEntityException("Foram encontradas múltiplas gestações ativas");
 
         when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(FARM_ID, GOAT_ID))
                 .thenThrow(duplicateException);
@@ -679,7 +679,7 @@ class ReproductionBusinessTest {
         DuplicateEntityException thrown = assertThrows(DuplicateEntityException.class,
                 () -> reproductionBusiness.getActivePregnancy(FARM_ID, GOAT_ID));
 
-        assertThat(thrown.getMessage()).contains("Foram encontradas mÃºltiplas gestaÃ§Ãµes ativas");
+        assertThat(thrown.getMessage()).contains("Foram encontradas múltiplas gestações ativas");
         verifyNoInteractions(reproductionBusinessMapper);
     }
 
