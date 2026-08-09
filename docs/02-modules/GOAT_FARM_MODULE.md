@@ -1,5 +1,5 @@
 ﻿# GOAT_FARM_MODULE
-Última atualização: 2026-03-16
+Última atualização: 2026-08-07
 Escopo: contratos e bordas HTTP do módulo base de Fazendas e Cabras (Goat/Farm).
 Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Padrão Market-Grade](../01-architecture/MODULE_STANDARD_MARKET_GRADE.md)
 
@@ -9,6 +9,14 @@ Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migra�
 - Consultar permissões do usuário sobre a fazenda.
 - Cadastrar, consultar, atualizar e remover cabras vinculadas a uma fazenda.
 - Importar cabras da ABCC pública de forma opcional, sem obrigar o cadastro manual a depender da ABCC.
+
+## Catálogo público e privacidade
+
+- A leitura de fazendas, animais e genealogia é pública e somente para consulta.
+- O catálogo pode exibir nome do responsável, telefones, e-mail de contato e redes sociais cadastradas, pois esses dados cumprem finalidade comercial de contato com a fazenda.
+- CPF, credenciais, papéis de acesso e endereço detalhado não pertencem ao contrato público. Para endereço, a resposta pública limita-se a município, estado e país.
+- Dados operacionais de sanidade, reprodução, lactação, estoque, alertas, relatórios e financeiro continuam protegidos por autenticação e autorização por fazenda.
+- A resposta pública de fazenda é sanitizada no backend; a ausência de CPF no frontend não substitui essa proteção.
 
 ## Regra de bloqueio operacional por status do animal
 - Animais com status diferente de `ATIVO` não podem sofrer escrita operacional.

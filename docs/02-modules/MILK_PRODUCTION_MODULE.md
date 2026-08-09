@@ -1,21 +1,21 @@
-﻿# MÃ³dulo Milk Production
-Ãšltima atualizaÃ§Ã£o: 2026-02-28
-Escopo: registro diÃ¡rio de ordenhas por cabra e consulta paginada de produÃ§Ã£o.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [MÃ³dulo LactaÃ§Ã£o](./LACTATION_MODULE.md), [Guia de MigraÃ§Ã£o](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
+# Módulo Milk Production
+Última atualização: 2026-02-28
+Escopo: registro diário de ordenhas por cabra e consulta paginada de produção.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
-## VisÃ£o geral
-Este mÃ³dulo gerencia produÃ§Ãµes de leite por cabra, com operaÃ§Ãµes de criaÃ§Ã£o, consulta, atualizaÃ§Ã£o parcial e cancelamento lÃ³gico.
+## Visão geral
+Este módulo gerencia produções de leite por cabra, com operações de criação, consulta, atualização parcial e cancelamento lógico.
 
 ## Regras / Contratos
 - Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
 - `POST` exige `date`, `shift` e `volumeLiters`.
-- Registro de produÃ§Ã£o depende de lactaÃ§Ã£o ativa.
+- Registro de produção depende de lactação ativa.
 - `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
-- `DELETE` realiza cancelamento lÃ³gico (nÃ£o remove histÃ³rico fÃ­sico).
+- `DELETE` realiza cancelamento lógico (não remove histórico físico).
 - As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.
 
 ## Endpoints
-| MÃ©todo | URL | Query params | Retorno |
+| Método | URL | Query params | Retorno |
 |---|---|---|---|
 | `POST` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | - | `201 Created` |
 | `PATCH` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `200 OK` |
@@ -23,7 +23,7 @@ Este mÃ³dulo gerencia produÃ§Ãµes de leite por cabra, com operaÃ§Ãµes 
 | `GET` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions` | `from`, `to`, `includeCanceled`, `page`, `size`, `sort` | `200 OK` (`Page` do Spring) |
 | `DELETE` | `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}` | - | `204 No Content` |
 
-Exemplo curto (criaÃ§Ã£o):
+Exemplo curto (criação):
 
 ```http
 POST /api/v1/goatfarms/1/goats/BR123/milk-productions
@@ -57,17 +57,17 @@ GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-
 
 ## Paginação
 - As rotas são publicadas exclusivamente em `/api/v1/...`.
-- A listagem continua retornando `Page` do Spring para preservar compatibilidade com consumidores jÃ¡ publicados.
+- A listagem continua retornando `Page` do Spring para preservar compatibilidade com consumidores já publicados.
 
 ## Erros/Status
-- `400`: payload invÃ¡lido, filtros inconsistentes ou paginaÃ§Ã£o invÃ¡lida.
-- `401`: autenticaÃ§Ã£o ausente ou invÃ¡lida.
+- `400`: payload inválido, filtros inconsistentes ou paginação inválida.
+- `401`: autenticação ausente ou inválida.
 - `403`: ownership/perfil insuficiente.
-- `404`: produÃ§Ã£o nÃ£o encontrada.
-- `422`: regra de negÃ³cio violada (ex.: sem lactaÃ§Ã£o ativa).
-- PadrÃ£o de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+- `404`: produção não encontrada.
+- `422`: regra de negócio violada (ex.: sem lactação ativa).
+- Padrão de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
-## ReferÃªncias internas
+## Referências internas
 - Controller: [src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java](../../src/main/java/com/devmaster/goatfarm/milk/api/controller/MilkProductionController.java)
 - DTOs: [src/main/java/com/devmaster/goatfarm/milk/api/dto](../../src/main/java/com/devmaster/goatfarm/milk/api/dto)
 ## Carencia sanitaria operacional no leite (2026-03-29)

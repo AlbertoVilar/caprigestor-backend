@@ -213,7 +213,7 @@ public class GoatBusiness implements GoatManagementUseCase {
     public List<GoatResponseVO> listOffspring(Long farmId, String goatId) {
         Goat goat = entityFinder.findOrThrow(
                 () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra nÃ£o encontrada nesta fazenda."
+                "Cabra não encontrada nesta fazenda."
         );
 
         return goatPort.findOffspringByParentRegistration(farmId, goat.getRegistrationNumber()).stream()

@@ -11,6 +11,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Base geral: `/api/v1`
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Rotas públicas sem autenticação (quando aplicável) usam namespace separado, por exemplo: `/public/articles`.
+- As consultas `GET` de fazendas, animais e genealogia sob `/api/v1/goatfarms` são públicas por decisão de produto. Fazendas públicas incluem nome do responsável, telefones e e-mail de contato, mas nunca CPF, credenciais, papéis ou endereço detalhado.
 
 ### Versionamento
 - Endpoints de aplicação são publicados exclusivamente em `/api/v1/...`.

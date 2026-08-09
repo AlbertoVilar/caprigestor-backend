@@ -169,6 +169,7 @@ public class GoatFarmController {
             UserResponseDTO user = new UserResponseDTO();
             user.setId(dto.getUser().getId());
             user.setName(dto.getUser().getName());
+            user.setEmail(dto.getUser().getEmail());
             sanitized.setUser(user);
         }
 

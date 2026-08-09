@@ -53,7 +53,7 @@ class GenealogyComplementaryBusinessTest {
                                 .fatherRegistrationNumber("1635717065")
                                 .fatherName("C.V.C SIGNOS PETROLEO")
                                 .maternalGrandfatherRegistrationNumber("123")
-                                .maternalGrandfatherName("AVÃ” MAT")
+                                .maternalGrandfatherName("AVÔ MAT")
                                 .build()
                 ));
 
