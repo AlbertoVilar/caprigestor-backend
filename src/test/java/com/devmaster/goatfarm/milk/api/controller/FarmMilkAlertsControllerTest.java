@@ -94,7 +94,7 @@ class FarmMilkAlertsControllerTest {
                 .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
         when(lactationMapper.toDryOffAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/milk/alerts/dry-off", farmId)
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", farmId)
                         .param("referenceDate", "2026-02-28")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

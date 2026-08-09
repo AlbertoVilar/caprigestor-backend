@@ -8,12 +8,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class ApiVersioningGuardTest {
+
+    private static final Pattern LEGACY_API_LITERAL = Pattern.compile("\"/api/(?!v1(?:/|\"))");
 
     @Test
     void restControllersMustExposeApiV1Prefix() {
@@ -31,6 +34,24 @@ class ApiVersioningGuardTest {
 
         assertTrue(violations.isEmpty(),
                 "All @RestController classes in api/controller must include class-level /api/v1 mapping. Violations:\n"
+                        + String.join("\n", violations));
+    }
+
+    @Test
+    void productionSourceMustNotReferenceLegacyApiPrefix() {
+        Path projectRoot = Paths.get(System.getProperty("user.dir"));
+        Path root = projectRoot.resolve(Paths.get("src", "main", "java"));
+        List<String> violations = new ArrayList<>();
+
+        try (Stream<Path> paths = Files.walk(root)) {
+            paths.filter(path -> path.toString().endsWith(".java"))
+                    .forEach(path -> validateNoLegacyApiLiteral(projectRoot, path, violations));
+        } catch (IOException e) {
+            fail("Failed to scan production source files: " + e.getMessage());
+        }
+
+        assertTrue(violations.isEmpty(),
+                "Production source must use only /api/v1 routes. Violations:\n"
                         + String.join("\n", violations));
     }
 
@@ -56,6 +77,17 @@ class ApiVersioningGuardTest {
             if (!content.contains("@RequestMapping({\"/api/v1") && !content.contains("@RequestMapping(\"/api/v1")) {
                 String relative = projectRoot.relativize(path).toString().replace('\\', '/');
                 violations.add(relative + " -> missing /api/v1 prefix in class-level @RequestMapping");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read " + path + ": " + e.getMessage(), e);
+        }
+    }
+
+    private void validateNoLegacyApiLiteral(Path projectRoot, Path path, List<String> violations) {
+        try {
+            String content = Files.readString(path);
+            if (LEGACY_API_LITERAL.matcher(content).find()) {
+                violations.add(projectRoot.relativize(path).toString().replace('\\', '/'));
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to read " + path + ": " + e.getMessage(), e);

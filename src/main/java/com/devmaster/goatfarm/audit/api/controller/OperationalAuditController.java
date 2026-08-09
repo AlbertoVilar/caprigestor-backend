@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/audit", "/api/goatfarms/{farmId}/audit"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/audit")
 @Tag(name = "Operational Audit API", description = "Trilha minima de auditoria operacional para operacoes criticas.")
 public class OperationalAuditController {
 

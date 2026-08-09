@@ -102,7 +102,7 @@ class GoatFarmControllerTest {
         when(farmUseCase.findAllGoatFarm(any(Pageable.class))).thenReturn(farms);
         when(ownershipService.canManageFarm(1L)).thenReturn(false);
 
-        mockMvc.perform(get("/api/goatfarms")
+        mockMvc.perform(get("/api/v1/goatfarms")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())

@@ -26,7 +26,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/milk/alerts", "/api/goatfarms/{farmId}/milk/alerts"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/milk/alerts")
 @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
 @Tag(
         name = "Milk Alerts API",

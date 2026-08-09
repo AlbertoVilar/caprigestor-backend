@@ -1,5 +1,5 @@
 # MVP_READY
-Última atualização: 2026-02-26
+Última atualização: 2026-08-07
 Escopo: prontidão do backend para uso em MVP com API versionada e suíte mínima de validação.
 
 Links relacionados: [Status do Projeto](./PROJECT_STATUS.md), [Roadmap](./ROADMAP.md), [Contratos API](../03-api/API_CONTRACTS.md), [Guia de Migração de Versionamento](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
@@ -47,7 +47,7 @@ Suite mínima de fumaça para `/api/v1`:
 - Garantir envio de `Idempotency-Key` nos comandos do Inventory.
 - Validar paginação padrão (`page`, `size`, `sort`) nos endpoints listáveis.
 
-## Compatibilidade e depreciação
-- Caminho oficial: `/api/v1/...`.
-- Caminho legado: `/api/...` em compatibilidade temporária, marcado como **deprecated**.
-- Remoção planejada do legado: **2026-06-30** (versão alvo `v2.0.0`), após o frontend operar 100% em `/api/v1`.
+## Versionamento
+- Caminho oficial e exclusivo dos endpoints de aplicação: `/api/v1/...`.
+- O frontend opera integralmente no contrato versionado.
+- A compatibilidade com o prefixo não versionado foi removida em 2026-08-07.

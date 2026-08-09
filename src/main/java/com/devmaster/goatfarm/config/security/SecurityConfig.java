@@ -65,15 +65,15 @@ public class SecurityConfig {
     public SecurityFilterChain publicEndpointsFilterChain(HttpSecurity http) throws Exception {
         http
             // Torna públicos apenas os endpoints de autenticação explícitos (login/register/refresh)
-            // Exclui "/api/auth/me" para que ele seja tratado pelo filtro JWT e exija autenticação
+            // Exclui "/api/v1/auth/me" para que ele seja tratado pelo filtro JWT e exija autenticação
             .securityMatcher(
-                    "/api/v1/auth/login", "/api/auth/login",
-                    "/api/v1/auth/register", "/api/auth/register",
-                    "/api/v1/auth/refresh", "/api/auth/refresh",
-                    "/api/v1/auth/register-farm", "/api/auth/register-farm",
-                    "/api/v1/auth/password-reset/request", "/api/auth/password-reset/request",
-                    "/api/v1/auth/password-reset/confirm", "/api/auth/password-reset/confirm",
-                    "/api/v1/goatfarms/full", "/api/goatfarms/full",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/refresh",
+                    "/api/v1/auth/register-farm",
+                    "/api/v1/auth/password-reset/request",
+                    "/api/v1/auth/password-reset/confirm",
+                    "/api/v1/goatfarms/full",
                     "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**",
                     "/actuator/health", "/actuator/health/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
@@ -102,31 +102,24 @@ public class SecurityConfig {
     @Order(3)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/**")
+            .securityMatcher("/api/v1/**")
             .authorizeHttpRequests(authorize -> authorize
                 // Fazendas (público - leitura)
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms",
                         "/api/v1/goatfarms/*",
-                        "/api/v1/goatfarms/name",
-                        "/api/goatfarms",
-                        "/api/goatfarms/*",
-                        "/api/goatfarms/name").permitAll()
+                        "/api/v1/goatfarms/name").permitAll()
                 // Consultas de cabras dentro da fazenda (públicas)
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms/*/goats",
                         "/api/v1/goatfarms/*/goats/*",
-                        "/api/v1/goatfarms/*/goats/search",
-                        "/api/goatfarms/*/goats",
-                        "/api/goatfarms/*/goats/*",
-                        "/api/goatfarms/*/goats/search").permitAll()
+                        "/api/v1/goatfarms/*/goats/search").permitAll()
                 // Genealogias públicas (apenas leitura)
                 .requestMatchers(HttpMethod.GET,
-                        "/api/v1/goatfarms/*/goats/*/genealogies",
-                        "/api/goatfarms/*/goats/*/genealogies").permitAll()
-                .requestMatchers("/api/v1/articles/**", "/api/articles/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/v1/users/**", "/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                        "/api/v1/goatfarms/*/goats/*/genealogies").permitAll()
+                .requestMatchers("/api/v1/articles/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/v1/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
                 .requestMatchers(HttpMethod.POST, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.PUT, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")

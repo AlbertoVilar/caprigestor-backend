@@ -7,10 +7,14 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OwnershipService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OwnershipService.class);
 
     private final GoatFarmPersistencePort goatFarmPort;
     private final UserPersistencePort userPort;
@@ -65,7 +69,8 @@ public class OwnershipService {
             }
             return farmOpt.get().getUser().getId().equals(current.getId());
         } catch (RuntimeException ex) {
-            ex.printStackTrace(); // Logar erro para debug
+            logger.debug("event=farm_ownership_check_failed farmId={} exception={}",
+                    farmId, ex.getClass().getSimpleName());
             return false;
         }
     }
@@ -94,17 +99,19 @@ public class OwnershipService {
             // 3. OWNER deve ser dono da fazenda
             var farmOpt = goatFarmPort.findById(farmId);
             if (farmOpt.isEmpty()) {
-                System.out.println("DEBUG: Fazenda nao encontrada ID " + farmId);
+                logger.debug("event=farm_management_check_denied farmId={} reason=farm_not_found", farmId);
                 return false;
             }
             if (farmOpt.get().getUser() == null) {
-                System.out.println("DEBUG: Fazenda ID " + farmId + " sem usuario dono vinculado");
+                logger.debug("event=farm_management_check_denied farmId={} reason=owner_not_linked", farmId);
                 return false;
             }
             boolean isOwner = farmOpt.get().getUser().getId().equals(current.getId());
-            System.out.println("DEBUG: User " + current.getId() + " isOwner of Farm " + farmId + "? " + isOwner + " (Owner ID: " + farmOpt.get().getUser().getId() + ")");
+            logger.debug("event=farm_management_check farmId={} allowed={}", farmId, isOwner);
             return isOwner;
         } catch (RuntimeException ex) {
+            logger.debug("event=farm_management_check_failed farmId={} exception={}",
+                    farmId, ex.getClass().getSimpleName());
             return false;
         }
     }

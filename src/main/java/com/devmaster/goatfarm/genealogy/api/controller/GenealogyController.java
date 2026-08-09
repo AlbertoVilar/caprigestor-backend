@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies", "/api/goatfarms/{farmId}/goats/{goatId}/genealogies"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies")
 @Tag(name = "Genealogy", description = "Endpoints para consulta de genealogia de caprinos. Caminho canÃ´nico /api/v1; legado /api em descontinuaÃ§Ã£o.")
 public class GenealogyController {
 

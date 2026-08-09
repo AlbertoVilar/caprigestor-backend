@@ -129,13 +129,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ValidationError> handleAll(Exception e, HttpServletRequest request) {
-        logger.error("Erro interno do servidor: ", e); // LOG THE ERROR
-        e.printStackTrace(); // KEEP PRINT STACK TRACE FOR CONSOLE DEBUGGING
+        logger.error("event=unhandled_exception method={} path={} exception={}",
+                request.getMethod(), request.getRequestURI(), e.getClass().getSimpleName(), e);
         String error = "Erro interno do servidor";
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
         err.addError("server", "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.");
-        // Logar o erro original seria importante aqui, mas o handler já é chamado pelo Spring que loga
         return ResponseEntity.status(status).body(err);
     }
 
@@ -153,6 +152,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ValidationError> handleDataIntegrityViolation(DataIntegrityViolationException e, HttpServletRequest request) {
+        logger.warn("event=data_integrity_violation method={} path={}",
+                request.getMethod(), request.getRequestURI());
         String error = "Conflito de integridade de dados";
         HttpStatus status = HttpStatus.CONFLICT;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());

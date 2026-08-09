@@ -18,7 +18,7 @@ Regras:
 ## Padrão de rotas
 
 - Base canônica: `/api/v1`
-- Compatibilidade temporária: `/api` legado em dual mapping, marcado como **DEPRECATED**
+- Versionamento obrigatório: somente `/api/v1` para endpoints de aplicação
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Todo controller em `api/controller` deve manter class-level `@RequestMapping` com `/api/v1`
 
@@ -79,7 +79,7 @@ Estrutura padrão:
 
 - Swagger em PT-BR
 - exemplos de request/response
-- rotas canônicas e legadas documentadas
+- rotas canônicas documentadas
 - códigos HTTP relevantes (`200/201/400/403/404/409/422`)
 - documentação do módulo atualizada em `docs/02-modules`
 

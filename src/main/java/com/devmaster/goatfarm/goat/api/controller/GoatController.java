@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/goats", "/api/goatfarms/{farmId}/goats"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/goats")
 @Tag(name = "Goat API", description = "Gerenciamento de cabras da fazenda. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GoatController {
 

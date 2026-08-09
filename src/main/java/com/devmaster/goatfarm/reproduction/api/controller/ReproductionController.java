@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction", "/api/goatfarms/{farmId}/goats/{goatId}/reproduction"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction")
 @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
 @Tag(
         name = "Reproduction API",

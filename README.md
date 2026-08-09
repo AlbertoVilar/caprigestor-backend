@@ -117,7 +117,7 @@ O sistema valida a genealogia com base na classificação do animal:
 - ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
 - ✅ **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
 - ✅ **Endpoints:**
-  - `POST /api/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
+  - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
   - `PUT /.../health-events/{eventId}` (Editar dados)
   - `PATCH /.../health-events/{eventId}/done` (Marcar como realizado)
   - `PATCH /.../health-events/{eventId}/cancel` (Cancelar evento)
@@ -139,7 +139,7 @@ O sistema valida a genealogia com base na classificação do animal:
   - A validação é feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador só acesse fazendas permitidas.
 
 **Endpoint de permissões da fazenda:**
-- `GET /api/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
+- `GET /api/v1/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
 
 ---
 
@@ -636,7 +636,7 @@ java -jar target/CapriGestor-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
 
 Após iniciar com o perfil `dev`, a API estará disponível em:
 
-- **API Base:** `http://localhost:8080/api`
+- **API Base:** `http://localhost:8080/api/v1`
 - **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
 
 > ⚠️ **Importante:** A maioria das operações requer autenticação via Bearer Token e os dados são isolados por `farmId`.

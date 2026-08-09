@@ -1,14 +1,13 @@
 # Status do Projeto GoatFarm/CapriGestor Backend
-Última atualização: 2026-02-26  
+Última atualização: 2026-08-07
 Escopo: visão executiva do estado atual para fechamento do MVP.
 
 Links relacionados: [Portal](../INDEX.md), [Roadmap](./ROADMAP.md), [Contratos API](../03-api/API_CONTRACTS.md), [Guia de Versionamento](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Prontidão do MVP](./MVP_READY.md)
 
 ## 1. Resumo executivo
 - Backend do MVP está funcional e com gate verde (`./mvnw -U -T 1C clean test`).
-- Padrão de rotas consolidado: `/api/v1` canônico.
-- Compatibilidade temporária mantida em `/api` como **deprecated**.
-- Prazo sugerido para remoção de `/api` legado: **2026-06-30** (alvo `v2.0.0`), após atualização completa do frontend.
+- Padrão de rotas consolidado: somente `/api/v1` para endpoints de aplicação.
+- A compatibilidade com o prefixo não versionado foi encerrada em 2026-08-07.
 
 ## 2. Módulos do MVP
 | Módulo | Status | Endpoints canônicos principais | Evidências de teste |
@@ -30,4 +29,3 @@ Links relacionados: [Portal](../INDEX.md), [Roadmap](./ROADMAP.md), [Contratos A
 ## 4. Itens fora do escopo do MVP (não bloqueantes)
 - Hardening do módulo `events` assíncrono.
 - Evolução de observabilidade e redução de warnings de tooling (Mockito/ByteBuddy).
-- Fechamento definitivo da janela de compatibilidade `/api` após migração total do frontend.

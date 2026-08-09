@@ -91,7 +91,7 @@ class LactationControllerTest {
         when(lactationQueryUseCase.getActiveLactation(farmId, goatId)).thenReturn(responseVO);
         when(lactationMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/goats/{goatId}/lactations/active", farmId, goatId)
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations/active", farmId, goatId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(13));

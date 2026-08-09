@@ -109,6 +109,17 @@ class ApiV1SmokeTest {
     }
 
     @Test
+    void should_not_expose_unversioned_api_routes() throws Exception {
+        mockMvc.perform(get("/api/goatfarms"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginPayload(ownerEmail, ownerPassword)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void should_hit_reproduction_alerts_under_api_v1() throws Exception {
         String token = loginAndGetToken(ownerEmail, ownerPassword);
 
