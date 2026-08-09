@@ -4,7 +4,9 @@ import com.devmaster.goatfarm.inventory.domain.enums.InventoryAdjustDirection;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -45,12 +47,24 @@ public record InventoryMovementCreateRequestDTO(
         String reason,
 
         @Positive(message = "unitCost deve ser maior que zero quando informado.")
+        @Digits(integer = 10, fraction = 4, message = "unitCost deve ter no maximo 10 inteiros e 4 decimais.")
         @Schema(description = "Custo unitario da compra. Usado apenas em entradas por compra.", example = "18.5000")
         BigDecimal unitCost,
 
         @Positive(message = "totalCost deve ser maior que zero quando informado.")
+        @Digits(integer = 12, fraction = 2, message = "totalCost deve ter no maximo 12 inteiros e 2 decimais.")
         @Schema(description = "Custo total da compra. Usado apenas em entradas por compra.", example = "185.00")
         BigDecimal totalCost,
+
+        @PositiveOrZero(message = "freightCost nao pode ser negativo.")
+        @Digits(integer = 12, fraction = 2, message = "freightCost deve ter no maximo 12 inteiros e 2 decimais.")
+        @Schema(description = "Frete vinculado a esta compra de estoque.", example = "25.00")
+        BigDecimal freightCost,
+
+        @PositiveOrZero(message = "discountAmount nao pode ser negativo.")
+        @Digits(integer = 12, fraction = 2, message = "discountAmount deve ter no maximo 12 inteiros e 2 decimais.")
+        @Schema(description = "Desconto concedido nesta compra de estoque.", example = "10.00")
+        BigDecimal discountAmount,
 
         @Schema(description = "Data da compra, quando a entrada representar uma aquisicao.", example = "2026-03-28")
         LocalDate purchaseDate,
@@ -69,6 +83,24 @@ public record InventoryMovementCreateRequestDTO(
             LocalDate movementDate,
             String reason
     ) {
-        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason, null, null, null, null);
+        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason,
+                null, null, null, null, null, null);
+    }
+
+    public InventoryMovementCreateRequestDTO(
+            InventoryMovementType type,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            InventoryAdjustDirection adjustDirection,
+            LocalDate movementDate,
+            String reason,
+            BigDecimal unitCost,
+            BigDecimal totalCost,
+            LocalDate purchaseDate,
+            String supplierName
+    ) {
+        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason,
+                unitCost, totalCost, null, null, purchaseDate, supplierName);
     }
 }

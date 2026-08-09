@@ -30,6 +30,8 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
                         m.resultingBalance,
                         m.unitCost,
                         m.totalCost,
+                        m.freightCost,
+                        m.discountAmount,
                         m.purchaseDate,
                         m.supplierName,
                         m.createdAt

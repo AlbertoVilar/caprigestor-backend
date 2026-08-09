@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementPersistedVO
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryItemEntity;
+import com.devmaster.goatfarm.inventory.persistence.entity.InventoryIdempotencyEntity;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryLotEntity;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryBalanceRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryIdempotencyRepository;
@@ -134,6 +135,36 @@ class InventoryMovementPersistenceAdapterIntegrationTest {
     }
 
     @Test
+    void saveMovement_shouldPersistPurchaseCostBreakdown() {
+        Long farmId = 92L;
+        Long itemId = persistItem(farmId, "Racao", false).getId();
+
+        InventoryMovementPersistedVO saved = adapter.saveMovement(new InventoryMovementPersistedVO(
+                null,
+                farmId,
+                InventoryMovementType.IN,
+                null,
+                new BigDecimal("10.000"),
+                itemId,
+                null,
+                LocalDate.of(2026, 8, 1),
+                "Compra",
+                new BigDecimal("10.000"),
+                new BigDecimal("18.5000"),
+                new BigDecimal("200.00"),
+                new BigDecimal("25.00"),
+                new BigDecimal("10.00"),
+                LocalDate.of(2026, 8, 1),
+                "Casa do Campo",
+                OffsetDateTime.parse("2026-08-01T12:00:00Z")
+        ));
+
+        assertThat(saved.freightCost()).isEqualByComparingTo("25.00");
+        assertThat(saved.discountAmount()).isEqualByComparingTo("10.00");
+        assertThat(saved.totalCost()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
     void saveAndFindIdempotency_shouldReturnPersistedResponseForReplay() {
         Long farmId = 95L;
         String idempotencyKey = "idem-replay-95";
@@ -165,6 +196,41 @@ class InventoryMovementPersistenceAdapterIntegrationTest {
         assertThat(found.get().requestHash()).isEqualTo(requestHash);
         assertThat(found.get().response().movementId()).isEqualTo(1234L);
         assertThat(found.get().response().resultingBalance()).isEqualByComparingTo("9.750");
+    }
+
+    @Test
+    void findIdempotency_shouldReadLegacyResponseWithoutCostBreakdownFields() {
+        InventoryIdempotencyEntity legacy = new InventoryIdempotencyEntity();
+        legacy.setFarmId(96L);
+        legacy.setIdempotencyKey("legacy-response");
+        legacy.setRequestHash("legacy-hash");
+        legacy.setResponsePayload("""
+                {
+                  "movementId": 4321,
+                  "type": "IN",
+                  "quantity": 10.000,
+                  "itemId": 101,
+                  "lotId": null,
+                  "movementDate": "2026-03-28",
+                  "resultingBalance": 10.000,
+                  "unitCost": 18.5000,
+                  "totalCost": 185.00,
+                  "purchaseDate": "2026-03-28",
+                  "supplierName": "Casa do Campo",
+                  "createdAt": "2026-03-28T14:10:00Z"
+                }
+                """);
+        legacy.setCreatedAt(OffsetDateTime.parse("2026-03-28T14:10:00Z"));
+        idempotencyRepository.save(legacy);
+
+        var found = adapter.findIdempotency(96L, "legacy-response");
+
+        assertThat(found).isPresent();
+        assertThat(found.get().response().movementId()).isEqualTo(4321L);
+        assertThat(found.get().response().subtotalCost()).isNull();
+        assertThat(found.get().response().freightCost()).isNull();
+        assertThat(found.get().response().discountAmount()).isNull();
+        assertThat(found.get().response().totalCost()).isEqualByComparingTo("185.00");
     }
 
     private InventoryItemEntity persistItem(Long farmId, String name, boolean trackLot) {
