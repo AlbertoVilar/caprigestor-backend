@@ -8,6 +8,11 @@ backups
 docker/.env.prod
 docker/.env
 docker/secrets
+.env
+.env.*
+*.key
+*.pem
+docs/_private
 *.log
 hs_err_pid*
 .tmp*
