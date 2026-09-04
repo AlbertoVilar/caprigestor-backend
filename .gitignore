@@ -55,3 +55,11 @@ docs/UX_UPDATE_GUIDE.md
 
 # Estado operacional local usado para continuidade das tarefas do Codex
 docs/00-overview/CAPRIGESTOR_CURRENT_STATE.md
+
+# Local credentials and generated signing material. Test fixtures remain tracked explicitly.
+.env
+.env.*
+*.key
+*.pem
+!src/test/resources/app-test.key
+!src/test/resources/app-test.pub

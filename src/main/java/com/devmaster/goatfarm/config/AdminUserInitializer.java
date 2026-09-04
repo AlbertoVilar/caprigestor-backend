@@ -34,12 +34,12 @@ public class AdminUserInitializer implements CommandLineRunner {
     public AdminUserInitializer(UserRepository userRepository,
                                 RoleRepository roleRepository,
                                 PasswordEncoder passwordEncoder,
-                                @Value("${caprigestor.bootstrap.admin.enabled:true}") boolean bootstrapAdminEnabled,
+                                @Value("${caprigestor.bootstrap.admin.enabled:false}") boolean bootstrapAdminEnabled,
                                 @Value("${caprigestor.bootstrap.admin.reset-password:false}") boolean resetAdminPassword,
-                                @Value("${caprigestor.bootstrap.admin.email:albertovilar1@gmail.com}") String adminEmail,
-                                @Value("${caprigestor.bootstrap.admin.name:Alberto Vilar}") String adminName,
-                                @Value("${caprigestor.bootstrap.admin.cpf:05202259450}") String adminCpf,
-                                @Value("${caprigestor.bootstrap.admin.initial-password:132747}") String adminInitialPassword) {
+                                @Value("${caprigestor.bootstrap.admin.email:}") String adminEmail,
+                                @Value("${caprigestor.bootstrap.admin.name:}") String adminName,
+                                @Value("${caprigestor.bootstrap.admin.cpf:}") String adminCpf,
+                                @Value("${caprigestor.bootstrap.admin.initial-password:}") String adminInitialPassword) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -54,6 +54,11 @@ public class AdminUserInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        if (!bootstrapAdminEnabled) {
+            logger.info(">>> Bootstrap do admin desabilitado. <<<");
+            return;
+        }
+
         logger.info(">>> Iniciando AdminUserInitializer <<<");
 
         Role adminRole = ensureRoleExists("ROLE_ADMIN");
@@ -87,11 +92,6 @@ public class AdminUserInitializer implements CommandLineRunner {
             } else {
                 logger.info(">>> Usuário administrativo já existente e sem alterações de bootstrap. <<<");
             }
-            return;
-        }
-
-        if (!bootstrapAdminEnabled) {
-            logger.warn(">>> Bootstrap do admin desabilitado e usuário '{}' não encontrado. <<<", adminEmail);
             return;
         }
 
