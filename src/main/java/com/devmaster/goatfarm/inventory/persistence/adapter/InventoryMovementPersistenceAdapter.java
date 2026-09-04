@@ -99,6 +99,8 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
         entity.setResultingBalance(vo.resultingBalance());
         entity.setUnitCost(vo.unitCost());
         entity.setTotalCost(vo.totalCost());
+        entity.setFreightCost(vo.freightCost());
+        entity.setDiscountAmount(vo.discountAmount());
         entity.setPurchaseDate(vo.purchaseDate());
         entity.setSupplierName(vo.supplierName());
         entity.setCreatedAt(vo.createdAt());
@@ -118,6 +120,8 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
                 saved.getResultingBalance(),
                 saved.getUnitCost(),
                 saved.getTotalCost(),
+                saved.getFreightCost(),
+                saved.getDiscountAmount(),
                 saved.getPurchaseDate(),
                 saved.getSupplierName(),
                 saved.getCreatedAt()

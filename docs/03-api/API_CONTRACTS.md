@@ -222,7 +222,7 @@ Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
 - `GET /api/v1/goatfarms/{farmId}/inventory/movements`
   - filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`
   - ordenação padrão: `movementDate desc`, `createdAt desc`
-  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `createdAt`
+  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `unitCost`, `subtotalCost`, `freightCost`, `discountAmount`, `totalCost`, `purchaseDate`, `supplierName`, `createdAt`
 - validações obrigatórias:
   - `fromDate <= toDate`
   - `size <= 100`
@@ -238,6 +238,39 @@ Exemplo de consulta de histórico:
 ```http
 GET /api/v1/goatfarms/1/inventory/movements?type=OUT&fromDate=2026-02-01&toDate=2026-02-28&page=0&size=20
 ```
+
+### Inventory (entrada por compra)
+Para `POST /api/v1/goatfarms/{farmId}/inventory/movements`, uma compra usa `type=IN` e a seguinte composição:
+
+```json
+{
+  "type": "IN",
+  "quantity": 32.143,
+  "itemId": 101,
+  "movementDate": "2026-08-01",
+  "unitCost": 112.0000,
+  "freightCost": 45.50,
+  "discountAmount": 12.25,
+  "purchaseDate": "2026-08-01",
+  "supplierName": "Durrancho"
+}
+```
+
+Resposta financeira calculada pelo servidor:
+
+```json
+{
+  "unitCost": 112.0000,
+  "subtotalCost": 3600.02,
+  "freightCost": 45.50,
+  "discountAmount": 12.25,
+  "totalCost": 3633.27
+}
+```
+
+- O cliente novo não precisa enviar `totalCost`.
+- Se um cliente legado enviar `unitCost` e `totalCost`, o servidor valida a fórmula completa.
+- Se enviar apenas `totalCost`, o servidor deriva o custo unitário das mercadorias, considerando frete e desconto.
 
 ## Erros/Status
 ### Estrutura de erro padrão

@@ -15,6 +15,9 @@ public record InventoryMovementResponseVO(
         LocalDate movementDate,
         BigDecimal resultingBalance,
         BigDecimal unitCost,
+        BigDecimal subtotalCost,
+        BigDecimal freightCost,
+        BigDecimal discountAmount,
         BigDecimal totalCost,
         LocalDate purchaseDate,
         String supplierName,
@@ -31,6 +34,32 @@ public record InventoryMovementResponseVO(
             BigDecimal resultingBalance,
             OffsetDateTime createdAt
     ) {
-        this(movementId, type, quantity, itemId, lotId, movementDate, resultingBalance, null, null, null, null, createdAt);
+        this(movementId, type, quantity, itemId, lotId, movementDate, resultingBalance,
+                null, null, null, null, null, null, null, createdAt);
+    }
+
+    public InventoryMovementResponseVO(
+            Long movementId,
+            InventoryMovementType type,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            LocalDate movementDate,
+            BigDecimal resultingBalance,
+            BigDecimal unitCost,
+            BigDecimal totalCost,
+            LocalDate purchaseDate,
+            String supplierName,
+            OffsetDateTime createdAt
+    ) {
+        this(movementId, type, quantity, itemId, lotId, movementDate, resultingBalance,
+                unitCost, subtotal(quantity, unitCost), BigDecimal.ZERO, BigDecimal.ZERO,
+                totalCost, purchaseDate, supplierName, createdAt);
+    }
+
+    private static BigDecimal subtotal(BigDecimal quantity, BigDecimal unitCost) {
+        return quantity == null || unitCost == null
+                ? null
+                : quantity.multiply(unitCost).setScale(2, java.math.RoundingMode.HALF_UP);
     }
 }

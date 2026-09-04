@@ -21,6 +21,8 @@ public record InventoryMovementPersistedVO(
         BigDecimal resultingBalance,
         BigDecimal unitCost,
         BigDecimal totalCost,
+        BigDecimal freightCost,
+        BigDecimal discountAmount,
         LocalDate purchaseDate,
         String supplierName,
         OffsetDateTime createdAt
@@ -59,6 +61,8 @@ public record InventoryMovementPersistedVO(
                 movementDate,
                 reason,
                 resultingBalance,
+                null,
+                null,
                 null,
                 null,
                 null,

@@ -44,7 +44,16 @@ public record InventoryMovementHistoryResponseDTO(
         @Schema(description = "Custo unitario da compra, quando a entrada representar aquisicao.", example = "18.5000")
         BigDecimal unitCost,
 
-        @Schema(description = "Custo total da compra, quando houver.", example = "185.00")
+        @Schema(description = "Subtotal das mercadorias (quantity x unitCost).", example = "185.00")
+        BigDecimal subtotalCost,
+
+        @Schema(description = "Frete vinculado a compra.", example = "25.00")
+        BigDecimal freightCost,
+
+        @Schema(description = "Desconto concedido na compra.", example = "10.00")
+        BigDecimal discountAmount,
+
+        @Schema(description = "Custo final da compra (subtotal + frete - desconto).", example = "200.00")
         BigDecimal totalCost,
 
         @Schema(description = "Data da compra, quando houver.", example = "2026-03-28")
@@ -85,7 +94,39 @@ public record InventoryMovementHistoryResponseDTO(
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 createdAt
         );
+    }
+
+    public InventoryMovementHistoryResponseDTO(
+            Long movementId,
+            InventoryMovementType type,
+            InventoryAdjustDirection adjustDirection,
+            BigDecimal quantity,
+            Long itemId,
+            String itemName,
+            Long lotId,
+            LocalDate movementDate,
+            String reason,
+            BigDecimal resultingBalance,
+            BigDecimal unitCost,
+            BigDecimal totalCost,
+            LocalDate purchaseDate,
+            String supplierName,
+            OffsetDateTime createdAt
+    ) {
+        this(movementId, type, adjustDirection, quantity, itemId, itemName, lotId,
+                movementDate, reason, resultingBalance, unitCost,
+                subtotal(quantity, unitCost), BigDecimal.ZERO, BigDecimal.ZERO,
+                totalCost, purchaseDate, supplierName, createdAt);
+    }
+
+    private static BigDecimal subtotal(BigDecimal quantity, BigDecimal unitCost) {
+        return quantity == null || unitCost == null
+                ? null
+                : quantity.multiply(unitCost).setScale(2, java.math.RoundingMode.HALF_UP);
     }
 }

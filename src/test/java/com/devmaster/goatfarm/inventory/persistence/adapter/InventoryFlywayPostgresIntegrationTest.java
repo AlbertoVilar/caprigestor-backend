@@ -47,6 +47,37 @@ class InventoryFlywayPostgresIntegrationTest {
             assertThat(columnExists(connection, "inventory_lot", "code")).isTrue();
             assertThat(columnExists(connection, "inventory_lot", "expiration_date")).isTrue();
             assertThat(columnExists(connection, "inventory_lot", "active")).isTrue();
+            assertThat(columnExists(connection, "inventory_movement", "freight_cost")).isTrue();
+            assertThat(columnExists(connection, "inventory_movement", "discount_amount")).isTrue();
+            assertThat(hasCheckConstraint(
+                    connection,
+                    "inventory_movement",
+                    "ck_inventory_movement_freight_cost_non_negative"
+            )).isTrue();
+            assertThat(hasCheckConstraint(
+                    connection,
+                    "inventory_movement",
+                    "ck_inventory_movement_discount_amount_non_negative"
+            )).isTrue();
+        }
+    }
+
+    private boolean hasCheckConstraint(Connection connection, String tableName, String constraintName)
+            throws SQLException {
+        String sql = """
+                select 1
+                from information_schema.table_constraints
+                where table_name = ?
+                  and constraint_name = ?
+                  and constraint_type = 'CHECK'
+                """;
+
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, constraintName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 
