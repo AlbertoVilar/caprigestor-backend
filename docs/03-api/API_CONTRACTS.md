@@ -3,6 +3,8 @@
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
+Atualizado em 2026-09-04 para os contratos de referências genealógicas externas.
+
 ## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
 
@@ -71,6 +73,20 @@ Genealogia complementar ABCC:
 - Não aplica regra patrimonial de TOD da importação ABCC.
 - Lookup principal por `registrationNumber`, sem fallback por nome.
 - Status de integração: `FOUND`, `NOT_FOUND`, `UNAVAILABLE`, `INSUFFICIENT_DATA`.
+
+Referências genealógicas em comandos de criação:
+- `fatherRegistrationNumber` e `motherRegistrationNumber` são resolvidos pela
+  mesma política em `POST /goats`, atualizações de animal e criação de cria no
+  parto.
+- `PO` e `PC` exigem pai e mãe identificáveis localmente ou por consulta ABCC.
+  `PA` permite ausência e RG externo declarado não localizado.
+- Pai e mãe identificados devem ter, respectivamente, sexo `MACHO` e `FEMEA`.
+  O RG do próprio animal não pode ser usado como genitor.
+- Referência de outra fazenda é apenas genealógica: não altera ownership,
+  permissões ou o escopo da rota.
+- A API persiste uma FK local ou o RG externo, nunca uma árvore da ABCC. A
+  resposta de genealogia pode sinalizar origem `LOCAL`, `ABCC`, `DECLARADO` ou
+  `AUSENTE`.
 
 
 ### Reproduction (gestação e alertas)
@@ -206,7 +222,7 @@ Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
 - `GET /api/v1/goatfarms/{farmId}/inventory/movements`
   - filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`
   - ordenação padrão: `movementDate desc`, `createdAt desc`
-  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `createdAt`
+  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `unitCost`, `subtotalCost`, `freightCost`, `discountAmount`, `totalCost`, `purchaseDate`, `supplierName`, `createdAt`
 - validações obrigatórias:
   - `fromDate <= toDate`
   - `size <= 100`
@@ -222,6 +238,39 @@ Exemplo de consulta de histórico:
 ```http
 GET /api/v1/goatfarms/1/inventory/movements?type=OUT&fromDate=2026-02-01&toDate=2026-02-28&page=0&size=20
 ```
+
+### Inventory (entrada por compra)
+Para `POST /api/v1/goatfarms/{farmId}/inventory/movements`, uma compra usa `type=IN` e a seguinte composição:
+
+```json
+{
+  "type": "IN",
+  "quantity": 32.143,
+  "itemId": 101,
+  "movementDate": "2026-08-01",
+  "unitCost": 112.0000,
+  "freightCost": 45.50,
+  "discountAmount": 12.25,
+  "purchaseDate": "2026-08-01",
+  "supplierName": "Durrancho"
+}
+```
+
+Resposta financeira calculada pelo servidor:
+
+```json
+{
+  "unitCost": 112.0000,
+  "subtotalCost": 3600.02,
+  "freightCost": 45.50,
+  "discountAmount": 12.25,
+  "totalCost": 3633.27
+}
+```
+
+- O cliente novo não precisa enviar `totalCost`.
+- Se um cliente legado enviar `unitCost` e `totalCost`, o servidor valida a fórmula completa.
+- Se enviar apenas `totalCost`, o servidor deriva o custo unitário das mercadorias, considerando frete e desconto.
 
 ## Erros/Status
 ### Estrutura de erro padrão
@@ -253,6 +302,7 @@ Erros seguem estrutura `ValidationError`:
 | `409 Conflict` | `DuplicateEntityException`, `DataIntegrityViolationException` |
 | `415 Unsupported Media Type` | content type não suportado |
 | `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean |
+| `503 Service Unavailable` | consulta ABCC indisponível ou insuficiente para validação obrigatória |
 | `500 Internal Server Error` | erro não tratado |
 
 ## Referências internas

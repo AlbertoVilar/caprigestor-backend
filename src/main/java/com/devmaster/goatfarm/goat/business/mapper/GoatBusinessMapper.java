@@ -10,9 +10,9 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface GoatBusinessMapper {
     @Mapping(target = "fatherName", source = "father.name")
-    @Mapping(target = "fatherRegistrationNumber", source = "father.registrationNumber")
+    @Mapping(target = "fatherRegistrationNumber", expression = "java(entity.getFather() != null ? entity.getFather().getRegistrationNumber() : entity.getExternalFatherRegistrationNumber())")
     @Mapping(target = "motherName", source = "mother.name")
-    @Mapping(target = "motherRegistrationNumber", source = "mother.registrationNumber")
+    @Mapping(target = "motherRegistrationNumber", expression = "java(entity.getMother() != null ? entity.getMother().getRegistrationNumber() : entity.getExternalMotherRegistrationNumber())")
     @Mapping(target = "userName", source = "user.name")
     @Mapping(target = "farmId", source = "farm.id")
     @Mapping(target = "farmName", source = "farm.name")
@@ -22,6 +22,8 @@ public interface GoatBusinessMapper {
     @Mapping(target = "farm", ignore = true)
     @Mapping(target = "father", ignore = true)
     @Mapping(target = "mother", ignore = true)
+    @Mapping(target = "externalFatherRegistrationNumber", ignore = true)
+    @Mapping(target = "externalMotherRegistrationNumber", ignore = true)
     Goat toEntity(GoatRequestVO vo);
 
     @Mapping(target = "registrationNumber", ignore = true)
@@ -41,5 +43,7 @@ public interface GoatBusinessMapper {
     @Mapping(target = "category", source = "vo.category")
     @Mapping(target = "father", source = "father")
     @Mapping(target = "mother", source = "mother")
+    @Mapping(target = "externalFatherRegistrationNumber", ignore = true)
+    @Mapping(target = "externalMotherRegistrationNumber", ignore = true)
     void updateEntity(@MappingTarget Goat entity, GoatRequestVO vo, Goat father, Goat mother);
 }

@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.genealogy.business.bo;
 
+import com.devmaster.goatfarm.goat.enums.Gender;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,6 +19,7 @@ public class GenealogyAbccSnapshotVO {
 
     private String animalName;
     private String animalRegistrationNumber;
+    private Gender animalGender;
 
     private String fatherName;
     private String fatherRegistrationNumber;

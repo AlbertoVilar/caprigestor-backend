@@ -3,6 +3,8 @@ Ultima atualizacao: 2026-02-10
 Escopo: entidades centrais, regras de negocio e requisitos nao funcionais do backend.
 Links relacionados: [Portal](../INDEX.md), [Glossario](./DOMAIN_GLOSSARY.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md)
 
+Atualizado em 2026-09-04 para registrar as regras de referências genealógicas locais e externas.
+
 ## Visao geral
 O sistema modela operacao de caprinos por fazenda, com foco em ownership, rastreabilidade de eventos e contratos estaveis entre modulos.
 
@@ -14,7 +16,8 @@ O sistema modela operacao de caprinos por fazenda, com foco em ownership, rastre
   - relaciona dados de contato e animais.
 - `Goat`:
   - identifica animal por `registrationNumber`.
-  - mantem referencia de genealogia (`father`, `mother`).
+  - mantém referência genealógica local (`father`, `mother`) ou referência
+    externa declarada pelos RGs de pai e mãe.
   - pertence a uma fazenda.
 - `User` / `Authority`:
   - controla autenticacao/autorizacao.
@@ -36,6 +39,27 @@ O sistema modela operacao de caprinos por fazenda, com foco em ownership, rastre
 - Unicidade de registro do animal por identificador de negocio.
 - Unicidade operacional em pontos sensiveis (ex.: producao por data+turno).
 - Fronteiras entre modulos sao protegidas por portas e contratos de shared kernel.
+
+### Referência genealógica de pai e mãe
+- A mesma política é aplicada no cadastro manual de animal e no cadastro de cria
+  durante a comunicação de parto. A reprodução delega a criação da cria ao
+  módulo Goat; não existe uma regra paralela de resolução de genitor.
+- A referência de um genitor pode ser:
+  - `LOCAL`: um `Goat` já cadastrado, inclusive em outra fazenda;
+  - `ABCC`: RG encontrado e validado na consulta pública, persistido somente
+    como referência externa;
+  - `DECLARADO`: RG informado para animal `PA` que não foi localizado; ou
+  - ausente, quando a categoria permitir.
+- `PO` e `PC` exigem pai e mãe com referência genealógica identificável. `PA`
+  pode ser registrada sem genitor conhecido e pode preservar um RG declarado
+  que não foi localizado.
+- Pai conhecido deve ser `MACHO`; mãe conhecida deve ser `FEMEA`. O próprio
+  animal não pode ser indicado como seu genitor.
+- Uma referência externa não cria um `Goat`, não transfere ownership, não
+  concede autorização entre fazendas e não altera o rebanho da fazenda de
+  origem do genitor.
+- A árvore continua uma projeção sob demanda. O domínio persiste somente a FK
+  local ou o RG externo, nunca uma cópia de ancestrais da ABCC.
 
 ## Fluxos principais
 1. Cadastro e manutencao de rebanho:

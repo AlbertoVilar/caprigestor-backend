@@ -122,25 +122,39 @@ Todos os endpoints farm-level do módulo seguem:
 ## Observações
 - Não houve criação de módulo paralelo de lotes fora de `inventory`.
 - O fluxo de lotes foi encaixado na arquitetura já existente: controller -> port in -> business -> port out -> adapter/repository.
-- A correção de Flyway é de integridade de versionamento; ela não altera o comportamento funcional do Bloco 3.`r`n`r`n## Atualizacao 2026-03-28 - custo de compra na entrada
-O modulo `inventory` passou a aceitar metadados economicos em movimentos `IN` que representem compra operacional.
+- A correção de Flyway é de integridade de versionamento; ela não altera o comportamento funcional do Bloco 3.
+
+## Atualização 2026-08-09 — composição do custo de compra
+O módulo `inventory` aceita metadados econômicos em movimentos `IN` que representem compra operacional.
 
 Campos suportados na entrada por compra:
-- `unitCost`
-- `totalCost`
-- `purchaseDate`
+- `unitCost`: custo unitário exclusivo das mercadorias, com até quatro casas decimais;
+- `freightCost`: frete vinculado à compra, com duas casas decimais;
+- `discountAmount`: desconto da compra, com duas casas decimais;
+- `totalCost`: total final, calculado pelo backend;
+- `purchaseDate`;
 - `supplierName` opcional
 - `reason` opcional
 
+Fórmula oficial:
+
+```text
+subtotalCost = round(quantity × unitCost, 2)
+totalCost = subtotalCost + freightCost - discountAmount
+```
+
 Regras adicionais:
-- custo de compra so pode ser informado em `IN`;
-- `purchaseDate` e obrigatoria quando houver custo;
-- `unitCost` e `totalCost` devem ser positivos;
-- quando ambos forem informados, a consistencia com `quantity` e validada;
-- quando apenas um deles for informado, o outro pode ser derivado no backend;
-- movimentos continuam imutaveis apos gravacao.
+- custo de compra só pode ser informado em `IN`;
+- `purchaseDate` é obrigatória quando houver custo;
+- `unitCost` e o total final devem ser maiores que zero;
+- frete e desconto não podem ser negativos;
+- o desconto deve ser menor que `subtotalCost + freightCost`;
+- o backend é a autoridade do cálculo e da persistência;
+- o frontend exibe o total apenas como valor derivado e não o envia em comandos novos;
+- payloads legados que enviam `totalCost` continuam aceitos e são validados;
+- compras antigas recebem frete e desconto iguais a zero na migração V35;
+- movimentos continuam imutáveis após gravação.
 
 Limites conscientes:
-- esta etapa nao implementa custo medio, FIFO ou valuation contabil;
+- esta etapa não implementa custo médio, FIFO ou valuation contábil;
 - o custo registrado serve ao controle operacional e ao resumo mensal simples da fazenda.
-

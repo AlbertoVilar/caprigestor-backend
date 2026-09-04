@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.exceptions;
 
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
@@ -34,6 +35,17 @@ public class GlobalExceptionHandler {
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
         String field = e.getFieldName() != null ? e.getFieldName() : "business_error";
         err.addError(field, e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<ValidationError> externalServiceUnavailable(
+            ExternalServiceUnavailableException e,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.SERVICE_UNAVAILABLE;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), "Serviço externo indisponível", request.getRequestURI());
+        err.addError("abcc", e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
 

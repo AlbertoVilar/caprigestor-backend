@@ -98,6 +98,44 @@ class InventoryMovementQueryPersistenceAdapterIntegrationTest {
         });
     }
 
+    @Test
+    void listMovements_shouldReturnPurchaseCostBreakdown() {
+        Long farmId = 53L;
+        InventoryItemEntity item = persistItem(farmId, "Ração", false);
+        InventoryMovementEntity movement = new InventoryMovementEntity();
+        movement.setFarmId(farmId);
+        movement.setItemId(item.getId());
+        movement.setType(InventoryMovementType.IN);
+        movement.setQuantity(new BigDecimal("10.000"));
+        movement.setMovementDate(LocalDate.of(2026, 8, 1));
+        movement.setResultingBalance(new BigDecimal("10.000"));
+        movement.setUnitCost(new BigDecimal("18.5000"));
+        movement.setFreightCost(new BigDecimal("25.00"));
+        movement.setDiscountAmount(new BigDecimal("10.00"));
+        movement.setTotalCost(new BigDecimal("200.00"));
+        movement.setPurchaseDate(LocalDate.of(2026, 8, 1));
+        movement.setSupplierName("Casa do Campo");
+        movement.setCreatedAt(OffsetDateTime.parse("2026-08-01T12:00:00Z"));
+        movementRepository.save(movement);
+
+        var page = adapter.listMovements(new InventoryMovementFilterVO(
+                farmId,
+                null,
+                null,
+                InventoryMovementType.IN,
+                null,
+                null,
+                PageRequest.of(0, 20)
+        ));
+
+        assertThat(page.getContent()).singleElement().satisfies(entry -> {
+            assertThat(entry.subtotalCost()).isEqualByComparingTo("185.00");
+            assertThat(entry.freightCost()).isEqualByComparingTo("25.00");
+            assertThat(entry.discountAmount()).isEqualByComparingTo("10.00");
+            assertThat(entry.totalCost()).isEqualByComparingTo("200.00");
+        });
+    }
+
     private InventoryItemEntity persistItem(Long farmId, String name, boolean trackLot) {
         InventoryItemEntity item = new InventoryItemEntity();
         item.setFarmId(farmId);

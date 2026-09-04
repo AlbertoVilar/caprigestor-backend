@@ -20,6 +20,8 @@ public record InventoryMovementQueryRow(
         BigDecimal resultingBalance,
         BigDecimal unitCost,
         BigDecimal totalCost,
+        BigDecimal freightCost,
+        BigDecimal discountAmount,
         LocalDate purchaseDate,
         String supplierName,
         OffsetDateTime createdAt
