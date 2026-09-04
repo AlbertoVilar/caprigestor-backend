@@ -64,6 +64,12 @@ public class InventoryMovementEntity {
     @Column(name = "total_cost", precision = 14, scale = 2)
     private BigDecimal totalCost;
 
+    @Column(name = "freight_cost", precision = 14, scale = 2)
+    private BigDecimal freightCost;
+
+    @Column(name = "discount_amount", precision = 14, scale = 2)
+    private BigDecimal discountAmount;
+
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
 
