@@ -3,6 +3,8 @@ Ultima atualizacao: 2026-03-28
 Escopo: cobertura, diagnostico, acompanhamento, alertas e encerramento de gestacoes.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
+Atualizado em 2026-09-04 para o caso de uso de parto com referências genealógicas.
+
 ## Visao geral
 O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente.
 
@@ -27,6 +29,22 @@ O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status
 - Fluxos de gestacao seguem estado de dominio (ativa, encerrada, motivo de encerramento).
 - Integracao com `milk` ocorre por shared kernel (snapshot de prenhez), sem acoplamento direto de entidades.
 - As rotas deste modulo sao publicadas exclusivamente em `/api/v1/...`.
+
+## Caso de uso: comunicar parto e cadastrar cria
+
+- O comando de parto recebe as crias, encerra a gestação ativa com motivo
+  `BIRTH` e cria cada animal pelo contrato de criação do módulo Goat.
+- A matriz do path é sempre a mãe local da cria. O registro do pai é opcional
+  para `PA` e obrigatório para ao menos uma cria `PO` ou `PC` no mesmo parto.
+- A validação e a persistência do pai e da mãe não são duplicadas neste módulo:
+  o módulo Goat aplica a política de referências genealógicas compartilhada.
+- Um pai pode ser um `Goat` local de outra fazenda, um RG validado pela ABCC ou,
+  no caso de `PA`, um RG externo declarado não localizado. Isso não altera
+  ownership nem concede permissão sobre a fazenda do reprodutor.
+- Sexo incompatível, autorreferência e genitor não identificável para `PO` ou
+  `PC` retornam `422`. Indisponibilidade ABCC durante validação retorna `503`.
+- A genealogia da cria continua projetada sob demanda; o parto não cria animal
+  fictício nem persiste uma árvore externa.
 
 ## Endpoints
 ### Escopo por cabra
@@ -129,6 +147,7 @@ GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=20
 - `403`: ownership/perfil insuficiente.
 - `404`: recurso de reproducao nao encontrado.
 - `422`: regra de negocio violada (transicao de estado, consistencia de datas, diagnostico antes de 60 dias etc.).
+- `503`: serviço ABCC indisponível durante validação genealógica obrigatória.
 - Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
 ## Referencias internas

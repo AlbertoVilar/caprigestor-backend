@@ -948,13 +948,10 @@ class ReproductionBusinessTest {
         Long pregnancyId = 10L;
         BirthRequestVO requestVO = validBirthRequestVO();
         Pregnancy activePregnancy = activePregnancyEntity();
-        Goat father = fatherGoatEntity();
         GoatResponseVO createdKid = createdKidResponse("KID-001");
 
         when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(activePregnancy));
-        when(goatPersistencePort.findByIdAndFarmId(father.getRegistrationNumber(), FARM_ID))
-                .thenReturn(Optional.of(father));
         when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class)))
                 .thenReturn(createdKid);
         when(reproductionBusinessMapper.toBirthKidResponseVO(createdKid))
@@ -979,13 +976,15 @@ class ReproductionBusinessTest {
 
         GoatRequestVO createdKidRequest = goatRequestCaptor.getValue();
         assertThat(createdKidRequest.getMotherRegistrationNumber()).isEqualTo(GOAT_ID);
-        assertThat(createdKidRequest.getFatherRegistrationNumber()).isEqualTo(father.getRegistrationNumber());
+        assertThat(createdKidRequest.getFatherRegistrationNumber()).isEqualTo(requestVO.getFatherRegistrationNumber());
+        assertThat(createdKidRequest.getCategory()).isEqualTo(com.devmaster.goatfarm.goat.enums.Category.PA);
         assertThat(createdKidRequest.getBirthDate()).isEqualTo(requestVO.getBirthDate());
         assertThat(createdKidRequest.getRegistrationNumber()).isEqualTo("KID-001");
 
         assertThat(result.getKids()).hasSize(1);
         verify(pregnancyPersistencePort).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
+        verifyNoInteractions(goatPersistencePort);
     }
 
     @Test
@@ -1028,24 +1027,6 @@ class ReproductionBusinessTest {
 
         verify(goatManagementUseCase, org.mockito.Mockito.times(2)).createGoat(eq(FARM_ID), any(GoatRequestVO.class));
         assertThat(result.getKids()).hasSize(2);
-    }
-
-    @Test
-    void registerBirth_shouldRejectWhenFatherIsNotLocal() {
-        Long pregnancyId = 10L;
-        BirthRequestVO requestVO = validBirthRequestVO();
-
-        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
-                .thenReturn(Optional.of(activePregnancyEntity()));
-        when(goatPersistencePort.findByIdAndFarmId("SIRE-001", FARM_ID))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, pregnancyId, requestVO))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Pai local nao encontrado");
-
-        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class));
-        verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
     }
 
     // ==================================================================================
