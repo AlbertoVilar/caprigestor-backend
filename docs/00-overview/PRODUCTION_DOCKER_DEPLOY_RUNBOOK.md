@@ -26,19 +26,18 @@ Executar o primeiro cutover real do CapriGestor com:
 
 ## Artefatos deste pacote
 
-- [Dockerfile](C:\Dev\GoatFarm\Dockerfile)
-- [docker-compose.prod.yml](C:\Dev\GoatFarm\docker\docker-compose.prod.yml)
-- [.env.prod.example](C:\Dev\GoatFarm\docker\.env.prod.example)
-- [caprigestor.app.conf.example](C:\Dev\GoatFarm\docker\caprigestor.app.conf.example)
+- [Dockerfile](../../Dockerfile)
+- [docker-compose.prod.yml](../../docker/docker-compose.prod.yml)
+- [.env.prod.example](../../docker/.env.prod.example)
+- [caprigestor.app.conf.example](../../docker/caprigestor.app.conf.example)
 - frontend:
-  - [Dockerfile](C:\Dev\frontend\capril-vilar-react\capril-vilar\Dockerfile)
-  - [nginx.conf](C:\Dev\frontend\capril-vilar-react\capril-vilar\nginx.conf)
+  - `Dockerfile` e `nginx.conf` do repositório frontend correspondente
 - base:
-  - [PRODUCTION_BASE_SANITIZATION_RUNBOOK.md](C:\Dev\GoatFarm\docs\00-overview\PRODUCTION_BASE_SANITIZATION_RUNBOOK.md)
-  - [PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md](C:\Dev\GoatFarm\docs\00-overview\PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md)
+  - [PRODUCTION_BASE_SANITIZATION_RUNBOOK.md](PRODUCTION_BASE_SANITIZATION_RUNBOOK.md)
+  - [PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md](PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md)
 - scripts:
-  - [production-db-integrity-check.sql](C:\Dev\GoatFarm\scripts\production-db-integrity-check.sql)
-  - [production-cutover-smoke.ps1](C:\Dev\GoatFarm\scripts\production-cutover-smoke.ps1)
+  - [production-db-integrity-check.sql](../../scripts/production-db-integrity-check.sql)
+  - [production-cutover-smoke.ps1](../../scripts/production-cutover-smoke.ps1)
 
 ## O que vai para o registry
 
@@ -61,7 +60,7 @@ Nao vai:
 ### Backend
 
 ```bash
-docker build -t seu-usuario/caprigestor-backend:2026-03-31 C:/Dev/GoatFarm
+docker build -t seu-usuario/caprigestor-backend:2026-03-31 .
 docker push seu-usuario/caprigestor-backend:2026-03-31
 ```
 
@@ -71,7 +70,7 @@ docker push seu-usuario/caprigestor-backend:2026-03-31
 docker build ^
   --build-arg VITE_API_BASE_URL=https://app.seu-dominio.com ^
   -t seu-usuario/caprigestor-frontend:2026-03-31 ^
-  C:/Dev/frontend/capril-vilar-react/capril-vilar
+  .
 
 docker push seu-usuario/caprigestor-frontend:2026-03-31
 ```
@@ -126,6 +125,11 @@ Preencher, no minimo:
 - `CAPRIGESTOR_BOOTSTRAP_ADMIN_ENABLED=false`
 - `CAPRIGESTOR_BOOTSTRAP_ADMIN_RESET_PASSWORD=false`
 - `CAPRIGESTOR_MESSAGING_ENABLED=false`
+
+O bootstrap administrativo fica desabilitado por padrão em todos os perfis.
+Caso seja indispensável usá-lo em um ambiente controlado, habilite-o
+explicitamente e forneça todas as variáveis `CAPRIGESTOR_BOOTSTRAP_ADMIN_*`
+fora do repositório. Nunca use dados pessoais ou senhas como valores padrão.
 
 ## Promocao da base saneada
 
