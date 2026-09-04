@@ -13,6 +13,7 @@ import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
@@ -432,12 +433,18 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             throw new InvalidArgumentException("birthDate", "Data do parto nao pode ser anterior a data de cobertura");
         }
 
-        Goat father = resolveLocalFather(farmId, goatId, vo.getFatherRegistrationNumber());
         ensureDistinctKidRegistrations(vo.getKids());
 
         List<BirthKidResponseVO> createdKids = new ArrayList<>();
         for (BirthKidRequestVO kid : vo.getKids()) {
-            GoatRequestVO kidRequest = buildKidRequestVO(farmId, goatId, mother, father, vo.getBirthDate(), kid);
+            GoatRequestVO kidRequest = buildKidRequestVO(
+                    farmId,
+                    goatId,
+                    mother,
+                    vo.getFatherRegistrationNumber(),
+                    vo.getBirthDate(),
+                    kid
+            );
             GoatResponseVO savedKid = goatManagementUseCase.createGoat(farmId, kidRequest);
             createdKids.add(reproductionBusinessMapper.toBirthKidResponseVO(savedKid));
         }
@@ -690,28 +697,10 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
     }
 
-    private Goat resolveLocalFather(Long farmId, String motherGoatId, String fatherRegistrationNumber) {
-        String normalizedFatherRegistration = normalizeRegistration(fatherRegistrationNumber);
-        if (normalizedFatherRegistration == null) {
-            return null;
-        }
-
-        Goat father = goatPersistencePort.findByIdAndFarmId(normalizedFatherRegistration, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pai local nao encontrado para o registro informado: " + normalizedFatherRegistration));
-
-        if (motherGoatId.equals(father.getRegistrationNumber())) {
-            throw new InvalidArgumentException("fatherRegistrationNumber", "Pai nao pode ser o mesmo animal da matriz");
-        }
-        if (father.getGender() != Gender.MACHO) {
-            throw new BusinessRuleException("fatherRegistrationNumber", "O pai informado deve ser um animal MACHO");
-        }
-        return father;
-    }
-
     private GoatRequestVO buildKidRequestVO(Long farmId,
                                             String motherGoatId,
                                             Goat mother,
-                                            Goat father,
+                                            String fatherRegistrationNumber,
                                             LocalDate defaultBirthDate,
                                             BirthKidRequestVO kid) {
         String kidRegistration = normalizeRegistration(kid.getRegistrationNumber());
@@ -749,8 +738,8 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .status(GoatStatus.ATIVO)
                 .tod(mother.getTod())
                 .toe(mother.getToe())
-                .category(kid.getCategory())
-                .fatherRegistrationNumber(father != null ? father.getRegistrationNumber() : null)
+                .category(kid.getCategory() != null ? kid.getCategory() : Category.PA)
+                .fatherRegistrationNumber(normalizeRegistration(fatherRegistrationNumber))
                 .motherRegistrationNumber(motherGoatId)
                 .farmId(farmId)
                 .build();

@@ -3,6 +3,8 @@
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
+Atualizado em 2026-09-04 para os contratos de referências genealógicas externas.
+
 ## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
 
@@ -71,6 +73,20 @@ Genealogia complementar ABCC:
 - Não aplica regra patrimonial de TOD da importação ABCC.
 - Lookup principal por `registrationNumber`, sem fallback por nome.
 - Status de integração: `FOUND`, `NOT_FOUND`, `UNAVAILABLE`, `INSUFFICIENT_DATA`.
+
+Referências genealógicas em comandos de criação:
+- `fatherRegistrationNumber` e `motherRegistrationNumber` são resolvidos pela
+  mesma política em `POST /goats`, atualizações de animal e criação de cria no
+  parto.
+- `PO` e `PC` exigem pai e mãe identificáveis localmente ou por consulta ABCC.
+  `PA` permite ausência e RG externo declarado não localizado.
+- Pai e mãe identificados devem ter, respectivamente, sexo `MACHO` e `FEMEA`.
+  O RG do próprio animal não pode ser usado como genitor.
+- Referência de outra fazenda é apenas genealógica: não altera ownership,
+  permissões ou o escopo da rota.
+- A API persiste uma FK local ou o RG externo, nunca uma árvore da ABCC. A
+  resposta de genealogia pode sinalizar origem `LOCAL`, `ABCC`, `DECLARADO` ou
+  `AUSENTE`.
 
 
 ### Reproduction (gestação e alertas)
@@ -253,6 +269,7 @@ Erros seguem estrutura `ValidationError`:
 | `409 Conflict` | `DuplicateEntityException`, `DataIntegrityViolationException` |
 | `415 Unsupported Media Type` | content type não suportado |
 | `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean |
+| `503 Service Unavailable` | consulta ABCC indisponível ou insuficiente para validação obrigatória |
 | `500 Internal Server Error` | erro não tratado |
 
 ## Referências internas

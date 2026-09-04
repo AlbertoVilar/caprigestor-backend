@@ -75,6 +75,12 @@ public class Goat {
         @JoinColumn(name = "mae_num_registro", referencedColumnName = "num_registro")
         private Goat mother;
 
+        @Column(name = "pai_rg_externo", length = 20)
+        private String externalFatherRegistrationNumber;
+
+        @Column(name = "mae_rg_externo", length = 20)
+        private String externalMotherRegistrationNumber;
+
         @ManyToOne
     @JoinColumn(name = "usuario_id")
     @JsonBackReference
@@ -131,6 +137,12 @@ public class Goat {
     
     public Goat getMother() { return mother; }
     public void setMother(Goat mother) { this.mother = mother; }
+
+    public String getExternalFatherRegistrationNumber() { return externalFatherRegistrationNumber; }
+    public void setExternalFatherRegistrationNumber(String externalFatherRegistrationNumber) { this.externalFatherRegistrationNumber = externalFatherRegistrationNumber; }
+
+    public String getExternalMotherRegistrationNumber() { return externalMotherRegistrationNumber; }
+    public void setExternalMotherRegistrationNumber(String externalMotherRegistrationNumber) { this.externalMotherRegistrationNumber = externalMotherRegistrationNumber; }
     
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

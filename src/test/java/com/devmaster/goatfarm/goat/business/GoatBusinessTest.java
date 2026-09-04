@@ -49,6 +49,7 @@ public class GoatBusinessTest {
     @Mock private GoatBusinessMapper goatBusinessMapper;
     @Mock private EntityFinder entityFinder;
     @Mock private OperationalAuditUseCase operationalAuditUseCase;
+    @Mock private GenealogicalParentageService genealogicalParentageService;
 
     private GoatBusiness goatBusiness;
 
@@ -60,7 +61,9 @@ public class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatBusinessMapper, entityFinder, operationalAuditUseCase);
+        goatBusiness = new GoatBusiness(goatPort, goatFarmPort, ownershipService, goatBusinessMapper, entityFinder, operationalAuditUseCase, genealogicalParentageService);
+        lenient().when(genealogicalParentageService.resolve(any(), any(), any(), any()))
+                .thenReturn(new GenealogicalParentageService.ResolvedParentage(null, null, null, null));
 
         // Configure default EntityFinder behavior
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
@@ -153,7 +156,7 @@ public class GoatBusinessTest {
         verify(ownershipService, times(1)).verifyFarmOwnership(1L);
         verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
         verify(goatFarmPort, times(1)).findById(1L);
-        verify(goatPort, never()).findByRegistrationNumber(any());
+        verify(genealogicalParentageService).resolve(Category.PO, "164322002", null, null);
         verify(goatBusinessMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));
@@ -188,8 +191,8 @@ public class GoatBusinessTest {
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
         when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(goatFarm));
-        when(goatPort.findByRegistrationNumber("164321001")).thenReturn(Optional.of(fatherGoat));
-        when(goatPort.findByRegistrationNumber("164321002")).thenReturn(Optional.of(motherGoat));
+        when(genealogicalParentageService.resolve(Category.PO, "164322002", "164321001", "164321002"))
+                .thenReturn(new GenealogicalParentageService.ResolvedParentage(fatherGoat, motherGoat, null, null));
         when(goatBusinessMapper.toEntity(requestVO)).thenReturn(goat);
         when(ownershipService.getCurrentUser()).thenReturn(currentUser);
         when(goatPort.save(any(Goat.class))).thenReturn(goat);
@@ -207,8 +210,7 @@ public class GoatBusinessTest {
         verify(ownershipService, times(1)).verifyFarmOwnership(1L);
         verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
         verify(goatFarmPort, times(1)).findById(1L);
-        verify(goatPort, times(1)).findByRegistrationNumber("164321001"); // Pai
-        verify(goatPort, times(1)).findByRegistrationNumber("164321002"); // Mãe
+        verify(genealogicalParentageService).resolve(Category.PO, "164322002", "164321001", "164321002");
         verify(goatBusinessMapper, times(1)).toEntity(requestVO);
         verify(ownershipService, times(1)).getCurrentUser();
         verify(goatPort, times(1)).save(any(Goat.class));

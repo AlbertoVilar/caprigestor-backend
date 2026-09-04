@@ -38,7 +38,7 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (isBlank(goat.getRegistrationNumber())) {
-            return buildResponse(goat, null, integration("INSUFFICIENT_DATA",
+            return buildResponse(goat, null, null, null, integration("INSUFFICIENT_DATA",
                     "Registro do animal ausente ou inválido para consulta complementar na ABCC."));
         }
 
@@ -48,14 +48,19 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
             );
 
             if (abccSnapshot.isEmpty()) {
-                return buildResponse(goat, null, integration("NOT_FOUND",
-                        "Não foi possível localizar genealogia complementar na ABCC para este registro."));
+                return buildResponse(
+                        goat,
+                        null,
+                        findExternalParentSnapshot(goat.getExternalFatherRegistrationNumber()),
+                        findExternalParentSnapshot(goat.getExternalMotherRegistrationNumber()),
+                        integration("NOT_FOUND", "Não foi possível localizar genealogia complementar na ABCC para este registro.")
+                );
             }
 
-            return buildResponse(goat, abccSnapshot.get(), integration("FOUND",
+            return buildResponse(goat, abccSnapshot.get(), null, null, integration("FOUND",
                     "Genealogia complementar ABCC carregada com sucesso."));
         } catch (RuntimeException ex) {
-            return buildResponse(goat, null, integration("UNAVAILABLE",
+            return buildResponse(goat, null, null, null, integration("UNAVAILABLE",
                     "Não foi possível consultar a ABCC no momento. Exibindo apenas a genealogia local."));
         }
     }
@@ -63,6 +68,8 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
     private GenealogyComplementaryResponseVO buildResponse(
             Goat root,
             GenealogyAbccSnapshotVO abcc,
+            GenealogyAbccSnapshotVO externalFather,
+            GenealogyAbccSnapshotVO externalMother,
             GenealogyComplementaryIntegrationVO integration
     ) {
         Goat paiLocal = root.getFather();
@@ -75,8 +82,14 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
         return GenealogyComplementaryResponseVO.builder()
                 .animalPrincipal(buildNode("animalPrincipal", root, abcc != null ? abcc.getAnimalName() : null, abcc != null ? abcc.getAnimalRegistrationNumber() : null))
-                .pai(buildNode("pai", paiLocal, abcc != null ? abcc.getFatherName() : null, abcc != null ? abcc.getFatherRegistrationNumber() : null))
-                .mae(buildNode("mae", maeLocal, abcc != null ? abcc.getMotherName() : null, abcc != null ? abcc.getMotherRegistrationNumber() : null))
+                .pai(buildNode("pai", paiLocal,
+                        abcc != null ? abcc.getFatherName() : externalFather != null ? externalFather.getAnimalName() : null,
+                        abcc != null ? abcc.getFatherRegistrationNumber() : externalFather != null ? externalFather.getAnimalRegistrationNumber() : root.getExternalFatherRegistrationNumber(),
+                        abcc == null && externalFather == null && !isBlank(root.getExternalFatherRegistrationNumber())))
+                .mae(buildNode("mae", maeLocal,
+                        abcc != null ? abcc.getMotherName() : externalMother != null ? externalMother.getAnimalName() : null,
+                        abcc != null ? abcc.getMotherRegistrationNumber() : externalMother != null ? externalMother.getAnimalRegistrationNumber() : root.getExternalMotherRegistrationNumber(),
+                        abcc == null && externalMother == null && !isBlank(root.getExternalMotherRegistrationNumber())))
                 .avoPaterno(buildNode("avoPaterno", avoPaternoLocal, abcc != null ? abcc.getPaternalGrandfatherName() : null, abcc != null ? abcc.getPaternalGrandfatherRegistrationNumber() : null))
                 .avoPaterna(buildNode("avoPaterna", avoPaternaLocal, abcc != null ? abcc.getPaternalGrandmotherName() : null, abcc != null ? abcc.getPaternalGrandmotherRegistrationNumber() : null))
                 .avoMaterno(buildNode("avoMaterno", avoMaternoLocal, abcc != null ? abcc.getMaternalGrandfatherName() : null, abcc != null ? abcc.getMaternalGrandfatherRegistrationNumber() : null))
@@ -99,6 +112,16 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
             String abccName,
             String abccRegistrationNumber
     ) {
+        return buildNode(relationship, localGoat, abccName, abccRegistrationNumber, false);
+    }
+
+    private GenealogyComplementaryNodeVO buildNode(
+            String relationship,
+            Goat localGoat,
+            String abccName,
+            String abccRegistrationNumber,
+            boolean declared
+    ) {
         if (localGoat != null) {
             return GenealogyComplementaryNodeVO.builder()
                     .relationship(relationship)
@@ -114,7 +137,7 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
                     .relationship(relationship)
                     .name(trimOrNull(abccName))
                     .registrationNumber(trimOrNull(abccRegistrationNumber))
-                    .source(GenealogyNodeSource.ABCC)
+                    .source(declared ? GenealogyNodeSource.DECLARADO : GenealogyNodeSource.ABCC)
                     .localGoatId(null)
                     .build();
         }
@@ -134,6 +157,17 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
                 .lookupKey(LOOKUP_KEY)
                 .message(message)
                 .build();
+    }
+
+    private GenealogyAbccSnapshotVO findExternalParentSnapshot(String registrationNumber) {
+        if (isBlank(registrationNumber)) {
+            return null;
+        }
+        try {
+            return genealogyAbccQueryPort.findGenealogyByRegistrationNumber(registrationNumber).orElse(null);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private boolean isBlank(String value) {
