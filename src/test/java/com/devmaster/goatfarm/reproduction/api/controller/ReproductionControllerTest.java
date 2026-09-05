@@ -24,6 +24,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,6 +55,14 @@ class ReproductionControllerTest {
 
     @MockBean
     private ReproductionMapper mapper;
+
+    @Test
+    void securityGuard_shouldUseFarmManagementPolicy() {
+        PreAuthorize guard = ReproductionController.class.getAnnotation(PreAuthorize.class);
+
+        assertThat(guard).isNotNull();
+        assertThat(guard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+    }
 
     @Test
     void getPregnancyById_shouldReturn200_whenPregnancyExists() throws Exception {
@@ -135,7 +145,7 @@ class ReproductionControllerTest {
         BirthResponseVO responseVO = BirthResponseVO.builder().build();
         BirthResponseDTO responseDTO = BirthResponseDTO.builder()
                 .pregnancy(PregnancyResponseDTO.builder().id(pregnancyId).build())
-                .kids(List.of(BirthKidResponseDTO.builder().registrationNumber("KID-001").build()))
+                .kids(List.of(BirthKidResponseDTO.builder().registrationNumber("1643200001").build()))
                 .build();
 
         when(mapper.toBirthRequestVO(any(BirthRequestDTO.class))).thenReturn(requestVO);
@@ -147,7 +157,7 @@ class ReproductionControllerTest {
                   "birthDate": "2026-03-10",
                   "kids": [
                     {
-                      "registrationNumber": "KID-001",
+                      "registrationNumber": "1643200001",
                       "name": "Cria 1",
                       "gender": "FEMEA",
                       "breed": "SAANEN"
@@ -162,7 +172,7 @@ class ReproductionControllerTest {
                         .content(payload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.pregnancy.id").value(pregnancyId))
-                .andExpect(jsonPath("$.kids[0].registrationNumber").value("KID-001"));
+                .andExpect(jsonPath("$.kids[0].registrationNumber").value("1643200001"));
     }
 
     @Test

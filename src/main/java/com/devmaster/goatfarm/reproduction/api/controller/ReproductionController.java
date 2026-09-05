@@ -25,7 +25,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction")
-@PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+@PreAuthorize("@ownershipService.canManageFarm(#farmId)")
 @Tag(
         name = "Reproduction API",
         description = "Gestão reprodutiva por cabra. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."

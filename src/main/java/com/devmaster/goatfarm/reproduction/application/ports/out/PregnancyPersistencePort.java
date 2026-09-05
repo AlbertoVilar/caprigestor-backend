@@ -19,4 +19,5 @@ public interface PregnancyPersistencePort {
     Optional<LocalDate> findLatestBirthCloseDate(Long farmId, String goatId);
     Page<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
     List<Pregnancy> findAllActiveByFarmIdAndGoatIdOrdered(Long farmId, String goatId);
+    Page<Pregnancy> findActiveWithDueDateOnOrBefore(Long farmId, LocalDate referenceDate, Pageable pageable);
 }
