@@ -64,6 +64,14 @@ Convenção principal:
 - `business`: regras de negócio e orquestração de casos de uso;
 - `persistence` / `infrastructure`: adaptadores, entidades, repositórios e integrações.
 
+```mermaid
+flowchart LR
+    API[API<br/>controllers e DTOs] --> APP[Application<br/>ports]
+    APP --> BUSINESS[Business<br/>casos de uso]
+    BUSINESS --> OUT[Output ports]
+    OUT --> INFRA[Infrastructure<br/>JPA e integrações]
+```
+
 Módulos com maior peso hoje:
 
 - `authority`
@@ -78,6 +86,26 @@ Módulos com maior peso hoje:
 - `audit`
 
 O repositório possui gates de arquitetura para evitar regressões de dependência entre camadas.
+
+## Modelo de Domínio
+
+O modelo parte da fazenda e preserva a rastreabilidade do animal ao longo dos
+fluxos operacionais principais.
+
+```mermaid
+classDiagram
+    User "1" --> "0..*" GoatFarm : administra
+    GoatFarm "1" --> "0..*" Goat : mantém
+    Goat "1" --> "0..*" Pregnancy : possui
+    Goat "1" --> "0..*" Lactation : produz
+    Goat "1" --> "0..*" HealthEvent : recebe
+    Pregnancy "1" --> "0..*" ReproductiveEvent : registra
+    Goat --> Goat : pai / mãe
+```
+
+O detalhamento de entidades, regras e contratos permanece no
+[Portal de Documentação](./docs/INDEX.md), para que o README continue útil como
+porta de entrada e não se torne uma cópia concorrente da documentação técnica.
 
 ## Stack Técnica
 
@@ -137,6 +165,14 @@ Serviços locais:
 O perfil `dev` é o padrão para desenvolvimento local. Nele, a mensageria fica
 desabilitada por padrão; habilite `CAPRIGESTOR_MESSAGING_ENABLED=true` somente
 quando precisar validar a integração assíncrona com RabbitMQ.
+
+### Perfis de execução
+
+| Perfil | Uso | Persistência | Mensageria |
+|---|---|---|---|
+| `dev` | desenvolvimento local | PostgreSQL | desabilitada por padrão |
+| `test` | suíte automatizada | cenários isolados e Testcontainers quando necessário | listeners desabilitados |
+| `prod` | implantação | PostgreSQL com schema validado pelo Flyway | desabilitada por padrão |
 
 ## Segurança
 
