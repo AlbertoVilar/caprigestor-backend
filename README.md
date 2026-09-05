@@ -19,7 +19,7 @@ Pontos fortes do projeto:
 - arquitetura hexagonal com portas e adaptadores;
 - segurança JWT com controle por perfil e por fazenda;
 - PostgreSQL + Flyway com histórico de evolução do schema;
-- mensageria RabbitMQ para eventos assíncronos;
+- integração opcional com RabbitMQ para eventos assíncronos;
 - suíte de testes com unit, integração, ArchUnit e Testcontainers;
 - documentação operacional e arquitetural mantida dentro do repositório.
 
@@ -64,6 +64,14 @@ Convenção principal:
 - `business`: regras de negócio e orquestração de casos de uso;
 - `persistence` / `infrastructure`: adaptadores, entidades, repositórios e integrações.
 
+```mermaid
+flowchart LR
+    API[API<br/>controllers e DTOs] --> APP[Application<br/>ports]
+    APP --> BUSINESS[Business<br/>casos de uso]
+    BUSINESS --> OUT[Output ports]
+    OUT --> INFRA[Infrastructure<br/>JPA e integrações]
+```
+
 Módulos com maior peso hoje:
 
 - `authority`
@@ -79,6 +87,26 @@ Módulos com maior peso hoje:
 
 O repositório possui gates de arquitetura para evitar regressões de dependência entre camadas.
 
+## Modelo de Domínio
+
+O modelo parte da fazenda e preserva a rastreabilidade do animal ao longo dos
+fluxos operacionais principais.
+
+```mermaid
+classDiagram
+    User "1" --> "0..*" GoatFarm : administra
+    GoatFarm "1" --> "0..*" Goat : mantém
+    Goat "1" --> "0..*" Pregnancy : possui
+    Goat "1" --> "0..*" Lactation : produz
+    Goat "1" --> "0..*" HealthEvent : recebe
+    Pregnancy "1" --> "0..*" ReproductiveEvent : registra
+    Goat --> Goat : pai / mãe
+```
+
+O detalhamento de entidades, regras e contratos permanece no
+[Portal de Documentação](./docs/INDEX.md), para que o README continue útil como
+porta de entrada e não se torne uma cópia concorrente da documentação técnica.
+
 ## Stack Técnica
 
 - Java 21
@@ -87,7 +115,7 @@ O repositório possui gates de arquitetura para evitar regressões de dependênc
 - Spring Data JPA
 - PostgreSQL
 - Flyway
-- RabbitMQ
+- RabbitMQ (opcional)
 - MapStruct
 - Lombok
 - Testcontainers
@@ -99,7 +127,7 @@ O repositório possui gates de arquitetura para evitar regressões de dependênc
 ### Pré-requisitos
 
 - Java 21
-- Docker e Docker Compose
+- Docker e Docker Compose (para subir a infraestrutura local pelo Compose)
 
 ### 1. Clonar o projeto
 
@@ -121,7 +149,7 @@ Serviços locais:
 - API base: `http://localhost:8080/api/v1`
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - PostgreSQL: `localhost:5432`
-- RabbitMQ UI: `http://localhost:15672`
+- RabbitMQ UI (opcional): `http://localhost:15672`
 - PgAdmin: `http://localhost:8081`
 
 ### 3. Iniciar o backend
@@ -134,7 +162,17 @@ Serviços locais:
 ./mvnw spring-boot:run
 ```
 
-O perfil `dev` é o padrão para desenvolvimento local.
+O perfil `dev` é o padrão para desenvolvimento local. Nele, a mensageria fica
+desabilitada por padrão; habilite `CAPRIGESTOR_MESSAGING_ENABLED=true` somente
+quando precisar validar a integração assíncrona com RabbitMQ.
+
+### Perfis de execução
+
+| Perfil | Uso | Persistência | Mensageria |
+|---|---|---|---|
+| `dev` | desenvolvimento local | PostgreSQL | desabilitada por padrão |
+| `test` | suíte automatizada | cenários isolados e Testcontainers quando necessário | listeners desabilitados |
+| `prod` | implantação | PostgreSQL com schema validado pelo Flyway | desabilitada por padrão |
 
 ## Segurança
 
@@ -152,14 +190,19 @@ Para detalhes de regras de acesso e ownership:
 ## Banco de Dados e Mensageria
 
 - schema versionado com Flyway em [`src/main/resources/db/migration`](./src/main/resources/db/migration);
-- PostgreSQL como banco principal em `dev`, `test` e `prod`;
+- PostgreSQL como banco principal em `dev` e `prod`;
 - Hibernate configurado para validar schema, não gerar schema automaticamente;
-- RabbitMQ usado para eventos assíncronos e desacoplamento operacional.
+- perfil de testes com cenários isolados e Testcontainers para os fluxos que
+  dependem de PostgreSQL;
+- RabbitMQ disponível para eventos assíncronos e desacoplamento operacional,
+  mas desabilitado por padrão em `dev` e `prod`. O indicador de health segue a
+  mesma configuração.
 
 Referências úteis:
 
 - [API Contracts](./docs/03-api/API_CONTRACTS.md)
 - [MVP Ready](./docs/00-overview/MVP_READY.md)
+- [Homologation Operation Runbook](./docs/00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
 - [Production Docker Deploy Runbook](./docs/00-overview/PRODUCTION_DOCKER_DEPLOY_RUNBOOK.md)
 
 ## Qualidade e Testes
@@ -176,7 +219,7 @@ Execução local:
 
 ```bash
 # Windows
-./mvnw.cmd test
+.\mvnw.cmd test
 
 # Linux / macOS
 ./mvnw test
@@ -185,6 +228,10 @@ Execução local:
 Comandos úteis:
 
 ```bash
+# Windows
+.\mvnw.cmd clean test
+
+# Linux / macOS
 ./mvnw clean test
 curl http://localhost:8080/actuator/health
 curl http://localhost:8080/actuator/health/liveness
