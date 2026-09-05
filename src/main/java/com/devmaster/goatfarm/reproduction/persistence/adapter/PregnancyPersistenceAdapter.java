@@ -73,4 +73,15 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     public List<Pregnancy> findAllActiveByFarmIdAndGoatIdOrdered(Long farmId, String goatId) {
         return pregnancyRepository.findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(farmId, goatId, PregnancyStatus.ACTIVE);
     }
+
+    @Override
+    public Page<Pregnancy> findActiveWithDueDateOnOrBefore(Long farmId, LocalDate referenceDate, Pageable pageable) {
+        return pregnancyRepository
+                .findByFarmIdAndStatusAndExpectedDueDateIsNotNullAndExpectedDueDateLessThanEqualOrderByExpectedDueDateAscIdAsc(
+                        farmId,
+                        PregnancyStatus.ACTIVE,
+                        referenceDate,
+                        pageable
+                );
+    }
 }

@@ -1,5 +1,5 @@
 # API_CONTRACTS
-Última atualização: 2026-08-07
+Última atualização: 2026-09-05
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -102,10 +102,23 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation?referenceDate=`
 - `GET /api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis?referenceDate=&page=&size=`
+- `GET /api/v1/goatfarms/{farmId}/reproduction/alerts/births-due?referenceDate=&page=&size=`
 
 Paginação atual:
 - Os endpoints `events` e `pregnancies` continuam retornando `Page` do Spring para preservar compatibilidade com o frontend já publicado.
-- O endpoint `pregnancy-diagnosis` retorna envelope agregado com `totalPending` e `alerts`.
+- Os endpoints `pregnancy-diagnosis` e `births-due` retornam envelope agregado
+  com `totalPending` e `alerts`; `page >= 0`, `size` entre 1 e 100, padrões 0/20.
+- Em `births-due`, cada item contém `pregnancyId`, `goatId`,
+  `expectedDueDate` e `daysOverdue`. São retornadas gestações ativas da fazenda
+  com previsão na referência ou anterior, ordenadas por previsão e ID crescentes.
+- Os controllers usam `canManageFarm`, incluindo operador vinculado; a criação
+  delegada ao Goat mantém sua própria exigência de proprietário/administrador.
+
+No comando de parto, `kids[].registrationNumber` deve conter 10 a 12 caracteres
+(números e uma letra final opcional), começando pelo TOD da fazenda de nascimento.
+`kids[].birthDate`, se informada, deve coincidir com `birthDate` do parto.
+Formato/data inválidos retornam `400`; inconsistência de TOD retorna `422`.
+Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-de-uso-comunicar-parto-e-cadastrar-cria).
 
 Exemplo de alerta pendente:
 

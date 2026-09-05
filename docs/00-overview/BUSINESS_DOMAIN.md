@@ -1,5 +1,5 @@
 ﻿# Dominio de Negocio - GoatFarm
-Ultima atualizacao: 2026-02-10
+Ultima atualizacao: 2026-09-05
 Escopo: entidades centrais, regras de negocio e requisitos nao funcionais do backend.
 Links relacionados: [Portal](../INDEX.md), [Glossario](./DOMAIN_GLOSSARY.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md)
 
@@ -60,6 +60,22 @@ O sistema modela operacao de caprinos por fazenda, com foco em ownership, rastre
   origem do genitor.
 - A árvore continua uma projeção sob demanda. O domínio persiste somente a FK
   local ou o RG externo, nunca uma cópia de ancestrais da ABCC.
+
+### Identidade da cria no parto
+
+- A cria usa o TOD cadastrado na fazenda de nascimento, com cinco dígitos,
+  inclusive quando a matriz tem TOD de outra origem. O RG deve começar com
+  esse TOD; o restante compõe o TOE próprio da cria, nunca o TOE da mãe.
+- O RG possui 10 a 12 caracteres: números e uma letra final opcional,
+  normalizada para maiúscula. Duplicatas no mesmo parto consideram essa
+  normalização.
+- A data de nascimento da cria deve coincidir com a data do parto; quando
+  omitida, recebe essa data.
+- Gestação ativa com previsão de parto na data de referência ou anterior
+  gera alerta consultável por fazenda; o vencimento não encerra a gestação
+  automaticamente.
+- Essas regras não mudam a política genealógica compartilhada nem as regras
+  de aquisição ou transferência de animais.
 
 ## Fluxos principais
 1. Cadastro e manutencao de rebanho:

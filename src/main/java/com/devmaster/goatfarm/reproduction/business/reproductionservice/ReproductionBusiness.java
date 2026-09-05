@@ -9,6 +9,8 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
@@ -31,6 +33,7 @@ import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCheckRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyCloseRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyConfirmRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
+import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDueAlertVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
@@ -57,15 +60,21 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class ReproductionBusiness implements ReproductionCommandUseCase, ReproductionQueryUseCase {
 
+    private static final Pattern BIRTH_REGISTRATION_PATTERN =
+            Pattern.compile("^(?=.{10,12}$)[0-9]+[A-Z]?$");
+
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
     private final GoatPersistencePort goatPersistencePort;
+    private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final GoatManagementUseCase goatManagementUseCase;
     private final GoatGenderValidator goatGenderValidator;
     private final ReproductionBusinessMapper reproductionBusinessMapper;
@@ -74,6 +83,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
                                 GoatPersistencePort goatPersistencePort,
+                                GoatFarmPersistencePort goatFarmPersistencePort,
                                 GoatManagementUseCase goatManagementUseCase,
                                 GoatGenderValidator goatGenderValidator,
                                 ReproductionBusinessMapper reproductionBusinessMapper,
@@ -81,6 +91,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
         this.goatPersistencePort = goatPersistencePort;
+        this.goatFarmPersistencePort = goatFarmPersistencePort;
         this.goatManagementUseCase = goatManagementUseCase;
         this.goatGenderValidator = goatGenderValidator;
         this.reproductionBusinessMapper = reproductionBusinessMapper;
@@ -416,6 +427,8 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             throw new InvalidArgumentException("kids", "E necessario informar ao menos uma cria");
         }
 
+        String birthFarmTod = resolveBirthFarmTod(farmId);
+
         Pregnancy pregnancy = pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestacao nao encontrada para o identificador informado: " + pregnancyId));
 
@@ -442,6 +455,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                     goatId,
                     mother,
                     vo.getFatherRegistrationNumber(),
+                    birthFarmTod,
                     vo.getBirthDate(),
                     kid
             );
@@ -620,6 +634,17 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .map(projection -> toPregnancyDiagnosisAlertVO(projection, reference));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PregnancyDueAlertVO> getPendingBirthAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
+        LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now(clock);
+        Pageable pageRequest = normalizeAlertsPageable(pageable);
+
+        return pregnancyPersistencePort
+                .findActiveWithDueDateOnOrBefore(farmId, reference, pageRequest)
+                .map(pregnancy -> toPregnancyDueAlertVO(pregnancy, reference));
+    }
+
     private DiagnosisRecommendationCoverageVO toCoverageVO(ReproductiveEvent coverage, LocalDate effectiveCoverageDate) {
         return DiagnosisRecommendationCoverageVO.builder()
                 .id(coverage.getId())
@@ -697,15 +722,47 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
     }
 
+    private PregnancyDueAlertVO toPregnancyDueAlertVO(Pregnancy pregnancy, LocalDate referenceDate) {
+        LocalDate expectedDueDate = pregnancy.getExpectedDueDate();
+        long overdueDays = Math.max(0L, ChronoUnit.DAYS.between(expectedDueDate, referenceDate));
+
+        return PregnancyDueAlertVO.builder()
+                .pregnancyId(pregnancy.getId())
+                .goatId(pregnancy.getGoatId())
+                .expectedDueDate(expectedDueDate)
+                .daysOverdue((int) overdueDays)
+                .build();
+    }
+
     private GoatRequestVO buildKidRequestVO(Long farmId,
                                             String motherGoatId,
                                             Goat mother,
                                             String fatherRegistrationNumber,
+                                            String birthFarmTod,
                                             LocalDate defaultBirthDate,
                                             BirthKidRequestVO kid) {
-        String kidRegistration = normalizeRegistration(kid.getRegistrationNumber());
+        String kidRegistration = normalizeBirthRegistration(kid.getRegistrationNumber());
         if (kidRegistration == null) {
             throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria e obrigatorio");
+        }
+        if (!BIRTH_REGISTRATION_PATTERN.matcher(kidRegistration).matches()) {
+            throw new InvalidArgumentException(
+                    "kids.registrationNumber",
+                    "Registro da cria deve ter entre 10 e 12 caracteres: numeros e, opcionalmente, uma letra final"
+            );
+        }
+        if (!kidRegistration.startsWith(birthFarmTod)) {
+            throw new BusinessRuleException(
+                    "kids.registrationNumber",
+                    "O registro da cria deve iniciar com o TOD da fazenda de nascimento: " + birthFarmTod
+            );
+        }
+        String kidToe = kidRegistration.substring(birthFarmTod.length());
+        if (kidToe.isEmpty()) {
+            throw new InvalidArgumentException(
+                    "kids.registrationNumber",
+                    "O registro da cria deve conter o TOE apos o TOD da fazenda"
+            );
         }
         String kidName = normalizeText(kid.getName());
         if (kidName == null) {
@@ -722,6 +779,12 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         if (kidBirthDate.isAfter(LocalDate.now(clock))) {
             throw new InvalidArgumentException("kids.birthDate", "Data de nascimento da cria nao pode ser futura");
         }
+        if (defaultBirthDate != null && !kidBirthDate.equals(defaultBirthDate)) {
+            throw new InvalidArgumentException(
+                    "kids.birthDate",
+                    "Data de nascimento da cria deve ser igual a data do parto"
+            );
+        }
 
         GoatBreed kidBreed = kid.getBreed() != null ? kid.getBreed() : mother.getBreed();
         if (kidBreed == null) {
@@ -736,8 +799,8 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .color(normalizeText(kid.getColor()))
                 .birthDate(kidBirthDate)
                 .status(GoatStatus.ATIVO)
-                .tod(mother.getTod())
-                .toe(mother.getToe())
+                .tod(birthFarmTod)
+                .toe(kidToe)
                 .category(kid.getCategory() != null ? kid.getCategory() : Category.PA)
                 .fatherRegistrationNumber(normalizeRegistration(fatherRegistrationNumber))
                 .motherRegistrationNumber(motherGoatId)
@@ -745,10 +808,27 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 .build();
     }
 
+    private String resolveBirthFarmTod(Long farmId) {
+        String farmTod = goatFarmPersistencePort.findById(farmId)
+                .map(GoatFarm::getTod)
+                .map(this::normalizeRegistration)
+                .orElseThrow(() -> new BusinessRuleException(
+                        "kids.registrationNumber",
+                        "Nao e possivel registrar cria: a fazenda de nascimento nao possui TOD cadastrado"
+                ));
+        if (!farmTod.matches("[0-9]{5}")) {
+            throw new BusinessRuleException(
+                    "kids.registrationNumber",
+                    "Nao e possivel registrar cria: o TOD da fazenda de nascimento deve conter 5 digitos"
+            );
+        }
+        return farmTod;
+    }
+
     private void ensureDistinctKidRegistrations(List<BirthKidRequestVO> kids) {
         Set<String> seen = new HashSet<>();
         for (BirthKidRequestVO kid : kids) {
-            String registration = normalizeRegistration(kid.getRegistrationNumber());
+            String registration = normalizeBirthRegistration(kid.getRegistrationNumber());
             if (registration == null) {
                 throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria e obrigatorio");
             }
@@ -756,6 +836,11 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
                 throw new BusinessRuleException("kids.registrationNumber", "Nao e permitido informar crias com registro duplicado no mesmo parto");
             }
         }
+    }
+
+    private String normalizeBirthRegistration(String registrationNumber) {
+        String normalized = normalizeRegistration(registrationNumber);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private String normalizeRegistration(String value) {
