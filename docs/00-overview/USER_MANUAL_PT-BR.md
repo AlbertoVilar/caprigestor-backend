@@ -1,6 +1,6 @@
 ﻿# Manual do Usuário — CapriGestor / GoatFarm
 
-Última atualização: 2026-03-29  
+Última atualização: 2026-08-07
 Escopo: guia funcional oficial do sistema para uso operacional no dia a dia da fazenda.  
 Idioma: Português (Brasil).  
 Links relacionados: [Portal](../INDEX.md), [Domínio](./BUSINESS_DOMAIN.md), [Runbook de Homologação](./HOMOLOGATION_OPERATION_RUNBOOK.md), [Playbook de Freeze e Piloto](./PILOT_FREEZE_PLAYBOOK.md)
@@ -31,11 +31,14 @@ O sistema foi desenhado para priorizar:
 
 Os perfis operacionais mais importantes são:
 
+- `Visitante`: consulta sem login o catálogo de fazendas, contatos comerciais, animais e genealogias. Não acessa nem modifica dados operacionais.
 - `Administrador`: possui acesso total às operações permitidas no sistema.
 - `Operador`: executa rotinas operacionais conforme as permissões da fazenda.
 - `Proprietário da fazenda`: atua com controle sobre a própria fazenda.
 
 Algumas ações podem ficar restritas conforme permissões e ownership.
+
+No catálogo público, a fazenda pode divulgar nome do responsável, telefone, e-mail e redes sociais para contato comercial. CPF, credenciais, endereço detalhado, sanidade, reprodução operacional, lactação, estoque, alertas, relatórios e financeiro não são exibidos ao visitante.
 
 ## 3. Acesso ao sistema
 

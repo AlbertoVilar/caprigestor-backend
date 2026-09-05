@@ -23,6 +23,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 ### 01-architecture
 - [ARCHITECTURE.md](./01-architecture/ARCHITECTURE.md)
 - [README.md](./01-architecture/README.md)
+- [OBSERVABILITY_LOGGING.md](./01-architecture/OBSERVABILITY_LOGGING.md)
 - [ADR-001-atomic-goatfarm-registration-pt-br.md](./01-architecture/ADR/ADR-001-atomic-goatfarm-registration-pt-br.md)
 - [ADR-001-atomic-goatfarm-registration.md](./01-architecture/ADR/ADR-001-atomic-goatfarm-registration.md)
 - [ADR-002-inventory-ledger-balance-and-lots.md](./01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md)
@@ -51,4 +52,3 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 - Novas secoes devem seguir cabecalho padrao e links relativos ao repositorio.
 
 - O modulo de leite agora documenta explicitamente a diferenca entre producao individual por cabra e producao diaria consolidada da fazenda.
-

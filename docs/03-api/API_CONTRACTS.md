@@ -1,7 +1,9 @@
 # API_CONTRACTS
-Última atualização: 2026-02-28
+Última atualização: 2026-09-05
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
+
+Atualizado em 2026-09-04 para os contratos de referências genealógicas externas.
 
 ## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
@@ -11,11 +13,11 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Base geral: `/api/v1`
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Rotas públicas sem autenticação (quando aplicável) usam namespace separado, por exemplo: `/public/articles`.
+- As consultas `GET` de fazendas, animais e genealogia sob `/api/v1/goatfarms` são públicas por decisão de produto. Fazendas públicas incluem nome do responsável, telefones e e-mail de contato, mas nunca CPF, credenciais, papéis ou endereço detalhado.
 
-### Versionamento e compatibilidade
-- Rotas canônicas: sempre em `/api/v1/...`.
-- Compatibilidade temporária: rotas legadas em `/api/...` permanecem ativas por 1 ciclo como **DEPRECATED**.
-- Remoção planejada das rotas legadas: **2026-06-30** (versão alvo **v2.0.0**).
+### Versionamento
+- Endpoints de aplicação são publicados exclusivamente em `/api/v1/...`.
+- O prefixo não versionado foi removido em 2026-08-07 e não possui fallback.
 - Novos endpoints não devem ser publicados fora de `/api/v1`.
 
 ### Segurança
@@ -35,7 +37,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Datas em formato ISO (`yyyy-MM-dd` ou `yyyy-MM-dd'T'HH:mm:ss`).
 - Mensagens de validação em PT-BR.
 
-As seções por domínio abaixo destacam apenas rotas, formatos e exceções específicas. Compatibilidade legada em `/api/...` e códigos HTTP transversais seguem as seções globais deste documento.
+As seções por domínio abaixo destacam apenas rotas, formatos e exceções específicas. Os códigos HTTP transversais seguem as seções globais deste documento.
 
 ### Goat/Farm (cadastros base)
 Rotas canônicas:
@@ -72,6 +74,20 @@ Genealogia complementar ABCC:
 - Lookup principal por `registrationNumber`, sem fallback por nome.
 - Status de integração: `FOUND`, `NOT_FOUND`, `UNAVAILABLE`, `INSUFFICIENT_DATA`.
 
+Referências genealógicas em comandos de criação:
+- `fatherRegistrationNumber` e `motherRegistrationNumber` são resolvidos pela
+  mesma política em `POST /goats`, atualizações de animal e criação de cria no
+  parto.
+- `PO` e `PC` exigem pai e mãe identificáveis localmente ou por consulta ABCC.
+  `PA` permite ausência e RG externo declarado não localizado.
+- Pai e mãe identificados devem ter, respectivamente, sexo `MACHO` e `FEMEA`.
+  O RG do próprio animal não pode ser usado como genitor.
+- Referência de outra fazenda é apenas genealógica: não altera ownership,
+  permissões ou o escopo da rota.
+- A API persiste uma FK local ou o RG externo, nunca uma árvore da ABCC. A
+  resposta de genealogia pode sinalizar origem `LOCAL`, `ABCC`, `DECLARADO` ou
+  `AUSENTE`.
+
 
 ### Reproduction (gestação e alertas)
 Rotas canônicas:
@@ -86,10 +102,23 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation?referenceDate=`
 - `GET /api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis?referenceDate=&page=&size=`
+- `GET /api/v1/goatfarms/{farmId}/reproduction/alerts/births-due?referenceDate=&page=&size=`
 
 Paginação atual:
 - Os endpoints `events` e `pregnancies` continuam retornando `Page` do Spring para preservar compatibilidade com o frontend já publicado.
-- O endpoint `pregnancy-diagnosis` retorna envelope agregado com `totalPending` e `alerts`.
+- Os endpoints `pregnancy-diagnosis` e `births-due` retornam envelope agregado
+  com `totalPending` e `alerts`; `page >= 0`, `size` entre 1 e 100, padrões 0/20.
+- Em `births-due`, cada item contém `pregnancyId`, `goatId`,
+  `expectedDueDate` e `daysOverdue`. São retornadas gestações ativas da fazenda
+  com previsão na referência ou anterior, ordenadas por previsão e ID crescentes.
+- Os controllers usam `canManageFarm`, incluindo operador vinculado; a criação
+  delegada ao Goat mantém sua própria exigência de proprietário/administrador.
+
+No comando de parto, `kids[].registrationNumber` deve conter 10 a 12 caracteres
+(números e uma letra final opcional), começando pelo TOD da fazenda de nascimento.
+`kids[].birthDate`, se informada, deve coincidir com `birthDate` do parto.
+Formato/data inválidos retornam `400`; inconsistência de TOD retorna `422`.
+Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-de-uso-comunicar-parto-e-cadastrar-cria).
 
 Exemplo de alerta pendente:
 
@@ -206,7 +235,7 @@ Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
 - `GET /api/v1/goatfarms/{farmId}/inventory/movements`
   - filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`
   - ordenação padrão: `movementDate desc`, `createdAt desc`
-  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `createdAt`
+  - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `unitCost`, `subtotalCost`, `freightCost`, `discountAmount`, `totalCost`, `purchaseDate`, `supplierName`, `createdAt`
 - validações obrigatórias:
   - `fromDate <= toDate`
   - `size <= 100`
@@ -222,6 +251,39 @@ Exemplo de consulta de histórico:
 ```http
 GET /api/v1/goatfarms/1/inventory/movements?type=OUT&fromDate=2026-02-01&toDate=2026-02-28&page=0&size=20
 ```
+
+### Inventory (entrada por compra)
+Para `POST /api/v1/goatfarms/{farmId}/inventory/movements`, uma compra usa `type=IN` e a seguinte composição:
+
+```json
+{
+  "type": "IN",
+  "quantity": 32.143,
+  "itemId": 101,
+  "movementDate": "2026-08-01",
+  "unitCost": 112.0000,
+  "freightCost": 45.50,
+  "discountAmount": 12.25,
+  "purchaseDate": "2026-08-01",
+  "supplierName": "Durrancho"
+}
+```
+
+Resposta financeira calculada pelo servidor:
+
+```json
+{
+  "unitCost": 112.0000,
+  "subtotalCost": 3600.02,
+  "freightCost": 45.50,
+  "discountAmount": 12.25,
+  "totalCost": 3633.27
+}
+```
+
+- O cliente novo não precisa enviar `totalCost`.
+- Se um cliente legado enviar `unitCost` e `totalCost`, o servidor valida a fórmula completa.
+- Se enviar apenas `totalCost`, o servidor deriva o custo unitário das mercadorias, considerando frete e desconto.
 
 ## Erros/Status
 ### Estrutura de erro padrão
@@ -253,6 +315,7 @@ Erros seguem estrutura `ValidationError`:
 | `409 Conflict` | `DuplicateEntityException`, `DataIntegrityViolationException` |
 | `415 Unsupported Media Type` | content type não suportado |
 | `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean |
+| `503 Service Unavailable` | consulta ABCC indisponível ou insuficiente para validação obrigatória |
 | `500 Internal Server Error` | erro não tratado |
 
 ## Referências internas

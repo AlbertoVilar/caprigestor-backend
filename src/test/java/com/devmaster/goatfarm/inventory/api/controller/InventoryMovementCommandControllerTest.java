@@ -61,7 +61,9 @@ class InventoryMovementCommandControllerTest {
                 LocalDate.of(2026, 3, 28),
                 "compra de racao",
                 new BigDecimal("18.5000"),
-                new BigDecimal("185.00"),
+                new BigDecimal("200.00"),
+                new BigDecimal("25.00"),
+                new BigDecimal("10.00"),
                 LocalDate.of(2026, 3, 28),
                 "Casa do Campo"
         );
@@ -75,6 +77,9 @@ class InventoryMovementCommandControllerTest {
                 new BigDecimal("10.000"),
                 new BigDecimal("18.5000"),
                 new BigDecimal("185.00"),
+                new BigDecimal("25.00"),
+                new BigDecimal("10.00"),
+                new BigDecimal("200.00"),
                 LocalDate.of(2026, 3, 28),
                 "Casa do Campo",
                 OffsetDateTime.parse("2026-03-28T14:10:00Z")
@@ -89,6 +94,9 @@ class InventoryMovementCommandControllerTest {
                 new BigDecimal("10.000"),
                 new BigDecimal("18.5000"),
                 new BigDecimal("185.00"),
+                new BigDecimal("25.00"),
+                new BigDecimal("10.00"),
+                new BigDecimal("200.00"),
                 LocalDate.of(2026, 3, 28),
                 "Casa do Campo",
                 OffsetDateTime.parse("2026-03-28T14:10:00Z")
@@ -110,7 +118,8 @@ class InventoryMovementCommandControllerTest {
                                   "movementDate": "2026-03-28",
                                   "reason": "compra de racao",
                                   "unitCost": 18.5,
-                                  "totalCost": 185.0,
+                                  "freightCost": 25.0,
+                                  "discountAmount": 10.0,
                                   "purchaseDate": "2026-03-28",
                                   "supplierName": "Casa do Campo"
                                 }
@@ -118,7 +127,10 @@ class InventoryMovementCommandControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.movementId").value(9001))
                 .andExpect(jsonPath("$.unitCost").value(18.5))
-                .andExpect(jsonPath("$.totalCost").value(185.0))
+                .andExpect(jsonPath("$.subtotalCost").value(185.0))
+                .andExpect(jsonPath("$.freightCost").value(25.0))
+                .andExpect(jsonPath("$.discountAmount").value(10.0))
+                .andExpect(jsonPath("$.totalCost").value(200.0))
                 .andExpect(jsonPath("$.supplierName").value("Casa do Campo"));
     }
 }

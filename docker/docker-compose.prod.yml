@@ -2,7 +2,12 @@ services:
   backend:
     image: ${BACKEND_IMAGE}
     container_name: caprigestor-backend
+    init: true
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       SPRING_PROFILES_ACTIVE: prod
       JDBC_URL: ${JDBC_URL}
@@ -33,9 +38,11 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE}
     container_name: caprigestor-frontend
+    init: true
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${FRONTEND_BIND_PORT:-8088}:80"
     networks:

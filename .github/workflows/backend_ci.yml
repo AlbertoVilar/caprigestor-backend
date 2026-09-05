@@ -9,9 +9,13 @@ on:
     branches:
       - develop
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  group: backend-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,9 +23,6 @@ jobs:
     name: Clean test
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,5 +37,19 @@ jobs:
       - name: Ensure Maven Wrapper is executable
         run: chmod +x mvnw
 
-      - name: Run backend clean test gate
-        run: ./mvnw -U -T 1C clean test
+      - name: Run backend verification gate
+        run: ./mvnw -B -U clean verify
+
+      - name: Build production image without publishing it
+        run: docker build --pull --tag caprigestor-backend:ci .
+
+      - name: Upload Maven reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: |
+            target/surefire-reports
+            target/failsafe-reports
+          if-no-files-found: ignore
+          retention-days: 7

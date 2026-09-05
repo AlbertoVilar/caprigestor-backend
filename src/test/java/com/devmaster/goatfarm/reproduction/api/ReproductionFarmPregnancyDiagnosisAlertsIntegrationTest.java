@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.reproduction.api;
 
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.persistence.entity.FarmOperator;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.repository.FarmOperatorRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
@@ -13,6 +14,8 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
+import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
@@ -163,6 +166,83 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
                 .andExpect(jsonPath("$.totalPending").value(5))
                 .andExpect(jsonPath("$.alerts.length()").value(1))
                 .andExpect(jsonPath("$.alerts[0].goatId").value("GOAT-005"));
+    }
+
+    @Test
+    void shouldFilterAndPaginateDueBirthsByFarmStatusAndDate() throws Exception {
+        String token = loginAndGetToken("owner@example.com", "password");
+        LocalDate reference = LocalDate.of(2026, 7, 3);
+        savePregnancy("DUE-OLD", ownerFarm, reference.minusDays(2), PregnancyStatus.ACTIVE);
+        savePregnancy("DUE-TODAY", ownerFarm, reference, PregnancyStatus.ACTIVE);
+        savePregnancy("DUE-FUTURE", ownerFarm, reference.plusDays(1), PregnancyStatus.ACTIVE);
+        savePregnancy("DUE-CLOSED", ownerFarm, reference.minusDays(3), PregnancyStatus.CLOSED);
+        savePregnancy("DUE-UNKNOWN", ownerFarm, null, PregnancyStatus.ACTIVE);
+        GoatFarm otherFarm = new GoatFarm();
+        otherFarm.setName("Other farm");
+        otherFarm.setUser(ownerUser);
+        otherFarm = goatFarmRepository.save(otherFarm);
+        savePregnancy("DUE-OTHER", otherFarm, reference.minusDays(5), PregnancyStatus.ACTIVE);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/births-due", ownerFarm.getId())
+                        .param("referenceDate", reference.toString()).param("size", "1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPending").value(2))
+                .andExpect(jsonPath("$.alerts.length()").value(1))
+                .andExpect(jsonPath("$.alerts[0].goatId").value("DUE-OLD"))
+                .andExpect(jsonPath("$.alerts[0].daysOverdue").value(2));
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/births-due", ownerFarm.getId())
+                        .param("referenceDate", reference.toString()).param("size", "1").param("page", "1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPending").value(2))
+                .andExpect(jsonPath("$.alerts[0].goatId").value("DUE-TODAY"))
+                .andExpect(jsonPath("$.alerts[0].daysOverdue").value(0));
+    }
+
+    @Test
+    void shouldAllowLinkedOperatorToReadBothAlertTypes() throws Exception {
+        String token = createOperatorToken(true);
+        for (String type : List.of("births-due", "pregnancy-diagnosis")) {
+            mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/{type}", ownerFarm.getId(), type)
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void shouldRejectUnlinkedOperatorForBothAlertTypes() throws Exception {
+        String token = createOperatorToken(false);
+        for (String type : List.of("births-due", "pregnancy-diagnosis")) {
+            mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/{type}", ownerFarm.getId(), type)
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    private String createOperatorToken(boolean linked) throws Exception {
+        User operator = new User();
+        operator.setName("Operator");
+        operator.setEmail("operator@example.com");
+        operator.setCpf("00000000002");
+        operator.setPassword(passwordEncoder.encode("password"));
+        operator.addRole(roleRepository.save(new Role("ROLE_OPERATOR", "Operator")));
+        operator = userRepository.save(operator);
+        if (linked) {
+            FarmOperator link = new FarmOperator();
+            link.setFarm(ownerFarm);
+            link.setUser(operator);
+            farmOperatorRepository.save(link);
+        }
+        return loginAndGetToken("operator@example.com", "password");
+    }
+
+    private void savePregnancy(String goatId, GoatFarm farm, LocalDate dueDate, PregnancyStatus status) {
+        Goat goat = saveGoat(goatId);
+        goat.setFarm(farm);
+        goatRepository.save(goat);
+        pregnancyRepository.save(Pregnancy.builder()
+                .farmId(farm.getId()).goatId(goatId).status(status).expectedDueDate(dueDate).build());
     }
 
     private Goat saveGoat(String registrationNumber) {

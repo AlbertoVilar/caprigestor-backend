@@ -45,6 +45,8 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
                     m.resultingBalance,
                     m.unitCost,
                     m.totalCost,
+                    m.freightCost,
+                    m.discountAmount,
                     m.purchaseDate,
                     m.supplierName,
                     m.createdAt
@@ -95,6 +97,9 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
                 row.reason(),
                 row.resultingBalance(),
                 row.unitCost(),
+                calculateSubtotal(row.quantity(), row.unitCost()),
+                row.freightCost(),
+                row.discountAmount(),
                 row.totalCost(),
                 row.purchaseDate(),
                 row.supplierName(),
@@ -102,6 +107,16 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
         )).toList();
 
         return new PageImpl<>(content, pageable, countQuery.getSingleResult());
+    }
+
+    private java.math.BigDecimal calculateSubtotal(
+            java.math.BigDecimal quantity,
+            java.math.BigDecimal unitCost
+    ) {
+        if (quantity == null || unitCost == null) {
+            return null;
+        }
+        return quantity.multiply(unitCost).setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     private void appendFilters(

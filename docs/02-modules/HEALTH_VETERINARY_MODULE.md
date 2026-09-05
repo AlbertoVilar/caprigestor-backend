@@ -13,7 +13,7 @@ O módulo `health` registra, atualiza e consulta eventos de saúde (vacina, medi
 - Reabertura (`/{eventId}/reopen`) exige ownership e papel `ADMIN` ou `FARM_OWNER`.
 - Indicador `overdue` é derivado (não é payload de entrada).
 - Alertas de fazenda limitam `windowDays` para faixa segura (`1..30`).
-- Compatibilidade temporária: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remoção planejada: 2026-06-30, v2.0.0).
+- As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.
 
 ## Endpoints
 ### Escopo por cabra
@@ -93,9 +93,8 @@ GET /api/v1/goatfarms/1/health-events/alerts?windowDays=7
 }
 ```
 
-## Compatibilidade e paginação
-- As rotas canônicas são sempre publicadas em `/api/v1/...`.
-- O legado `/api/...` segue ativo apenas por compatibilidade temporária.
+## Paginação
+- As rotas são publicadas exclusivamente em `/api/v1/...`.
 - As listagens `health-events` e `calendar` continuam retornando `Page` do Spring para preservar compatibilidade.
 - O endpoint `alerts` retorna um agregado de contadores e listas reduzidas (top 5 por categoria).
 

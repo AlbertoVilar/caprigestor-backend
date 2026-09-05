@@ -99,6 +99,8 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
         entity.setResultingBalance(vo.resultingBalance());
         entity.setUnitCost(vo.unitCost());
         entity.setTotalCost(vo.totalCost());
+        entity.setFreightCost(vo.freightCost());
+        entity.setDiscountAmount(vo.discountAmount());
         entity.setPurchaseDate(vo.purchaseDate());
         entity.setSupplierName(vo.supplierName());
         entity.setCreatedAt(vo.createdAt());
@@ -118,6 +120,8 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
                 saved.getResultingBalance(),
                 saved.getUnitCost(),
                 saved.getTotalCost(),
+                saved.getFreightCost(),
+                saved.getDiscountAmount(),
                 saved.getPurchaseDate(),
                 saved.getSupplierName(),
                 saved.getCreatedAt()
@@ -164,7 +168,7 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
         try {
             return objectMapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Falha ao serializar resposta de idempotencia.", e);
+            throw new IllegalStateException("Falha ao serializar resposta de idempotência.", e);
         }
     }
 
@@ -172,7 +176,7 @@ public class InventoryMovementPersistenceAdapter implements InventoryMovementPer
         try {
             return objectMapper.readValue(payload, InventoryMovementResponseVO.class);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Falha ao desserializar resposta de idempotencia.", e);
+            throw new IllegalStateException("Falha ao desserializar resposta de idempotência.", e);
         }
     }
 }

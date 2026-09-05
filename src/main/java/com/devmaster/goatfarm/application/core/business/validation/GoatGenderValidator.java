@@ -37,6 +37,29 @@ public class GoatGenderValidator {
         return goat;
     }
 
+    public void requireGender(
+            Gender actualGender,
+            Gender expectedGender,
+            String fieldName,
+            String parentArticle,
+            String parentRole
+    ) {
+        if (actualGender == expectedGender) {
+            return;
+        }
+
+        if (actualGender == null) {
+            throw new BusinessRuleException(fieldName, "O sexo do animal informado para " + parentArticle + " " + parentRole + " é obrigatório.");
+        }
+
+        String actualGenderDescription = actualGender == Gender.FEMEA ? "feminino" : "masculino";
+        throw new BusinessRuleException(
+                fieldName,
+                "O registro informado para " + parentArticle + " " + parentRole
+                        + " corresponde a um animal do sexo " + actualGenderDescription + "."
+        );
+    }
+
     private Goat requireGoat(Long farmId, String goatId) {
         return goatPersistencePort.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));

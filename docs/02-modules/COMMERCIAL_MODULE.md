@@ -98,6 +98,11 @@ Fontes de saida consideradas:
 - despesas operacionais pela `expenseDate`;
 - compras de estoque com custo registrado pela `purchaseDate`.
 
+Regra contra dupla contabilização de frete:
+- frete diretamente vinculado a uma compra de estoque compõe `inventory_movement.total_cost`;
+- esse mesmo frete não deve ser registrado novamente como despesa operacional `FREIGHT`;
+- `FREIGHT` permanece disponível para transportes sem vínculo com uma compra de estoque, como deslocamentos e entregas independentes.
+
 Campos principais expostos:
 - `totalRevenue`
 - `totalExpenses`

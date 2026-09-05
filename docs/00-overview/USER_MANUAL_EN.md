@@ -1,6 +1,6 @@
 ﻿# User Manual — CapriGestor / GoatFarm
 
-Last update: 2026-03-29  
+Last update: 2026-08-07
 Scope: official functional guide for day-to-day farm operation.  
 Language: English.  
 Related links: [Portal](../INDEX.md), [Business Domain](./BUSINESS_DOMAIN.md), [Homologation Runbook](./HOMOLOGATION_OPERATION_RUNBOOK.md), [Freeze and Pilot Playbook](./PILOT_FREEZE_PLAYBOOK.md)
@@ -31,11 +31,14 @@ The system prioritizes:
 
 The most relevant operational roles are:
 
+- `Visitor`: browses the public farm catalog, commercial contacts, animals, and genealogies without signing in. Visitors cannot access or modify operational data.
 - `Administrator`: full access to allowed operations.
 - `Operator`: performs daily operational routines according to farm permissions.
 - `Farm owner`: manages the farm under their ownership scope.
 
 Some actions are restricted by permissions and farm ownership rules.
+
+In the public catalog, a farm may publish the responsible person's name, phone number, email, and social media for commercial contact. CPF, credentials, detailed address, health data, operational reproduction, lactation, inventory, alerts, reports, and finance remain private.
 
 ## 3. Accessing the system
 

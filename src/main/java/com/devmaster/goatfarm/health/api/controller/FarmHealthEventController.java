@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/health-events", "/api/goatfarms/{farmId}/health-events"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/health-events")
 @Tag(
         name = "Farm Health API",
         description = "Consultas agregadas de saúde por fazenda. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."

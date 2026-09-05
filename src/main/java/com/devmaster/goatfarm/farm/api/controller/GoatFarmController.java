@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms", "/api/goatfarms"})
+@RequestMapping("/api/v1/goatfarms")
 @Tag(name = "Goat Farm API", description = "Gestão de fazendas caprinas. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GoatFarmController {
 
@@ -169,6 +169,7 @@ public class GoatFarmController {
             UserResponseDTO user = new UserResponseDTO();
             user.setId(dto.getUser().getId());
             user.setName(dto.getUser().getName());
+            user.setEmail(dto.getUser().getEmail());
             sanitized.setUser(user);
         }
 

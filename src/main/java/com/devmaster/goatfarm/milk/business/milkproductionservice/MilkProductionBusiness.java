@@ -31,13 +31,13 @@ import java.util.List;
 @Service
 public class MilkProductionBusiness implements MilkProductionUseCase {
 
-    /** Ports (infra abstraÃ­da) */
+    /** Ports (infra abstraída) */
     private final MilkProductionPersistencePort milkProductionPersistencePort;
     private final LactationPersistencePort lactationPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
     private final HealthWithdrawalQueryUseCase healthWithdrawalQueryUseCase;
 
-    /** Mapper de domÃ­nio */
+    /** Mapper de domínio */
     private final MilkProductionBusinessMapper milkProductionMapper;
 
     public MilkProductionBusiness(MilkProductionPersistencePort milkProductionPersistencePort,
@@ -53,7 +53,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     }
 
     /**
-     * CriaÃ§Ã£o de produÃ§Ã£o diÃ¡ria de leite
+     * Criação de produção diária de leite
      */
     @Override
     public MilkProductionResponseVO createMilkProduction(
@@ -63,17 +63,17 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     ) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         //=======================
-        // *** VALIDAÃ‡ÃƒO *** //
+        // *** VALIDAÇÃO *** //
         //=======================
         
         if (requestVO.getDate() == null) {
-            throw new InvalidArgumentException("date", "Data da ordenha Ã© obrigatÃ³ria");
+            throw new InvalidArgumentException("date", "Data da ordenha é obrigatória");
         }
         if (requestVO.getDate().isAfter(LocalDate.now())) {
-            throw new InvalidArgumentException("date", "Data da ordenha nÃ£o pode ser futura");
+            throw new InvalidArgumentException("date", "Data da ordenha não pode ser futura");
         }
 
-        // Regra 1: NÃ£o permitir produÃ§Ã£o duplicada para a mesma data e turno
+        // Regra 1: Não permitir produção duplicada para a mesma data e turno
         validateNoDuplicateProduction(farmId, goatId, requestVO.getDate(), requestVO.getShift());
         GoatWithdrawalStatusVO withdrawalStatus = healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(
                 farmId,
@@ -103,9 +103,9 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     ) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
-                .orElseThrow(() -> new ResourceNotFoundException("ProduÃ§Ã£o de leite nÃ£o encontrada com o ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
         if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
-            throw new BusinessRuleException("status", "Registro cancelado nao pode ser alterado.");
+            throw new BusinessRuleException("status", "Registro cancelado não pode ser alterado.");
         }
 
 
@@ -126,7 +126,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "ProduÃ§Ã£o de leite nÃ£o encontrada com o ID: " + id
+                                "Produção de leite não encontrada com o ID: " + id
                         )
                 );
 
@@ -138,7 +138,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     public void delete(Long farmId, String goatId, Long id) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
         MilkProduction milkProduction = milkProductionPersistencePort.findById(farmId, goatId, id)
-                .orElseThrow(() -> new ResourceNotFoundException("ProduÃ§Ã£o de leite nÃ£o encontrada com o ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Produção de leite não encontrada com o ID: " + id));
 
         if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
             return;
@@ -152,7 +152,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     }
 
     /**
-     * Consulta de produÃ§Ãµes por perÃ­odo
+     * Consulta de produções por período
      */
     @Override
     public Page<MilkProductionResponseVO> getMilkProductions(
@@ -178,12 +178,12 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
 
     /* ==========================================================
-       Regras de domÃ­nio (assinaturas internas)
+       Regras de domínio (assinaturas internas)
        ========================================================== */
 
     /**
      * Regra 1:
-     * NÃ£o permitir produÃ§Ã£o duplicada para a mesma data e turno
+     * Não permitir produção duplicada para a mesma data e turno
      */
     private void validateNoDuplicateProduction(
             Long farmId,
@@ -191,7 +191,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             LocalDate date,
             MilkingShift shift
     ) {
-        // implementaÃ§Ã£o futura
+        // implementação futura
         if (milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(farmId, goatId, date, shift)) {
             throw new DuplicateMilkProductionException();
         }
@@ -199,7 +199,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     /**
      * Regra 2:
-     * ProduÃ§Ã£o sÃ³ pode existir se houver lactaÃ§Ã£o ativa
+     * Produção só pode existir se houver lactação ativa
      */
     private Lactation getRequiredActiveLactation(
             Long farmId,

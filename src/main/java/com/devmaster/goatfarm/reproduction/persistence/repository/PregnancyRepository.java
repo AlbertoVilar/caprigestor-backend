@@ -21,6 +21,12 @@ public interface PregnancyRepository extends JpaRepository<Pregnancy, Long> {
     Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     boolean existsByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     Page<Pregnancy> findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
+    Page<Pregnancy> findByFarmIdAndStatusAndExpectedDueDateIsNotNullAndExpectedDueDateLessThanEqualOrderByExpectedDueDateAscIdAsc(
+            Long farmId,
+            PregnancyStatus status,
+            LocalDate referenceDate,
+            Pageable pageable
+    );
 
     @Query("""
             select max(p.closedAt)

@@ -17,24 +17,24 @@ import java.util.List;
 @AllArgsConstructor
 public class UserRequestDTO {
 
-    @NotBlank(message = "O nome Ã© obrigatÃ³rio")
+    @NotBlank(message = "O nome é obrigatório")
     @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")
     private String name;
 
-    @Email(message = "Email invÃ¡lido")
-    @NotBlank(message = "O email Ã© obrigatÃ³rio")
+    @Email(message = "Email inválido")
+    @NotBlank(message = "O email é obrigatório")
     private String email;
 
-    @NotBlank(message = "CPF Ã© obrigatÃ³rio")
-    @Pattern(regexp = "^\\d{11}$", message = "CPF deve conter exatamente 11 dÃ­gitos numÃ©ricos")
+    @NotBlank(message = "CPF é obrigatório")
+    @Pattern(regexp = "^\\d{11}$", message = "CPF deve conter exatamente 11 dígitos numéricos")
     private String cpf;
 
-    @NotBlank(message = "A senha Ã© obrigatÃ³ria")
+    @NotBlank(message = "A senha é obrigatória")
     @Size(min = 6, message = "A senha deve ter pelo menos 6 caracteres")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    @NotBlank(message = "ConfirmaÃ§Ã£o de senha Ã© obrigatÃ³ria")
+    @NotBlank(message = "Confirmação de senha é obrigatória")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String confirmPassword;
 

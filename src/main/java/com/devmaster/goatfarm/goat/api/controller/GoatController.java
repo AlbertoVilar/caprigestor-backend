@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/goatfarms/{farmId}/goats", "/api/goatfarms/{farmId}/goats"})
+@RequestMapping("/api/v1/goatfarms/{farmId}/goats")
 @Tag(name = "Goat API", description = "Gerenciamento de cabras da fazenda. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class GoatController {
 
@@ -120,7 +120,7 @@ public class GoatController {
     @Operation(summary = "Lista as crias locais vinculadas ao animal")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Crias retornadas com sucesso."),
-            @ApiResponse(responseCode = "404", description = "Cabra nÃ£o encontrada.")
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
     })
     public ResponseEntity<List<GoatResponseDTO>> listOffspring(@PathVariable("farmId") Long farmId, @PathVariable("goatId") String goatId) {
         return ResponseEntity.ok(

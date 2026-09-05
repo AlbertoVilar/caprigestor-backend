@@ -86,14 +86,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                     }
                     throw new DuplicateEntityException(
                             "idempotencyKey",
-                            "Idempotency-Key ja foi usada com payload diferente."
+                            "Idempotency-Key já foi usada com payload diferente."
                     );
                 });
     }
 
     private InventoryItemSnapshotVO resolveItemSnapshot(Long farmId, Long itemId) {
         return persistencePort.findItemSnapshot(farmId, itemId)
-                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
     }
 
     private LockedBalanceContext lockItemThenBalance(
@@ -101,7 +101,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             InventoryMovementCreateRequestVO request
     ) {
         InventoryItemSnapshotVO lockedItem = persistencePort.lockItemForUpdate(farmId, request.itemId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de estoque não encontrado."));
         validateTrackLot(lockedItem, request);
         Long effectiveLotId = resolveEffectiveLotId(farmId, lockedItem, request);
 
@@ -130,6 +130,8 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 resultingBalance,
                 request.unitCost(),
                 request.totalCost(),
+                request.freightCost(),
+                request.discountAmount(),
                 request.purchaseDate(),
                 normalizeSupplierName(request.supplierName()),
                 OffsetDateTime.now(clock)
@@ -148,6 +150,9 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 persistedMovement.movementDate(),
                 persistedBalance.quantity(),
                 persistedMovement.unitCost(),
+                calculateSubtotal(persistedMovement.quantity(), persistedMovement.unitCost()),
+                persistedMovement.freightCost(),
+                persistedMovement.discountAmount(),
                 persistedMovement.totalCost(),
                 persistedMovement.purchaseDate(),
                 persistedMovement.supplierName(),
@@ -168,14 +173,14 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         if (item.trackLot() && request.lotId() == null) {
             throw new InvalidArgumentException(
                     "lotId",
-                    "lotId e obrigatorio quando o item possui rastreio por lote (trackLot=true)."
+                    "lotId é obrigatório quando o item possui rastreio por lote (trackLot=true)."
             );
         }
 
         if (!item.trackLot() && request.lotId() != null) {
             throw new InvalidArgumentException(
                     "lotId",
-                    "lotId deve ser nulo quando o item nao possui rastreio por lote (trackLot=false)."
+                    "lotId deve ser nulo quando o item não possui rastreio por lote (trackLot=false)."
             );
         }
     }
@@ -213,7 +218,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
         if (InventoryMovementType.OUT.equals(request.type())) {
             return decreaseWithNonNegativeCheck(currentBalance, request.quantity(),
-                    "Saldo insuficiente para realizar a movimentacao.");
+                    "Saldo insuficiente para realizar a movimentação.");
         }
 
         if (InventoryAdjustDirection.INCREASE.equals(request.adjustDirection())) {
@@ -221,7 +226,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
 
         return decreaseWithNonNegativeCheck(currentBalance, request.quantity(),
-                "Ajuste (DECREASE) nao permitido: saldo ficaria negativo.");
+                "Ajuste (DECREASE) não permitido: saldo ficaria negativo.");
     }
 
     private BigDecimal decreaseWithNonNegativeCheck(BigDecimal currentBalance, BigDecimal quantity, String message) {
@@ -257,19 +262,19 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
 
     private void validateRequest(Long farmId, String idempotencyKey, InventoryMovementCreateRequestVO request) {
         if (farmId == null) {
-            throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
+            throw new InvalidArgumentException("farmId", "farmId é obrigatório.");
         }
 
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key e obrigatorio.");
+            throw new InvalidArgumentException("Idempotency-Key", "Idempotency-Key é obrigatório.");
         }
 
         if (request == null) {
-            throw new InvalidArgumentException("request", "Payload da requisicao e obrigatorio.");
+            throw new InvalidArgumentException("request", "Payload da requisição é obrigatório.");
         }
 
         if (request.type() == null) {
-            throw new InvalidArgumentException("type", "Tipo do movimento e obrigatorio.");
+            throw new InvalidArgumentException("type", "Tipo do movimento é obrigatório.");
         }
 
         if (request.quantity() == null || request.quantity().compareTo(BigDecimal.ZERO) <= 0) {
@@ -277,13 +282,13 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
         }
 
         if (request.itemId() == null) {
-            throw new InvalidArgumentException("itemId", "itemId e obrigatorio.");
+            throw new InvalidArgumentException("itemId", "itemId é obrigatório.");
         }
 
         if (InventoryMovementType.ADJUST.equals(request.type()) && request.adjustDirection() == null) {
             throw new InvalidArgumentException(
                     "adjustDirection",
-                    "adjustDirection e obrigatorio quando o tipo e ADJUST."
+                    "adjustDirection é obrigatório quando o tipo é ADJUST."
             );
         }
 
@@ -291,7 +296,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 && request.adjustDirection() != null) {
             throw new InvalidArgumentException(
                     "adjustDirection",
-                    "adjustDirection deve ser nulo quando o tipo e IN ou OUT."
+                    "adjustDirection deve ser nulo quando o tipo é IN ou OUT."
             );
         }
 
@@ -334,16 +339,54 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             throw new InvalidArgumentException("totalCost", "totalCost deve ser maior que zero.");
         }
 
+        if (request.freightCost() != null && request.freightCost().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidArgumentException("freightCost", "freightCost nao pode ser negativo.");
+        }
+
+        if (request.discountAmount() != null && request.discountAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new InvalidArgumentException("discountAmount", "discountAmount nao pode ser negativo.");
+        }
+
+        BigDecimal freightCost = normalizeMoneyOrZero(request.freightCost());
+        BigDecimal discountAmount = normalizeMoneyOrZero(request.discountAmount());
+
         if (request.unitCost() != null && request.totalCost() != null) {
-            BigDecimal expectedTotalCost = request.unitCost()
-                    .multiply(request.quantity())
+            BigDecimal subtotalCost = calculateSubtotal(request.quantity(), request.unitCost());
+            BigDecimal expectedTotalCost = subtotalCost
+                    .add(freightCost)
+                    .subtract(discountAmount)
                     .setScale(2, RoundingMode.HALF_UP);
             BigDecimal informedTotalCost = request.totalCost().setScale(2, RoundingMode.HALF_UP);
 
             if (expectedTotalCost.compareTo(informedTotalCost) != 0) {
                 throw new InvalidArgumentException(
                         "totalCost",
-                        "totalCost deve ser consistente com quantity x unitCost."
+                        "totalCost deve ser consistente com subtotal + freightCost - discountAmount."
+                );
+            }
+        }
+
+        if (request.unitCost() == null && request.totalCost() != null) {
+            BigDecimal inferredSubtotal = request.totalCost()
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .subtract(freightCost)
+                    .add(discountAmount);
+            if (inferredSubtotal.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidArgumentException(
+                        "totalCost",
+                        "totalCost deve representar mercadorias com subtotal maior que zero apos frete e desconto."
+                );
+            }
+        }
+
+        if (request.unitCost() != null && request.totalCost() == null) {
+            BigDecimal calculatedTotal = calculateSubtotal(request.quantity(), request.unitCost())
+                    .add(freightCost)
+                    .subtract(discountAmount);
+            if (calculatedTotal.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new InvalidArgumentException(
+                        "discountAmount",
+                        "O desconto deve ser menor que a soma do subtotal com o frete."
                 );
             }
         }
@@ -354,15 +397,27 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             return request;
         }
 
-        BigDecimal normalizedUnitCost = request.unitCost();
-        BigDecimal normalizedTotalCost = request.totalCost();
+        BigDecimal normalizedUnitCost = request.unitCost() == null
+                ? null
+                : request.unitCost().setScale(4, RoundingMode.HALF_UP);
+        BigDecimal normalizedTotalCost = request.totalCost() == null
+                ? null
+                : request.totalCost().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal normalizedFreightCost = normalizeMoneyOrZero(request.freightCost());
+        BigDecimal normalizedDiscountAmount = normalizeMoneyOrZero(request.discountAmount());
 
         if (normalizedUnitCost == null && normalizedTotalCost != null) {
-            normalizedUnitCost = normalizedTotalCost.divide(request.quantity(), 4, RoundingMode.HALF_UP);
+            BigDecimal merchandiseSubtotal = normalizedTotalCost
+                    .subtract(normalizedFreightCost)
+                    .add(normalizedDiscountAmount);
+            normalizedUnitCost = merchandiseSubtotal.divide(request.quantity(), 4, RoundingMode.HALF_UP);
         }
 
         if (normalizedTotalCost == null && normalizedUnitCost != null) {
-            normalizedTotalCost = normalizedUnitCost.multiply(request.quantity()).setScale(2, RoundingMode.HALF_UP);
+            normalizedTotalCost = calculateSubtotal(request.quantity(), normalizedUnitCost)
+                    .add(normalizedFreightCost)
+                    .subtract(normalizedDiscountAmount)
+                    .setScale(2, RoundingMode.HALF_UP);
         }
 
         return new InventoryMovementCreateRequestVO(
@@ -375,6 +430,8 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 request.reason(),
                 normalizedUnitCost,
                 normalizedTotalCost,
+                normalizedFreightCost,
+                normalizedDiscountAmount,
                 request.purchaseDate(),
                 normalizeSupplierName(request.supplierName())
         );
@@ -383,6 +440,8 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
     private boolean hasPurchaseMetadata(InventoryMovementCreateRequestVO request) {
         return request.unitCost() != null
                 || request.totalCost() != null
+                || request.freightCost() != null
+                || request.discountAmount() != null
                 || request.purchaseDate() != null
                 || normalizeSupplierName(request.supplierName()) != null;
     }
@@ -394,7 +453,7 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
             byte[] hash = digest.digest(canonical.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Algoritmo SHA-256 nao disponivel.", e);
+            throw new IllegalStateException("Algoritmo SHA-256 não disponível.", e);
         }
     }
 
@@ -425,11 +484,33 @@ public class InventoryMovementBusiness implements InventoryMovementCommandUseCas
                 ? ""
                 : normalizeSupplierName(request.supplierName());
 
-        return baseCanonical
+        String purchaseCanonical = baseCanonical
                 + "|" + unitCostOrEmpty
                 + "|" + totalCostOrEmpty
                 + "|" + purchaseDateOrEmpty
                 + "|" + supplierTrimOrEmpty;
+
+        BigDecimal freightCost = normalizeMoneyOrZero(request.freightCost());
+        BigDecimal discountAmount = normalizeMoneyOrZero(request.discountAmount());
+        if (freightCost.compareTo(BigDecimal.ZERO) == 0
+                && discountAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return purchaseCanonical;
+        }
+
+        return purchaseCanonical
+                + "|" + freightCost.stripTrailingZeros().toPlainString()
+                + "|" + discountAmount.stripTrailingZeros().toPlainString();
+    }
+
+    private BigDecimal calculateSubtotal(BigDecimal quantity, BigDecimal unitCost) {
+        if (quantity == null || unitCost == null) {
+            return null;
+        }
+        return quantity.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal normalizeMoneyOrZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO.setScale(2) : value.setScale(2, RoundingMode.HALF_UP);
     }
 
     private record LockedBalanceContext(Long effectiveLotId, InventoryBalanceSnapshotVO balance) {

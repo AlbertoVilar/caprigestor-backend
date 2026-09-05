@@ -10,8 +10,8 @@ public record InventoryBalanceSnapshotVO(
         BigDecimal quantity
 ) {
     public InventoryBalanceSnapshotVO {
-        Objects.requireNonNull(farmId, "farmId nao pode ser nulo.");
-        Objects.requireNonNull(itemId, "itemId nao pode ser nulo.");
-        Objects.requireNonNull(quantity, "quantity nao pode ser nulo.");
+        Objects.requireNonNull(farmId, "farmId não pode ser nulo.");
+        Objects.requireNonNull(itemId, "itemId não pode ser nulo.");
+        Objects.requireNonNull(quantity, "quantity não pode ser nulo.");
     }
 }

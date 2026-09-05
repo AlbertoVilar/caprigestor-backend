@@ -483,7 +483,7 @@ class GoatControllerTest {
         Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
         when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class))).thenReturn(goatPage);
 
-        mockMvc.perform(get("/api/goatfarms/1/goats")
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())

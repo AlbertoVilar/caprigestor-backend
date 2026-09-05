@@ -8,14 +8,14 @@ public class PhoneRequestDTO {
 
     private Long id;
 
-    @NotBlank(message = "O DDD nÃ£o pode estar em branco.")
-    @Size(min = 2, max = 2, message = "O DDD deve ter 2 dÃ­gitos.")
-    @Pattern(regexp = "^\\d{2}$", message = "O DDD deve conter apenas nÃºmeros.")
+    @NotBlank(message = "O DDD não pode estar em branco.")
+    @Size(min = 2, max = 2, message = "O DDD deve ter 2 dígitos.")
+    @Pattern(regexp = "^\\d{2}$", message = "O DDD deve conter apenas números.")
     private String ddd;
 
-    @NotBlank(message = "O nÃºmero de telefone nÃ£o pode estar em branco.")
-    @Size(min = 8, max = 9, message = "O nÃºmero de telefone deve ter 8 ou 9 dÃ­gitos.")
-    @Pattern(regexp = "^\\d{8,9}$", message = "O nÃºmero de telefone deve conter apenas nÃºmeros.")
+    @NotBlank(message = "O número de telefone não pode estar em branco.")
+    @Size(min = 8, max = 9, message = "O número de telefone deve ter 8 ou 9 dígitos.")
+    @Pattern(regexp = "^\\d{8,9}$", message = "O número de telefone deve conter apenas números.")
     private String number;
 
     private Long goatFarmId; 

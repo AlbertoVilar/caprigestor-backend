@@ -115,7 +115,7 @@ class FarmHealthEventControllerTest {
         when(alertsQueryUseCase.getAlerts(farmId, 5)).thenReturn(responseVO);
         when(alertsMapper.toDTO(responseVO)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/goatfarms/{farmId}/health-events/alerts", farmId)
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/health-events/alerts", farmId)
                         .param("windowDays", "5")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

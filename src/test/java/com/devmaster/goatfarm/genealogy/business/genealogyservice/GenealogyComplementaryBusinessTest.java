@@ -53,7 +53,7 @@ class GenealogyComplementaryBusinessTest {
                                 .fatherRegistrationNumber("1635717065")
                                 .fatherName("C.V.C SIGNOS PETROLEO")
                                 .maternalGrandfatherRegistrationNumber("123")
-                                .maternalGrandfatherName("AVÃ” MAT")
+                                .maternalGrandfatherName("AVÔ MAT")
                                 .build()
                 ));
 
@@ -95,6 +95,49 @@ class GenealogyComplementaryBusinessTest {
         var response = business.findComplementaryGenealogy(1L, "1643218012");
 
         assertThat(response.getIntegration().getStatus()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void shouldExposeAnUnknownExternalFatherAsDeclaredInsteadOfAbccValidated() {
+        Goat goat = new Goat();
+        goat.setRegistrationNumber("KID-001");
+        goat.setExternalFatherRegistrationNumber("1635719026A");
+
+        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("KID-001", 1L))
+                .thenReturn(Optional.of(goat));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("KID-001"))
+                .thenReturn(Optional.empty());
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635719026A"))
+                .thenReturn(Optional.empty());
+
+        var response = business.findComplementaryGenealogy(1L, "KID-001");
+
+        assertThat(response.getPai().getRegistrationNumber()).isEqualTo("1635719026A");
+        assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.DECLARADO);
+    }
+
+    @Test
+    void shouldExposeAnAbccValidatedExternalFatherWithoutCreatingALocalGoat() {
+        Goat goat = new Goat();
+        goat.setRegistrationNumber("KID-001");
+        goat.setExternalFatherRegistrationNumber("1635719026A");
+
+        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("KID-001", 1L))
+                .thenReturn(Optional.of(goat));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("KID-001"))
+                .thenReturn(Optional.empty());
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635719026A"))
+                .thenReturn(Optional.of(GenealogyAbccSnapshotVO.builder()
+                        .animalRegistrationNumber("1635719026A")
+                        .animalName("REPRODUTOR EXTERNO")
+                        .build()));
+
+        var response = business.findComplementaryGenealogy(1L, "KID-001");
+
+        assertThat(response.getPai().getName()).isEqualTo("REPRODUTOR EXTERNO");
+        assertThat(response.getPai().getRegistrationNumber()).isEqualTo("1635719026A");
+        assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(response.getPai().getLocalGoatId()).isNull();
     }
 
     @Test

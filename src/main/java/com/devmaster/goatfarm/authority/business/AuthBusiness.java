@@ -40,7 +40,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
     }
 
     public LoginResponseVO authenticateUser(LoginRequestVO loginRequest) {
-        logger.info("🔒 LOGIN: Tentativa de login para: {}", loginRequest.getEmail());
+        logger.info("event=login_attempt");
 
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -53,17 +53,18 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             User user = (User) authentication.getPrincipal();
             String accessToken = jwtService.generateToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
+            logger.info("event=login_succeeded userId={}", user.getId());
 
             return authorityBusinessMapper.toLoginResponseVO(user, accessToken, refreshToken);
 
         } catch (BadCredentialsException e) {
-            logger.warn("🔒 LOGIN ERROR: Credenciais inválidas para: {}", loginRequest.getEmail());
+            logger.warn("event=login_failed reason=bad_credentials");
             throw new InvalidArgumentException("Email ou senha inválidos");
         }
     }
 
     public LoginResponseVO refreshToken(RefreshTokenRequestVO refreshRequest) {
-        logger.info("🔄 REFRESH: Tentativa de refresh token");
+        logger.info("event=token_refresh_attempt");
 
         try {
             var jwt = jwtDecoder.decode(refreshRequest.getRefreshToken());
@@ -83,7 +84,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             return authorityBusinessMapper.toLoginResponseVO(newAccessToken, newRefreshToken);
 
         } catch (Exception e) {
-            logger.error("🔄 REFRESH ERROR: Erro ao renovar token: {}", e.getMessage(), e);
+            logger.warn("event=token_refresh_failed exception={}", e.getClass().getSimpleName());
             throw new UnauthorizedException("Token inválido ou expirado");
         }
     }

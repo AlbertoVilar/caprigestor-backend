@@ -1,7 +1,9 @@
 ﻿# GOAT_FARM_MODULE
-Última atualização: 2026-03-16
+Última atualização: 2026-08-07
 Escopo: contratos e bordas HTTP do módulo base de Fazendas e Cabras (Goat/Farm).
 Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Padrão Market-Grade](../01-architecture/MODULE_STANDARD_MARKET_GRADE.md)
+
+Atualizado em 2026-09-04 para as referências genealógicas locais e externas.
 
 ## Objetivo do módulo
 - Cadastrar fazendas caprinas.
@@ -9,6 +11,14 @@ Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migra�
 - Consultar permissões do usuário sobre a fazenda.
 - Cadastrar, consultar, atualizar e remover cabras vinculadas a uma fazenda.
 - Importar cabras da ABCC pública de forma opcional, sem obrigar o cadastro manual a depender da ABCC.
+
+## Catálogo público e privacidade
+
+- A leitura de fazendas, animais e genealogia é pública e somente para consulta.
+- O catálogo pode exibir nome do responsável, telefones, e-mail de contato e redes sociais cadastradas, pois esses dados cumprem finalidade comercial de contato com a fazenda.
+- CPF, credenciais, papéis de acesso e endereço detalhado não pertencem ao contrato público. Para endereço, a resposta pública limita-se a município, estado e país.
+- Dados operacionais de sanidade, reprodução, lactação, estoque, alertas, relatórios e financeiro continuam protegidos por autenticação e autorização por fazenda.
+- A resposta pública de fazenda é sanitizada no backend; a ausência de CPF no frontend não substitui essa proteção.
 
 ## Regra de bloqueio operacional por status do animal
 - Animais com status diferente de `ATIVO` não podem sofrer escrita operacional.
@@ -45,7 +55,39 @@ Reprodução (Sprint 1 - parto + cria(s)):
 - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/births`
 - Registra parto, encerra a gestação ativa com `BIRTH` e cadastra uma ou mais crias vinculadas.
 - Vínculo mãe é obrigatório (matriz do path).
-- Vínculo pai é opcional e só ocorre quando houver pai local válido na mesma fazenda.
+- Pai e mãe da cria seguem a política única de referências genealógicas deste
+  módulo; o pai pode ser local, de outra fazenda ou externo pela ABCC.
+
+## Caso de uso: cadastrar animal ou cria com referências genealógicas
+
+- O cadastro manual (`POST /goats`) e o registro de cria no parto usam a mesma
+  resolução de pai e mãe no módulo Goat. A rota de parto não possui lookup local
+  próprio nem uma integração ABCC paralela.
+- O sistema normaliza o RG, procura primeiro um `Goat` em todo o cadastro local
+  e, se não houver resultado, reutiliza a porta pública de genealogia ABCC.
+- Para `PO` e `PC`, pai e mãe são obrigatórios e precisam ser identificáveis por
+  um `Goat` local ou por uma resposta ABCC válida. Um RG não localizado gera
+  `422` no campo correspondente.
+- Para `PA`, pai e mãe são opcionais. Um RG informado que não seja localizado
+  pode ser mantido como referência `DECLARADO`; a ausência de um genitor não
+  bloqueia o nascimento ou o cadastro.
+- Pai identificado deve ser `MACHO`, mãe identificada deve ser `FEMEA`, e nenhum
+  deles pode ser o próprio animal. Violação de regra de domínio retorna `422`.
+- Se a ABCC estiver indisponível ou devolver dados insuficientes para validar uma
+  categoria que exige genealogia, a API retorna `503`; isso não é apresentado
+  como “não encontrado”.
+- Uma referência local pode apontar para animal de outra fazenda apenas para
+  genealogia. Ela não muda propriedade, permissões, vinculação do rebanho ou a
+  regra de autorização por `farmId`.
+
+## Persistência e projeção genealógica
+
+- A migration `V36__add_external_genealogical_parent_references.sql` acrescenta
+  `pai_rg_externo` e `mae_rg_externo` em `cabras`.
+- Cada lado mantém uma única forma de referência: FK local ou RG externo; a
+  constraint da base impede que ambas coexistam para o mesmo genitor.
+- A árvore permanece montada sob demanda. Não há nova tabela de árvore, cópia de
+  ancestrais ABCC ou criação de `Goat` fictício para representar genitor externo.
 
 Reprodução (Sprint 2 - desmame):
 - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/weaning`
@@ -156,6 +198,7 @@ Regras de decisão por item no lote:
 - Origem dos nós da árvore híbrida:
   - `LOCAL`
   - `ABCC`
+  - `DECLARADO`
   - `AUSENTE`
 
 ## Resumo oficial da entrega — Genealogia complementar ABCC
@@ -163,12 +206,15 @@ Regras de decisão por item no lote:
 - Consulta complementar em modo `read-only`, sem persistência de ancestrais externos.
 - Sem criação de novo `Goat` e sem impacto patrimonial no rebanho.
 - Separação explícita da importação patrimonial ABCC (que continua com regra de TOD).
-- Árvore híbrida local + ABCC com origem por nó (`LOCAL`, `ABCC`, `AUSENTE`).
+- Árvore híbrida local + ABCC com origem por nó (`LOCAL`, `ABCC`, `DECLARADO`,
+  `AUSENTE`).
+- Quando a raiz não possui resposta complementar na ABCC, um RG externo
+  declarado pode ser apresentado como pai ou mãe sem persistir ancestrais.
 - Lookup principal na ABCC por `registrationNumber`, sem heurística fraca por nome.
 
-## Compatibilidade temporária
-- As rotas legadas em `/api/...` continuam ativas por compatibilidade.
-- Essas rotas são **DEPRECATED** e devem ser removidas após 2026-06-30.
+## Versionamento
+- As rotas de fazendas, animais e importação ABCC são publicadas exclusivamente em `/api/v1/...`.
+- O prefixo não versionado foi removido em 2026-08-07.
 - O frontend e novos consumidores devem usar apenas `/api/v1/...`.
 
 ## Paginação e filtros
@@ -185,7 +231,9 @@ Regras de decisão por item no lote:
 - `404`: recurso não encontrado.
 - `409`: conflito de unicidade (quando aplicável).
 - `422`: falha de validação de payload/regra de negócio.
+- `503`: consulta externa ABCC indisponível ou sem dados suficientes para a
+  validação genealógica obrigatória.
 
 ## Cobertura mínima
-- Unit: [GoatFarmBusinessTest](../../src/test/java/com/devmaster/goatfarm/farm/business/GoatFarmBusinessTest), [GoatBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatBusinessTest), [GoatAbccImportBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatAbccImportBusinessTest)
+- Unit: [GoatFarmBusinessTest](../../src/test/java/com/devmaster/goatfarm/farm/business/GoatFarmBusinessTest), [GoatBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatBusinessTest), [GenealogicalParentageServiceTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GenealogicalParentageServiceTest), [GoatAbccImportBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatAbccImportBusinessTest)
 - Controller: [GoatFarmControllerTest](../../src/test/java/com/devmaster/goatfarm/farm/api/GoatFarmControllerTest), [GoatControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatControllerTest), [GoatAbccImportControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatAbccImportControllerTest)

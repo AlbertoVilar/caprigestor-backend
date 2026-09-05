@@ -16,6 +16,8 @@ public record InventoryMovementCreateRequestVO(
         String reason,
         BigDecimal unitCost,
         BigDecimal totalCost,
+        BigDecimal freightCost,
+        BigDecimal discountAmount,
         LocalDate purchaseDate,
         String supplierName
 ) {
@@ -29,6 +31,24 @@ public record InventoryMovementCreateRequestVO(
             LocalDate movementDate,
             String reason
     ) {
-        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason, null, null, null, null);
+        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason,
+                null, null, null, null, null, null);
+    }
+
+    public InventoryMovementCreateRequestVO(
+            InventoryMovementType type,
+            BigDecimal quantity,
+            Long itemId,
+            Long lotId,
+            InventoryAdjustDirection adjustDirection,
+            LocalDate movementDate,
+            String reason,
+            BigDecimal unitCost,
+            BigDecimal totalCost,
+            LocalDate purchaseDate,
+            String supplierName
+    ) {
+        this(type, quantity, itemId, lotId, adjustDirection, movementDate, reason,
+                unitCost, totalCost, null, null, purchaseDate, supplierName);
     }
 }

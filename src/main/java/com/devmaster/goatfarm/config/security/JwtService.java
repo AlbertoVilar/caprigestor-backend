@@ -25,18 +25,14 @@ public class JwtService {
 
     public String generateToken(User user) {
         try {
-            logger.debug("ðŸ” JWT: Iniciando geraÃ§Ã£o de token para usuÃ¡rio: {}", user.getEmail());
+            logger.debug("event=jwt_generation_started userId={}", user.getId());
             
             Instant now = Instant.now();
             long expiry = 24L;             
-            logger.debug("ðŸ” JWT: Coletando roles do usuÃ¡rio...");
             String scope = user.getRoles()
                     .stream()
                     .map(role -> role.getAuthority())
                     .collect(Collectors.joining(" "));
-            logger.debug("ðŸ” JWT: Scope gerado: {}", scope);
-
-            logger.debug("ðŸ” JWT: Construindo claims...");
             JwtClaimsSet claims = JwtClaimsSet.builder()
                     .issuer("goatfarm-api")
                     .issuedAt(now)
@@ -48,14 +44,13 @@ public class JwtService {
                     .claim("email", user.getEmail())
                     .build();
             
-            logger.debug("ðŸ” JWT: Codificando token...");
             String token = this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-            logger.debug("ðŸ” JWT: Token gerado com sucesso, tamanho: {}", token.length());
+            logger.debug("event=jwt_generation_completed userId={} expiresInHours={}", user.getId(), expiry);
             
             return token;
         } catch (Exception e) {
-            logger.error("ðŸ” JWT ERROR: Erro ao gerar token - {}: {}", e.getClass().getSimpleName(), e.getMessage());
-            e.printStackTrace();
+            logger.error("event=jwt_generation_failed userId={} exception={}",
+                    user.getId(), e.getClass().getSimpleName(), e);
             throw e;
         }
     }

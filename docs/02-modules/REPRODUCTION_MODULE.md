@@ -1,10 +1,12 @@
 ﻿# Modulo Reproduction
-Ultima atualizacao: 2026-03-28
+Ultima atualizacao: 2026-09-05
 Escopo: cobertura, diagnostico, acompanhamento, alertas e encerramento de gestacoes.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
+Atualizado em 2026-09-04 para o caso de uso de parto com referências genealógicas.
+
 ## Visao geral
-O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente.
+O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente e parto devido.
 
 ## Cobertura: regra ativa do ciclo
 - Coberturas validas em data posterior sao permitidas e preservam o historico do animal.
@@ -24,9 +26,38 @@ O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status
 - Base por cabra: `/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction`.
 - Base de alertas por fazenda: `/api/v1/goatfarms/{farmId}/reproduction/alerts`.
 - Ownership por `farmId` em todas as rotas do modulo.
+- Os controllers reutilizam `OwnershipService.canManageFarm`: administrador,
+  proprietário ou operador vinculado à fazenda. Não há alteração nessa policy
+  nem autorização sobre fazendas sem vínculo.
+- A criação da cria continua sujeita à autorização própria de `GoatBusiness`
+  (`verifyFarmOwnership`, proprietário/administrador). A abertura do guard
+  do controller para operador não remove essa restrição do comando delegado.
 - Fluxos de gestacao seguem estado de dominio (ativa, encerrada, motivo de encerramento).
 - Integracao com `milk` ocorre por shared kernel (snapshot de prenhez), sem acoplamento direto de entidades.
-- Compatibilidade temporaria: `/api/...` segue ativo por 1 ciclo como **DEPRECATED** (remocao planejada: 2026-06-30, v2.0.0).
+- As rotas deste modulo sao publicadas exclusivamente em `/api/v1/...`.
+
+## Caso de uso: comunicar parto e cadastrar cria
+
+- O comando de parto recebe as crias, encerra a gestação ativa com motivo
+  `BIRTH` e cria cada animal pelo contrato de criação do módulo Goat.
+- A matriz do path é sempre a mãe local da cria. O registro do pai é opcional
+  para `PA` e obrigatório para ao menos uma cria `PO` ou `PC` no mesmo parto.
+- A validação e a persistência do pai e da mãe não são duplicadas neste módulo:
+  o módulo Goat aplica a política de referências genealógicas compartilhada.
+- Um pai pode ser um `Goat` local de outra fazenda, um RG validado pela ABCC ou,
+  no caso de `PA`, um RG externo declarado não localizado. Isso não altera
+  ownership nem concede permissão sobre a fazenda do reprodutor.
+- Sexo incompatível, autorreferência e genitor não identificável para `PO` ou
+  `PC` retornam `422`. Indisponibilidade ABCC durante validação retorna `503`.
+- A genealogia da cria continua projetada sob demanda; o parto não cria animal
+  fictício nem persiste uma árvore externa.
+- A identidade da cria usa o TOD da fazenda de nascimento e seu próprio TOE,
+  conforme [regras de domínio](../00-overview/BUSINESS_DOMAIN.md#identidade-da-cria-no-parto).
+  O TOD é consultado pela porta `GoatFarmPersistencePort`; não é inferido da
+  matriz. Formato/data inválidos retornam `400`; TOD ausente, inválido ou
+  divergente retorna `422`.
+- A data omitida da cria assume a data do parto. Se informada, deve ser igual
+  a ela. Não há mudança no encerramento transacional nem na delegação ao Goat.
 
 ## Endpoints
 ### Escopo por cabra
@@ -96,6 +127,15 @@ Base URL: `/api/v1/goatfarms/{farmId}/reproduction/alerts`
 | Metodo | URL | Query params | Retorno |
 |---|---|---|---|
 | `GET` | `/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis` | `referenceDate`, `page`, `size` | `200 OK` (agregado com `totalPending` + `alerts`) |
+| `GET` | `/api/v1/goatfarms/{farmId}/reproduction/alerts/births-due` | `referenceDate`, `page`, `size` | `200 OK` (agregado com `totalPending` + `alerts`) |
+
+O alerta `births-due` inclui somente gestações `ACTIVE` da fazenda com
+`expectedDueDate <= referenceDate`, excluindo previsão nula, futura e gestação
+encerrada. A referência omitida usa a data do relógio da aplicação. A ordenação
+é previsão crescente e, em empate, ID crescente. Cada item expõe
+`pregnancyId`, `goatId`, `expectedDueDate` e `daysOverdue` (zero no dia previsto).
+A consulta reutiliza as portas de reprodução; não há scheduler, mensageria ou
+persistência de notificações. A exibição no sininho depende do consumidor frontend.
 
 Exemplo curto (alertas):
 
@@ -118,11 +158,13 @@ GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=20
 }
 ```
 
-## Compatibilidade e paginacao
-- As rotas canonicas sao sempre publicadas em `/api/v1/...`.
-- O legado `/api/...` segue ativo apenas por compatibilidade temporaria.
+## Paginacao
+- As rotas sao publicadas exclusivamente em `/api/v1/...`.
 - Os historicos por cabra (`events` e `pregnancies`) continuam retornando `Page` do Spring para preservar compatibilidade com consumidores ja publicados.
 - O endpoint de alertas retorna um envelope agregado proprio (`totalPending` + `alerts`) e nao deve ser reinterpretado como `Page` no cliente.
+- Ambos os alertas aceitam `page >= 0` e `1 <= size <= 100`; padrões: página 0
+  e tamanho 20. Valores fora desses limites retornam `400`. `totalPending`
+  é o total filtrado, não apenas a quantidade da página.
 
 ## Erros/Status
 - `400`: payload invalido, parametro invalido ou paginacao inconsistente.
@@ -130,6 +172,7 @@ GET /api/v1/goatfarms/1/reproduction/alerts/pregnancy-diagnosis?referenceDate=20
 - `403`: ownership/perfil insuficiente.
 - `404`: recurso de reproducao nao encontrado.
 - `422`: regra de negocio violada (transicao de estado, consistencia de datas, diagnostico antes de 60 dias etc.).
+- `503`: serviço ABCC indisponível durante validação genealógica obrigatória.
 - Padrao de payload de erro: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 
 ## Referencias internas

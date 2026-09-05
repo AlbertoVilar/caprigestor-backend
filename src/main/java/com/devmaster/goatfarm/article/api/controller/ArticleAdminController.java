@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/api/v1/articles", "/api/articles"})
+@RequestMapping("/api/v1/articles")
 @Tag(name = "Admin Articles", description = "Gerenciamento administrativo de artigos do blog. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class ArticleAdminController {
 

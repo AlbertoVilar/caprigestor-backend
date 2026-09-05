@@ -9,10 +9,15 @@ on:
     branches:
       - develop
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   deny_root_markdown:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,13 +29,14 @@ jobs:
           violations=()
 
           for file in *.md; do
-            if [[ "$file" != "README.md" ]]; then
-              violations+=("$file")
-            fi
+            case "$file" in
+              README.md|AGENTS.md) ;;
+              *) violations+=("$file") ;;
+            esac
           done
 
           if (( ${#violations[@]} > 0 )); then
-            echo "Policy violation: markdown files are not allowed in repository root (except README.md)."
+            echo "Policy violation: markdown files are not allowed in repository root (except README.md and AGENTS.md)."
             printf '%s\n' "${violations[@]}"
             echo "Move documentation files to docs/ (official docs) or docs/_work/ (work artifacts)."
             exit 1

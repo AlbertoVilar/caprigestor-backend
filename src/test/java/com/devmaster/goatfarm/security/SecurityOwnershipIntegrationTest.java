@@ -31,6 +31,7 @@ import com.devmaster.goatfarm.health.persistence.repository.HealthEventRepositor
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,17 +113,7 @@ public class SecurityOwnershipIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        milkProductionRepository.deleteAll();
-        lactationRepository.deleteAll();
-        eventRepository.deleteAll();
-        healthEventRepository.deleteAll();
-        farmOperatorRepository.deleteAll();
-        goatRepository.deleteAll();
-        phoneRepository.deleteAll();
-        goatFarmRepository.deleteAll();
-        addressRepository.deleteAll();
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
+        cleanDatabase();
 
         Role roleAdmin = roleRepository.save(new Role("ROLE_ADMIN", "Admin"));
         Role roleOwner = roleRepository.save(new Role("ROLE_FARM_OWNER", "Farm owner"));
@@ -227,6 +218,25 @@ public class SecurityOwnershipIntegrationTest {
         production.setStatus(MilkProductionStatus.ACTIVE);
         production.setShift(MilkingShift.MORNING);
         milkProductionRepository.save(production);
+    }
+
+    @AfterEach
+    void tearDown() {
+        cleanDatabase();
+    }
+
+    private void cleanDatabase() {
+        milkProductionRepository.deleteAll();
+        lactationRepository.deleteAll();
+        eventRepository.deleteAll();
+        healthEventRepository.deleteAll();
+        farmOperatorRepository.deleteAll();
+        goatRepository.deleteAll();
+        phoneRepository.deleteAll();
+        goatFarmRepository.deleteAll();
+        addressRepository.deleteAll();
+        userRepository.deleteAll();
+        roleRepository.deleteAll();
     }
 
     private String loginAndGetToken(String email, String password) throws Exception {

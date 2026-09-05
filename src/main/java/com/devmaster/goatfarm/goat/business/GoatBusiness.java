@@ -36,7 +36,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class GoatBusiness implements GoatManagementUseCase {
@@ -46,16 +45,19 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final GoatBusinessMapper goatBusinessMapper;
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase operationalAuditUseCase;
+    private final GenealogicalParentageService genealogicalParentageService;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
                         OwnershipService ownershipService, GoatBusinessMapper goatBusinessMapper, EntityFinder entityFinder,
-                        OperationalAuditUseCase operationalAuditUseCase) {
+                        OperationalAuditUseCase operationalAuditUseCase,
+                        GenealogicalParentageService genealogicalParentageService) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
         this.goatBusinessMapper = goatBusinessMapper;
         this.entityFinder = entityFinder;
         this.operationalAuditUseCase = operationalAuditUseCase;
+        this.genealogicalParentageService = genealogicalParentageService;
     }
 
     @Transactional
@@ -70,15 +72,21 @@ public class GoatBusiness implements GoatManagementUseCase {
                 () -> goatFarmPort.findById(farmId),
                 "Fazenda não encontrada."
         );
-        Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
-        Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
+        GenealogicalParentageService.ResolvedParentage parentage = genealogicalParentageService.resolve(
+                requestVO.getCategory(),
+                requestVO.getRegistrationNumber(),
+                requestVO.getFatherRegistrationNumber(),
+                requestVO.getMotherRegistrationNumber()
+        );
 
         Goat goat = goatBusinessMapper.toEntity(requestVO);
         User user = ownershipService.getCurrentUser();
         goat.setUser(user);
         goat.setFarm(farm);
-        goat.setFather(father);
-        goat.setMother(mother);
+        goat.setFather(parentage.father());
+        goat.setMother(parentage.mother());
+        goat.setExternalFatherRegistrationNumber(parentage.externalFatherRegistrationNumber());
+        goat.setExternalMotherRegistrationNumber(parentage.externalMotherRegistrationNumber());
         
         Goat savedGoat = goatPort.save(goat);
 
@@ -94,10 +102,16 @@ public class GoatBusiness implements GoatManagementUseCase {
                 "Cabra não encontrada nesta fazenda."
         );
 
-        Goat father = findOptionalGoat(requestVO.getFatherRegistrationNumber()).orElse(null);
-        Goat mother = findOptionalGoat(requestVO.getMotherRegistrationNumber()).orElse(null);
+        GenealogicalParentageService.ResolvedParentage parentage = genealogicalParentageService.resolve(
+                requestVO.getCategory(),
+                goatToUpdate.getRegistrationNumber(),
+                requestVO.getFatherRegistrationNumber(),
+                requestVO.getMotherRegistrationNumber()
+        );
 
-        goatBusinessMapper.updateEntity(goatToUpdate, requestVO, father, mother);
+        goatBusinessMapper.updateEntity(goatToUpdate, requestVO, parentage.father(), parentage.mother());
+        goatToUpdate.setExternalFatherRegistrationNumber(parentage.externalFatherRegistrationNumber());
+        goatToUpdate.setExternalMotherRegistrationNumber(parentage.externalMotherRegistrationNumber());
         
         Goat updatedGoat = goatPort.save(goatToUpdate);
         return goatBusinessMapper.toResponseVO(updatedGoat);
@@ -213,7 +227,7 @@ public class GoatBusiness implements GoatManagementUseCase {
     public List<GoatResponseVO> listOffspring(Long farmId, String goatId) {
         Goat goat = entityFinder.findOrThrow(
                 () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra nÃ£o encontrada nesta fazenda."
+                "Cabra não encontrada nesta fazenda."
         );
 
         return goatPort.findOffspringByParentRegistration(farmId, goat.getRegistrationNumber()).stream()
@@ -261,11 +275,6 @@ public class GoatBusiness implements GoatManagementUseCase {
                 .deceased(deceased)
                 .breeds(breeds)
                 .build();
-    }
-
-    private Optional<Goat> findOptionalGoat(String registrationNumber) {
-        if (registrationNumber == null) return Optional.empty();
-        return goatPort.findByRegistrationNumber(registrationNumber);
     }
 
     private GoatBreedSummaryVO toBreedSummary(GoatBreedCountProjection projection) {

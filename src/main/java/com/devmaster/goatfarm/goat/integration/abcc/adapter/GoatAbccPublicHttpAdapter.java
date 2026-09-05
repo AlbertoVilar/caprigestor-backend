@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
+import com.devmaster.goatfarm.goat.enums.Gender;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -387,6 +388,7 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
                 .externalId(externalId)
                 .animalName(cleanText(principal.get("Nome")))
                 .animalRegistrationNumber(cleanText(principal.get("Registro")))
+                .animalGender(parseGender(principal.get("Sexo")))
                 .fatherName(relName(relatives, "pai"))
                 .fatherRegistrationNumber(relRegistration(relatives, "pai"))
                 .motherName(relName(relatives, "mae"))
@@ -632,17 +634,19 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
         return value == null || value.trim().isEmpty();
     }
 
-    private String normalizeRegistration(String value) {
+    static String normalizeRegistration(String value) {
         if (value == null) {
             return "";
         }
+        return value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+    }
 
-        String digits = value.replaceAll("\\D", "");
-        if (!digits.isEmpty()) {
-            return digits;
-        }
-
-        return value.trim();
+    private Gender parseGender(String value) {
+        return switch (normalizeToken(value)) {
+            case "macho" -> Gender.MACHO;
+            case "femea" -> Gender.FEMEA;
+            default -> null;
+        };
     }
 
     private String normalizeToken(String value) {
