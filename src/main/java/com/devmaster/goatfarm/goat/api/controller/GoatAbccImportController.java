@@ -46,12 +46,10 @@ public class GoatAbccImportController {
         this.goatMapper = goatMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @GetMapping("/races")
     @Operation(summary = "Lista as raças públicas da ABCC com seus respectivos IDs")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Raças da ABCC carregadas com sucesso."),
-            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para importar nesta fazenda."),
             @ApiResponse(responseCode = "422", description = "Falha de validação ou regra de negócio.")
     })
     public ResponseEntity<GoatAbccRaceOptionsResponseDTO> listRaces(
@@ -61,12 +59,10 @@ public class GoatAbccImportController {
         return ResponseEntity.ok(goatAbccImportMapper.toRaceOptionsResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/search")
     @Operation(summary = "Busca animais na ABCC pública por filtros mínimos")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Busca ABCC executada com sucesso."),
-            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para importar nesta fazenda."),
             @ApiResponse(responseCode = "422", description = "Falha de validação ou regra de negócio.")
     })
     public ResponseEntity<GoatAbccSearchResponseDTO> search(
@@ -77,12 +73,10 @@ public class GoatAbccImportController {
         return ResponseEntity.ok(goatAbccImportMapper.toSearchResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/preview")
     @Operation(summary = "Consulta preview detalhado de um animal da ABCC pública")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Preview ABCC retornado com sucesso."),
-            @ApiResponse(responseCode = "403", description = "Usuário sem permissão para importar nesta fazenda."),
             @ApiResponse(responseCode = "422", description = "Falha de validação ou regra de negócio.")
     })
     public ResponseEntity<GoatAbccPreviewResponseDTO> preview(
@@ -93,7 +87,7 @@ public class GoatAbccImportController {
         return ResponseEntity.ok(goatAbccImportMapper.toPreviewResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/confirm")
     @Operation(summary = "Confirma importação ABCC e cria a cabra na fazenda")
     @ApiResponses(value = {
@@ -114,7 +108,7 @@ public class GoatAbccImportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(goatMapper.toResponseDTO(created));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/confirm-batch")
     @Operation(summary = "Confirma importação ABCC em lote para os animais selecionados da página atual")
     @ApiResponses(value = {

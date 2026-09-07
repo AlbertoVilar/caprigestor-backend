@@ -8,6 +8,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CorsConfigTest {
@@ -23,5 +24,15 @@ class CorsConfigTest {
         assertNotNull(cors);
         assertNotNull(cors.getExposedHeaders());
         assertTrue(cors.getExposedHeaders().contains(HttpRequestLoggingFilter.CORRELATION_ID_HEADER));
+        assertTrue(cors.getAllowedOrigins().contains("http://localhost:5173"));
+        assertTrue(cors.getAllowCredentials());
+    }
+
+    @Test
+    void shouldRejectWildcardOriginsWhenCredentialsAreEnabled() {
+        CorsConfig config = new CorsConfig();
+        ReflectionTestUtils.setField(config, "corsOrigins", "*");
+
+        assertThrows(IllegalStateException.class, config::corsConfigurationSource);
     }
 }

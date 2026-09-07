@@ -1,8 +1,20 @@
-﻿# Modulo Authority / acesso / recuperacao de senha
-Ultima atualizacao: 2026-03-28
-Escopo: autenticacao, refresh, cadastro inicial e recuperacao de senha do CapriGestor.
+﻿# Módulo Authority / acesso / recuperação de senha
+Última atualização: 2026-09-06
+Escopo: autenticação, refresh, cadastro inicial, administração de usuários e recuperação de senha do CapriGestor.
 
-## Recuperacao de senha MVP
+## Administração de usuários
+
+- Todos os endpoints em `/api/v1/users/**` são exclusivamente administrativos e exigem `ROLE_ADMIN`.
+- A restrição existe tanto na configuração HTTP quanto no `UserController`, como defesa em profundidade.
+- Alterações administrativas de senha e de papéis também validam a autoridade antes de codificar senha, consultar papéis ou modificar uma entidade persistente.
+- `POST /api/v1/auth/register` permanece público, não recebe papéis no contrato e cria o usuário somente com o papel padrão `ROLE_OPERATOR`. Campos desconhecidos, inclusive uma tentativa de enviar `roles`, são rejeitados.
+- A autorização por fazenda distingue propriedade e operação: ADMIN possui acesso global, FARM_OWNER precisa ser o responsável da fazenda e OPERATOR precisa de vínculo persistido em `FarmOperator`.
+- `OwnershipService` consulta o vínculo operacional por `FarmAccessQueryPort`; o adapter de persistência concentra o acesso ao repositório Spring Data.
+- `GET /api/v1/auth/me` permanece disponível para o usuário autenticado consultar os próprios dados. Esta correção não cria uma API de edição do perfil próprio.
+- O endpoint legado de diagnóstico de papéis foi removido: não possuía consumidor funcional e expunha dados administrativos desnecessários.
+- O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.
+
+## Recuperação de senha MVP
 Entrou neste MVP:
 - solicitacao publica de reset por email
 - token aleatorio forte com hash persistido

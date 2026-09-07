@@ -102,6 +102,7 @@ public class CommercialBusiness implements CommercialUseCase {
     @Override
     @Transactional
     public AnimalSaleResponseVO createAnimalSale(Long farmId, AnimalSaleRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         GoatFarm farm = requireFarm(farmId);
         Customer customer = requireActiveCustomer(farmId, requestVO.customerId());
         LocalDate saleDate = requireSaleDate("saleDate", requestVO.saleDate());
@@ -154,6 +155,7 @@ public class CommercialBusiness implements CommercialUseCase {
     @Override
     @Transactional
     public AnimalSaleResponseVO registerAnimalSalePayment(Long farmId, Long saleId, SalePaymentRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         requireFarm(farmId);
         AnimalSale animalSale = entityFinder.findOrThrow(
                 () -> commercialPersistencePort.findAnimalSaleByIdAndFarmId(saleId, farmId),
@@ -180,6 +182,7 @@ public class CommercialBusiness implements CommercialUseCase {
     @Override
     @Transactional
     public MilkSaleResponseVO createMilkSale(Long farmId, MilkSaleRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         GoatFarm farm = requireFarm(farmId);
         Customer customer = requireActiveCustomer(farmId, requestVO.customerId());
         LocalDate saleDate = requireSaleDate("saleDate", requestVO.saleDate());
@@ -226,6 +229,7 @@ public class CommercialBusiness implements CommercialUseCase {
     @Override
     @Transactional
     public MilkSaleResponseVO registerMilkSalePayment(Long farmId, Long saleId, SalePaymentRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         requireFarm(farmId);
         MilkSale milkSale = entityFinder.findOrThrow(
                 () -> commercialPersistencePort.findMilkSaleByIdAndFarmId(saleId, farmId),

@@ -15,21 +15,23 @@ import java.util.stream.Collectors;
 @Configuration
 public class CorsConfig {
 
-    @Value("${cors.origins:*}")
+    @Value("${cors.origins:}")
     private String corsOrigins;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Usa propriedade cors.origins quando disponível; caso contrário, fallback para "*"
         List<String> origins = Arrays.stream(corsOrigins.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
         if (origins.isEmpty()) {
-            origins = List.of("*");
+            throw new IllegalStateException("cors.origins deve informar ao menos uma origem explícita.");
         }
-        configuration.setAllowedOriginPatterns(origins);
+        if (origins.contains("*")) {
+            throw new IllegalStateException("cors.origins não pode usar '*' quando credenciais estão habilitadas.");
+        }
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(List.of(HttpRequestLoggingFilter.CORRELATION_ID_HEADER));

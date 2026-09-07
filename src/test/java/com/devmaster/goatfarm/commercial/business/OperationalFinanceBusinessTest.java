@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.commercial.business.bo.OperationalExpenseRequestVO
 import com.devmaster.goatfarm.commercial.enums.OperationalExpenseCategory;
 import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,6 +24,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +40,9 @@ class OperationalFinanceBusinessTest {
 
     @Mock
     private InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort;
+
+    @Mock
+    private OwnershipService ownershipService;
 
     @InjectMocks
     private OperationalFinanceBusiness operationalFinanceBusiness;
@@ -110,5 +118,17 @@ class OperationalFinanceBusinessTest {
         assertThat(summary.totalExpenses()).isEqualByComparingTo("750.00");
         assertThat(summary.balance()).isEqualByComparingTo("1030.00");
         assertThat(summary.inventoryPurchaseCostsTotal()).isEqualByComparingTo("500.00");
+    }
+
+    @Test
+    void createOperationalExpense_shouldAuthorizeOwnerBeforePersistence() {
+        doThrow(new AccessDeniedException("denied"))
+                .when(ownershipService).verifyFarmOwnership(17L);
+
+        assertThrows(AccessDeniedException.class,
+                () -> operationalFinanceBusiness.createOperationalExpense(17L, null));
+
+        verify(goatFarmPersistencePort, never()).findById(17L);
+        verify(persistencePort, never()).saveOperationalExpense(any());
     }
 }

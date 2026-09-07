@@ -60,6 +60,11 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     public UserResponseVO updateUser(Long userId, UserRequestVO vo) {
         validateUserData(vo, false);
 
+        boolean rolesUpdateRequested = vo.getRoles() != null && !vo.getRoles().isEmpty();
+        if (rolesUpdateRequested) {
+            requireAdmin("Apenas administradores podem alterar roles de usuários.");
+        }
+
         User existingUser = userPort.findById(userId)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
 
@@ -81,7 +86,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
 
         Set<Role> resolvedRoles = null;
-        if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
+        if (rolesUpdateRequested) {
             resolvedRoles = resolveUserRoles(vo);
         }
 
@@ -94,11 +99,6 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
 
         if (resolvedRoles != null) {
-            User current = getAuthenticatedEntity();
-            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
-            if (!isAdmin) {
-                throw new UnauthorizedException("Apenas administradores podem alterar roles de usuários.");
-            }
             existingUser.getRoles().clear();
             existingUser.getRoles().addAll(resolvedRoles);
         }
@@ -132,14 +132,10 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         if (newPassword == null || newPassword.trim().isEmpty()) {
             throw new InvalidArgumentException("password", "Senha é obrigatória e não pode estar em branco");
         }
+
+        requireAdmin("Apenas administradores podem atualizar senhas pela API administrativa.");
+
         String encrypted = passwordEncoder.encode(newPassword);
-
-        User current = getAuthenticatedEntity();
-        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
-        if (!isAdmin && (current.getId() == null || !current.getId().equals(userId))) {
-            throw new UnauthorizedException("Apenas administradores ou o próprio usuário podem atualizar a senha.");
-        }
-
         userPort.updatePassword(userId, encrypted);
     }
 
@@ -148,16 +144,13 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         if (roles == null || roles.isEmpty()) {
             throw new InvalidArgumentException("roles", "É necessário informar ao menos uma role");
         }
+
+        requireAdmin("Apenas administradores podem alterar roles de usuários.");
+
         java.util.Set<Role> resolved = roles.stream()
                 .map(roleName -> rolePort.findByAuthority(roleName)
                         .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
                 .collect(java.util.stream.Collectors.toSet());
-
-        User current = getAuthenticatedEntity();
-        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
-        if (!isAdmin) {
-            throw new UnauthorizedException("Apenas administradores podem alterar roles de usuários.");
-        }
 
         User user = userPort.findById(userId)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
@@ -243,6 +236,15 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     @Transactional(readOnly = true)
     public java.util.Optional<User> findUserByEmail(String email) {
         return userPort.findByEmail(email);
+    }
+
+    private void requireAdmin(String message) {
+        User current = getAuthenticatedEntity();
+        boolean isAdmin = current.getRoles().stream()
+                .anyMatch(role -> "ROLE_ADMIN".equals(role.getAuthority()));
+        if (!isAdmin) {
+            throw new UnauthorizedException(message);
+        }
     }
 
     private User getAuthenticatedEntity() {

@@ -28,6 +28,12 @@ O modulo de lactacao pertence ao contexto `milk` e controla o ciclo produtivo da
 - Rotas sao farm-level com ownership por `farmId`.
 - As rotas deste modulo sao publicadas exclusivamente em `/api/v1/...`.
 
+## Autorização operacional
+- Abertura, consultas, sumários, listagem, secagem e retomada exigem `canManageFarm(farmId)`.
+- A política permite ADMIN, o responsável pela fazenda e OPERATOR com vínculo persistido para a fazenda. Um OPERATOR sem vínculo recebe `403`.
+- A autorização não substitui as regras do domínio: a cabra precisa pertencer à fazenda, ser fêmea apta e respeitar as transições `ACTIVE`/`DRY`, as restrições de prenhez e o bloqueio de retomada após parto.
+- Secagem não é um encerramento irreversível: ela pode ser retomada apenas nas condições de negócio previstas. Por isso é uma rotina operacional, não uma exclusão de histórico.
+
 ## Endpoints
 ### Escopo por cabra
 Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations`

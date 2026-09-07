@@ -15,7 +15,7 @@ Atualizado em 2026-09-04 para as referências genealógicas locais e externas.
 ## Catálogo público e privacidade
 
 - A leitura de fazendas, animais e genealogia é pública e somente para consulta.
-- O catálogo pode exibir nome do responsável, telefones, e-mail de contato e redes sociais cadastradas, pois esses dados cumprem finalidade comercial de contato com a fazenda.
+- O catálogo pode exibir nome do responsável, e-mail de contato e redes sociais cadastradas. Telefones e endereços detalhados permanecem restritos às rotas administrativas.
 - CPF, credenciais, papéis de acesso e endereço detalhado não pertencem ao contrato público. Para endereço, a resposta pública limita-se a município, estado e país.
 - Dados operacionais de sanidade, reprodução, lactação, estoque, alertas, relatórios e financeiro continuam protegidos por autenticação e autorização por fazenda.
 - A resposta pública de fazenda é sanitizada no backend; a ausência de CPF no frontend não substitui essa proteção.

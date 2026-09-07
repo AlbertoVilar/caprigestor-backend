@@ -1,12 +1,5 @@
 package com.devmaster.goatfarm.authority.business;
 
-import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
-// Removed unused imports
-// import org.springframework.web.context.request.RequestContextHolder;
-// import org.springframework.web.context.request.ServletRequestAttributes;
-// import org.springframework.mock.web.MockHttpServletRequest;
-// import org.junit.jupiter.api.AfterEach;
-
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
@@ -16,6 +9,8 @@ import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.business.usersbusiness.UserBusiness;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +19,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class UserBusinessTest {
@@ -88,11 +86,10 @@ class UserBusinessTest {
         operatorRole.setAuthority("ROLE_OPERATOR");
     }
 
-    // Removed tearDown method
-    // @AfterEach
-    // void tearDown() {
-    //    RequestContextHolder.resetRequestAttributes();
-    // }
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     @DisplayName("Deve criar usuário com sucesso quando não há duplicidade")
@@ -127,5 +124,82 @@ class UserBusinessTest {
         when(userPort.findByEmail("joao@email.com")).thenReturn(Optional.of(new User()));
 
         assertThrows(DuplicateEntityException.class, () -> userBusiness.saveUser(userRequestVO));
+    }
+
+    @Test
+    @DisplayName("Operador não deve alterar senha pela API administrativa nem iniciar a criptografia")
+    void operatorCannotUpdatePasswordBeforeEncoding() {
+        authenticateAs(userEntity, operatorRole);
+
+        assertThrows(UnauthorizedException.class, () -> userBusiness.updatePassword(2L, "novaSenha123"));
+
+        verify(passwordEncoder, never()).encode(any());
+        verify(userPort, never()).updatePassword(any(), any());
+    }
+
+    @Test
+    @DisplayName("Operador não deve alterar nem a própria senha pela API administrativa")
+    void operatorCannotUpdateOwnPasswordThroughAdministrativeUseCase() {
+        authenticateAs(userEntity, operatorRole);
+
+        assertThrows(UnauthorizedException.class, () -> userBusiness.updatePassword(1L, "novaSenha123"));
+
+        verify(passwordEncoder, never()).encode(any());
+        verify(userPort, never()).updatePassword(any(), any());
+    }
+
+    @Test
+    @DisplayName("Administrador deve alterar senha após autorização")
+    void adminCanUpdatePasswordAfterAuthorization() {
+        Role adminRole = role("ROLE_ADMIN");
+        authenticateAs(userEntity, adminRole);
+        when(passwordEncoder.encode("novaSenha123")).thenReturn("senha-codificada");
+
+        userBusiness.updatePassword(2L, "novaSenha123");
+
+        verify(passwordEncoder).encode("novaSenha123");
+        verify(userPort).updatePassword(2L, "senha-codificada");
+    }
+
+    @Test
+    @DisplayName("Operador não deve resolver ou persistir roles antes da autorização")
+    void operatorCannotUpdateRolesBeforeResolutionOrPersistence() {
+        authenticateAs(userEntity, operatorRole);
+
+        assertThrows(UnauthorizedException.class,
+                () -> userBusiness.updateRoles(2L, List.of("ROLE_ADMIN")));
+
+        verify(rolePort, never()).findByAuthority(any());
+        verify(userPort, never()).findById(any());
+        verify(userPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Mudança de roles deve ser autorizada antes de qualquer mutação do usuário")
+    void operatorCannotMutateUserWhenRolesAreRequested() {
+        authenticateAs(userEntity, operatorRole);
+        userRequestVO.setRoles(List.of("ROLE_ADMIN"));
+
+        assertThrows(UnauthorizedException.class, () -> userBusiness.updateUser(2L, userRequestVO));
+
+        verify(userPort, never()).findById(any());
+        verify(rolePort, never()).findByAuthority(any());
+        verify(passwordEncoder, never()).encode(any());
+        verify(userPort, never()).save(any());
+    }
+
+    private void authenticateAs(User user, Role assignedRole) {
+        user.getRoles().clear();
+        user.addRole(assignedRole);
+        when(userPort.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(user.getEmail(), "ignored", java.util.List.of())
+        );
+    }
+
+    private Role role(String authority) {
+        Role role = new Role();
+        role.setAuthority(authority);
+        return role;
     }
 }

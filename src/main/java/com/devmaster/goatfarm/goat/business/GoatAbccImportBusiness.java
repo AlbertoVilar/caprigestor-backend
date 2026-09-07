@@ -86,8 +86,6 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<GoatAbccRaceOptionVO> listRaces(Long farmId) {
-        ownershipService.verifyFarmOwnership(farmId);
-
         List<GoatAbccRaceOptionVO> raceOptions = fetchAbccRaceCatalog();
         return raceOptions.stream()
                 .map(this::toNormalizedRaceOption)
@@ -97,12 +95,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     @Override
     @Transactional(readOnly = true)
     public GoatAbccSearchResponseVO search(Long farmId, GoatAbccSearchRequestVO requestVO) {
-        ownershipService.verifyFarmOwnership(farmId);
         validateSearchRequest(requestVO);
-
-        boolean isAdmin = ownershipService.isCurrentUserAdmin();
-        GoatFarm farm = loadFarm(farmId);
-        String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
 
         Integer resolvedRaceId = resolveRaceId(requestVO);
         GoatAbccSearchRequestVO normalizedRequest = GoatAbccSearchRequestVO.builder()
@@ -111,7 +104,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .affix(requestVO.getAffix())
                 .page(requestVO.getPage())
                 .sex(requestVO.getSex())
-                .tod(isAdmin ? requestVO.getTod() : farmTod)
+                .tod(requestVO.getTod())
                 .toe(requestVO.getToe())
                 .name(requestVO.getName())
                 .dna(requestVO.getDna())
@@ -128,7 +121,6 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 ? List.of()
                 : rawResult.getItems().stream()
                 .map(this::normalizeSearchItem)
-                .filter(item -> isAdmin || isSameTod(item.getTod(), farmTod))
                 .toList();
 
         return GoatAbccSearchResponseVO.builder()
@@ -142,14 +134,11 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     @Override
     @Transactional(readOnly = true)
     public GoatAbccPreviewResponseVO preview(Long farmId, GoatAbccPreviewRequestVO requestVO) {
-        ownershipService.verifyFarmOwnership(farmId);
         if (requestVO == null || isBlank(requestVO.getExternalId())) {
             throw new BusinessRuleException("externalId", "Identificador externo da ABCC é obrigatório.");
         }
 
-        boolean isAdmin = ownershipService.isCurrentUserAdmin();
         GoatFarm farm = loadFarm(farmId);
-        String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
 
         GoatAbccRawPreviewVO raw;
         try {
@@ -159,9 +148,6 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         }
 
         String abccTod = trimOrNull(raw.getTod());
-        enforceTodMatchForNonAdmin(isAdmin, farmTod, abccTod);
-
-        User currentUser = ownershipService.getCurrentUser();
 
         List<String> warnings = new ArrayList<>();
         Gender gender = normalizeGender(raw.getSexo(), warnings, "sexo");
@@ -194,7 +180,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .fatherRegistrationNumber(trimOrNull(raw.getPaiRegistro()))
                 .motherName(trimOrNull(raw.getMaeNome()))
                 .motherRegistrationNumber(trimOrNull(raw.getMaeRegistro()))
-                .userName(currentUser != null ? currentUser.getName() : null)
+                .userName(null)
                 .farmId(farmId)
                 .farmName(farm.getName())
                 .normalizationWarnings(warnings)

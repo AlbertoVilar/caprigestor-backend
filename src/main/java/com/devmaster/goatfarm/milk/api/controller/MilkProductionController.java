@@ -44,7 +44,7 @@ public class MilkProductionController {
         this.milkProductionMapper = milkProductionMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @PostMapping
     @Operation(summary = "Registrar produção diária de leite")
     @ApiResponses({
@@ -63,7 +63,7 @@ public class MilkProductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(milkProductionMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @PatchMapping("/{id}")
     @Operation(summary = "Atualizar parcialmente um registro de produção")
     @ApiResponses({
@@ -91,7 +91,7 @@ public class MilkProductionController {
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
             @ApiResponse(responseCode = "404", description = "Produção não encontrada.")
     })
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping("/{id}")
     public ResponseEntity<MilkProductionResponseDTO> findById(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -111,7 +111,7 @@ public class MilkProductionController {
             @ApiResponse(responseCode = "400", description = "Parâmetros de filtro ou paginação inválidos."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
     })
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping
     public ResponseEntity<Page<MilkProductionResponseDTO>> getMilkProductions(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -145,7 +145,7 @@ public class MilkProductionController {
         return ResponseEntity.ok(dtoPage);
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @DeleteMapping("/{id}")
     @Operation(summary = "Cancelar logicamente um registro de produção")
     @ApiResponses({

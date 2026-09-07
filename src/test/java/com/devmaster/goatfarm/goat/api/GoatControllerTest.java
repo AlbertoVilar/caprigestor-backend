@@ -75,6 +75,7 @@ class GoatControllerTest {
             objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         }
         when(ownershipService.isFarmOwner(eq(1L))).thenReturn(true);
+        when(ownershipService.canManageFarm(eq(1L))).thenReturn(true);
         goatResponseDTO = new GoatResponseDTO();
         goatResponseDTO.setRegistrationNumber("001");
         goatResponseDTO.setName("Cabra Teste");
@@ -288,7 +289,7 @@ class GoatControllerTest {
     @WithMockUser(roles = "FARM_OWNER")
     void shouldForbidCreateGoatWhenNotOwnerOfFarm() throws Exception {
         // Arrange
-        when(ownershipService.isFarmOwner(eq(2L))).thenReturn(false);
+        when(ownershipService.canManageFarm(eq(2L))).thenReturn(false);
         GoatRequestDTO newGoatRequestDTO = new GoatRequestDTO();
         newGoatRequestDTO.setRegistrationNumber("004");
         newGoatRequestDTO.setName("Cabra Fora");
@@ -345,7 +346,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldUpdateGoatSuccessfully() throws Exception {
         // Arrange
         GoatRequestDTO updateGoatRequestDTO = new GoatRequestDTO();
@@ -384,7 +385,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldRegisterGoatExitSuccessfully() throws Exception {
         GoatExitRequestDTO requestDTO = GoatExitRequestDTO.builder()
                 .exitType(com.devmaster.goatfarm.goat.enums.GoatExitType.VENDA)
@@ -417,7 +418,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldReturnUnprocessableEntityWhenExitPayloadIsInvalid() throws Exception {
         GoatExitRequestDTO requestDTO = new GoatExitRequestDTO();
 
@@ -431,7 +432,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldDeleteGoatSuccessfully() throws Exception {
         // Arrange
         doNothing().when(goatUseCase).deleteGoat(eq(1L), eq("001"));
@@ -445,7 +446,7 @@ class GoatControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldReturnNotFoundWhenDeletingNonExistentGoat() throws Exception {
         doThrow(new ResourceNotFoundException("Goat not found with id: 999"))
                 .when(goatUseCase).deleteGoat(eq(1L), eq("999"));

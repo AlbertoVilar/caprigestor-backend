@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -45,6 +47,8 @@ class HealthEventBusinessTest {
     private GoatGenderValidator goatGenderValidator;
     @Mock
     private HealthEventBusinessMapper mapper;
+    @Mock
+    private OwnershipService ownershipService;
 
     private HealthEventBusiness healthEventBusiness;
 
@@ -61,7 +65,8 @@ class HealthEventBusinessTest {
                 goatPersistencePort,
                 goatGenderValidator,
                 mapper,
-                entityFinder
+                entityFinder,
+                ownershipService
         );
 
         healthEvent = new HealthEvent();
@@ -267,6 +272,20 @@ class HealthEventBusinessTest {
         );
 
         verify(goatGenderValidator).requireActive(farmId, goatId);
+        verify(persistencePort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should authorize owner before reopening a health event")
+    void reopen_fail_whenFarmOwnershipIsDenied() {
+        doThrow(new AccessDeniedException("denied"))
+                .when(ownershipService).verifyFarmOwnership(farmId);
+
+        assertThrows(AccessDeniedException.class,
+                () -> healthEventBusiness.reopen(farmId, goatId, eventId));
+
+        verify(goatGenderValidator, never()).requireActive(farmId, goatId);
+        verify(persistencePort, never()).findByIdAndFarmIdAndGoatId(any(), any(), any());
         verify(persistencePort, never()).save(any());
     }
 }

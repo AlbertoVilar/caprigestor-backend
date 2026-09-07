@@ -1,5 +1,5 @@
 # Módulo Saúde e Veterinário
-Última atualização: 2026-02-28
+Última atualização: 2026-09-07
 Escopo: eventos sanitários por cabra e consultas agregadas por fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
@@ -10,7 +10,7 @@ O módulo `health` registra, atualiza e consulta eventos de saúde (vacina, medi
 - Status de evento: `AGENDADO`, `REALIZADO`, `CANCELADO`.
 - Tipos principais: `VACINA`, `VERMIFUGACAO`, `MEDICACAO`, `PROCEDIMENTO`, `DOENCA`.
 - Ownership obrigatório nas rotas farm-level (`@ownershipService.canManageFarm`).
-- Reabertura (`/{eventId}/reopen`) exige ownership e papel `ADMIN` ou `FARM_OWNER`.
+- Reabertura (`/{eventId}/reopen`) exige `ADMIN` ou `FARM_OWNER` da fazenda. A mesma autorização é validada novamente no caso de uso, antes de qualquer leitura ou mutação do evento.
 - Indicador `overdue` é derivado (não é payload de entrada).
 - Alertas de fazenda limitam `windowDays` para faixa segura (`1..30`).
 - As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.
@@ -110,21 +110,21 @@ GET /api/v1/goatfarms/1/health-events/alerts?windowDays=7
 - Controller por cabra: [src/main/java/com/devmaster/goatfarm/health/api/controller/HealthEventController.java](../../src/main/java/com/devmaster/goatfarm/health/api/controller/HealthEventController.java)
 - Controller por fazenda: [src/main/java/com/devmaster/goatfarm/health/api/controller/FarmHealthEventController.java](../../src/main/java/com/devmaster/goatfarm/health/api/controller/FarmHealthEventController.java)
 - DTOs de entrada/saída: [src/main/java/com/devmaster/goatfarm/health/api/dto](../../src/main/java/com/devmaster/goatfarm/health/api/dto)
-## Carencia sanitaria operacional (2026-03-29)
-- A carencia operacional e derivada dos eventos sanitarios `REALIZADO` com `withdrawalMilkDays` e/ou `withdrawalMeatDays`.
-- Nao existe tabela nova para carencia nesta etapa; o status e calculado a partir de `performedAt + withdrawalDays`.
-- O detalhe do evento e o status por cabra agora expoem:
+## Carência sanitária operacional (2026-03-29)
+- A carência operacional é derivada dos eventos sanitários `REALIZADO` com `withdrawalMilkDays` e/ou `withdrawalMeatDays`.
+- Não existe tabela nova para carência nesta etapa; o status é calculado a partir de `performedAt + withdrawalDays`.
+- O detalhe do evento e o status por cabra agora expõem:
   - `milkWithdrawalActive`
   - `milkWithdrawalEndDate`
   - `meatWithdrawalActive`
   - `meatWithdrawalEndDate`
-  - origem resumida do tratamento responsavel pela carencia
+  - origem resumida do tratamento responsável pela carência
 - Novo endpoint por cabra:
   - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events/withdrawal-status`
-- O agregado farm-level de alertas passou a retornar tambem:
+- O agregado farm-level de alertas passou a retornar também:
   - `activeMilkWithdrawalCount`
   - `activeMeatWithdrawalCount`
   - `milkWithdrawalTop`
   - `meatWithdrawalTop`
-- Nesta etapa, carencia de carne entra como alerta forte operacional.
-- Para leite, a carencia passa a ser leitura e marcacao operacional viva: o sistema permite registrar a producao, mas identifica explicitamente o volume produzido em carencia para manter a separacao entre historico zootecnico e uso comercial.
+- Nesta etapa, carência de carne entra como alerta forte operacional.
+- Para leite, a carência passa a ser leitura e marcação operacional viva: o sistema permite registrar a produção, mas identifica explicitamente o volume produzido em carência para manter a separação entre histórico zootécnico e uso comercial.

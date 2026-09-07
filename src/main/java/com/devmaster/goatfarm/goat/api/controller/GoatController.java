@@ -36,7 +36,7 @@ public class GoatController {
         this.goatMapper = goatMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @PostMapping
     @Operation(summary = "Cadastra uma nova cabra em uma fazenda")
     @ApiResponses(value = {
@@ -52,7 +52,7 @@ public class GoatController {
                 ));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PutMapping("/{goatId}")
     @Operation(summary = "Atualiza os dados de uma cabra existente em uma fazenda")
     @ApiResponses(value = {
@@ -69,7 +69,7 @@ public class GoatController {
         );
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/{goatId}/exit")
     @Operation(summary = "Registra saida controlada do animal do rebanho")
     @ApiResponses(value = {
@@ -89,7 +89,7 @@ public class GoatController {
         );
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @DeleteMapping("/{goatId}")
     @Operation(summary = "Remove uma cabra de uma fazenda")
     @ApiResponses(value = {

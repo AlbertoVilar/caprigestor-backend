@@ -9,8 +9,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +17,7 @@ import com.devmaster.goatfarm.authority.api.dto.UserRolesUpdateDTO;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
@@ -29,7 +28,6 @@ public class UserController {
         this.userMapper = userMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or #id == principal.id")
     @PatchMapping("/{id}/password")
     public ResponseEntity<?> updatePassword(@PathVariable Long id, @RequestBody @Valid UserPasswordUpdateDTO dto) {
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
@@ -39,7 +37,6 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PatchMapping("/{id}/roles")
     public ResponseEntity<UserResponseDTO> updateRoles(@PathVariable Long id, @RequestBody @Valid UserRolesUpdateDTO dto) {
         return ResponseEntity.ok(userMapper.toResponseDTO(userUseCase.updateRoles(id, dto.getRoles())));
@@ -75,16 +72,5 @@ public class UserController {
         return ResponseEntity.ok(
                 userMapper.toResponseDTO(userUseCase.updateUser(id, userMapper.toRequestVO(dto)))
         );
-    }
-
-        @GetMapping("/debug/{email}")
-    public ResponseEntity<Map<String, Object>> debugUserRoles(@PathVariable String email) {
-        UserResponseDTO user = userMapper.toResponseDTO(userUseCase.findByEmail(email));
-        Map<String, Object> debugInfo = new HashMap<>();
-        debugInfo.put("email", user.getEmail());
-        debugInfo.put("name", user.getName());
-        debugInfo.put("rolesCount", user.getRoles().size());
-        debugInfo.put("roles", user.getRoles());
-        return ResponseEntity.ok(debugInfo);
     }
 }

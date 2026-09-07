@@ -44,7 +44,7 @@ public class LactationController {
         this.lactationMapper = lactationMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @PostMapping
     @Operation(summary = "Abrir uma nova lactação para uma cabra")
     @ApiResponses({
@@ -63,7 +63,7 @@ public class LactationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping("/active")
     @Operation(summary = "Buscar lactação ativa de uma cabra")
     @ApiResponses({
@@ -78,7 +78,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping("/active/summary")
     @Operation(summary = "Buscar sumário da lactação ativa da cabra")
     @ApiResponses({
@@ -93,7 +93,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toSummaryResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @PatchMapping("/{lactationId}/dry")
     @Operation(summary = "Marcar uma lactação como seca")
     @ApiResponses({
@@ -113,7 +113,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @PatchMapping("/{lactationId}/resume")
     @Operation(summary = "Retomar uma lactacao previamente secada")
     @ApiResponses({
@@ -131,7 +131,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping("/{lactationId}")
     @Operation(summary = "Buscar lactação por identificador")
     @ApiResponses({
@@ -148,7 +148,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping("/{lactationId}/summary")
     @Operation(summary = "Buscar sumário da lactação por identificador")
     @ApiResponses({
@@ -165,7 +165,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toSummaryResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or ((hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')) and @ownershipService.isFarmOwner(#farmId))")
+    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
     @GetMapping
     @Operation(summary = "Listar histórico de lactações de uma cabra")
     @ApiResponses({

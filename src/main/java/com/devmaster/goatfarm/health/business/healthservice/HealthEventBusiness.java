@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.health.business.healthservice;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
@@ -31,19 +32,22 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     private final GoatGenderValidator goatGenderValidator;
     private final HealthEventBusinessMapper mapper;
     private final EntityFinder entityFinder;
+    private final OwnershipService ownershipService;
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
             GoatPersistencePort goatPersistencePort,
             GoatGenderValidator goatGenderValidator,
             HealthEventBusinessMapper mapper,
-            EntityFinder entityFinder
+            EntityFinder entityFinder,
+            OwnershipService ownershipService
     ) {
         this.persistencePort = persistencePort;
         this.goatPersistencePort = goatPersistencePort;
         this.goatGenderValidator = goatGenderValidator;
         this.mapper = mapper;
         this.entityFinder = entityFinder;
+        this.ownershipService = ownershipService;
     }
 
     @Override
@@ -123,6 +127,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO reopen(Long farmId, String goatId, Long eventId) {
+        ownershipService.verifyFarmOwnership(farmId);
         goatGenderValidator.requireActive(farmId, goatId);
         var healthEvent = findEventOrThrow(farmId, goatId, eventId);
         HealthEventStatus currentStatus = healthEvent.getStatus();

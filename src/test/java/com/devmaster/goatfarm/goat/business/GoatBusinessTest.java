@@ -127,7 +127,7 @@ public class GoatBusinessTest {
     @DisplayName("Deve criar cabra com sucesso quando pai e mãe são nulos")
     void shouldCreateGoatSuccessfully() {
         // ===== Arrange =====
-        doNothing().when(ownershipService).verifyFarmOwnership(1L);
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(java.util.Optional.of(goatFarm));
         when(goatBusinessMapper.toEntity(requestVO)).thenReturn(goat);
@@ -153,7 +153,7 @@ public class GoatBusinessTest {
         assertThat(resultado.getFarmId()).isEqualTo(1L);
 
         // ===== Verify =====
-        verify(ownershipService, times(1)).verifyFarmOwnership(1L);
+        verify(ownershipService, times(1)).verifyFarmManagement(1L);
         verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
         verify(goatFarmPort, times(1)).findById(1L);
         verify(genealogicalParentageService).resolve(Category.PO, "164322002", null, null);
@@ -188,7 +188,7 @@ public class GoatBusinessTest {
         goat.setMother(motherGoat);
 
         // ===== ARRANGE - Mocks =====
-        doNothing().when(ownershipService).verifyFarmOwnership(1L);
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(goatFarm));
         when(genealogicalParentageService.resolve(Category.PO, "164322002", "164321001", "164321002"))
@@ -207,7 +207,7 @@ public class GoatBusinessTest {
         assertThat(resultado.getName()).isEqualTo("Xeque V Do Capril Vilar");
 
         // ===== VERIFY =====
-        verify(ownershipService, times(1)).verifyFarmOwnership(1L);
+        verify(ownershipService, times(1)).verifyFarmManagement(1L);
         verify(goatPort, times(1)).existsByRegistrationNumber("164322002");
         verify(goatFarmPort, times(1)).findById(1L);
         verify(genealogicalParentageService).resolve(Category.PO, "164322002", "164321001", "164321002");
