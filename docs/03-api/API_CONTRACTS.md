@@ -1,5 +1,5 @@
 # API_CONTRACTS
-Última atualização: 2026-09-05
+Última atualização: 2026-09-07
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -13,7 +13,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Base geral: `/api/v1`
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Rotas públicas sem autenticação (quando aplicável) usam namespace separado, por exemplo: `/public/articles`.
-- As consultas `GET` de fazendas, animais e genealogia sob `/api/v1/goatfarms` são públicas por decisão de produto. Fazendas públicas incluem nome do responsável, telefones e e-mail de contato, mas nunca CPF, credenciais, papéis ou endereço detalhado.
+- As consultas `GET` de fazendas, animais e genealogia sob `/api/v1/goatfarms` são públicas por decisão de produto. Fazendas públicas podem incluir nome do responsável e e-mail de contato, mas não incluem telefones, CPF, credenciais, papéis ou endereço detalhado.
 
 ### Versionamento
 - Endpoints de aplicação são publicados exclusivamente em `/api/v1/...`.
@@ -112,13 +112,19 @@ Paginação atual:
   `expectedDueDate` e `daysOverdue`. São retornadas gestações ativas da fazenda
   com previsão na referência ou anterior, ordenadas por previsão e ID crescentes.
 - Os controllers usam `canManageFarm`, incluindo operador vinculado; a criação
-  delegada ao Goat mantém sua própria exigência de proprietário/administrador.
+  da cria reutiliza a mesma autorização operacional no caso de uso Goat.
 
 No comando de parto, `kids[].registrationNumber` deve conter 10 a 12 caracteres
 (números e uma letra final opcional), começando pelo TOD da fazenda de nascimento.
 `kids[].birthDate`, se informada, deve coincidir com `birthDate` do parto.
 Formato/data inválidos retornam `400`; inconsistência de TOD retorna `422`.
 Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-de-uso-comunicar-parto-e-cadastrar-cria).
+
+### Commercial
+
+- Consultas, resumos e cadastro de cliente exigem usuário autorizado a operar a fazenda: ADMIN, FARM_OWNER próprio ou OPERATOR formalmente vinculado.
+- Registro de venda de animal ou leite, baixa de pagamento e lançamento de despesa operacional são mutações financeiras ou patrimoniais definitivas e exigem ADMIN ou FARM_OWNER da própria fazenda.
+- A autorização das mutações sensíveis é aplicada no controller e validada novamente no caso de uso antes da persistência.
 
 Exemplo de alerta pendente:
 

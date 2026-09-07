@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.commercial.business.bo.OperationalExpenseResponseV
 import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.stereotype.Service;
@@ -26,20 +27,24 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     private final OperationalFinancePersistencePort persistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort;
+    private final OwnershipService ownershipService;
 
     public OperationalFinanceBusiness(
             OperationalFinancePersistencePort persistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
-            InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort
+            InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort,
+            OwnershipService ownershipService
     ) {
         this.persistencePort = persistencePort;
         this.goatFarmPersistencePort = goatFarmPersistencePort;
         this.inventoryPurchaseCostQueryPort = inventoryPurchaseCostQueryPort;
+        this.ownershipService = ownershipService;
     }
 
     @Override
     @Transactional
     public OperationalExpenseResponseVO createOperationalExpense(Long farmId, OperationalExpenseRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         GoatFarm farm = resolveFarm(farmId);
         validateRequest(requestVO);
 
@@ -60,6 +65,7 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<OperationalExpenseResponseVO> listOperationalExpenses(Long farmId) {
+        ownershipService.verifyFarmManagement(farmId);
         resolveFarm(farmId);
         return persistencePort.findOperationalExpensesByFarmId(farmId).stream().map(this::toResponseVO).toList();
     }
@@ -67,6 +73,7 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     @Override
     @Transactional(readOnly = true)
     public MonthlyOperationalSummaryVO getMonthlySummary(Long farmId, int year, int month) {
+        ownershipService.verifyFarmManagement(farmId);
         resolveFarm(farmId);
 
         YearMonth yearMonth = resolveYearMonth(year, month);

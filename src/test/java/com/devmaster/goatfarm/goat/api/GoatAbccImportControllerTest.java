@@ -70,7 +70,6 @@ class GoatAbccImportControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
     void shouldListAbccRacesSuccessfully() throws Exception {
         when(goatAbccImportUseCase.listRaces(eq(1L))).thenReturn(List.of(
                 GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").normalizedBreed(GoatBreed.SAANEN).build(),
@@ -87,7 +86,6 @@ class GoatAbccImportControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
     void shouldSearchAbccSuccessfully() throws Exception {
         when(goatAbccImportUseCase.search(eq(1L), any())).thenReturn(GoatAbccSearchResponseVO.builder()
                 .currentPage(1)
@@ -127,7 +125,6 @@ class GoatAbccImportControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
     void shouldPreviewAbccSuccessfully() throws Exception {
         when(goatAbccImportUseCase.preview(eq(1L), any())).thenReturn(GoatAbccPreviewResponseVO.builder()
                 .externalSource("ABCC_PUBLIC")
@@ -162,7 +159,7 @@ class GoatAbccImportControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldConfirmAbccImportSuccessfully() throws Exception {
         GoatResponseVO created = new GoatResponseVO();
         created.setRegistrationNumber("1643218012");
@@ -205,7 +202,7 @@ class GoatAbccImportControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "OPERATOR")
+    @WithMockUser(roles = "FARM_OWNER")
     void shouldConfirmBatchAbccImportSuccessfully() throws Exception {
         when(goatAbccImportUseCase.confirmBatch(eq(1L), any())).thenReturn(
                 GoatAbccBatchConfirmResponseVO.builder()
@@ -271,21 +268,28 @@ class GoatAbccImportControllerTest {
 
     @Test
     @WithMockUser(roles = "VIEWER")
-    void shouldForbidViewerFromAbccImportEndpoints() throws Exception {
+    void shouldForbidViewerFromAbccConfirmEndpoint() throws Exception {
         String payload = """
                 {
-                  "raceName": "SAANEN",
-                  "affix": "CRS",
-                  "page": 1
+                  "externalId": "4044",
+                  "goat": {
+                    "registrationNumber": "1643218012",
+                    "name": "XEQUE V DO CAPRIL VILAR",
+                    "gender": "MACHO",
+                    "breed": "ALPINA",
+                    "color": "CHAMOISÉE",
+                    "birthDate": "2018-06-27",
+                    "status": "ATIVO"
+                  }
                 }
                 """;
 
-        mockMvc.perform(post("/api/v1/goatfarms/1/goats/imports/abcc/search")
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/imports/abcc/confirm")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isForbidden());
 
-        verify(goatAbccImportUseCase, never()).search(eq(1L), any());
+        verify(goatAbccImportUseCase, never()).confirm(eq(1L), any(), any());
     }
 }

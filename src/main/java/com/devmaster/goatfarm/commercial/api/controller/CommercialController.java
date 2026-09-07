@@ -55,7 +55,7 @@ public class CommercialController {
         return ResponseEntity.ok(commercialUseCase.listCustomers(farmId).stream().map(commercialApiMapper::toDTO).toList());
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/animal-sales")
     @Operation(summary = "Registrar venda de animal")
     public ResponseEntity<AnimalSaleResponseDTO> createAnimalSale(@PathVariable Long farmId, @Valid @RequestBody AnimalSaleRequestDTO requestDTO) {
@@ -70,14 +70,14 @@ public class CommercialController {
         return ResponseEntity.ok(commercialUseCase.listAnimalSales(farmId).stream().map(commercialApiMapper::toDTO).toList());
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/animal-sales/{saleId}/payment")
     @Operation(summary = "Marcar venda de animal como paga")
     public ResponseEntity<AnimalSaleResponseDTO> registerAnimalSalePayment(@PathVariable Long farmId, @PathVariable Long saleId, @Valid @RequestBody SalePaymentRequestDTO requestDTO) {
         return ResponseEntity.ok(commercialApiMapper.toDTO(commercialUseCase.registerAnimalSalePayment(farmId, saleId, commercialApiMapper.toVO(requestDTO))));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/milk-sales")
     @Operation(summary = "Registrar venda de leite")
     public ResponseEntity<MilkSaleResponseDTO> createMilkSale(@PathVariable Long farmId, @Valid @RequestBody MilkSaleRequestDTO requestDTO) {
@@ -92,7 +92,7 @@ public class CommercialController {
         return ResponseEntity.ok(commercialUseCase.listMilkSales(farmId).stream().map(commercialApiMapper::toDTO).toList());
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PatchMapping("/milk-sales/{saleId}/payment")
     @Operation(summary = "Marcar venda de leite como paga")
     public ResponseEntity<MilkSaleResponseDTO> registerMilkSalePayment(@PathVariable Long farmId, @PathVariable Long saleId, @Valid @RequestBody SalePaymentRequestDTO requestDTO) {

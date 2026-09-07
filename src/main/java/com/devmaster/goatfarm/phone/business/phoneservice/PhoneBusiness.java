@@ -39,6 +39,7 @@ public class PhoneBusiness implements PhoneManagementUseCase {
 
     @Transactional
     public PhoneResponseVO createPhone(Long farmId, PhoneRequestVO requestVO) {
+        ownershipService.verifyFarmOwnership(farmId);
         if (requestVO == null) {
             throw new InvalidArgumentException("request", "Os dados do telefone para criação não podem ser nulos.");
         }

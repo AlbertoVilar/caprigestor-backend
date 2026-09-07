@@ -73,7 +73,6 @@ public class SecurityConfig {
                     "/api/v1/auth/register-farm",
                     "/api/v1/auth/password-reset/request",
                     "/api/v1/auth/password-reset/confirm",
-                    "/api/v1/goatfarms/full",
                     "/public/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**",
                     "/actuator/health", "/actuator/health/**")
             .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
@@ -109,17 +108,26 @@ public class SecurityConfig {
                         "/api/v1/goatfarms",
                         "/api/v1/goatfarms/*",
                         "/api/v1/goatfarms/name").permitAll()
+                // Cadastro completo de fazenda é o fluxo público de onboarding.
+                // A autorização do proprietário é definida internamente e não vem do payload.
+                .requestMatchers(HttpMethod.POST, "/api/v1/goatfarms").permitAll()
                 // Consultas de cabras dentro da fazenda (públicas)
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms/*/goats",
                         "/api/v1/goatfarms/*/goats/*",
-                        "/api/v1/goatfarms/*/goats/search").permitAll()
+                        "/api/v1/goatfarms/*/goats/search",
+                        "/api/v1/goatfarms/*/goats/*/offspring",
+                        "/api/v1/goatfarms/*/goats/imports/abcc/races").permitAll()
+                // Consultas ABCC públicas e somente leitura
+                .requestMatchers(HttpMethod.POST,
+                        "/api/v1/goatfarms/*/goats/imports/abcc/search",
+                        "/api/v1/goatfarms/*/goats/imports/abcc/preview").permitAll()
                 // Genealogias públicas (apenas leitura)
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms/*/goats/*/genealogies").permitAll()
                 .requestMatchers("/api/v1/articles/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/v1/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR")
+                .requestMatchers("/api/v1/users/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.PUT, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")

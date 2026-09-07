@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.api.controller.GoatFarmController;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
+import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -150,6 +151,11 @@ class GoatFarmControllerTest {
         farmResponse.setCity("Monteiro");
         farmResponse.setState("PB");
         farmResponse.setZipCode("58500-000");
+        PhoneResponseVO phone = new PhoneResponseVO();
+        phone.setId(40L);
+        phone.setDdd("83");
+        phone.setNumber("999999999");
+        farmResponse.setPhones(List.of(phone));
         when(farmUseCase.findGoatFarmById(1L)).thenReturn(farmResponse);
         when(ownershipService.canManageFarm(1L)).thenReturn(false);
 
@@ -162,7 +168,8 @@ class GoatFarmControllerTest {
                 .andExpect(jsonPath("$.address.city").value("Monteiro"))
                 .andExpect(jsonPath("$.address.state").value("PB"))
                 .andExpect(jsonPath("$.address.street").doesNotExist())
-                .andExpect(jsonPath("$.address.zipCode").doesNotExist());
+                .andExpect(jsonPath("$.address.zipCode").doesNotExist())
+                .andExpect(jsonPath("$.phones").doesNotExist());
 
         verify(farmUseCase).findGoatFarmById(1L);
         verify(ownershipService, never()).verifyFarmOwnership(1L);

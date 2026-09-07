@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -18,9 +19,15 @@ public class JwtService {
     private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
     private final JwtEncoder jwtEncoder;
+    private final long accessTokenDurationSeconds;
+    private final long refreshTokenDurationSeconds;
 
-    public JwtService(JwtEncoder jwtEncoder) {
+    public JwtService(JwtEncoder jwtEncoder,
+                      @Value("${security.jwt.duration:86400}") long accessTokenDurationSeconds,
+                      @Value("${security.jwt.refresh-duration:604800}") long refreshTokenDurationSeconds) {
         this.jwtEncoder = jwtEncoder;
+        this.accessTokenDurationSeconds = requirePositiveDuration("security.jwt.duration", accessTokenDurationSeconds);
+        this.refreshTokenDurationSeconds = requirePositiveDuration("security.jwt.refresh-duration", refreshTokenDurationSeconds);
     }
 
     public String generateToken(User user) {
@@ -28,7 +35,6 @@ public class JwtService {
             logger.debug("event=jwt_generation_started userId={}", user.getId());
             
             Instant now = Instant.now();
-            long expiry = 24L;             
             String scope = user.getRoles()
                     .stream()
                     .map(role -> role.getAuthority())
@@ -36,7 +42,7 @@ public class JwtService {
             JwtClaimsSet claims = JwtClaimsSet.builder()
                     .issuer("goatfarm-api")
                     .issuedAt(now)
-                    .expiresAt(now.plus(expiry, ChronoUnit.HOURS))
+                    .expiresAt(now.plus(accessTokenDurationSeconds, ChronoUnit.SECONDS))
                     .subject(user.getEmail())
                     .claim("scope", scope)
                     .claim("userId", user.getId())
@@ -45,7 +51,7 @@ public class JwtService {
                     .build();
             
             String token = this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-            logger.debug("event=jwt_generation_completed userId={} expiresInHours={}", user.getId(), expiry);
+            logger.debug("event=jwt_generation_completed userId={} expiresInSeconds={}", user.getId(), accessTokenDurationSeconds);
             
             return token;
         } catch (Exception e) {
@@ -57,16 +63,22 @@ public class JwtService {
 
     public String generateRefreshToken(User user) {
         Instant now = Instant.now();
-        long expiry = 168L; 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("goatfarm-api")
                 .issuedAt(now)
-                .expiresAt(now.plus(expiry, ChronoUnit.HOURS))
+                .expiresAt(now.plus(refreshTokenDurationSeconds, ChronoUnit.SECONDS))
                 .subject(user.getEmail())
                 .claim("scope", "REFRESH")
                 .claim("userId", user.getId())
                 .build();
 
         return this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+    }
+
+    private long requirePositiveDuration(String propertyName, long durationSeconds) {
+        if (durationSeconds <= 0) {
+            throw new IllegalArgumentException(propertyName + " deve ser maior que zero.");
+        }
+        return durationSeconds;
     }
 }

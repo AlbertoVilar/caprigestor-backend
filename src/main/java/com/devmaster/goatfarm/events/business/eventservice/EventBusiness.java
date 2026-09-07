@@ -14,6 +14,7 @@ import com.devmaster.goatfarm.events.persistence.entity.Event;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,7 +48,7 @@ public class EventBusiness implements EventManagementUseCase {
         Goat goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatRegistrationNumber));
 
-        verifyFarmOwnership(goat);
+        verifyFarmManagement(goat);
 
         Event event = eventMapper.toEntity(requestVO);
         event.setGoat(goat);
@@ -82,7 +83,7 @@ public class EventBusiness implements EventManagementUseCase {
     public EventResponseVO findEventById(Long eventId) {
         Event event = eventPersistencePort.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + eventId));
-        verifyFarmOwnership(event.getGoat());
+        verifyFarmManagement(event.getGoat());
         return eventMapper.toResponseVO(event);
     }
 
@@ -92,7 +93,7 @@ public class EventBusiness implements EventManagementUseCase {
         Goat goat = goatPersistencePort.findByRegistrationNumber(goatNumRegistration)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatNumRegistration));
 
-        verifyFarmOwnership(goat);
+        verifyFarmManagement(goat);
 
         List<Event> events = eventPersistencePort.findByGoatRegistrationNumber(goatNumRegistration);
         if (events.isEmpty()) {
@@ -111,7 +112,7 @@ public class EventBusiness implements EventManagementUseCase {
         Goat goat = goatPersistencePort.findByRegistrationNumber(registrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + registrationNumber));
 
-        verifyFarmOwnership(goat);
+        verifyFarmManagement(goat);
 
         Page<Event> events = eventPersistencePort.findWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
         return events.map(eventMapper::toResponseVO);
@@ -132,5 +133,12 @@ public class EventBusiness implements EventManagementUseCase {
 
     private void verifyFarmOwnership(Goat goat) {
         ownershipService.verifyGoatOwnership(goat.getFarm().getId(), goat.getRegistrationNumber());
+    }
+
+    private void verifyFarmManagement(Goat goat) {
+        Long farmId = goat.getFarm().getId();
+        if (!ownershipService.canManageFarm(farmId)) {
+            throw new AccessDeniedException("Usuário não pode operar esta fazenda.");
+        }
     }
 }

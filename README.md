@@ -20,7 +20,7 @@ Pontos fortes do projeto:
 - segurança JWT com controle por perfil e por fazenda;
 - PostgreSQL + Flyway com histórico de evolução do schema;
 - integração opcional com RabbitMQ para eventos assíncronos;
-- suíte de testes com unit, integração, ArchUnit e Testcontainers;
+- suíte de testes unitários, de integração com H2 e de arquitetura com ArchUnit;
 - documentação operacional e arquitetural mantida dentro do repositório.
 
 ## Principais Capacidades
@@ -114,11 +114,11 @@ porta de entrada e não se torne uma cópia concorrente da documentação técni
 - Spring Security
 - Spring Data JPA
 - PostgreSQL
+- H2 (testes automatizados)
 - Flyway
 - RabbitMQ (opcional)
 - MapStruct
 - Lombok
-- Testcontainers
 - ArchUnit
 - Docker / Docker Compose
 
@@ -170,17 +170,23 @@ quando precisar validar a integração assíncrona com RabbitMQ.
 
 | Perfil | Uso | Persistência | Mensageria |
 |---|---|---|---|
-| `dev` | desenvolvimento local | PostgreSQL | desabilitada por padrão |
-| `test` | suíte automatizada | cenários isolados e Testcontainers quando necessário | listeners desabilitados |
+| `dev` | desenvolvimento local | PostgreSQL com Flyway | desabilitada por padrão |
+| `test` | suíte automatizada | H2 em memória, sem Flyway | listeners desabilitados |
 | `prod` | implantação | PostgreSQL com schema validado pelo Flyway | desabilitada por padrão |
 
 ## Segurança
 
 - autenticação stateless baseada em JWT;
-- autorização por papéis como `ROLE_ADMIN`, `ROLE_FARM_OWNER` e `ROLE_OPERATOR`;
-- enforcement de ownership por fazenda;
-- endpoint específico de permissões por fazenda;
+- `ROLE_ADMIN` possui acesso administrativo global;
+- `ROLE_FARM_OWNER` administra somente a própria fazenda;
+- `ROLE_OPERATOR` executa rotinas operacionais somente quando possui vínculo formal com a fazenda;
+- consultas públicas de animais, genealogia, descendência e ABCC somente leitura permanecem abertas;
+- mutações administrativas, patrimoniais e financeiras sensíveis permanecem restritas;
 - suporte a operadores vinculados pela tabela `tb_farm_operator`.
+
+Em produção, configure explicitamente `CORS_ORIGINS`. A duração do access token
+é controlada por `JWT_DURATION`, e a do refresh token por
+`JWT_REFRESH_DURATION`.
 
 Para detalhes de regras de acesso e ownership:
 
@@ -192,8 +198,7 @@ Para detalhes de regras de acesso e ownership:
 - schema versionado com Flyway em [`src/main/resources/db/migration`](./src/main/resources/db/migration);
 - PostgreSQL como banco principal em `dev` e `prod`;
 - Hibernate configurado para validar schema, não gerar schema automaticamente;
-- perfil de testes com cenários isolados e Testcontainers para os fluxos que
-  dependem de PostgreSQL;
+- perfil de testes com H2 em memória, Flyway desabilitado e schema isolado por execução;
 - RabbitMQ disponível para eventos assíncronos e desacoplamento operacional,
   mas desabilitado por padrão em `dev` e `prod`. O indicador de health segue a
   mesma configuração.
@@ -210,9 +215,8 @@ Referências úteis:
 A suíte cobre:
 
 - testes unitários das regras de negócio;
-- testes de integração com contexto Spring;
+- testes de integração com contexto Spring e H2 em memória;
 - testes arquiteturais com ArchUnit;
-- testes com Testcontainers para fluxos dependentes de PostgreSQL;
 - smoke tests e validações operacionais.
 
 Execução local:

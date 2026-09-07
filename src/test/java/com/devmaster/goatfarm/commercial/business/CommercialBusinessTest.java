@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -44,10 +45,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -319,6 +322,23 @@ class CommercialBusinessTest {
                         )
                 )
         );
+    }
+
+    @Test
+    void sensitiveMutationsMustAuthorizeFarmOwnerBeforeLoadingOrPersistingData() {
+        doThrow(new AccessDeniedException("denied"))
+                .when(ownershipService).verifyFarmOwnership(1L);
+
+        assertThrows(AccessDeniedException.class,
+                () -> commercialBusiness.createAnimalSale(1L, null));
+        assertThrows(AccessDeniedException.class,
+                () -> commercialBusiness.registerAnimalSalePayment(1L, 10L, null));
+        assertThrows(AccessDeniedException.class,
+                () -> commercialBusiness.createMilkSale(1L, null));
+        assertThrows(AccessDeniedException.class,
+                () -> commercialBusiness.registerMilkSalePayment(1L, 10L, null));
+
+        verifyNoInteractions(commercialPersistencePort, goatFarmPersistencePort, goatManagementUseCase);
     }
 
     private GoatFarm farm(Long id) {

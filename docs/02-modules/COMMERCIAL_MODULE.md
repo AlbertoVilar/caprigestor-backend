@@ -1,5 +1,5 @@
 ﻿# Modulo Commercial (Comercial e Financeiro Operacional Minimo)
-Ultima atualizacao: 2026-03-28
+Ultima atualizacao: 2026-09-07
 Escopo: estado tecnico e funcional do modulo `commercial` apos a consolidacao da camada comercial minima e da etapa 1 do financeiro operacional da fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API Contracts](../03-api/API_CONTRACTS.md), [Inventory](./INVENTORY_MODULE.md)
 
@@ -114,10 +114,24 @@ Campos principais expostos:
 
 ## Regras e consistencia
 - todo endpoint do modulo e farm-level;
-- o ownership continua em `@ownershipService.canManageFarm(#farmId)`;
+- ADMIN tem acesso global e FARM_OWNER administra somente a propria fazenda;
+- OPERATOR com vinculo persistido pode cadastrar clientes e executar todas as consultas do modulo;
+- venda de animal, venda de leite, baixa de pagamento e lancamento de despesa sao mutacoes financeiras ou patrimoniais definitivas e permanecem restritas a ADMIN/FARM_OWNER;
+- as mutacoes sensiveis validam ownership no controller e novamente no business antes de carregar ou persistir dados;
+- OPERATOR sem vinculo, FARM_OWNER de outra fazenda e acesso cruzado recebem `403`; endpoint autenticado sem credencial responde `401`;
 - a venda de animal nao duplica a logica do ciclo do rebanho;
 - recebiveis continuam minimos e derivados das vendas;
 - o resumo mensal usa dados reais persistidos, sem agregador paralelo ou BI.
+
+## Matriz de autorização
+
+| Operação | ADMIN | FARM_OWNER próprio | OPERATOR vinculado |
+|---|---:|---:|---:|
+| Cadastrar cliente | sim | sim | sim |
+| Consultar clientes, vendas, recebíveis, despesas e resumos | sim | sim | sim |
+| Registrar venda de animal ou leite | sim | sim | não |
+| Registrar pagamento | sim | sim | não |
+| Registrar despesa operacional | sim | sim | não |
 
 ## Limites conscientes
 Esta etapa nao implementa:
