@@ -14,6 +14,12 @@ Este módulo gerencia produções de leite por cabra, com operações de criaç�
 - `DELETE` realiza cancelamento lógico (não remove histórico físico).
 - As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.
 
+## Autorização operacional
+- `POST`, `GET` por identificador, listagem e `PATCH` exigem `canManageFarm(farmId)`: ADMIN, responsável pela fazenda ou OPERATOR com vínculo persistido na fazenda.
+- O `PATCH` é uma correção operacional limitada a `volumeLiters` e `notes`; não altera data, turno, lactação nem status, e um registro cancelado não pode ser alterado.
+- `DELETE` continua restrito a ADMIN ou ao responsável pela fazenda. A operação faz cancelamento lógico e altera um histórico sensível; OPERATOR não a executa, mesmo quando vinculado.
+- As validações de domínio continuam garantindo escopo de fazenda/cabra, lactação ativa, ausência de duplicidade e rastreabilidade de carência sanitária.
+
 ## Endpoints
 | Método | URL | Query params | Retorno |
 |---|---|---|---|

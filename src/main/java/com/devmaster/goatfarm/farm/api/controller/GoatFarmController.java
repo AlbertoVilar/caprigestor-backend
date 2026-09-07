@@ -67,7 +67,7 @@ public class GoatFarmController {
         return new ResponseEntity<>(farmMapper.toFullDTO(responseVO), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#id))")
     @PutMapping("/{id}")
     @Operation(summary = "Atualiza os dados completos de uma fazenda")
     @ApiResponses(value = {
@@ -124,7 +124,7 @@ public class GoatFarmController {
                 .map(this::toPublicSafeDTO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#id))")
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove uma fazenda")
     @ApiResponses(value = {
@@ -163,8 +163,6 @@ public class GoatFarmController {
         sanitized.setCreatedAt(dto.getCreatedAt());
         sanitized.setUpdatedAt(dto.getUpdatedAt());
         sanitized.setVersion(dto.getVersion());
-        sanitized.setPhones(dto.getPhones());
-
         if (dto.getUser() != null) {
             UserResponseDTO user = new UserResponseDTO();
             user.setId(dto.getUser().getId());

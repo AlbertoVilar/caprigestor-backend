@@ -7,12 +7,14 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.phone.business.mapper.PhoneBusinessMapper;
 import com.devmaster.goatfarm.phone.persistence.entity.Phone;
+import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Optional;
 
@@ -76,5 +78,21 @@ class PhoneBusinessTest {
         phoneBusiness.deletePhone(farmId, phoneId);
 
         verify(phonePort).deleteById(phoneId);
+    }
+
+    @Test
+    @DisplayName("Should verify farm ownership before creating a direct phone")
+    void createPhone_shouldVerifyFarmOwnership() {
+        Long farmId = 1L;
+        PhoneRequestVO request = new PhoneRequestVO();
+        request.setDdd("11");
+        request.setNumber("999999999");
+        doThrow(new AccessDeniedException("not owner"))
+                .when(ownershipService).verifyFarmOwnership(farmId);
+
+        assertThrows(AccessDeniedException.class, () -> phoneBusiness.createPhone(farmId, request));
+
+        verify(ownershipService).verifyFarmOwnership(farmId);
+        verify(phonePort, never()).save(any());
     }
 }

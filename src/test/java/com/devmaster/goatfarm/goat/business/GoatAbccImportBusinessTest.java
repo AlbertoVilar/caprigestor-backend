@@ -84,9 +84,7 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
-    void shouldSearchAndKeepOnlyFarmTodForNonAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+    void shouldSearchWithoutFarmAuthorizationOrTodFiltering() {
 
         when(abccPublicQueryPort.search(any())).thenReturn(GoatAbccRawSearchResultVO.builder()
                 .currentPage(1)
@@ -119,34 +117,33 @@ class GoatAbccImportBusinessTest {
                 .page(1)
                 .build());
 
-        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems()).hasSize(2);
         assertThat(response.getItems().getFirst().getExternalId()).isEqualTo("A-001");
 
         ArgumentCaptor<GoatAbccSearchRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatAbccSearchRequestVO.class);
         verify(abccPublicQueryPort).search(requestCaptor.capture());
-        assertThat(requestCaptor.getValue().getTod()).isEqualTo("12345");
+        assertThat(requestCaptor.getValue().getTod()).isNull();
+        verify(ownershipService, never()).verifyFarmOwnership(1L);
+        verify(goatFarmPort, never()).findById(any());
     }
 
     @Test
-    void shouldBlockSearchWhenFarmTodIsMissingForNonAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", null)));
+    void shouldSearchWhenNoLocalFarmIsLoaded() {
+        when(abccPublicQueryPort.search(any())).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .currentPage(1).totalPages(1).items(List.of()).build());
 
-        assertThatThrownBy(() -> business.search(1L, GoatAbccSearchRequestVO.builder()
+        var response = business.search(1L, GoatAbccSearchRequestVO.builder()
                 .raceId(9)
                 .affix("CAPRIL VILAR")
                 .page(1)
-                .build()))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("não possui TOD configurado");
+                .build());
 
-        verify(abccPublicQueryPort, never()).search(any());
+        assertThat(response.getItems()).isEmpty();
+        verify(goatFarmPort, never()).findById(any());
     }
 
     @Test
-    void shouldAllowSearchAnyTodForAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(true);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", null)));
+    void shouldKeepRequestedTodInPublicSearch() {
 
         when(abccPublicQueryPort.search(any())).thenReturn(GoatAbccRawSearchResultVO.builder()
                 .currentPage(1)
@@ -160,16 +157,18 @@ class GoatAbccImportBusinessTest {
         var response = business.search(1L, GoatAbccSearchRequestVO.builder()
                 .raceId(9)
                 .affix("CAPRIL VILAR")
+                .tod("11111")
                 .page(1)
                 .build());
 
         assertThat(response.getItems()).hasSize(2);
+        ArgumentCaptor<GoatAbccSearchRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatAbccSearchRequestVO.class);
+        verify(abccPublicQueryPort).search(requestCaptor.capture());
+        assertThat(requestCaptor.getValue().getTod()).isEqualTo("11111");
     }
 
     @Test
     void shouldResolveRaceIdByRaceNameWhenRaceIdIsNotProvided() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(true);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", null)));
         when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
                 GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build(),
                 GoatAbccRaceOptionVO.builder().id(2).name("BOER").build()
@@ -191,21 +190,19 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
-    void shouldBlockPreviewWhenTodDoesNotMatchForNonAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+    void shouldPreviewExternalAnimalEvenWhenTodDiffersFromTheFarm() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "ANIMAL", "99999", "00001")
         );
 
-        assertThatThrownBy(() -> business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-001").build()))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("TOD diferente");
+        var response = business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-001").build());
+        assertThat(response.getTod()).isEqualTo("99999");
+        verify(ownershipService, never()).verifyFarmOwnership(1L);
     }
 
     @Test
-    void shouldAllowPreviewWithDifferentTodForAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(true);
+    void shouldPreviewExternalAnimalWithoutCurrentUser() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "ANIMAL", "99999", "00001")
@@ -215,11 +212,11 @@ class GoatAbccImportBusinessTest {
 
         assertThat(response.getTod()).isEqualTo("99999");
         assertThat(response.getRegistrationNumber()).isEqualTo("1111111111");
+        assertThat(response.getUserName()).isNull();
     }
 
     @Test
     void shouldMapSemRgdAsAtivoOnPreview() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "ANIMAL", "12345", "00001", "Sem RGD")
@@ -367,6 +364,7 @@ class GoatAbccImportBusinessTest {
         );
 
         when(goatPersistencePort.findByIdAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
+        when(goatPersistencePort.findByIdAndFarmId("2222222222", 1L)).thenReturn(Optional.empty());
         when(goatPersistencePort.findByIdAndFarmId("3333333333", 1L)).thenReturn(Optional.of(new Goat()));
 
         GoatResponseVO created = new GoatResponseVO();

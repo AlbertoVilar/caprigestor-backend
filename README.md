@@ -506,7 +506,7 @@ Antes de começar, certifique-se de ter instalado:
 
 - ☕ **Java 21** ou superior
 - 🛠 **Maven 3.8+** (ou use o wrapper incluído)
-- 🐳 **Docker & Docker Compose** (obrigatório para banco de dados e mensageria)
+- 🐳 **Docker & Docker Compose** (necessário para o PostgreSQL local; RabbitMQ é opcional)
 - 💻 **IDE**: IntelliJ IDEA, Eclipse ou VS Code
 
 ---
@@ -519,7 +519,7 @@ git clone https://github.com/albertovilar/caprigestor-backend.git
 cd caprigestor-backend
 ```
 
-2️⃣ **Subir infraestrutura (PostgreSQL + RabbitMQ)**
+2️⃣ **Subir infraestrutura local**
 ```bash
 cd docker
 docker compose up -d
@@ -571,7 +571,7 @@ Os endpoints acima são somente leitura e podem ser usados em smoke checks locai
 
 ## 🐳 Docker
 
-Para subir o ambiente completo (Banco de Dados + RabbitMQ):
+Para subir o PostgreSQL e os serviços auxiliares disponíveis no Compose:
 
 ```bash
 cd docker
@@ -579,7 +579,7 @@ docker compose up -d
 ```
 > **Serviços:**
 > - PostgreSQL: `localhost:5432`
-> - RabbitMQ UI: `http://localhost:15672` (admin/admin)
+> - RabbitMQ UI: `http://localhost:15672` (somente quando a mensageria opcional estiver em uso)
 > - PgAdmin: `http://localhost:8081`
 
 ---
@@ -591,7 +591,7 @@ O projeto adota uma estratégia estrita de perfis para evitar configurações im
 
 - **`default`**: Apenas configurações básicas (logging, jackson). **Não conecta ao banco.**
 - **`dev`**: Ambiente de desenvolvimento. Conecta ao **PostgreSQL local** e roda **Flyway**.
-- **`test`**: Ambiente de testes. Usa **Testcontainers** para subir um banco efêmero.
+- **`test`**: Ambiente de testes. Usa **H2 em memória**, sem exigir Docker.
 - **`prod`**: Ambiente de produção. Configurações via variáveis de ambiente.
 
 ---
@@ -603,7 +603,7 @@ O projeto está configurado para usar o perfil `dev` por padrão para facilitar 
 | Perfil | Uso | Banco de Dados | Flyway | DDL Auto |
 |--------|-----|----------------|--------|----------|
 | `dev` | Desenvolvimento (Padrão) | PostgreSQL (Docker) | ✅ Habilitado | `validate` |
-| `test` | Testes Automatizados | Testcontainers | ✅ Habilitado | `validate` |
+| `test` | Testes automatizados | H2 em memória | ❌ Desabilitado | `create-drop` |
 | `prod` | Produção | PostgreSQL (AWS/Cloud) | ✅ Habilitado | `validate` |
 | `default` | Base | ❌ Nenhum | ❌ Desabilitado | `none` |
 
@@ -653,9 +653,7 @@ Todo o schema do banco é gerenciado pelo **Flyway**.
 - O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
 
 ### H2 Database
-O H2 é utilizado em dois cenários:
-1.  **Testes Unitários**: Execução rápida e isolada.
-2.  **Smoke Tests**: Validação rápida do build (`profile: smoke`), permitindo rodar a aplicação em memória sem depender do Docker.
+O perfil `test` usa H2 em memória, com schema criado e descartado pelo Hibernate. Não existe profile `smoke` separado na configuração atual.
 
 ### Flyway V16 – banco sujo com ACTIVE duplicada
 
@@ -812,7 +810,7 @@ WHERE version = '25';
 
 ## 🧪 Testes
 
-Os testes de integração sobem a aplicação completa usando **Testcontainers** para garantir fidelidade ao ambiente real.
+Os testes de integração sobem a aplicação Spring com H2 em memória no profile `test`.
 
 **Executar todos os testes:**
 ```bash
@@ -822,13 +820,13 @@ Os testes de integração sobem a aplicação completa usando **Testcontainers**
 # Linux/Mac
 ./mvnw test
 ```
-> *Nota: É necessário ter o Docker rodando para que os Testcontainers funcionem.*
+> *Nota: a suíte padrão não depende de Docker. A validação final com PostgreSQL real é feita separadamente pelo smoke de integração.*
 
 ---
 
 ## 🐳 Docker
 
-Para subir todo o ecossistema (App + Banco + Mensageria):
+Para subir os serviços locais disponíveis no Compose:
 
 ```bash
 cd docker
@@ -839,21 +837,21 @@ docker compose up -d
 |---------|-------|-----------|
 | API | 8080 | Backend Spring Boot |
 | PostgreSQL | 5432 | Banco de Dados |
-| RabbitMQ | 5672 | Mensageria (AMQP) |
-| RabbitMQ UI | 15672 | Painel de Gestão |
+| RabbitMQ | 5672 | Mensageria opcional (AMQP) |
+| RabbitMQ UI | 15672 | Painel da mensageria opcional |
 | PgAdmin | 8081 | Gestão Visual do Banco |
 
 ---
 
 ## 📨 Mensageria de Eventos (RabbitMQ)
 
-O sistema utiliza RabbitMQ para processamento assíncrono de eventos (nascimentos, atualizações), garantindo desacoplamento.
+O sistema possui integração opcional com RabbitMQ. Ela fica desabilitada por padrão nos perfis `dev` e `prod` e só é ativada com `CAPRIGESTOR_MESSAGING_ENABLED=true`.
 
 - **Exchange:** `events-exchange`
 - **Fila:** `events-queue`
 - **Routing Key:** `event.created`
 
-Para monitorar, acesse o painel do RabbitMQ em `http://localhost:15672` (User/Pass: `admin`/`admin`).
+Quando habilitada localmente, a mensageria pode ser monitorada no painel configurado pelo Docker Compose.
 
 ---
 

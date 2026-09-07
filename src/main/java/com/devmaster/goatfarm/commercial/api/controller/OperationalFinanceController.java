@@ -37,7 +37,7 @@ public class OperationalFinanceController {
         this.apiMapper = apiMapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
     @PostMapping("/operational-expenses")
     @Operation(summary = "Registrar despesa operacional da fazenda")
     public ResponseEntity<OperationalExpenseResponseDTO> createOperationalExpense(

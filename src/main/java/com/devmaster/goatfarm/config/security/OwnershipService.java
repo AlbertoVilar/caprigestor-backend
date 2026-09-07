@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
-import com.devmaster.goatfarm.authority.persistence.repository.FarmOperatorRepository;
+import com.devmaster.goatfarm.authority.application.ports.out.FarmAccessQueryPort;
 import org.springframework.security.access.AccessDeniedException;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
@@ -19,23 +19,39 @@ public class OwnershipService {
     private final GoatFarmPersistencePort goatFarmPort;
     private final UserPersistencePort userPort;
     private final GoatPersistencePort goatPort;
-    private final FarmOperatorRepository farmOperatorRepository;
+    private final FarmAccessQueryPort farmAccessQueryPort;
 
-    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort, FarmOperatorRepository farmOperatorRepository) {
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort) {
         this.goatFarmPort = goatFarmPort;
         this.userPort = userPort;
         this.goatPort = goatPort;
-        this.farmOperatorRepository = farmOperatorRepository;
+        this.farmAccessQueryPort = farmAccessQueryPort;
     }
 
     public void verifyFarmOwnership(Long farmId) {
         var current = getAuthenticatedEntity();
         boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
         if (isAdmin) return;
+        boolean isFarmOwner = current.getRoles().stream()
+                .anyMatch(r -> "ROLE_FARM_OWNER".equals(r.getAuthority()));
+        if (!isFarmOwner) {
+            throw new AccessDeniedException("Usuário não possui o papel de proprietário de fazenda.");
+        }
         var farm = goatFarmPort.findById(farmId)
                 .orElseThrow(() -> new UnauthorizedException("Fazenda não encontrada: " + farmId));
         if (farm.getUser() == null || !farm.getUser().getId().equals(current.getId())) {
             throw new AccessDeniedException("Usuário não é proprietário desta fazenda.");
+        }
+    }
+
+    /**
+     * Verifies that the authenticated user can perform operational work for the
+     * requested farm. Unlike ownership, this deliberately includes a formally
+     * linked operator.
+     */
+    public void verifyFarmManagement(Long farmId) {
+        if (!canManageFarm(farmId)) {
+            throw new AccessDeniedException("Usuário não pode operar esta fazenda.");
         }
     }
 
@@ -92,11 +108,18 @@ public class OwnershipService {
 
             // 2. OPERATOR tem acesso (validado por vínculo)
             boolean isOperator = current.getRoles().stream().anyMatch(r -> "ROLE_OPERATOR".equals(r.getAuthority()));
-            if (isOperator && farmOperatorRepository.existsByFarmIdAndUserId(farmId, current.getId())) {
+            if (isOperator && farmAccessQueryPort.existsOperatorLink(farmId, current.getId())) {
                 return true;
             }
 
-            // 3. OWNER deve ser dono da fazenda
+            // 3. FARM_OWNER deve ser dono da fazenda. A relação direta, sem o
+            // papel oficial, não deve conceder capacidade operacional.
+            boolean isFarmOwner = current.getRoles().stream()
+                    .anyMatch(r -> "ROLE_FARM_OWNER".equals(r.getAuthority()));
+            if (!isFarmOwner) {
+                logger.debug("event=farm_management_check_denied farmId={} reason=missing_farm_owner_role", farmId);
+                return false;
+            }
             var farmOpt = goatFarmPort.findById(farmId);
             if (farmOpt.isEmpty()) {
                 logger.debug("event=farm_management_check_denied farmId={} reason=farm_not_found", farmId);

@@ -2,8 +2,9 @@ package com.devmaster.goatfarm.authority.api;
 
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -38,6 +40,8 @@ public class AuthControllerIntegrationTest {
 
     private User testUser;
     private Role testRole;
+    private User adminUser;
+    private User farmOwnerUser;
 
     @BeforeEach
     void setUp() {
@@ -48,13 +52,17 @@ public class AuthControllerIntegrationTest {
         testRole.setAuthority("ROLE_OPERATOR");
         roleRepository.save(testRole);
 
-        testUser = new User();
-        testUser.setEmail("test@example.com");
-        testUser.setPassword(passwordEncoder.encode("password"));
-        testUser.setName("Test User");
-        testUser.setCpf("12345678901");
-        testUser.addRole(testRole);
-        userRepository.save(testUser);
+        Role adminRole = new Role();
+        adminRole.setAuthority("ROLE_ADMIN");
+        roleRepository.save(adminRole);
+
+        Role farmOwnerRole = new Role();
+        farmOwnerRole.setAuthority("ROLE_FARM_OWNER");
+        roleRepository.save(farmOwnerRole);
+
+        testUser = createUser("test@example.com", "12345678901", "Test User", testRole);
+        adminUser = createUser("admin@example.com", "12345678902", "Admin User", adminRole);
+        farmOwnerUser = createUser("owner@example.com", "12345678903", "Farm Owner", farmOwnerRole);
     }
 
     @Test
@@ -82,19 +90,105 @@ public class AuthControllerIntegrationTest {
     void shouldGetCurrentUserWithValidToken() throws Exception {
         String loginPayload = "{\"email\":\"test@example.com\", \"password\":\"password\"}";
 
-        String response = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginPayload))
-                .andReturn().getResponse().getContentAsString();
-
-        String token = new com.fasterxml.jackson.databind.ObjectMapper()
-                .readTree(response)
-                .get("accessToken")
-                .asText();
+        String token = loginAndGetToken("test@example.com");
 
         mockMvc.perform(get("/api/v1/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@example.com"));
+    }
+
+    @Test
+    void shouldAllowAdminToAccessAdministrativeUserEndpointWithJwt() throws Exception {
+        String token = loginAndGetToken("admin@example.com");
+
+        mockMvc.perform(get("/api/v1/users/{id}", testUser.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test@example.com"));
+    }
+
+    @Test
+    void shouldForbidOperatorFromAdministrativeUserEndpointWithJwt() throws Exception {
+        String token = loginAndGetToken("test@example.com");
+
+        mockMvc.perform(get("/api/v1/users/{id}", adminUser.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldForbidFarmOwnerFromAdministrativeUserEndpointWithJwt() throws Exception {
+        String token = loginAndGetToken("owner@example.com");
+
+        mockMvc.perform(get("/api/v1/users/{id}", adminUser.getId())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedAdministrativeUserRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/users/{id}", farmOwnerUser.getId()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRegisterPublicUserWithDefaultRole() throws Exception {
+        String registerPayload = """
+                {
+                  "name": "Public User",
+                  "email": "public@example.com",
+                  "cpf": "10987654321",
+                  "password": "password123",
+                  "confirmPassword": "password123"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.roles", contains("ROLE_OPERATOR")));
+    }
+
+    @Test
+    void shouldNotAllowPrivilegeEscalationOnPublicRegistration() throws Exception {
+        String registerPayload = """
+                {
+                  "name": "Public User",
+                  "email": "public-admin-attempt@example.com",
+                  "cpf": "10987654322",
+                  "password": "password123",
+                  "confirmPassword": "password123",
+                  "roles": ["ROLE_ADMIN"]
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].fieldName").value("roles"));
+    }
+
+    private User createUser(String email, String cpf, String name, Role role) {
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode("password"));
+        user.setName(name);
+        user.setCpf(cpf);
+        user.addRole(role);
+        return userRepository.save(user);
+    }
+
+    private String loginAndGetToken(String email) throws Exception {
+        String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"password\"}";
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginPayload))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        return new ObjectMapper().readTree(response).get("accessToken").asText();
     }
 }
