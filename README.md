@@ -1,876 +1,275 @@
-<div align="center">
+# CapriGestor Backend
 
-# 🐐 CapriGestor – Backend
-
-### Sistema completo para gestão de caprinos com arquitetura limpa, segura e escalável
+Backend do CapriGestor, uma plataforma de gestão de caprinos construída com Java 21 e Spring Boot. O projeto cobre domínio real de fazenda, autenticação e autorização, rastreabilidade operacional, módulos de produção e saúde, e uma base arquitetural preparada para evolução contínua.
 
 [![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)](https://www.java.com)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?style=for-the-badge&logo=spring)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com)
 
-[📚 Portal de Documentação](./docs/INDEX.md) • [📋 Arquitetura](./docs/01-architecture/ARCHITECTURE.md) • [💼 Domínio](./docs/00-overview/BUSINESS_DOMAIN.md) • [🖥️ Frontend](https://github.com/albertovilar/caprigestor-frontend) • [📊 Swagger](http://localhost:8080/swagger-ui/index.html)
+[Portal de Documentação](./docs/INDEX.md) • [Arquitetura](./docs/01-architecture/ARCHITECTURE.md) • [Domínio](./docs/00-overview/BUSINESS_DOMAIN.md) • [Frontend](https://github.com/albertovilar/caprigestor-frontend) • [Roadmap](./docs/00-overview/ROADMAP.md)
 
-</div>
+## Visão Geral
 
----
+O CapriGestor foi modelado para resolver fluxos operacionais reais de uma fazenda de caprinos, não apenas CRUD genérico. O backend concentra regras de domínio, segurança por ownership, governança arquitetural e persistência versionada.
 
-## 📊 Status do Projeto
+Pontos fortes do projeto:
 
-> **Em Desenvolvimento** – MVP previsto para **02/10/2025**
+- domínio rico com múltiplos módulos de negócio integrados;
+- arquitetura hexagonal com portas e adaptadores;
+- segurança JWT com controle por perfil e por fazenda;
+- PostgreSQL + Flyway com histórico de evolução do schema;
+- integração opcional com RabbitMQ para eventos assíncronos;
+- suíte de testes unitários, de integração com H2 e de arquitetura com ArchUnit;
+- documentação operacional e arquitetural mantida dentro do repositório.
 
----
+## Principais Capacidades
 
-## 📑 Índice
+### Gestão da fazenda e operação
 
-- [Sobre](#sobre-o-projeto)
-- [Funcionalidades](#funcionalidades-principais)
-- [Tecnologias](#tecnologias-utilizadas)
-- [Arquitetura](#arquitetura-e-módulos)
-- [Diagrama do Domínio](#diagrama-do-domínio-mermaid)
-- [Diagrama de Classes](#diagrama-de-classes-mermaid)
-- [Pré-requisitos](#pré-requisitos)
-- [Instalação](#instalação)
-- [Configuração](#configuração)
-- [Perfis de Execução](#perfis-de-execução)
-- [Uso](#como-usar)
-- [Banco de Dados](#banco-de-dados)
-- [Segurança](#segurança)
-- [Testes](#testes)
-- [Docker](#docker)
-- [Licença](#licença)
-- [Contato](#contato)
-- [Mensageria](#mensageria-de-eventos-rabbitmq)
+- cadastro de fazendas, endereços, telefones e identidade visual;
+- controle de ownership da fazenda e acesso por operador;
+- fluxo atômico de registro da fazenda e bootstrap de usuário.
 
----
+### Gestão de animais
 
-## 📖 Sobre o Projeto
+- cadastro detalhado de caprinos;
+- genealogia e classificação zootécnica;
+- histórico operacional por animal;
+- integração com importação ABCC.
 
-**CapriGestor** é uma API REST robusta e moderna desenvolvida para o gerenciamento completo de fazendas de caprinos. Construída com **Spring Boot 3** e seguindo os princípios de **arquitetura hexagonal** (ports & adapters), oferece uma solução escalável, segura e de fácil manutenção.
+### Produção, reprodução e saúde
 
-### 🎯 Objetivo
+- lactação e produção leiteira;
+- ciclo reprodutivo com gestações, coberturas, alertas e correções;
+- eventos de saúde, vacinas, tratamentos e cancelamentos;
+- controle de retiradas e regras sanitárias;
+- auditoria operacional e trilha de rastreabilidade.
 
-Fornecer uma plataforma centralizada para criadores de caprinos gerenciarem todos os aspectos de suas fazendas, desde o cadastro de animais até o rastreamento genealógico completo e controle de eventos.
+### Comercial, conteúdo e administração
 
----
+- vendas, despesas e visão comercial;
+- blog e artigos públicos/administrativos;
+- autenticação, papéis, operadores e reset de senha;
+- módulo de auditoria para ações operacionais.
 
-## ✨ Funcionalidades Principais
+## Arquitetura
 
-### 🏡 Gestão de Fazendas
-- ✅ Cadastro completo de fazendas com endereços e telefones
-- ✅ Controle de propriedade e ownership
-- ✅ Listagem e busca paginadas
-- ✅ Gerenciamento de estábulos e locais
-- ✅ **Logo do Capril:** campo `logoUrl` válido (http/https) em cadastros e atualizações de fazenda para exibir identidade visual
+O projeto segue arquitetura hexagonal com separação explícita entre entrada, aplicação, domínio e persistência.
 
-### 📰 Blog e Artigos
-- ✅ **Módulo de Artigos:** endpoints públicos (`/public/articles`) para listagem de notícias e dicas
-- ✅ Gestão administrativa completa com `ROLE_ADMIN` (detalhes em `docs/02-modules/ARTICLE_BLOG_MODULE.md`)
+Convenção principal:
 
-### 🛡️ GoatFarm Atomic Registration
-O sistema implementa um fluxo de registro estrito e atômico para garantir consistência e segurança:
-
-- **Domain Rule:** `GoatFarm` é o Aggregate Root. A criação de Fazenda, Endereço, Telefones e Usuário (no caso anônimo) é indivisível.
-- **Fluxo Atômico:** Uma única transação engloba todas as entidades. Se qualquer validação falhar, nada é persistido (Rollback total).
-- **Security & Privacy:**
-  - **Authenticated Flow:** Se o usuário já está logado, ele se torna automaticamente o *Owner*. Qualquer dado de usuário enviado no payload é ignorado para prevenir *Account Takeover*.
-  - **Anonymous Flow:** Cria automaticamente um novo usuário com `ROLE_USER`.
-    - Bloqueia envio de campos sensíveis (`roles`, `admin`, `id`).
-    - Se o e-mail já existe, retorna erro genérico para impedir *User Enumeration*.
-  - **Anti-Mass Assignment:** DTOs de entrada são blindados contra injeção de propriedades não autorizadas.
-
-### 🐐 Gestão de Animais
-- ✅ Cadastro detalhado de caprinos com todas as informações relevantes
-- ✅ Rastreamento genealógico completo (pai, mãe, avós)
-- ✅ Visualização de árvore genealógica interativa
-- ✅ Status e categorização (PO, PA, PC)
-- ✅ Busca avançada e filtros
-
-### 🥛 Gestão de Produção Leiteira e Lactação
-- ✅ **Lactação:** Ciclo de vida produtivo (abertura, secagem, status ativo/fechado)
-- ✅ **Sumário de Lactação:** novos endpoints `/active/summary` e `/lactations/{id}/summary` para visão consolidada
-- ✅ **Produção Diária:** Registro de ordenhas por turno (Manhã/Tarde)
-- ✅ Controle de volume e observações
-- ✅ Histórico completo de lactações e produções
-- ✅ Validação de duplicidade e regras de negócio
-
-### 🧬 Regras de Negócio (Genealogia & Classificação)
-
-O sistema valida a genealogia com base na classificação do animal:
-
-| Classificação | Descrição | Exigência de Filiação |
-| :--- | :--- | :--- |
-| **PO** | *Puro de Origem* | 🔴 **Obrigatório** (Pai e Mãe) |
-| **PC** | *Puro por Cruza* | 🔴 **Obrigatório** (Pai e Mãe) |
-| **PA** | *Puro por Avaliação* | 🟢 **Opcional** (Permite cadastro sem filiação) |
-
-> **Nota:** Os genitores (pai/mãe) podem pertencer a **outra fazenda**, permitindo o registro de animais adquiridos de terceiros ou inseminação externa.
-
-### 📅 Eventos e Rastreabilidade
-- ✅ Registro de nascimentos, coberturas e partos
-- ✅ Histórico de pesagens
-- ✅ Histórico completo por animal
-- ✅ Filtros avançados por tipo e período
-
-### 🩺 Gestão de Saúde (Health Module)
-- ✅ **Vacinas e Tratamentos:** Registro completo de eventos sanitários.
-- ✅ **Agendamento:** Suporte a eventos agendados (futuros) e realizados.
-- ✅ **Status:** Controle de fluxo (AGENDADO, REALIZADO, CANCELADO).
-- ✅ **Endpoints:**
-  - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/health-events` (Agendar/Registrar)
-  - `PUT /.../health-events/{eventId}` (Editar dados)
-  - `PATCH /.../health-events/{eventId}/done` (Marcar como realizado)
-  - `PATCH /.../health-events/{eventId}/cancel` (Cancelar evento)
-  - `GET /.../health-events/{eventId}` (Detalhes)
-  - `GET /.../health-events` (Listagem por animal com filtros de data/status)
-  - *Planejado:* Endpoint de calendário geral da fazenda (`listCalendar`).
-
-### 🔐 Controle de Acesso
-- ✅ Autenticação JWT stateless
-- ✅ Autorização baseada em roles (ADMIN, FARM_OWNER, OPERATOR)
-- ✅ Proteção de endpoints sensíveis
-- ✅ Integração OAuth2
-
-**Permissões por perfil (resumo):**
-- `ROLE_ADMIN`: Acesso total ao sistema.
-- `ROLE_FARM_OWNER`: Acesso total aos recursos da **própria fazenda** (`farmId`).
-- `ROLE_OPERATOR`: Acesso operacional restrito às fazendas onde possui vínculo explícito.
-  - O vínculo é persistido na tabela `tb_farm_operator`.
-  - A validação é feita via `OwnershipService.canManageFarm(farmId)`, garantindo que o operador só acesse fazendas permitidas.
-
-**Endpoint de permissões da fazenda:**
-- `GET /api/v1/goatfarms/{farmId}/permissions` disponível para `ROLE_ADMIN`, `ROLE_OPERATOR` e `ROLE_FARM_OWNER`.
-
----
-
-## 🛠️ Tecnologias Utilizadas
-
-### Core
-- **Java 21** – Linguagem de programação moderna e robusta
-- **Spring Boot 3.x** – Framework principal para desenvolvimento
-- **Spring Security** – Segurança e controle de acesso
-- **Spring Data JPA** – Camada de persistência
-
----
-
-## 🏗️ Arquitetura e Módulos
-
-O projeto segue a **arquitetura hexagonal** (ports & adapters), garantindo baixo acoplamento e alta coesão.
-
-### 📦 Estrutura de Camadas
-
-```
-domain → application → infrastructure
-```
-
-### 🗂️ Módulos
-
-| Módulo | Descrição |
-|--------|-----------|
-| **goat** | Regras de negócio e acesso a dados de caprinos |
-| **reproduction** | Ciclo reprodutivo (coberturas, gestações, eventos reprodutivos) |
-| **milk** | Gestão de produção de leite e lactações |
-| **events** | Gestão de eventos (nascimentos, coberturas, pesagens, etc.) |
-| **health** | Gestão sanitária e veterinária (vacinas, tratamentos) |
-| **genealogy** | Relacionamento e linhagem (Projeção On-Demand) |
-| **farm** | Entidades e serviços de fazendas/estábulos/locais |
-| **address** | Gestão de endereços e localizações |
-| **phone** | Gestão de contatos telefônicos |
-| **article** | Blog e gerenciamento de conteúdo informativo |
-| **authority** | Autenticação, autorização, usuários e papéis |
-| **shared** | Utilitários, DTOs comuns, exceções e infra compartilhada |
-
-### 🧠 Filosofia Arquitetural (Hexagonal)
-
-- Princípios: inversão de dependências, isolamento do domínio e Portas & Adaptadores.
-- Convenção pragmática de nomes mapeada para hexagonal:
-  - Controller → Adaptador de Entrada (Driving Adapter)
-  - UseCase / Port → Porta de Entrada (Input Port)
-  - Business → Serviço de Aplicação (Implementa Input Port)
-  - Output Port → Porta de Saída (Interface para Infraestrutura)
-  - Adapter / Repository → Adaptador de Saída (Driven Adapter)
-
-### ✅ Regra de Dependência (Hexagonal)
-
-- `business` **nunca** importa `api.*`.
-- Mapeamentos separados: `api.mapper` (DTO ↔ VO) e `business.mapper` (VO ↔ Entity).
-- **Health** é a referência de implementação.
-- Gate automático: `HexagonalArchitectureGuardTest` falha o build em qualquer regressão.
-
----
-
-## 🧩 Diagrama do Domínio (Mermaid)
+- `api`: controllers, DTOs e mapeamento de entrada/saída;
+- `application`: portas de entrada e saída;
+- `business`: regras de negócio e orquestração de casos de uso;
+- `persistence` / `infrastructure`: adaptadores, entidades, repositórios e integrações.
 
 ```mermaid
-erDiagram
-  USER ||--o{ USER_ROLE : has
-  USER_ROLE }o--|| ROLE : belongs_to
-  USER ||--o{ GOAT_FARM : owns
-  GOAT_FARM ||--|| ADDRESS : has
-  GOAT_FARM ||--o{ PHONE : has
-  GOAT_FARM ||--o{ GOAT : hosts
-  GOAT ||--o{ EVENT : has
-  GOAT ||--o{ LACTATION : has
-  GOAT ||--o{ MILK_PRODUCTION : produces
-  GOAT ||--o| GOAT : father
-  GOAT ||--o| GOAT : mother
-
-  USER {
-    int id PK
-    string username
-    string email
-    string password
-    boolean enabled
-  }
-
-  ROLE {
-    int id PK
-    string name
-    string description
-  }
-
-  USER_ROLE {
-    int id PK
-    int user_id FK
-    int role_id FK
-  }
-
-  GOAT_FARM {
-    int id PK
-    string name
-    int owner_user_id FK
-    int address_id FK
-    datetime created_at
-    datetime updated_at
-  }
-
-  ADDRESS {
-    int id PK
-    string street
-    string number
-    string neighborhood
-    string city
-    string state
-    string zip_code
-    string country
-  }
-
-  PHONE {
-    int id PK
-    string ddd
-    string number
-    string type
-    int farm_id FK
-  }
-
-  GOAT {
-    string registration_number PK
-    string name
-    string gender
-    date birth_date
-    string color
-    string notes
-    string status
-    string classification
-    int farm_id FK
-    string father_id
-    string mother_id
-  }
-
-  EVENT {
-    int id PK
-    string event_type
-    date event_date
-    string observation
-    string goat_registration_number FK
-    int farm_id FK
-  }
-
-  LACTATION {
-    int id PK
-    date start_date
-    date end_date
-    string status
-    int goat_id FK
-    int farm_id FK
-  }
-
-  MILK_PRODUCTION {
-    int id PK
-    date date
-    string shift
-    float volume_liters
-    int goat_id FK
-    int farm_id FK
-  }
-  
-  PREGNANCY {
-    int id PK
-    int farm_id FK
-    string goat_id FK
-    string status
-    date breeding_date
-    date confirm_date
-    date expected_due_date
-    date closed_at
-    string close_reason
-  }
-
-  REPRODUCTIVE_EVENT {
-    int id PK
-    int farm_id FK
-    string goat_id FK
-    int pregnancy_id FK
-    string event_type
-    date event_date
-    string breeding_type
-    string breeder_ref
-    string notes
-    date check_scheduled_date
-    string check_result
-  }
-
-  FARM_OPERATOR {
-    int id PK
-    int farm_id FK
-    int user_id FK
-    datetime created_at
-  }
-
-  HEALTH_EVENT {
-    int id PK
-    int farm_id FK
-    string goat_id FK
-    string event_type
-    date date
-    string status
-    string notes
-    string cost
-  }
-
-  GOAT ||--o{ PREGNANCY : has
-  GOAT ||--o{ REPRODUCTIVE_EVENT : has
-  GOAT_FARM ||--o{ PREGNANCY : hosts
-  GOAT_FARM ||--o{ REPRODUCTIVE_EVENT : hosts
-  PREGNANCY ||--o{ REPRODUCTIVE_EVENT : lifecycle
-  
-  GOAT_FARM ||--o{ FARM_OPERATOR : has_operators
-  USER ||--o{ FARM_OPERATOR : is_operator_at
-  GOAT ||--o{ HEALTH_EVENT : has
-  GOAT_FARM ||--o{ HEALTH_EVENT : records
+flowchart LR
+    API[API<br/>controllers e DTOs] --> APP[Application<br/>ports]
+    APP --> BUSINESS[Business<br/>casos de uso]
+    BUSINESS --> OUT[Output ports]
+    OUT --> INFRA[Infrastructure<br/>JPA e integrações]
 ```
 
----
+Módulos com maior peso hoje:
 
-## 🧱 Diagrama de Classes (Mermaid)
+- `authority`
+- `farm`
+- `goat`
+- `health`
+- `milk`
+- `reproduction`
+- `inventory`
+- `commercial`
+- `article`
+- `audit`
+
+O repositório possui gates de arquitetura para evitar regressões de dependência entre camadas.
+
+## Modelo de Domínio
+
+O modelo parte da fazenda e preserva a rastreabilidade do animal ao longo dos
+fluxos operacionais principais.
 
 ```mermaid
 classDiagram
-    %% ========== MÓDULO FARM ==========
-    class GoatFarm {
-        +Long id
-        +String name
-        +Long ownerId
-        +Long addressId
-    }
-
-    class Address {
-        +Long id
-        +String street
-        +String city
-        +String state
-    }
-
-    class Phone {
-        +Long id
-        +String number
-        +PhoneType type
-    }
-
-    %% ========== MÓDULO AUTHORITY ==========
-    class User {
-        +Long id
-        +String email
-        +boolean enabled
-    }
-
-    class Role {
-        <<enumeration>>
-        ADMIN
-        OPERATOR
-    }
-
-    %% ========== MÓDULO GOAT ==========
-    class Goat {
-        +String registrationNumber
-        +String name
-        +Gender gender
-        +GoatLifeStatus status
-        +GoatClassification classification
-    }
-
-    class Gender {
-        <<enumeration>>
-        MALE
-        FEMALE
-    }
-
-    %% ========== MÓDULO REPRODUCTION ==========
-    class Pregnancy {
-        +Long id
-        +Long farmId
-        +String goatId
-        +PregnancyStatus status
-        +LocalDate breedingDate
-        +LocalDate confirmDate
-        +LocalDate expectedDueDate
-        +LocalDate closedAt
-        +PregnancyCloseReason closeReason
-    }
-
-    class ReproductiveEvent {
-        +Long id
-        +Long farmId
-        +String goatId
-        +Long pregnancyId
-        +ReproductiveEventType eventType
-        +LocalDate eventDate
-        +BreedingType breedingType
-    }
-
-    class PregnancyStatus {
-        <<enumeration>>
-        ACTIVE
-        CLOSED
-    }
-
-    class PregnancyCloseReason {
-        <<enumeration>>
-        BIRTH
-        LOST
-        ABORTED
-        DATA_FIX_DUPLICATED_ACTIVE
-    }
-
-    class ReproductiveEventType {
-        <<enumeration>>
-        COVERAGE
-        PREGNANCY_CHECK
-        PREGNANCY_CLOSE
-    }
-
-    class BreedingType {
-        <<enumeration>>
-        NATURAL
-        AI
-    }
-
-    %% ========== MÓDULO MILK ==========
-    class Lactation {
-        +Long id
-        +LocalDate startDate
-        +LocalDate endDate
-        +LactationStatus status
-    }
-
-    class MilkProduction {
-        +Long id
-        +LocalDate date
-        +String shift
-        +double volumeLiters
-    }
-
-    class LactationStatus {
-        <<enumeration>>
-        ACTIVE
-        CLOSED
-    }
-
-    %% ========== RELACIONAMENTOS ==========
-    GoatFarm "1" --> "1" Address : possui
-    GoatFarm "1" --> "0..*" Phone : tem
-    GoatFarm "1" --> "0..*" Goat : gerencia
-    Goat "1" --> "0..*" Lactation : possui
-    Goat "1" --> "0..*" MilkProduction : produz
-    Goat "1" --> "0..*" Pregnancy : gestacoes
-    Goat "1" --> "0..*" ReproductiveEvent : eventosReprodutivos
-    Pregnancy "1" --> "0..*" ReproductiveEvent : eventos
-    User "1" --> "0..*" GoatFarm : possui
+    User "1" --> "0..*" GoatFarm : administra
+    GoatFarm "1" --> "0..*" Goat : mantém
+    Goat "1" --> "0..*" Pregnancy : possui
+    Goat "1" --> "0..*" Lactation : produz
+    Goat "1" --> "0..*" HealthEvent : recebe
+    Pregnancy "1" --> "0..*" ReproductiveEvent : registra
+    Goat --> Goat : pai / mãe
 ```
 
----
+O detalhamento de entidades, regras e contratos permanece no
+[Portal de Documentação](./docs/INDEX.md), para que o README continue útil como
+porta de entrada e não se torne uma cópia concorrente da documentação técnica.
 
-## 📋 Pré-requisitos
+## Stack Técnica
 
-Antes de começar, certifique-se de ter instalado:
+- Java 21
+- Spring Boot 3
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
+- H2 (testes automatizados)
+- Flyway
+- RabbitMQ (opcional)
+- MapStruct
+- Lombok
+- ArchUnit
+- Docker / Docker Compose
 
-- ☕ **Java 21** ou superior
-- 🛠 **Maven 3.8+** (ou use o wrapper incluído)
-- 🐳 **Docker & Docker Compose** (necessário para o PostgreSQL local; RabbitMQ é opcional)
-- 💻 **IDE**: IntelliJ IDEA, Eclipse ou VS Code
+## Como Rodar
 
----
+### Pré-requisitos
 
-## 🚀 Instalação
+- Java 21
+- Docker e Docker Compose (para subir a infraestrutura local pelo Compose)
 
-1️⃣ **Clone o repositório**
+### 1. Clonar o projeto
+
 ```bash
 git clone https://github.com/albertovilar/caprigestor-backend.git
 cd caprigestor-backend
 ```
 
-2️⃣ **Subir infraestrutura local**
-```bash
-cd docker
-docker compose up -d
-```
-
-## 🧪 Testes
-
-> **Nota sobre Warnings:** É comum ver avisos do "Mockito inline agent" (Byte Buddy) durante a execução dos testes em Java 21+. Isso não afeta o resultado. Para suprimir, use a flag `-XX:+EnableDynamicAgentLoading`.
-
-O projeto possui uma suíte robusta de testes:
-
-- **Testes Unitários:** Cobrem as regras de negócio (`*Business`), isolados de dependências externas (banco, web). Organizados espelhando a estrutura de pacotes de `src/main`.
-- **Testes de Integração:** Validam o fluxo completo, incluindo banco de dados e endpoints REST (`@SpringBootTest`).
-- **Arquitetura:** Testes que garantem a integridade da Arquitetura Hexagonal (dependências corretas entre camadas).
-
-Para executar os testes:
-```bash
-./mvnw clean test
-```
-
-### CI backend
-
-O workflow `backend_ci` roda o gate oficial do backend em `push` e `pull_request`
-para `develop` e `main`:
-
-```bash
-./mvnw -U -T 1C clean test
-```
-
-Use o mesmo comando localmente antes de abrir PR ou promover `develop -> main`.
-
-### Health check operacional
-
-O backend expõe probes operacionais via Spring Boot Actuator:
-
-```bash
-curl http://localhost:8080/actuator/health/liveness
-curl http://localhost:8080/actuator/health/readiness
-curl http://localhost:8080/actuator/health
-```
-
-- `liveness`: valida que o processo Spring subiu e está vivo.
-- `readiness`: valida que a aplicação está pronta para receber tráfego.
-- `health`: visão agregada do estado do serviço e dependências expostas pelo Actuator.
-
-Os endpoints acima são somente leitura e podem ser usados em smoke checks locais/HML.
-
----
-
-## 🐳 Docker
-
-Para subir o PostgreSQL e os serviços auxiliares disponíveis no Compose:
+### 2. Subir a infraestrutura local
 
 ```bash
 cd docker
 docker compose up -d
+cd ..
 ```
-> **Serviços:**
-> - PostgreSQL: `localhost:5432`
-> - RabbitMQ UI: `http://localhost:15672` (somente quando a mensageria opcional estiver em uso)
-> - PgAdmin: `http://localhost:8081`
 
----
+Serviços locais:
 
-## ⚙️ Configuração
+- API base: `http://localhost:8080/api/v1`
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- PostgreSQL: `localhost:5432`
+- RabbitMQ UI (opcional): `http://localhost:15672`
+- PgAdmin: `http://localhost:8081`
 
-### Filosofia dos Perfis
-O projeto adota uma estratégia estrita de perfis para evitar configurações implícitas e garantir consistência entre ambientes.
+### 3. Iniciar o backend
 
-- **`default`**: Apenas configurações básicas (logging, jackson). **Não conecta ao banco.**
-- **`dev`**: Ambiente de desenvolvimento. Conecta ao **PostgreSQL local** e roda **Flyway**.
-- **`test`**: Ambiente de testes. Usa **H2 em memória**, sem exigir Docker.
-- **`prod`**: Ambiente de produção. Configurações via variáveis de ambiente.
-
----
-
-## 🧰 Perfis de Execução
-
-O projeto está configurado para usar o perfil `dev` por padrão para facilitar o desenvolvimento.
-
-| Perfil | Uso | Banco de Dados | Flyway | DDL Auto |
-|--------|-----|----------------|--------|----------|
-| `dev` | Desenvolvimento (Padrão) | PostgreSQL (Docker) | ✅ Habilitado | `validate` |
-| `test` | Testes automatizados | H2 em memória | ❌ Desabilitado | `create-drop` |
-| `prod` | Produção | PostgreSQL (AWS/Cloud) | ✅ Habilitado | `validate` |
-| `default` | Base | ❌ Nenhum | ❌ Desabilitado | `none` |
-
-### ▶️ Como Executar (Modo Dev)
-
-**Via Maven Wrapper (Simples):**
-O perfil `dev` é ativado automaticamente.
 ```bash
-# Windows (PowerShell)
+# Windows
 ./mvnw.cmd spring-boot:run
 
-# Linux/Mac
+# Linux / macOS
 ./mvnw spring-boot:run
 ```
 
-**Via Maven (Explícito):**
-Caso queira forçar um perfil específico:
-```bash
-./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
-```
+O perfil `dev` é o padrão para desenvolvimento local. Nele, a mensageria fica
+desabilitada por padrão; habilite `CAPRIGESTOR_MESSAGING_ENABLED=true` somente
+quando precisar validar a integração assíncrona com RabbitMQ.
 
-**Via JAR:**
-```bash
-java -jar target/CapriGestor-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev
-```
+### Perfis de execução
 
----
+| Perfil | Uso | Persistência | Mensageria |
+|---|---|---|---|
+| `dev` | desenvolvimento local | PostgreSQL com Flyway | desabilitada por padrão |
+| `test` | suíte automatizada | H2 em memória, sem Flyway | listeners desabilitados |
+| `prod` | implantação | PostgreSQL com schema validado pelo Flyway | desabilitada por padrão |
 
-## 🧰 Como Usar
+## Segurança
 
-Após iniciar com o perfil `dev`, a API estará disponível em:
+- autenticação stateless baseada em JWT;
+- `ROLE_ADMIN` possui acesso administrativo global;
+- `ROLE_FARM_OWNER` administra somente a própria fazenda;
+- `ROLE_OPERATOR` executa rotinas operacionais somente quando possui vínculo formal com a fazenda;
+- consultas públicas de animais, genealogia, descendência e ABCC somente leitura permanecem abertas;
+- mutações administrativas, patrimoniais e financeiras sensíveis permanecem restritas;
+- suporte a operadores vinculados pela tabela `tb_farm_operator`.
 
-- **API Base:** `http://localhost:8080/api/v1`
-- **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
+Em produção, configure explicitamente `CORS_ORIGINS`. A duração do access token
+é controlada por `JWT_DURATION`, e a do refresh token por
+`JWT_REFRESH_DURATION`.
 
-> ⚠️ **Importante:** A maioria das operações requer autenticação via Bearer Token e os dados são isolados por `farmId`.
+Para detalhes de regras de acesso e ownership:
 
----
+- [AUTHORITY_ACCESS_MODULE.md](./docs/02-modules/AUTHORITY_ACCESS_MODULE.md)
+- [ARCHITECTURE.md](./docs/01-architecture/ARCHITECTURE.md)
 
-## 🗄️ Banco de Dados
+## Banco de Dados e Mensageria
 
-### Versionamento (Flyway)
-Todo o schema do banco é gerenciado pelo **Flyway**.
-- Migrations SQL versionadas em: `src/main/resources/db/migration`
-- Java migrations Flyway (quando necessario) em: `src/main/java/db/migration` com `package db.migration`
-- Estrategia oficial: SQL-first; Java migration somente para guardrails tecnicos que nao cabem bem em SQL declarativo.
-- O Hibernate **apenas valida** o schema (`ddl-auto=validate`), nunca o altera.
+- schema versionado com Flyway em [`src/main/resources/db/migration`](./src/main/resources/db/migration);
+- PostgreSQL como banco principal em `dev` e `prod`;
+- Hibernate configurado para validar schema, não gerar schema automaticamente;
+- perfil de testes com H2 em memória, Flyway desabilitado e schema isolado por execução;
+- RabbitMQ disponível para eventos assíncronos e desacoplamento operacional,
+  mas desabilitado por padrão em `dev` e `prod`. O indicador de health segue a
+  mesma configuração.
 
-### H2 Database
-O perfil `test` usa H2 em memória, com schema criado e descartado pelo Hibernate. Não existe profile `smoke` separado na configuração atual.
+Referências úteis:
 
-### Flyway V16 – banco sujo com ACTIVE duplicada
+- [API Contracts](./docs/03-api/API_CONTRACTS.md)
+- [MVP Ready](./docs/00-overview/MVP_READY.md)
+- [Homologation Operation Runbook](./docs/00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
+- [Production Docker Deploy Runbook](./docs/00-overview/PRODUCTION_DOCKER_DEPLOY_RUNBOOK.md)
 
-A migration `V16` cria um índice único para garantir apenas **uma gestação ativa por cabra**. Em bancos de dados "sujos" (com duplicatas existentes), essa migration falhará.
-Antes dela, a Java migration `V15_9__Assert_no_duplicate_active_pregnancy` (em `src/main/java/db/migration`) executa um guardrail e interrompe o migrate com mensagem de correção manual quando encontra duplicidades.
+## Qualidade e Testes
 
-O fluxo recomendado é totalmente manual e está documentado em:
-- `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`  
-  (contém **diagnóstico**, **fix seguro** e **verificação final**)
+A suíte cobre:
 
-**Procedimento de Correção (ambiente dev com PostgreSQL Docker):**
+- testes unitários das regras de negócio;
+- testes de integração com contexto Spring e H2 em memória;
+- testes arquiteturais com ArchUnit;
+- smoke tests e validações operacionais.
 
-1.  **Rodar diagnóstico (verificar se há duplicidades):**
+Execução local:
 
-    ```sql
-    SELECT farm_id, goat_id, COUNT(*) AS active_count
-    FROM pregnancy
-    WHERE status = 'ACTIVE'
-    GROUP BY farm_id, goat_id
-    HAVING COUNT(*) > 1;
-    ```
-
-    - Se o resultado vier vazio, não há problema para a V16.
-    - Se houver linhas, existem gestações `ACTIVE` duplicadas que precisam ser corrigidas.
-
-    Exemplo usando o container padrão do projeto:
-
-    ```bash
-    docker exec -it caprigestor-postgres \
-      psql -U admin -d caprigestor_test \
-      -c "SELECT farm_id, goat_id, COUNT(*) AS active_count FROM pregnancy WHERE status = 'ACTIVE' GROUP BY farm_id, goat_id HAVING COUNT(*) > 1;"
-    ```
-
-2.  **Executar Data Fix (fechar gestações duplicadas mais antigas):**
-
-    - Execute o script manual em `src/main/resources/db/manual/datafix_duplicate_active_pregnancy.sql`
-      diretamente no banco (via `psql`, PgAdmin ou outra ferramenta SQL).
-    - O script mantém apenas a gestação `ACTIVE` mais recente por `(farm_id, goat_id)` e fecha as demais.
-
-3.  **Rodar verificação final:**
-
-    - Reexecute o SELECT de diagnóstico (ou o bloco **C) Verificação final** do script manual).
-    - O resultado deve estar vazio antes de subir a aplicação.
-
-4.  **Subir aplicação normalmente:**
-
-    - Com o banco já corrigido, a aplicação subirá e o Flyway aplicará a `V16` com sucesso.
-
-### Backup e restore local/hml (PostgreSQL Docker)
-
-O repositório agora possui dois scripts operacionais mínimos para ambiente local/hml:
-
-- `scripts/backup-postgres.ps1`
-- `scripts/restore-postgres.ps1`
-
-Os scripts assumem o container padrão `caprigestor-postgres` e funcionam com `pg_dump` / `psql` via `docker exec`.
-
-**Gerar backup SQL do banco local atual:**
-
-```powershell
-.\scripts\backup-postgres.ps1 -Database caprigestor_dev
-```
-
-**Gerar backup em diretório explícito:**
-
-```powershell
-.\scripts\backup-postgres.ps1 -Database caprigestor_dev -OutputDir .\backups
-```
-
-**Restaurar backup em um banco já existente:**
-
-```powershell
-.\scripts\restore-postgres.ps1 -InputFile .\backups\caprigestor_dev-YYYYMMDD-HHMMSS.sql -Database caprigestor_dev
-```
-
-**Recriar o banco antes do restore:**
-
-```powershell
-.\scripts\restore-postgres.ps1 -InputFile .\backups\caprigestor_dev-YYYYMMDD-HHMMSS.sql -Database caprigestor_dev_restore -RecreateDatabase
-```
-
-Regras operacionais:
-- usar backup antes de qualquer intervenção manual em `flyway_schema_history`;
-- usar `-RecreateDatabase` apenas em banco local/hml controlado;
-- não usar esse fluxo como substituto de estratégia de backup de produção.
-
-### Flyway V25 - checksum drift em banco local/hml
-
-Foi confirmado um caso real de drift em `caprigestor_dev`:
-
-- checksum aplicado no banco para `V25`: `1438893664`
-- checksum atual resolvido pelo código: `-1126156828`
-- causa no histórico do repositório: o arquivo `V25__evolve_inventory_lot_lifecycle.sql` foi alterado depois de já ter sido aplicado localmente (commit `8d9702e`)
-- diferença confirmada no Git: apenas texto da mensagem de erro e newline final, sem mudança estrutural de schema
-
-Comandos úteis de diagnóstico:
-
-```sql
-SELECT installed_rank, version, description, script, checksum, success
-FROM flyway_schema_history
-WHERE version = '25';
-```
-
-```powershell
-.\mvnw.cmd --% -Dflyway.url=jdbc:postgresql://localhost:5432/caprigestor_dev -Dflyway.user=admin -Dflyway.password=admin123 flyway:info
-```
-
-**Regra de decisão segura:**
-
-1. Se o banco local/hml é descartável ou pode ser restaurado a partir de backup:
-   - preferir backup;
-   - recriar o banco;
-   - subir a aplicação para reaplicar as migrations do zero.
-
-2. Se o banco local/hml precisa ser preservado e o diff da migration foi auditado como não estrutural:
-   - fazer backup antes;
-   - executar `repair` explicitamente;
-   - validar em seguida com `flyway:validate` ou com a subida normal da aplicação.
-
-3. Não fazer:
-   - editar novamente a migration histórica para "combinar" com o banco;
-   - rodar `repair` em produção para esconder drift não auditado;
-   - atualizar `flyway_schema_history` manualmente sem backup e sem evidência do diff.
-
-**Fluxo recomendado para este drift específico da V25 em local/hml:**
-
-```powershell
-.\scripts\backup-postgres.ps1 -Database caprigestor_dev
-.\mvnw.cmd --% -Dflyway.url=jdbc:postgresql://localhost:5432/caprigestor_dev -Dflyway.user=admin -Dflyway.password=admin123 flyway:repair
-.\mvnw.cmd --% -Dflyway.url=jdbc:postgresql://localhost:5432/caprigestor_dev -Dflyway.user=admin -Dflyway.password=admin123 flyway:validate
-```
-
-**Checklist pós-remediação:**
-
-- `flyway:validate` sem erro;
-- aplicação sobe normalmente no profile `dev`;
-- `SELECT ... FROM flyway_schema_history WHERE version = '25'` reflete o checksum atual;
-- nenhum arquivo histórico adicional foi alterado para "forçar" compatibilidade.
-
----
-
-## 🔐 Segurança
-
-- **OAuth2 + JWT:** Autenticação stateless robusta.
-- **Roles:**
-  - `ROLE_ADMIN`: Acesso total.
-  - `ROLE_OPERATOR`: Acesso operacional à fazenda vinculada.
-- **Header Obrigatório:**
-  ```http
-  Authorization: Bearer <seu-token-jwt>
-  ```
-
----
-
-## 🧪 Testes
-
-Os testes de integração sobem a aplicação Spring com H2 em memória no profile `test`.
-
-**Executar todos os testes:**
 ```bash
 # Windows
-./mvnw.cmd test
+.\mvnw.cmd test
 
-# Linux/Mac
+# Linux / macOS
 ./mvnw test
 ```
-> *Nota: a suíte padrão não depende de Docker. A validação final com PostgreSQL real é feita separadamente pelo smoke de integração.*
 
----
-
-## 🐳 Docker
-
-Para subir os serviços locais disponíveis no Compose:
+Comandos úteis:
 
 ```bash
-cd docker
-docker compose up -d
+# Windows
+.\mvnw.cmd clean test
+
+# Linux / macOS
+./mvnw clean test
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/actuator/health/liveness
+curl http://localhost:8080/actuator/health/readiness
 ```
 
-| Serviço | Porta | Descrição |
-|---------|-------|-----------|
-| API | 8080 | Backend Spring Boot |
-| PostgreSQL | 5432 | Banco de Dados |
-| RabbitMQ | 5672 | Mensageria opcional (AMQP) |
-| RabbitMQ UI | 15672 | Painel da mensageria opcional |
-| PgAdmin | 8081 | Gestão Visual do Banco |
+## Documentação
 
----
+O README foi mantido intencionalmente enxuto. O detalhe pesado do projeto está centralizado em `docs/`.
 
-## 📨 Mensageria de Eventos (RabbitMQ)
+Pontos de entrada recomendados:
 
-O sistema possui integração opcional com RabbitMQ. Ela fica desabilitada por padrão nos perfis `dev` e `prod` e só é ativada com `CAPRIGESTOR_MESSAGING_ENABLED=true`.
+- [INDEX.md](./docs/INDEX.md)
+- [ARCHITECTURE.md](./docs/01-architecture/ARCHITECTURE.md)
+- [BUSINESS_DOMAIN.md](./docs/00-overview/BUSINESS_DOMAIN.md)
+- [GOAT_FARM_MODULE.md](./docs/02-modules/GOAT_FARM_MODULE.md)
+- [HEALTH_VETERINARY_MODULE.md](./docs/02-modules/HEALTH_VETERINARY_MODULE.md)
+- [INVENTORY_MODULE.md](./docs/02-modules/INVENTORY_MODULE.md)
+- [API_CONTRACTS.md](./docs/03-api/API_CONTRACTS.md)
 
-- **Exchange:** `events-exchange`
-- **Fila:** `events-queue`
-- **Routing Key:** `event.created`
+## Frontend Relacionado
 
-Quando habilitada localmente, a mensageria pode ser monitorada no painel configurado pelo Docker Compose.
+O frontend desse ecossistema está em:
 
----
+- [caprigestor-frontend](https://github.com/albertovilar/caprigestor-frontend)
 
-## 📝 Licença
+## Licença
 
-Este projeto é proprietário. Todos os direitos reservados.
+Projeto proprietário. Todos os direitos reservados.
 
----
+## Contato
 
-## 👤 Contato
+José Alberto Vilar Pereira
 
-**José Alberto Vilar Pereira**
-
-📧 Email: albertovilar1@gmail.com
-💼 LinkedIn: [Alberto Vilar](https://www.linkedin.com/in/alberto-vilar-316725ab)
-🐙 GitHub: [@albertovilar](https://github.com/albertovilar)
-
-<div align="center">
-Desenvolvido com ☕ e ❤️ por Alberto Vilar
-
-⭐ Se este projeto foi útil para você, considere dar uma estrela!
-</div>
+- Email: `albertovilar1@gmail.com`
+- LinkedIn: [Alberto Vilar](https://www.linkedin.com/in/alberto-vilar-316725ab)
+- GitHub: [@AlbertoVilar](https://github.com/AlbertoVilar)
