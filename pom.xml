@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.12</version>
+		<version>3.5.15</version>
 		<relativePath/>
 	</parent>
 	<groupId>com.devmaster</groupId>
@@ -143,6 +143,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-amqp</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.rabbitmq</groupId>
+			<artifactId>amqp-client</artifactId>
+			<version>5.33.1</version>
 		</dependency>
 
 		<!-- Para testes de mensageria (opcional, mas recomendado) -->
