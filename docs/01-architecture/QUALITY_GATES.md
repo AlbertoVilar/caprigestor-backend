@@ -14,8 +14,11 @@ Escopo: gates automatizados introduzidos na W5.
   `disabledWithoutDocker=true` mantém o desenvolvimento local determinístico
   quando o daemon não está acessível, mas o CI Linux deve executá-los.
 - `codeql.yml` analisa Java em pull requests, pushes protegidos e semanalmente.
-- `dependency_review.yml` bloqueia alterações de dependências com severidade
-  alta ou crítica.
+- `dependency_review.yml` executa uma varredura de dependências do repositório
+  (Maven e arquivos de lock reconhecidos) e bloqueia vulnerabilidades altas ou
+  críticas corrigíveis. O recurso nativo Dependency Review do GitHub não está
+  disponível neste repositório público, então o gate usa o mesmo scanner
+  Trivy de forma explícita e auditável.
 - `supply_chain.yml` publica um SBOM CycloneDX como artefato e verifica a imagem
   Docker com Trivy, falhando em vulnerabilidades altas/críticas corrigíveis.
 

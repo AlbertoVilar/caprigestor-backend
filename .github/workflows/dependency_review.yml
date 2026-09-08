@@ -16,7 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Scan Maven and repository dependencies
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
-          fail-on-severity: high
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
