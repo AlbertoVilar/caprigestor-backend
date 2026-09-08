@@ -29,4 +29,21 @@ class MessagingOptionalConfigurationTest {
             assertThat(context).doesNotHaveBean(EventConsumer.class);
         });
     }
+
+    @Test
+    void shouldDefaultToNoOpPublisherWhenMessagingPropertyIsMissing() {
+        new ApplicationContextRunner()
+                .withUserConfiguration(
+                        RabbitMQConfig.class,
+                        RabbitMQEventPublisher.class,
+                        NoOpEventPublisher.class,
+                        EventConsumer.class
+                )
+                .run(context -> {
+                    assertThat(context).hasSingleBean(EventPublisher.class);
+                    assertThat(context).hasSingleBean(NoOpEventPublisher.class);
+                    assertThat(context).doesNotHaveBean(RabbitMQEventPublisher.class);
+                    assertThat(context).doesNotHaveBean(EventConsumer.class);
+                });
+    }
 }

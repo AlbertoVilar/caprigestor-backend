@@ -69,8 +69,8 @@ class LactationBusinessTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(goatGenderValidator.requireFemale(anyLong(), anyString())).thenReturn(new Goat());
-        lenient().when(goatGenderValidator.requireFemaleAndActive(anyLong(), anyString())).thenReturn(new Goat());
+        lenient().doNothing().when(goatGenderValidator).requireFemale(anyLong(), anyString());
+        lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(anyLong(), anyString());
     }
 
     @Test

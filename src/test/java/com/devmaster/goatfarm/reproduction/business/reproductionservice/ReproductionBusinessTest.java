@@ -64,6 +64,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -105,14 +106,16 @@ class ReproductionBusinessTest {
     @BeforeEach
     void setUp() {
         // Maintained to follow Milk module test style.
-        org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemale(any(Long.class), any(String.class)))
-                .thenReturn(new Goat());
-        org.mockito.Mockito.lenient().when(goatGenderValidator.requireActive(any(Long.class), any(String.class)))
-                .thenReturn(weanableKidEntity());
-        org.mockito.Mockito.lenient().when(goatGenderValidator.requireFemaleAndActive(any(Long.class), any(String.class)))
-                .thenReturn(motherGoatEntity());
+        org.mockito.Mockito.lenient().doNothing().when(goatGenderValidator)
+                .requireFemale(any(Long.class), any(String.class));
+        org.mockito.Mockito.lenient().doNothing().when(goatGenderValidator)
+                .requireActive(any(Long.class), any(String.class));
+        org.mockito.Mockito.lenient().doNothing().when(goatGenderValidator)
+                .requireFemaleAndActive(any(Long.class), any(String.class));
         org.mockito.Mockito.lenient().when(goatFarmPersistencePort.findById(FARM_ID))
                 .thenReturn(Optional.of(birthFarmEntity()));
+        org.mockito.Mockito.lenient().when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID))
+                .thenReturn(Optional.of(motherGoatEntity()));
         org.mockito.Mockito.lenient().when(pregnancyPersistencePort.findActiveByFarmIdAndGoatId(anyLong(), anyString()))
                 .thenReturn(Optional.empty());
         org.mockito.Mockito.lenient().when(pregnancyPersistencePort.findLatestBirthCloseDate(anyLong(), anyString()))
@@ -961,7 +964,8 @@ class ReproductionBusinessTest {
         Pregnancy activePregnancy = activePregnancyEntity();
         Goat motherFromAnotherFarm = motherGoatEntity();
         motherFromAnotherFarm.setTod("99999");
-        when(goatGenderValidator.requireFemaleAndActive(FARM_ID, GOAT_ID)).thenReturn(motherFromAnotherFarm);
+        doNothing().when(goatGenderValidator).requireFemaleAndActive(FARM_ID, GOAT_ID);
+        when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID)).thenReturn(Optional.of(motherFromAnotherFarm));
         GoatResponseVO createdKid = createdKidResponse("1643200001");
 
         when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
@@ -1000,7 +1004,7 @@ class ReproductionBusinessTest {
         assertThat(result.getKids()).hasSize(1);
         verify(pregnancyPersistencePort).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
-        verifyNoInteractions(goatPersistencePort);
+        verify(goatPersistencePort).findByIdAndFarmId(GOAT_ID, FARM_ID);
     }
 
     @ParameterizedTest
@@ -1023,7 +1027,7 @@ class ReproductionBusinessTest {
         assertThat(captor.getValue().getCategory()).isEqualTo(category);
         assertThat(captor.getValue().getFatherRegistrationNumber()).isEqualTo("1635719026A");
         assertThat(captor.getValue().getMotherRegistrationNumber()).isEqualTo(GOAT_ID);
-        verifyNoInteractions(goatPersistencePort);
+        verify(goatPersistencePort).findByIdAndFarmId(GOAT_ID, FARM_ID);
     }
 
     @Test
@@ -1185,7 +1189,8 @@ class ReproductionBusinessTest {
                 .build();
 
         Goat kid = weanableKidEntity();
-        when(goatGenderValidator.requireActive(FARM_ID, GOAT_ID)).thenReturn(kid);
+        doNothing().when(goatGenderValidator).requireActive(FARM_ID, GOAT_ID);
+        when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID)).thenReturn(Optional.of(kid));
         when(reproductiveEventPersistencePort.findLatestByFarmIdAndGoatIdAndEventType(FARM_ID, GOAT_ID, ReproductiveEventType.WEANING))
                 .thenReturn(Optional.empty());
         when(goatPersistencePort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -1247,7 +1252,8 @@ class ReproductionBusinessTest {
                 .weaningDate(LocalDate.now(clock).minusDays(2))
                 .build();
 
-        when(goatGenderValidator.requireActive(FARM_ID, GOAT_ID)).thenReturn(kid);
+        doNothing().when(goatGenderValidator).requireActive(FARM_ID, GOAT_ID);
+        when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID)).thenReturn(Optional.of(kid));
 
         assertThatThrownBy(() -> reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO))
                 .isInstanceOf(InvalidArgumentException.class)
@@ -1262,6 +1268,9 @@ class ReproductionBusinessTest {
         WeaningRequestVO requestVO = WeaningRequestVO.builder()
                 .weaningDate(LocalDate.now(clock).minusDays(1))
                 .build();
+
+        when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID))
+                .thenReturn(Optional.of(weanableKidEntity()));
 
         ReproductiveEvent existing = ReproductiveEvent.builder()
                 .id(701L)
@@ -1289,7 +1298,8 @@ class ReproductionBusinessTest {
                 .weaningDate(LocalDate.now(clock).minusDays(1))
                 .build();
 
-        when(goatGenderValidator.requireActive(FARM_ID, GOAT_ID)).thenReturn(kid);
+        doNothing().when(goatGenderValidator).requireActive(FARM_ID, GOAT_ID);
+        when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID)).thenReturn(Optional.of(kid));
 
         assertThatThrownBy(() -> reproductionBusiness.registerWeaning(FARM_ID, GOAT_ID, requestVO))
                 .isInstanceOf(BusinessRuleException.class)

@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.inventory.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryBalanceResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryBalanceApiMapper;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryBalanceQueryUseCase;
@@ -15,7 +16,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,7 +51,7 @@ public class InventoryBalanceController {
             @ApiResponse(responseCode = "403", description = "Acesso negado."),
             @ApiResponse(responseCode = "404", description = "Fazenda não encontrada, quando aplicável.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<InventoryBalanceResponseDTO>> listBalances(
             @Parameter(description = "Identificador da fazenda.")

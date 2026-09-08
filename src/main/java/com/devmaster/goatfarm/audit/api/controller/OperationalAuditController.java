@@ -3,10 +3,10 @@ package com.devmaster.goatfarm.audit.api.controller;
 import com.devmaster.goatfarm.audit.api.dto.OperationalAuditEntryDTO;
 import com.devmaster.goatfarm.audit.api.mapper.OperationalAuditApiMapper;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,7 +31,7 @@ public class OperationalAuditController {
         this.operationalAuditApiMapper = operationalAuditApiMapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/entries")
     @Operation(summary = "Listar operacoes criticas auditadas por fazenda ou animal")
     public ResponseEntity<List<OperationalAuditEntryDTO>> listEntries(

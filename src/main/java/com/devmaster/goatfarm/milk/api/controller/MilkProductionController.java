@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionUpdateRequestDTO;
@@ -23,7 +25,6 @@ import org.springframework.data.web.SortDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -44,7 +45,7 @@ public class MilkProductionController {
         this.milkProductionMapper = milkProductionMapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping
     @Operation(summary = "Registrar produção diária de leite")
     @ApiResponses({
@@ -63,7 +64,7 @@ public class MilkProductionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(milkProductionMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PatchMapping("/{id}")
     @Operation(summary = "Atualizar parcialmente um registro de produção")
     @ApiResponses({
@@ -91,7 +92,7 @@ public class MilkProductionController {
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada."),
             @ApiResponse(responseCode = "404", description = "Produção não encontrada.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/{id}")
     public ResponseEntity<MilkProductionResponseDTO> findById(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -111,7 +112,7 @@ public class MilkProductionController {
             @ApiResponse(responseCode = "400", description = "Parâmetros de filtro ou paginação inválidos."),
             @ApiResponse(responseCode = "403", description = "Acesso negado para a fazenda informada.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping
     public ResponseEntity<Page<MilkProductionResponseDTO>> getMilkProductions(
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
@@ -145,7 +146,7 @@ public class MilkProductionController {
         return ResponseEntity.ok(dtoPage);
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @DeleteMapping("/{id}")
     @Operation(summary = "Cancelar logicamente um registro de produção")
     @ApiResponses({

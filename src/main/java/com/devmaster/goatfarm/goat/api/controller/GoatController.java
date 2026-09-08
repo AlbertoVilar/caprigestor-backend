@@ -1,5 +1,9 @@
 package com.devmaster.goatfarm.goat.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.AuthenticatedFarmRead;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
+import com.devmaster.goatfarm.config.security.authorization.PublicEndpoint;
 import com.devmaster.goatfarm.goat.api.dto.GoatRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatHerdSummaryDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
@@ -18,7 +22,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,7 +39,7 @@ public class GoatController {
         this.goatMapper = goatMapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping
     @Operation(summary = "Cadastra uma nova cabra em uma fazenda")
     @ApiResponses(value = {
@@ -52,7 +55,7 @@ public class GoatController {
                 ));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PutMapping("/{goatId}")
     @Operation(summary = "Atualiza os dados de uma cabra existente em uma fazenda")
     @ApiResponses(value = {
@@ -69,7 +72,7 @@ public class GoatController {
         );
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PatchMapping("/{goatId}/exit")
     @Operation(summary = "Registra saida controlada do animal do rebanho")
     @ApiResponses(value = {
@@ -89,7 +92,7 @@ public class GoatController {
         );
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @DeleteMapping("/{goatId}")
     @Operation(summary = "Remove uma cabra de uma fazenda")
     @ApiResponses(value = {
@@ -103,6 +106,7 @@ public class GoatController {
     }
 
     @GetMapping("/{goatId}")
+    @PublicEndpoint
     @Operation(summary = "Busca uma cabra pelo ID dentro de uma fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cabra encontrada com sucesso."),
@@ -117,6 +121,7 @@ public class GoatController {
     }
 
     @GetMapping("/{goatId}/offspring")
+    @PublicEndpoint
     @Operation(summary = "Lista as crias locais vinculadas ao animal")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Crias retornadas com sucesso."),
@@ -131,6 +136,7 @@ public class GoatController {
     }
 
     @GetMapping
+    @PublicEndpoint
     @Operation(summary = "Lista todas as cabras de uma fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listagem executada com sucesso."),
@@ -146,6 +152,7 @@ public class GoatController {
     }
 
     @GetMapping("/search")
+    @PublicEndpoint
     @Operation(summary = "Busca cabras por nome dentro de uma fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Busca executada com sucesso."),
@@ -162,6 +169,7 @@ public class GoatController {
     }
 
     @GetMapping("/summary")
+    @AuthenticatedFarmRead
     @Operation(summary = "Retorna o resumo agregado do rebanho da fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Resumo do rebanho retornado com sucesso.")

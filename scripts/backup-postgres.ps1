@@ -2,11 +2,15 @@ param(
     [string]$Database = "caprigestor_dev",
     [string]$Container = "caprigestor-postgres",
     [string]$User = "admin",
-    [string]$Password = "admin123",
+    [string]$Password = $env:CAPRIGESTOR_DB_PASSWORD,
     [string]$OutputDir = ".\backups"
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($Password)) {
+    throw "Defina CAPRIGESTOR_DB_PASSWORD ou informe -Password explicitamente."
+}
 
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 

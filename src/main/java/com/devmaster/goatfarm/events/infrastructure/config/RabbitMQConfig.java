@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
  */
 @Configuration
 @EnableRabbit
-@ConditionalOnProperty(value = "caprigestor.messaging.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(value = "caprigestor.messaging.enabled", havingValue = "true", matchIfMissing = false)
 public class RabbitMQConfig {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMQConfig.class);

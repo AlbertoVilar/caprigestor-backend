@@ -60,7 +60,7 @@ class MilkProductionBusinessTest {
     void setUp() {
         // Método executado antes de cada teste.
         // Útil para resetar mocks ou configurar comportamento padrão se necessário.
-        lenient().when(goatGenderValidator.requireFemale(anyLong(), anyString())).thenReturn(new Goat());
+        lenient().doNothing().when(goatGenderValidator).requireFemale(anyLong(), anyString());
         lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(anyLong(), anyString(), any(LocalDate.class)))
                 .thenReturn(GoatWithdrawalStatusVO.builder()
                         .goatId("GOAT-DEFAULT")

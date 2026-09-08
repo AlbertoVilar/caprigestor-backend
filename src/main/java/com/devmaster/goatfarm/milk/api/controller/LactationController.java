@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.milk.api.dto.LactationDryRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationResponseDTO;
@@ -23,7 +24,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -44,7 +44,7 @@ public class LactationController {
         this.lactationMapper = lactationMapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping
     @Operation(summary = "Abrir uma nova lactação para uma cabra")
     @ApiResponses({
@@ -63,7 +63,7 @@ public class LactationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/active")
     @Operation(summary = "Buscar lactação ativa de uma cabra")
     @ApiResponses({
@@ -78,7 +78,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/active/summary")
     @Operation(summary = "Buscar sumário da lactação ativa da cabra")
     @ApiResponses({
@@ -93,7 +93,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toSummaryResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PatchMapping("/{lactationId}/dry")
     @Operation(summary = "Marcar uma lactação como seca")
     @ApiResponses({
@@ -113,7 +113,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PatchMapping("/{lactationId}/resume")
     @Operation(summary = "Retomar uma lactacao previamente secada")
     @ApiResponses({
@@ -131,7 +131,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/{lactationId}")
     @Operation(summary = "Buscar lactação por identificador")
     @ApiResponses({
@@ -148,7 +148,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/{lactationId}/summary")
     @Operation(summary = "Buscar sumário da lactação por identificador")
     @ApiResponses({
@@ -165,7 +165,7 @@ public class LactationController {
         return ResponseEntity.ok(lactationMapper.toSummaryResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping
     @Operation(summary = "Listar histórico de lactações de uma cabra")
     @ApiResponses({

@@ -12,6 +12,8 @@ import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
 import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
+import com.devmaster.goatfarm.config.security.authorization.PublicEndpoint;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -55,6 +57,7 @@ public class GoatFarmController {
     }
 
     @PostMapping
+    @PublicEndpoint
     @Operation(summary = "Cadastra uma nova fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Fazenda criada com sucesso."),
@@ -67,7 +70,7 @@ public class GoatFarmController {
         return new ResponseEntity<>(farmMapper.toFullDTO(responseVO), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#id))")
+    @FarmOwnerOnly
     @PutMapping("/{id}")
     @Operation(summary = "Atualiza os dados completos de uma fazenda")
     @ApiResponses(value = {
@@ -76,9 +79,9 @@ public class GoatFarmController {
             @ApiResponse(responseCode = "404", description = "Fazenda não encontrada."),
             @ApiResponse(responseCode = "422", description = "Falha de validação dos dados informados.")
     })
-    public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(@PathVariable Long id, @RequestBody @Valid GoatFarmUpdateRequestDTO requestDTO) {
+    public ResponseEntity<GoatFarmFullResponseDTO> updateGoatFarm(@PathVariable("id") Long farmId, @RequestBody @Valid GoatFarmUpdateRequestDTO requestDTO) {
         var responseVO = farmUseCase.updateGoatFarm(
-                id,
+                farmId,
                 farmMapper.toRequestVO(requestDTO.getFarm()),
                 userMapper.toRequestVO(requestDTO.getUser()),
                 addressMapper.toVO(requestDTO.getAddress()),
@@ -88,6 +91,7 @@ public class GoatFarmController {
     }
 
     @GetMapping("/{id}")
+    @PublicEndpoint
     @Operation(summary = "Busca uma fazenda pelo identificador")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Fazenda encontrada com sucesso."),
@@ -98,6 +102,7 @@ public class GoatFarmController {
     }
 
     @GetMapping("/name")
+    @PublicEndpoint
     @Operation(summary = "Busca fazendas por nome com paginação")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Busca executada com sucesso."),
@@ -113,6 +118,7 @@ public class GoatFarmController {
     }
 
     @GetMapping
+    @PublicEndpoint
     @Operation(summary = "Lista fazendas com paginação")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listagem executada com sucesso."),
@@ -124,20 +130,20 @@ public class GoatFarmController {
                 .map(this::toPublicSafeDTO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#id))")
+    @FarmOwnerOnly
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove uma fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Fazenda removida com sucesso."),
             @ApiResponse(responseCode = "404", description = "Fazenda não encontrada.")
     })
-    public ResponseEntity<Void> deleteGoatFarm(@PathVariable Long id) {
-        farmUseCase.deleteGoatFarm(id);
+    public ResponseEntity<Void> deleteGoatFarm(@PathVariable("id") Long farmId) {
+        farmUseCase.deleteGoatFarm(farmId);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @GetMapping("/{farmId}/permissions")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_OPERATOR') or hasAuthority('ROLE_FARM_OWNER')")
     @Operation(summary = "Consulta permissões do usuário na fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Permissões retornadas com sucesso."),

@@ -15,7 +15,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -45,10 +45,7 @@ class FarmReproductionAlertsControllerTest {
 
     @Test
     void securityGuard_shouldUseFarmManagementPolicy() {
-        PreAuthorize guard = FarmReproductionAlertsController.class.getAnnotation(PreAuthorize.class);
-
-        assertThat(guard).isNotNull();
-        assertThat(guard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(FarmReproductionAlertsController.class.isAnnotationPresent(CanManageFarm.class)).isTrue();
     }
 
     @Test

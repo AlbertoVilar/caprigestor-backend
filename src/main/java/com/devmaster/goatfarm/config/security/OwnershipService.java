@@ -5,8 +5,10 @@ import com.devmaster.goatfarm.authority.application.ports.out.FarmAccessQueryPor
 import org.springframework.security.access.AccessDeniedException;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,26 +22,35 @@ public class OwnershipService {
     private final UserPersistencePort userPort;
     private final GoatPersistencePort goatPort;
     private final FarmAccessQueryPort farmAccessQueryPort;
+    private final FarmOwnerQueryPort farmOwnerQueryPort;
 
-    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort,
+                            GoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort,
+                            FarmOwnerQueryPort farmOwnerQueryPort) {
         this.goatFarmPort = goatFarmPort;
         this.userPort = userPort;
         this.goatPort = goatPort;
         this.farmAccessQueryPort = farmAccessQueryPort;
+        this.farmOwnerQueryPort = farmOwnerQueryPort;
+    }
+
+    /** Compatibility constructor for isolated unit tests and legacy callers. */
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort) {
+        this(goatFarmPort, userPort, goatPort, farmAccessQueryPort, null);
     }
 
     public void verifyFarmOwnership(Long farmId) {
-        var current = getAuthenticatedEntity();
-        boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+        var current = getAuthenticatedPrincipal();
+        boolean isAdmin = current.hasAuthority("ROLE_ADMIN");
         if (isAdmin) return;
-        boolean isFarmOwner = current.getRoles().stream()
-                .anyMatch(r -> "ROLE_FARM_OWNER".equals(r.getAuthority()));
+        boolean isFarmOwner = current.hasAuthority("ROLE_FARM_OWNER");
         if (!isFarmOwner) {
             throw new AccessDeniedException("Usuário não possui o papel de proprietário de fazenda.");
         }
-        var farm = goatFarmPort.findById(farmId)
+        var ownerId = ownerId(farmId)
                 .orElseThrow(() -> new UnauthorizedException("Fazenda não encontrada: " + farmId));
-        if (farm.getUser() == null || !farm.getUser().getId().equals(current.getId())) {
+        if (!ownerId.equals(current.id())) {
             throw new AccessDeniedException("Usuário não é proprietário desta fazenda.");
         }
     }
@@ -76,14 +87,10 @@ public class OwnershipService {
 
     public boolean isFarmOwner(Long farmId) {
         try {
-            var current = getAuthenticatedEntity();
-            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            var current = getAuthenticatedPrincipal();
+            boolean isAdmin = current.hasAuthority("ROLE_ADMIN");
             if (isAdmin) return true;
-            var farmOpt = goatFarmPort.findById(farmId);
-            if (farmOpt.isEmpty() || farmOpt.get().getUser() == null) {
-                return false;
-            }
-            return farmOpt.get().getUser().getId().equals(current.getId());
+            return ownerId(farmId).map(current.id()::equals).orElse(false);
         } catch (RuntimeException ex) {
             logger.debug("event=farm_ownership_check_failed farmId={} exception={}",
                     farmId, ex.getClass().getSimpleName());
@@ -100,36 +107,31 @@ public class OwnershipService {
      */
     public boolean canManageFarm(Long farmId) {
         try {
-            var current = getAuthenticatedEntity();
+            var current = getAuthenticatedPrincipal();
             
             // 1. ADMIN tem acesso total
-            boolean isAdmin = current.getRoles().stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getAuthority()));
+            boolean isAdmin = current.hasAuthority("ROLE_ADMIN");
             if (isAdmin) return true;
 
             // 2. OPERATOR tem acesso (validado por vínculo)
-            boolean isOperator = current.getRoles().stream().anyMatch(r -> "ROLE_OPERATOR".equals(r.getAuthority()));
-            if (isOperator && farmAccessQueryPort.existsOperatorLink(farmId, current.getId())) {
+            boolean isOperator = current.hasAuthority("ROLE_OPERATOR");
+            if (isOperator && farmAccessQueryPort.existsOperatorLink(farmId, current.id())) {
                 return true;
             }
 
             // 3. FARM_OWNER deve ser dono da fazenda. A relação direta, sem o
             // papel oficial, não deve conceder capacidade operacional.
-            boolean isFarmOwner = current.getRoles().stream()
-                    .anyMatch(r -> "ROLE_FARM_OWNER".equals(r.getAuthority()));
+            boolean isFarmOwner = current.hasAuthority("ROLE_FARM_OWNER");
             if (!isFarmOwner) {
                 logger.debug("event=farm_management_check_denied farmId={} reason=missing_farm_owner_role", farmId);
                 return false;
             }
-            var farmOpt = goatFarmPort.findById(farmId);
-            if (farmOpt.isEmpty()) {
+            var ownerId = ownerId(farmId);
+            if (ownerId.isEmpty()) {
                 logger.debug("event=farm_management_check_denied farmId={} reason=farm_not_found", farmId);
                 return false;
             }
-            if (farmOpt.get().getUser() == null) {
-                logger.debug("event=farm_management_check_denied farmId={} reason=owner_not_linked", farmId);
-                return false;
-            }
-            boolean isOwner = farmOpt.get().getUser().getId().equals(current.getId());
+            boolean isOwner = ownerId.get().equals(current.id());
             logger.debug("event=farm_management_check farmId={} allowed={}", farmId, isOwner);
             return isOwner;
         } catch (RuntimeException ex) {
@@ -147,6 +149,24 @@ public class OwnershipService {
                     .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
         }
         throw new UnauthorizedException("Usuário não autenticado");
+    }
+
+    private AuthenticatedPrincipal getAuthenticatedPrincipal() {
+        User current = getAuthenticatedEntity();
+        return new AuthenticatedPrincipal(
+                current.getId(),
+                current.getEmail(),
+                current.getName(),
+                current.getRoles().stream().map(role -> role.getAuthority()).collect(java.util.stream.Collectors.toSet())
+        );
+    }
+
+    private java.util.Optional<Long> ownerId(Long farmId) {
+        if (farmOwnerQueryPort != null) {
+            return farmOwnerQueryPort.findOwnerId(farmId);
+        }
+        return goatFarmPort.findById(farmId)
+                .map(farm -> farm.getUser() == null ? null : farm.getUser().getId());
     }
 }
 

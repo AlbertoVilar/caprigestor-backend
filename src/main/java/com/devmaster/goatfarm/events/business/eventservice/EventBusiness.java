@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.events.application.ports.out.EventPublisher;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
+import com.devmaster.goatfarm.events.business.bo.EventPublication;
 import com.devmaster.goatfarm.events.enums.EventType;
 import com.devmaster.goatfarm.events.business.mapper.EventBusinessMapper;
 import com.devmaster.goatfarm.events.persistence.entity.Event;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,7 +56,7 @@ public class EventBusiness implements EventManagementUseCase {
         event.setGoat(goat);
         event = eventPersistencePort.save(event);
         // Publicar evento de forma assíncrona
-        eventPublisher.publishEvent(event);
+        eventPublisher.publishEvent(toPublication(event));
         return eventMapper.toResponseVO(event);
     }
 
@@ -140,5 +142,24 @@ public class EventBusiness implements EventManagementUseCase {
         if (!ownershipService.canManageFarm(farmId)) {
             throw new AccessDeniedException("Usuário não pode operar esta fazenda.");
         }
+    }
+
+    private EventPublication toPublication(Event event) {
+        Goat goat = event.getGoat();
+        Long farmId = goat == null || goat.getFarm() == null ? null : goat.getFarm().getId();
+        return new EventPublication(
+                event.getId(),
+                goat == null ? null : goat.getRegistrationNumber(),
+                goat == null ? null : goat.getName(),
+                event.getEventType(),
+                event.getDate(),
+                event.getDescription(),
+                event.getLocation(),
+                event.getVeterinarian(),
+                event.getOutcome(),
+                farmId,
+                OffsetDateTime.now().toString(),
+                "system"
+        );
     }
 }

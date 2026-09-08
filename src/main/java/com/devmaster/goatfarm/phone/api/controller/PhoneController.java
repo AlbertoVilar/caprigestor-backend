@@ -4,12 +4,12 @@ import com.devmaster.goatfarm.phone.api.dto.PhoneRequestDTO;
 import com.devmaster.goatfarm.phone.api.dto.PhoneResponseDTO;
 import com.devmaster.goatfarm.phone.application.ports.in.PhoneManagementUseCase;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,7 +27,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Cadastra um novo telefone para uma fazenda")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PostMapping
     public ResponseEntity<PhoneResponseDTO> createPhone(@PathVariable Long farmId, @RequestBody @Valid PhoneRequestDTO requestDTO) {
         var responseVO = phoneUseCase.createPhone(farmId, phoneMapper.toRequestVO(requestDTO));
@@ -35,7 +35,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Busca um telefone pelo ID dentro de uma fazenda")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @GetMapping("/{phoneId}")
     public ResponseEntity<PhoneResponseDTO> getPhoneById(
             @PathVariable Long farmId,
@@ -45,7 +45,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Lista todos os telefones de uma fazenda")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @GetMapping
     public ResponseEntity<List<PhoneResponseDTO>> findAllPhonesByFarm(@PathVariable Long farmId) {
         var voList = phoneUseCase.findAllPhonesByFarm(farmId);
@@ -53,7 +53,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Atualiza um telefone existente em uma fazenda")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PutMapping("/{phoneId}")
     public ResponseEntity<PhoneResponseDTO> updatePhone(
             @PathVariable Long farmId,
@@ -64,7 +64,7 @@ public class PhoneController {
     }
 
     @Operation(summary = "Remove um telefone existente de uma fazenda")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @DeleteMapping("/{phoneId}")
     public ResponseEntity<Void> deletePhone(
             @PathVariable Long farmId,

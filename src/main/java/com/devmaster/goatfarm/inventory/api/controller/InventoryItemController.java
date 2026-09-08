@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.inventory.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryItemCreateRequestDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryItemResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryItemApiMapper;
@@ -19,7 +20,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -79,7 +79,7 @@ public class InventoryItemController {
                     )
             )
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<InventoryItemResponseDTO> createItem(
             @Parameter(description = "Identificador da fazenda.")
@@ -100,7 +100,7 @@ public class InventoryItemController {
             @ApiResponse(responseCode = "400", description = "Parâmetros inválidos."),
             @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<InventoryItemResponseDTO>> listItems(
             @Parameter(description = "Identificador da fazenda.")

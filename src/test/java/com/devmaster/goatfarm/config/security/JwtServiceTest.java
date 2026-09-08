@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -29,12 +30,16 @@ class JwtServiceTest {
     @Test
     void shouldApplyConfiguredDurationsSeparatelyToAccessAndRefreshTokens() {
         when(jwtEncoder.encode(any())).thenReturn(encodedToken());
-        JwtService service = new JwtService(jwtEncoder, 90, 180);
+        JwtService service = new JwtService(jwtEncoder, 90, 180, "https://caprigestor.local", "caprigestor-api", "caprigestor-current");
         User user = user();
         ArgumentCaptor<JwtEncoderParameters> captor = ArgumentCaptor.forClass(JwtEncoderParameters.class);
 
-        service.generateToken(user);
-        service.generateRefreshToken(user);
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(
+                user.getId(), user.getEmail(), user.getName(),
+                user.getRoles().stream().map(Role::getAuthority).collect(java.util.stream.Collectors.toSet())
+        );
+        service.generateToken(principal);
+        service.issueRefreshToken(principal, null);
 
         org.mockito.Mockito.verify(jwtEncoder, org.mockito.Mockito.times(2)).encode(captor.capture());
         JwtClaimsSet accessClaims = captor.getAllValues().getFirst().getClaims();
@@ -43,12 +48,16 @@ class JwtServiceTest {
         assertEquals(90, Duration.between(accessClaims.getIssuedAt(), accessClaims.getExpiresAt()).toSeconds());
         assertEquals(180, Duration.between(refreshClaims.getIssuedAt(), refreshClaims.getExpiresAt()).toSeconds());
         assertEquals("REFRESH", refreshClaims.getClaimAsString("scope"));
+        assertEquals("access", accessClaims.getClaimAsString("typ"));
+        assertEquals("refresh", refreshClaims.getClaimAsString("typ"));
+        assertEquals("https://caprigestor.local", accessClaims.getIssuer().toString());
+        assertEquals("caprigestor-api", accessClaims.getAudience().getFirst());
     }
 
     @Test
     void shouldRejectNonPositiveConfiguredDurations() {
-        assertThrows(IllegalArgumentException.class, () -> new JwtService(jwtEncoder, 0, 180));
-        assertThrows(IllegalArgumentException.class, () -> new JwtService(jwtEncoder, 90, 0));
+        assertThrows(IllegalArgumentException.class, () -> new JwtService(jwtEncoder, 0, 180, "https://caprigestor.local", "caprigestor-api", "caprigestor-current"));
+        assertThrows(IllegalArgumentException.class, () -> new JwtService(jwtEncoder, 90, 0, "https://caprigestor.local", "caprigestor-api", "caprigestor-current"));
     }
 
     private Jwt encodedToken() {

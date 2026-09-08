@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.authority.business;
 import com.devmaster.goatfarm.authority.application.ports.out.PasswordResetMailPort;
 import com.devmaster.goatfarm.authority.application.ports.out.PasswordResetTokenPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetConfirmVO;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetRequestVO;
 import com.devmaster.goatfarm.authority.persistence.entity.PasswordResetToken;
@@ -42,6 +43,9 @@ class PasswordResetBusinessTest {
     private PasswordResetMailPort passwordResetMailPort;
 
     @Mock
+    private RefreshSessionPersistencePort refreshSessionPersistencePort;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private PasswordResetBusiness passwordResetBusiness;
@@ -55,6 +59,7 @@ class PasswordResetBusinessTest {
                 userPersistencePort,
                 passwordResetTokenPersistencePort,
                 passwordResetMailPort,
+                refreshSessionPersistencePort,
                 passwordEncoder,
                 30,
                 60,
@@ -151,6 +156,7 @@ class PasswordResetBusinessTest {
         verify(userPersistencePort).updatePassword(7L, "encoded-new");
         verify(passwordResetTokenPersistencePort).save(token);
         verify(passwordResetTokenPersistencePort).revokeActiveTokens(eq(7L), eq(Instant.parse("2026-03-28T12:00:00Z")), eq(Instant.parse("2026-03-28T12:00:00Z")));
+        verify(refreshSessionPersistencePort).revokeAllForUser(eq(7L), eq(Instant.parse("2026-03-28T12:00:00Z")), eq("password_reset"));
     }
 
     @Test

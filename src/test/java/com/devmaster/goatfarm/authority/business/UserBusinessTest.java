@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -24,10 +25,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,6 +50,9 @@ class UserBusinessTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RefreshSessionPersistencePort refreshSessionPersistencePort;
 
     @InjectMocks
     private UserBusiness userBusiness;
@@ -159,6 +165,22 @@ class UserBusinessTest {
 
         verify(passwordEncoder).encode("novaSenha123");
         verify(userPort).updatePassword(2L, "senha-codificada");
+        verify(refreshSessionPersistencePort).revokeAllForUser(eq(2L), any(Instant.class), eq("password_changed_by_admin"));
+    }
+
+    @Test
+    @DisplayName("Mudança administrativa de roles deve revogar sessões existentes")
+    void adminRoleChangeRevokesExistingSessions() {
+        Role adminRole = role("ROLE_ADMIN");
+        authenticateAs(userEntity, adminRole);
+        when(rolePort.findByAuthority("ROLE_OPERATOR")).thenReturn(Optional.of(operatorRole));
+        when(userPort.findById(2L)).thenReturn(Optional.of(userEntity));
+        when(userPort.save(userEntity)).thenReturn(userEntity);
+        when(authorityBusinessMapper.toResponseVO(userEntity)).thenReturn(userResponseVO);
+
+        userBusiness.updateRoles(2L, List.of("ROLE_OPERATOR"));
+
+        verify(refreshSessionPersistencePort).revokeAllForUser(eq(1L), any(Instant.class), eq("roles_changed"));
     }
 
     @Test

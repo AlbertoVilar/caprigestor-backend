@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.milk.api.dto.LactationDryOffAlertItemDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationDryOffAlertResponseDTO;
 import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
@@ -15,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +27,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/goatfarms/{farmId}/milk/alerts")
-@PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+@CanManageFarm
 @Tag(
         name = "Milk Alerts API",
         description = "Alertas de secagem por fazenda. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."

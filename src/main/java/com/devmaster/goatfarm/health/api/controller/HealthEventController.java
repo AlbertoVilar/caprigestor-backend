@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.health.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import com.devmaster.goatfarm.health.api.dto.*;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.api.mapper.HealthWithdrawalApiMapper;
@@ -20,7 +22,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -62,7 +63,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao agendar o evento.")
     })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<HealthEventResponseDTO> create(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -82,7 +83,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao atualizar o evento.")
     })
     @PutMapping(value = "/{eventId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<HealthEventResponseDTO> update(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -103,7 +104,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao concluir o evento.")
     })
     @PatchMapping(value = "/{eventId}/done", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<HealthEventResponseDTO> markAsDone(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -124,7 +125,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao cancelar o evento.")
     })
     @PatchMapping(value = "/{eventId}/cancel", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<HealthEventResponseDTO> cancel(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -144,7 +145,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "422", description = "Regra de negócio violada ao reabrir o evento.")
     })
     @PatchMapping(value = "/{eventId}/reopen")
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId) and (hasRole('ADMIN') or hasRole('FARM_OWNER'))")
+    @FarmOwnerOnly
     public ResponseEntity<HealthEventResponseDTO> reopen(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -161,7 +162,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "404", description = "Evento não encontrado.")
     })
     @GetMapping("/{eventId}")
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<HealthEventResponseDTO> getById(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -178,7 +179,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
     @GetMapping
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<Page<HealthEventResponseDTO>> listByGoat(
             @PathVariable Long farmId,
             @PathVariable String goatId,
@@ -199,7 +200,7 @@ public class HealthEventController {
             @ApiResponse(responseCode = "404", description = "Cabra nao encontrada.")
     })
     @GetMapping("/withdrawal-status")
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<GoatWithdrawalStatusDTO> getWithdrawalStatus(
             @PathVariable Long farmId,
             @PathVariable String goatId,

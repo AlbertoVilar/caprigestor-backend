@@ -14,7 +14,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -88,11 +88,10 @@ class InventoryBalanceControllerTest {
                 "/api/v1/goatfarms/{farmId}/inventory/balances"
         );
 
-        PreAuthorize listGuard = InventoryBalanceController.class
+        boolean listGuard = InventoryBalanceController.class
                 .getMethod("listBalances", Long.class, Long.class, Long.class, boolean.class, org.springframework.data.domain.Pageable.class)
-                .getAnnotation(PreAuthorize.class);
+                .isAnnotationPresent(CanManageFarm.class);
 
-        assertThat(listGuard).isNotNull();
-        assertThat(listGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(listGuard).isTrue();
     }
 }

@@ -1,0 +1,14 @@
+title = "CapriGestor secret scanning policy"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "caprigestor-powershell-literal-password"
+description = "Literal password assigned in a PowerShell script"
+regex = '''(?i)\$password\s*=\s*["'][^"'$\r\n]{6,}["']'''
+keywords = ["password"]
+
+# Do not add broad path, commit, or rule allowlists here. Any exception must be
+# limited to an exact finding fingerprint, have an owner, justification and
+# expiry date, and be reviewed as part of the security incident process.
