@@ -3,11 +3,15 @@ param(
     [string]$TargetDatabase = "caprigestor_restore_smoke",
     [string]$Container = "caprigestor-postgres",
     [string]$User = "admin",
-    [string]$Password = "admin123",
+    [string]$Password = $env:CAPRIGESTOR_DB_PASSWORD,
     [string]$OutputDir = ".\backups"
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($Password)) {
+    throw "Defina CAPRIGESTOR_DB_PASSWORD ou informe -Password explicitamente."
+}
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot

@@ -35,6 +35,9 @@ Executar o primeiro cutover real do CapriGestor com:
 - base:
   - [PRODUCTION_BASE_SANITIZATION_RUNBOOK.md](PRODUCTION_BASE_SANITIZATION_RUNBOOK.md)
   - [PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md](PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md)
+- seguranca:
+  - [JWT_KEY_ROTATION_RUNBOOK.md](../04-security/JWT_KEY_ROTATION_RUNBOOK.md)
+  - [SECURITY_INCIDENT_RESPONSE.md](../04-security/SECURITY_INCIDENT_RESPONSE.md)
 - scripts:
   - [production-db-integrity-check.sql](../../scripts/production-db-integrity-check.sql)
   - [production-cutover-smoke.ps1](../../scripts/production-cutover-smoke.ps1)
