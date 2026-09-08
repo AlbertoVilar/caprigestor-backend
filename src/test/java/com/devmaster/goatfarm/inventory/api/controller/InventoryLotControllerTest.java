@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -173,21 +173,18 @@ class InventoryLotControllerTest {
                 "/api/v1/goatfarms/{farmId}/inventory/lots"
         );
 
-        PreAuthorize createGuard = InventoryLotController.class
+        boolean createGuard = InventoryLotController.class
                 .getMethod("createLot", Long.class, InventoryLotCreateRequestDTO.class)
-                .getAnnotation(PreAuthorize.class);
-        PreAuthorize listGuard = InventoryLotController.class
+                .isAnnotationPresent(CanManageFarm.class);
+        boolean listGuard = InventoryLotController.class
                 .getMethod("listLots", Long.class, Long.class, Boolean.class, Pageable.class)
-                .getAnnotation(PreAuthorize.class);
-        PreAuthorize updateGuard = InventoryLotController.class
+                .isAnnotationPresent(CanManageFarm.class);
+        boolean updateGuard = InventoryLotController.class
                 .getMethod("updateLotActive", Long.class, Long.class, InventoryLotActivationRequestDTO.class)
-                .getAnnotation(PreAuthorize.class);
+                .isAnnotationPresent(CanManageFarm.class);
 
-        assertThat(createGuard).isNotNull();
-        assertThat(listGuard).isNotNull();
-        assertThat(updateGuard).isNotNull();
-        assertThat(createGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
-        assertThat(listGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
-        assertThat(updateGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(createGuard).isTrue();
+        assertThat(listGuard).isTrue();
+        assertThat(updateGuard).isTrue();
     }
 }

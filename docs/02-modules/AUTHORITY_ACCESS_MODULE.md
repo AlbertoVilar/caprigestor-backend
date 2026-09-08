@@ -15,6 +15,43 @@ Escopo: autenticação, refresh, cadastro inicial, administração de usuários 
 - O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.
 - Alterações de senha, redefinição de senha e alterações de papéis revogam todas as sessões de refresh do usuário. O access token já emitido continua válido somente até sua expiração curta.
 
+## Políticas semânticas de autorização
+
+Os controllers usam poucas annotations de intenção, definidas em
+`config.security.authorization`, sem alterar a política efetiva:
+
+- `@AdminOnly`: somente `ROLE_ADMIN`.
+- `@FarmOwnerOnly`: `ROLE_ADMIN` ou `ROLE_FARM_OWNER` proprietário da fazenda;
+  não concede capacidade a `ROLE_OPERATOR`.
+- `@CanManageFarm`: `ROLE_ADMIN`, proprietário oficial da fazenda ou
+  `ROLE_OPERATOR` com vínculo persistido em `FarmOperator`.
+- `@PublicEndpoint`: marca uma rota pública aprovada pela configuração HTTP.
+- `@AuthenticatedFarmRead`: marca uma leitura farm-scoped que exige somente
+  autenticação por compatibilidade, sem transformar essa leitura em ownership.
+
+| Política | ADMIN | FARM_OWNER da própria fazenda | FARM_OWNER de outra fazenda | OPERATOR vinculado | OPERATOR sem vínculo | Anônimo |
+| --- | --- | --- | --- | --- | --- | --- |
+| `@CanManageFarm` | permite | permite | nega | permite | nega | `401` |
+| `@FarmOwnerOnly` | permite | permite | nega | nega | nega | `401` |
+| `@AdminOnly` | permite | nega | nega | nega | nega | `401` |
+| `@PublicEndpoint` | permite | permite | permite | permite | permite | público |
+| `@AuthenticatedFarmRead` | permite | permite | permite* | permite* | permite* | `401` |
+
+\* A leitura autenticada não aplica ownership por compatibilidade; o escopo de
+dados continua sendo responsabilidade do caso de uso/adapter correspondente.
+
+As duas policies farm-scoped resolvem o parâmetro de método `farmId`. O guard
+`AuthorizationPolicyGuardTest` falha se um novo endpoint de controller sob
+`/api/v1/goatfarms` não declarar uma dessas intenções, uma rota pública,
+autenticação explícita ou uma exceção `@PreAuthorize` documentada. O mesmo
+guard verifica que policies farm-scoped continuam recebendo um parâmetro
+`farmId`, evitando uma anotação aplicada silenciosamente ao identificador errado.
+
+`GET /api/v1/goatfarms/{farmId}/permissions` permanece uma exceção legítima:
+aceita qualquer papel oficial autenticado e calcula `canCreateGoat` no caso de
+uso, por isso mantém sua expressão explícita em vez de ser convertido para
+ownership ou operação.
+
 ## Sessão JWT
 
 - O access token é emitido com `typ=access`, emissor, audiência, `kid` e `jti`; sua duração padrão é 15 minutos (`security.jwt.duration`).

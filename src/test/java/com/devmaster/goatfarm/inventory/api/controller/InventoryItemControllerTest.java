@@ -20,7 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -127,16 +127,14 @@ class InventoryItemControllerTest {
                 "/api/v1/goatfarms/{farmId}/inventory/items"
         );
 
-        PreAuthorize createGuard = InventoryItemController.class
+        boolean createGuard = InventoryItemController.class
                 .getMethod("createItem", Long.class, InventoryItemCreateRequestDTO.class)
-                .getAnnotation(PreAuthorize.class);
-        PreAuthorize listGuard = InventoryItemController.class
+                .isAnnotationPresent(CanManageFarm.class);
+        boolean listGuard = InventoryItemController.class
                 .getMethod("listItems", Long.class, Pageable.class)
-                .getAnnotation(PreAuthorize.class);
+                .isAnnotationPresent(CanManageFarm.class);
 
-        assertThat(createGuard).isNotNull();
-        assertThat(listGuard).isNotNull();
-        assertThat(createGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
-        assertThat(listGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(createGuard).isTrue();
+        assertThat(listGuard).isTrue();
     }
 }

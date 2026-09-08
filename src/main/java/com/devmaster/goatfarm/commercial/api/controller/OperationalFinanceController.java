@@ -5,12 +5,13 @@ import com.devmaster.goatfarm.commercial.api.dto.OperationalExpenseRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.OperationalExpenseResponseDTO;
 import com.devmaster.goatfarm.commercial.api.mapper.OperationalFinanceApiMapper;
 import com.devmaster.goatfarm.commercial.application.ports.in.OperationalFinanceUseCase;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,7 +38,7 @@ public class OperationalFinanceController {
         this.apiMapper = apiMapper;
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PostMapping("/operational-expenses")
     @Operation(summary = "Registrar despesa operacional da fazenda")
     public ResponseEntity<OperationalExpenseResponseDTO> createOperationalExpense(
@@ -48,7 +49,7 @@ public class OperationalFinanceController {
                 .body(apiMapper.toDTO(operationalFinanceUseCase.createOperationalExpense(farmId, apiMapper.toVO(requestDTO))));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/operational-expenses")
     @Operation(summary = "Listar despesas operacionais da fazenda")
     public ResponseEntity<List<OperationalExpenseResponseDTO>> listOperationalExpenses(@PathVariable Long farmId) {
@@ -57,7 +58,7 @@ public class OperationalFinanceController {
         );
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/monthly-summary")
     @Operation(summary = "Resumo mensal simples da fazenda")
     public ResponseEntity<MonthlyOperationalSummaryDTO> getMonthlySummary(

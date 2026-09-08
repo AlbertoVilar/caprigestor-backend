@@ -4,13 +4,13 @@ import com.devmaster.goatfarm.address.api.dto.AddressRequestDTO;
 import com.devmaster.goatfarm.address.api.dto.AddressResponseDTO;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +29,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Create a new address for a farm", description = "New address data")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PostMapping
     public ResponseEntity<AddressResponseDTO> createAddress(@PathVariable Long farmId, @RequestBody @Valid AddressRequestDTO requestDTO) {
         var responseVO = addressUseCase.createAddress(farmId, addressMapper.toVO(requestDTO));
@@ -37,7 +37,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Update an existing address for a farm", description = "Updated address data")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PutMapping("/{addressId}")
     public ResponseEntity<AddressResponseDTO> updateAddress(
             @PathVariable Long farmId,
@@ -48,7 +48,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Find an address by ID for a farm")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @GetMapping("/{addressId}")
     public ResponseEntity<AddressResponseDTO> findAddressById(
             @PathVariable Long farmId,
@@ -57,7 +57,7 @@ public class AddressController {
     }
 
     @Operation(summary = "Remove an address by ID for a farm")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @DeleteMapping("/{addressId}")
     public ResponseEntity<String> deleteAddress(
             @PathVariable Long farmId,

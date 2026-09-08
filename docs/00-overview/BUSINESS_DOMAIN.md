@@ -34,6 +34,12 @@ O sistema modela operacao de caprinos por fazenda, com foco em ownership, rastre
 ### Regras de seguranca e ownership
 - Operacoes farm-level devem respeitar o vinculo usuario-fazenda.
 - Um usuario nao pode manipular dados de fazenda de terceiros.
+- A política operacional distingue `ROLE_OPERATOR` vinculado de propriedade:
+  `@CanManageFarm` permite rotinas operacionais ao operador formalmente
+  vinculado, enquanto `@FarmOwnerOnly` preserva operações patrimoniais e
+  administrativas para ADMIN ou FARM_OWNER próprio. As consultas públicas
+  aprovadas permanecem explicitamente marcadas e não recebem ownership por
+  acidente.
 
 ### Regras de consistencia
 - Unicidade de registro do animal por identificador de negocio.

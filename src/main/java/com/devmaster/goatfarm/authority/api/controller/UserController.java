@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.authority.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.AdminOnly;
 import com.devmaster.goatfarm.authority.api.dto.UserRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserUpdateRequestDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserResponseDTO;
@@ -11,13 +12,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
 import com.devmaster.goatfarm.authority.api.dto.UserPasswordUpdateDTO;
 import com.devmaster.goatfarm.authority.api.dto.UserRolesUpdateDTO;
 
 @RestController
 @RequestMapping("/api/v1/users")
-@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+@AdminOnly
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);

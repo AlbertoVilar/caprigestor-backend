@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.genealogy.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.PublicEndpoint;
 import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCase;
 import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyComplementaryQueryUseCase;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryResponseVO;
@@ -33,6 +34,7 @@ public class GenealogyController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada na fazenda informada")
     })
     @GetMapping(params = "!complementaryAbcc")
+    @PublicEndpoint
     public ResponseEntity<GenealogyResponseVO> getGenealogy(
             @PathVariable Long farmId,
             @PathVariable String goatId) {
@@ -49,6 +51,7 @@ public class GenealogyController {
             @ApiResponse(responseCode = "404", description = "Cabra não encontrada na fazenda informada")
     })
     @GetMapping(params = "complementaryAbcc=true")
+    @PublicEndpoint
     public ResponseEntity<GenealogyComplementaryResponseVO> getComplementaryGenealogy(
             @PathVariable Long farmId,
             @PathVariable String goatId) {
