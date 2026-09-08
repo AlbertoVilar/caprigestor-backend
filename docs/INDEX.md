@@ -13,6 +13,7 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 - [PROJECT_STATUS.md](./00-overview/PROJECT_STATUS.md)
 - [ROADMAP.md](./00-overview/ROADMAP.md)
 - [AGENT_CONTEXT.md](./00-overview/AGENT_CONTEXT.md)
+- [CROSS_FARM_INTEGRITY_PRECHECK.md](./00-overview/CROSS_FARM_INTEGRITY_PRECHECK.md)
 - [HOMOLOGATION_OPERATION_RUNBOOK.md](./00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
 - [PILOT_FREEZE_PLAYBOOK.md](./00-overview/PILOT_FREEZE_PLAYBOOK.md)
 - [USER_MANUAL_PT-BR.md](./00-overview/USER_MANUAL_PT-BR.md)
