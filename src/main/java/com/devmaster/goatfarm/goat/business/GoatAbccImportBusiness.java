@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
@@ -113,6 +114,8 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         GoatAbccRawSearchResultVO rawResult;
         try {
             rawResult = abccPublicQueryPort.search(normalizedRequest);
+        } catch (ExternalServiceUnavailableException ex) {
+            throw ex;
         } catch (RuntimeException ex) {
             throw new BusinessRuleException("abcc", MSG_ABCC_UNAVAILABLE);
         }
@@ -143,6 +146,8 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         GoatAbccRawPreviewVO raw;
         try {
             raw = abccPublicQueryPort.preview(requestVO.getExternalId());
+        } catch (ExternalServiceUnavailableException ex) {
+            throw ex;
         } catch (RuntimeException ex) {
             throw new BusinessRuleException("abcc", MSG_PREVIEW_UNAVAILABLE);
         }
@@ -458,6 +463,8 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             }
             return raceOptions;
         } catch (BusinessRuleException ex) {
+            throw ex;
+        } catch (ExternalServiceUnavailableException ex) {
             throw ex;
         } catch (RuntimeException ex) {
             throw new BusinessRuleException("abcc", "Não foi possível carregar a lista de raças da ABCC pública.");
