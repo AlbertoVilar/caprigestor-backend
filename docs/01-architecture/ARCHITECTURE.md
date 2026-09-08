@@ -23,6 +23,16 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   - `business/*service`, `business/bo`
   - `persistence/adapter`, `persistence/entity`, `persistence/repository`, `persistence/projection`
 - Contrato farm-level: controllers de fazenda usam validacao de ownership (`@ownershipService.canManageFarm` ou regra equivalente).
+- A intenção da autorização é declarada por annotations semânticas em
+  `config.security.authorization`: `@CanManageFarm`, `@FarmOwnerOnly`,
+  `@AdminOnly`, `@PublicEndpoint` e `@AuthenticatedFarmRead`. Elas são apenas
+  meta-dados de entrada; `@CanManageFarm` e `@FarmOwnerOnly` continuam delegando
+  a decisão ao `OwnershipService` existente.
+- `AuthorizationPolicyGuardTest` percorre os controllers farm-scoped em
+  reflexão e impede endpoint novo sem política explícita. Também verifica a
+  presença do parâmetro `farmId` nas policies que usam esse identificador.
+- As exceções não são escondidas: permissões de fazenda continuam com sua
+  expressão explícita de papéis e consultas públicas são marcadas no método.
 - Shared kernel entre `milk` e `reproduction`:
   - Contrato: `com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot`
   - Consulta no modulo `milk` via `PregnancySnapshotQueryPort`.

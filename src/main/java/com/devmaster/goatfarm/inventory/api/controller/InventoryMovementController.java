@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.inventory.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementCreateRequestDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementHistoryResponseDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementResponseDTO;
@@ -26,7 +27,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,7 +72,7 @@ public class InventoryMovementController {
             @ApiResponse(responseCode = "403", description = "Acesso negado."),
             @ApiResponse(responseCode = "404", description = "Fazenda não encontrada, quando aplicável.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<InventoryMovementHistoryResponseDTO>> listMovements(
             @Parameter(description = "Identificador da fazenda.")
@@ -143,7 +143,7 @@ public class InventoryMovementController {
                     )
             )
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<InventoryMovementResponseDTO> createMovement(
             @Parameter(description = "Identificador da fazenda.")

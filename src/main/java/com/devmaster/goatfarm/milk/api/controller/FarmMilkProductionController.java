@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.milk.api.dto.*;
 import com.devmaster.goatfarm.milk.api.mapper.FarmMilkProductionMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.FarmMilkProductionUseCase;
@@ -15,7 +16,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -36,7 +36,7 @@ public class FarmMilkProductionController {
         this.mapper = mapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PutMapping("/{productionDate}")
     @Operation(summary = "Criar ou atualizar o consolidado diário de leite da fazenda")
     @ApiResponses({
@@ -59,7 +59,7 @@ public class FarmMilkProductionController {
         return ResponseEntity.ok(mapper.toDailySummaryDTO(response));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/daily")
     @Operation(summary = "Consultar a visão diária consolidada da fazenda")
     public ResponseEntity<FarmMilkProductionDailySummaryDTO> getDailySummary(
@@ -72,7 +72,7 @@ public class FarmMilkProductionController {
         return ResponseEntity.ok(mapper.toDailySummaryDTO(response));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/monthly")
     @Operation(summary = "Consultar a visão mensal consolidada da fazenda")
     public ResponseEntity<FarmMilkProductionMonthlySummaryDTO> getMonthlySummary(
@@ -84,7 +84,7 @@ public class FarmMilkProductionController {
         return ResponseEntity.ok(mapper.toMonthlySummaryDTO(response));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/annual")
     @Operation(summary = "Consultar a visão anual consolidada da fazenda")
     public ResponseEntity<FarmMilkProductionAnnualSummaryDTO> getAnnualSummary(

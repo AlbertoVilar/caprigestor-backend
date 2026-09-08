@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.reproduction.api.dto.*;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
@@ -18,14 +19,13 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction")
-@PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+@CanManageFarm
 @Tag(
         name = "Reproduction API",
         description = "Gestão reprodutiva por cabra. O caminho canônico é /api/v1; o legado /api segue ativo apenas durante a janela de descontinuação."

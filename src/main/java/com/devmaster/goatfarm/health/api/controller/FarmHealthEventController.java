@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.health.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.health.api.dto.FarmHealthAlertsResponseDTO;
 import com.devmaster.goatfarm.health.api.dto.HealthEventResponseDTO;
 import com.devmaster.goatfarm.health.api.mapper.FarmHealthAlertsApiMapper;
@@ -20,7 +21,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -58,7 +58,7 @@ public class FarmHealthEventController {
             @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
     @GetMapping(value = "/calendar", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<Page<HealthEventResponseDTO>> listCalendar(
             @PathVariable Long farmId,
             @Parameter(description = "Data inicial (ISO)")
@@ -83,7 +83,7 @@ public class FarmHealthEventController {
             @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
     @GetMapping(value = "/alerts", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     public ResponseEntity<FarmHealthAlertsResponseDTO> getAlerts(
             @PathVariable Long farmId,
             @Parameter(description = "Janela de dias para próximos alertas (default 7, máximo 30)")

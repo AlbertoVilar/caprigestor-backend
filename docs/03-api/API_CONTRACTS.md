@@ -23,6 +23,13 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 ### Segurança
 - Autenticação: JWT.
 - Autorização: ownership por `farmId` e/ou roles (`ROLE_ADMIN`, `ROLE_OPERATOR`, `ROLE_FARM_OWNER`).
+- Controllers farm-scoped declaram a intenção por `@CanManageFarm` (operação
+  para ADMIN/owner/operator vinculado), `@FarmOwnerOnly` (ADMIN/owner) ou uma
+  marca explícita de endpoint público/autenticado. A annotation não substitui
+  a validação de negócio nem altera os papéis aceitos.
+- Toda policy semântica farm-scoped usa o parâmetro `farmId`; o guard de
+  arquitetura rejeita a criação de endpoint sem intenção declarada ou com
+  identificador de fazenda não resolvível.
 - Access tokens usam `typ=access`, emissor e audiência configurados; refresh tokens usam `typ=refresh` e só podem ser enviados para os endpoints de sessão.
 - Respostas de segurança:
   - `401` via `CustomAuthenticationEntryPoint`

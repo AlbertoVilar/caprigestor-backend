@@ -15,7 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -197,27 +197,27 @@ class FarmMilkProductionControllerTest {
         assertThat(requestMapping).isNotNull();
         assertThat(requestMapping.value()).containsExactly("/api/v1/goatfarms/{farmId}/milk-consolidated-productions");
 
-        PreAuthorize upsertGuard = FarmMilkProductionController.class
+        boolean upsertGuard = FarmMilkProductionController.class
                 .getMethod(
                         "upsertDailyProduction",
                         Long.class,
                         LocalDate.class,
                         FarmMilkProductionUpsertRequestDTO.class
                 )
-                .getAnnotation(PreAuthorize.class);
-        PreAuthorize dailyGuard = FarmMilkProductionController.class
+                .isAnnotationPresent(CanManageFarm.class);
+        boolean dailyGuard = FarmMilkProductionController.class
                 .getMethod("getDailySummary", Long.class, LocalDate.class)
-                .getAnnotation(PreAuthorize.class);
-        PreAuthorize monthlyGuard = FarmMilkProductionController.class
+                .isAnnotationPresent(CanManageFarm.class);
+        boolean monthlyGuard = FarmMilkProductionController.class
                 .getMethod("getMonthlySummary", Long.class, int.class, int.class)
-                .getAnnotation(PreAuthorize.class);
-        PreAuthorize annualGuard = FarmMilkProductionController.class
+                .isAnnotationPresent(CanManageFarm.class);
+        boolean annualGuard = FarmMilkProductionController.class
                 .getMethod("getAnnualSummary", Long.class, int.class)
-                .getAnnotation(PreAuthorize.class);
+                .isAnnotationPresent(CanManageFarm.class);
 
-        assertThat(upsertGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
-        assertThat(dailyGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
-        assertThat(monthlyGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
-        assertThat(annualGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(upsertGuard).isTrue();
+        assertThat(dailyGuard).isTrue();
+        assertThat(monthlyGuard).isTrue();
+        assertThat(annualGuard).isTrue();
     }
 }

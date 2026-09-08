@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.article.business.bo.ArticlePublishRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
+import com.devmaster.goatfarm.config.security.authorization.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +22,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,7 +37,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin Articles", description = "Gerenciamento administrativo de artigos do blog. Caminho canônico /api/v1; legado /api em descontinuação.")
 public class ArticleAdminController {
 
-    private static final String ADMIN_ONLY = "hasAuthority('ROLE_ADMIN')";
 
     private final ArticleCommandUseCase articleCommandUseCase;
     private final ArticleQueryUseCase articleQueryUseCase;
@@ -51,7 +50,7 @@ public class ArticleAdminController {
         this.articleMapper = articleMapper;
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @PostMapping
     @Operation(summary = "Cria um rascunho de artigo")
     public ResponseEntity<ArticleResponseDTO> createDraft(@Valid @RequestBody ArticleRequestDTO request) {
@@ -60,7 +59,7 @@ public class ArticleAdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(articleMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @PutMapping("/{id}")
     @Operation(summary = "Atualiza conteúdo e metadados do artigo")
     public ResponseEntity<ArticleResponseDTO> updateArticle(
@@ -71,7 +70,7 @@ public class ArticleAdminController {
         return ResponseEntity.ok(articleMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @GetMapping
     @Operation(summary = "Lista artigos (inclui rascunhos)")
     public ResponseEntity<Page<ArticleResponseDTO>> getAllArticles(
@@ -81,7 +80,7 @@ public class ArticleAdminController {
         return ResponseEntity.ok(dtoPage);
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @GetMapping("/{id}")
     @Operation(summary = "Busca artigo por ID")
     public ResponseEntity<ArticleResponseDTO> getArticleById(
@@ -90,7 +89,7 @@ public class ArticleAdminController {
         return ResponseEntity.ok(articleMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @PatchMapping("/{id}/publish")
     @Operation(summary = "Publica ou despublica um artigo")
     public ResponseEntity<ArticleResponseDTO> publishArticle(
@@ -101,7 +100,7 @@ public class ArticleAdminController {
         return ResponseEntity.ok(articleMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @PatchMapping("/{id}/highlight")
     @Operation(summary = "Destaca ou remove destaque de um artigo")
     public ResponseEntity<ArticleResponseDTO> highlightArticle(
@@ -112,7 +111,7 @@ public class ArticleAdminController {
         return ResponseEntity.ok(articleMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize(ADMIN_ONLY)
+    @AdminOnly
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove um artigo")
     public ResponseEntity<Void> deleteArticle(

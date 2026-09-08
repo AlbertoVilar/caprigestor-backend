@@ -24,7 +24,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.prepost.PreAuthorize;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -58,10 +58,7 @@ class ReproductionControllerTest {
 
     @Test
     void securityGuard_shouldUseFarmManagementPolicy() {
-        PreAuthorize guard = ReproductionController.class.getAnnotation(PreAuthorize.class);
-
-        assertThat(guard).isNotNull();
-        assertThat(guard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(ReproductionController.class.isAnnotationPresent(CanManageFarm.class)).isTrue();
     }
 
     @Test

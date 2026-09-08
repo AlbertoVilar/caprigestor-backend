@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.inventory.api.controller;
 
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryLotActivationRequestDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryLotCreateRequestDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryLotResponseDTO;
@@ -20,7 +21,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -63,7 +63,7 @@ public class InventoryLotController {
             @ApiResponse(responseCode = "404", description = "Item de estoque não encontrado."),
             @ApiResponse(responseCode = "409", description = "Já existe lote com o mesmo código para o item.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<InventoryLotResponseDTO> createLot(
             @Parameter(description = "Identificador da fazenda.")
@@ -84,7 +84,7 @@ public class InventoryLotController {
             @ApiResponse(responseCode = "400", description = "Parâmetros inválidos."),
             @ApiResponse(responseCode = "403", description = "Acesso negado.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Page<InventoryLotResponseDTO>> listLots(
             @Parameter(description = "Identificador da fazenda.")
@@ -115,7 +115,7 @@ public class InventoryLotController {
             @ApiResponse(responseCode = "403", description = "Acesso negado."),
             @ApiResponse(responseCode = "404", description = "Lote não encontrado.")
     })
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PatchMapping(path = "/{lotId}/active", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<InventoryLotResponseDTO> updateLotActive(
             @Parameter(description = "Identificador da fazenda.")

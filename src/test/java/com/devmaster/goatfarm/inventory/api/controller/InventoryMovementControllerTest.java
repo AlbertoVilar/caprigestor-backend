@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementHistoryResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryMovementApiMapper;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryMovementCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryMovementQueryUseCase;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementFilterVO;
@@ -17,7 +18,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -121,7 +121,7 @@ class InventoryMovementControllerTest {
                 "/api/v1/goatfarms/{farmId}/inventory/movements"
         );
 
-        PreAuthorize listGuard = InventoryMovementController.class
+        boolean listGuard = InventoryMovementController.class
                 .getMethod(
                         "listMovements",
                         Long.class,
@@ -132,9 +132,8 @@ class InventoryMovementControllerTest {
                         java.time.LocalDate.class,
                         org.springframework.data.domain.Pageable.class
                 )
-                .getAnnotation(PreAuthorize.class);
+                .isAnnotationPresent(CanManageFarm.class);
 
-        assertThat(listGuard).isNotNull();
-        assertThat(listGuard.value()).isEqualTo("@ownershipService.canManageFarm(#farmId)");
+        assertThat(listGuard).isTrue();
     }
 }

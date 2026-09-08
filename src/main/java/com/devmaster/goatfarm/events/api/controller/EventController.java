@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.events.api.controller;
 
 import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
+import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
 import com.devmaster.goatfarm.events.api.dto.EventResponseDTO;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
@@ -16,7 +18,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -34,7 +35,7 @@ public class EventController {
         this.eventMapper = eventMapper;
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @PostMapping
     @Operation(summary = "Cria um novo evento para uma cabra específica em uma fazenda")
     public ResponseEntity<EventResponseDTO> createEvent(
@@ -46,7 +47,7 @@ public class EventController {
         return ResponseEntity.status(HttpStatus.CREATED).body(eventMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @PutMapping("/{eventId}")
     @Operation(summary = "Atualiza um evento existente de uma cabra em uma fazenda")
     public ResponseEntity<EventResponseDTO> updateEvent(
@@ -59,7 +60,7 @@ public class EventController {
         return ResponseEntity.ok(eventMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/{eventId}")
     @Operation(summary = "Busca um evento pelo ID de uma cabra em uma fazenda")
     public ResponseEntity<EventResponseDTO> findEventById(
@@ -70,7 +71,7 @@ public class EventController {
         return ResponseEntity.ok(eventMapper.toResponseDTO(responseVO));
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping
     @Operation(summary = "Lista todos os eventos de uma cabra em uma fazenda")
     public ResponseEntity<Page<EventResponseDTO>> findAllEventsByGoatAndFarm(
@@ -82,7 +83,7 @@ public class EventController {
         return ResponseEntity.ok(responseDTOs);
     }
 
-    @PreAuthorize("@ownershipService.canManageFarm(#farmId)")
+    @CanManageFarm
     @GetMapping("/filter")
     @Operation(summary = "Busca eventos de uma cabra com filtros opcionais em uma fazenda")
     public ResponseEntity<Page<EventResponseDTO>> findEventsByGoatWithFilters(
@@ -97,7 +98,7 @@ public class EventController {
         return ResponseEntity.ok(responseDTOs);
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))")
+    @FarmOwnerOnly
     @DeleteMapping("/{eventId}")
     @Operation(summary = "Remove um evento de uma cabra em uma fazenda")
     public ResponseEntity<Void> deleteEvent(
