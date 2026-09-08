@@ -37,6 +37,33 @@ Regra pratica desta fase:
 - nenhuma credencial copiada para documentacao, historico de shell, ticket, log ou artefato de CI.
 - `CAPRIGESTOR_DB_PASSWORD` definido externamente para os scripts de backup e restore.
 
+## Checklist formal da primeira homologação
+
+Use esta lista uma única vez antes do primeiro deploy em HML. Marque cada item
+com evidência no cofre/CI/runbook do ambiente; não registre valores de secrets.
+
+- [ ] gerar um novo par de chaves JWT exclusivo da HML;
+- [ ] gerar uma nova senha de bootstrap administrativo e mantê-la somente no
+      cofre; deixar o bootstrap desabilitado após a criação inicial;
+- [ ] criar credenciais/usuário PostgreSQL exclusivos da HML;
+- [ ] criar credenciais SMTP exclusivas da HML e confirmar remetente permitido;
+- [ ] definir `CORS_ORIGINS`, `JWT_DURATION`, `JWT_REFRESH_DURATION`,
+      `JWT_ISSUER`, `JWT_AUDIENCE` e `JWT_KEY_ID` para a HML;
+- [ ] montar as chaves JWT como secrets somente leitura, sem `.env` ou chave
+      no repositório/imagem;
+- [ ] publicar a imagem aprovada no registry e registrar o digest imutável;
+- [ ] confirmar destino, retenção e restauração testada do backup PostgreSQL;
+- [ ] executar `flyway:validate`/validação equivalente no banco restaurado;
+- [ ] executar smoke de health, login, `/api/v1/auth/me` e leitura autenticada;
+- [ ] executar o smoke funcional correspondente ao escopo da entrega;
+- [ ] registrar plano de rollback da aplicação (imagem anterior) e de restore
+      do banco, incluindo a compatibilidade do schema;
+- [ ] confirmar que nenhum secret de desenvolvimento foi reutilizado e que o
+      acesso temporário de bootstrap foi revogado ou rotacionado.
+
+Esta checklist não é evidência de HML concluída: no estado atual do projeto a
+primeira homologação ainda não foi executada.
+
 ## Restore smoke do banco
 
 Script oficial:
