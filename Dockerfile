@@ -13,7 +13,7 @@ COPY src/ src/
 
 RUN ./mvnw -q -DskipTests clean package
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-noble
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
