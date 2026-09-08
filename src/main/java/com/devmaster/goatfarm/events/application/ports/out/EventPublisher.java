@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.events.application.ports.out;
 
-import com.devmaster.goatfarm.events.persistence.entity.Event;
+import com.devmaster.goatfarm.events.business.bo.EventPublication;
 
 /**
  * Porta de saída para publicação de eventos em sistema de mensageria
@@ -10,7 +10,7 @@ public interface EventPublisher {
 
     /**
      * Publica um evento no sistema de mensageria
-     * @param event Evento a ser publicado
+     * @param event Evento serializável a ser publicado
      */
-    void publishEvent(Event event);
+    void publishEvent(EventPublication event);
 }

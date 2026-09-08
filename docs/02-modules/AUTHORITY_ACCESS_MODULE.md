@@ -10,6 +10,10 @@ Escopo: autenticação, refresh, cadastro inicial, administração de usuários 
 - `POST /api/v1/auth/register` permanece público, não recebe papéis no contrato e cria o usuário somente com o papel padrão `ROLE_OPERATOR`. Campos desconhecidos, inclusive uma tentativa de enviar `roles`, são rejeitados.
 - A autorização por fazenda distingue propriedade e operação: ADMIN possui acesso global, FARM_OWNER precisa ser o responsável da fazenda e OPERATOR precisa de vínculo persistido em `FarmOperator`.
 - `OwnershipService` consulta o vínculo operacional por `FarmAccessQueryPort`; o adapter de persistência concentra o acesso ao repositório Spring Data.
+- Na W4, a consulta do proprietário foi reduzida ao contrato `FarmOwnerQueryPort`,
+  e a decisão recebe `AuthenticatedPrincipal` (id, email, nome e authorities),
+  evitando que a emissão de JWT e as verificações de ownership precisem
+  carregar a entidade JPA `User`.
 - `GET /api/v1/auth/me` permanece disponível para o usuário autenticado consultar os próprios dados. Esta correção não cria uma API de edição do perfil próprio.
 - O endpoint legado de diagnóstico de papéis foi removido: não possuía consumidor funcional e expunha dados administrativos desnecessários.
 - O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.
@@ -51,6 +55,15 @@ guard verifica que policies farm-scoped continuam recebendo um parâmetro
 aceita qualquer papel oficial autenticado e calcula `canCreateGoat` no caso de
 uso, por isso mantém sua expressão explícita em vez de ser convertido para
 ownership ou operação.
+
+### Limites de segurança
+
+`OwnershipService` continua oferecendo `isFarmOwner` para políticas
+administrativas e `canManageFarm` para operações de fazenda. As duas funções
+compartilham a mesma resolução de principal e do proprietário oficial, mas
+`canManageFarm` também consulta o vínculo persistido em `FarmOperator` para
+permitir operadores. A diferença é deliberada: trocar uma chamada por outra
+altera a política, não apenas a forma de consulta.
 
 ## Sessão JWT
 

@@ -38,6 +38,17 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   - Consulta no modulo `milk` via `PregnancySnapshotQueryPort`.
 - Fronteira de contexto:
   - `milk` nao importa classes internas de `reproduction` em `api`, `business` e `persistence.entity`.
+- Fronteiras críticas reforçadas na W4:
+  - `OwnershipService` consulta o responsável da fazenda por `FarmOwnerQueryPort` e recebe um `AuthenticatedPrincipal`, sem importar repositórios Spring Data.
+  - `GoatGenderValidator` consulta apenas `GoatValidationQueryPort.GoatValidationSnapshot`; entidades JPA não atravessam o contrato de validação.
+  - `EventPublisher` recebe `EventPublication`, um contrato de aplicação imutável, e não a entidade `events.persistence.entity.Event`.
+  - `JwtService` emite tokens a partir de `AuthenticatedPrincipal`; o mapeamento de usuário persistente fica restrito ao caso de uso de autenticação.
+  - RabbitMQ é opcional e fail-closed: somente é criado quando `caprigestor.messaging.enabled=true`; sem a propriedade, o publisher NoOp é usado.
+
+Essas regras não afirmam que todo o domínio já esteja livre de JPA. Módulos
+legados ainda manipulam entidades em alguns casos de uso; a W4 isolou os
+contratos que participam diretamente de autorização, emissão de credenciais,
+validação crítica e publicação de eventos.
 
 ## Fluxos principais
 1. Fluxo HTTP farm-level:
@@ -54,6 +65,7 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
 |---|---|---|
 | `HexagonalArchitectureGuardTest` | Impedir import indevido de `business` para `api` | [src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java) |
 | `MilkReproductionBoundaryArchUnitTest` | Garantir fronteira entre `milk` e `reproduction` | [src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java) |
+| `OwnershipSecurityBoundaryArchUnitTest` | Impedir dependências de entidades JPA nos contratos críticos de segurança, validação e eventos | [src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java) |
 
 ## Referencias internas
 - Modulos mapeados: `address`, `article`, `authority`, `events`, `farm`, `genealogy`, `goat`, `health`, `milk`, `phone`, `reproduction`.
