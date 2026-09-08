@@ -1,5 +1,5 @@
 ﻿# Módulo Authority / acesso / recuperação de senha
-Última atualização: 2026-09-06
+Última atualização: 2026-09-08
 Escopo: autenticação, refresh, cadastro inicial, administração de usuários e recuperação de senha do CapriGestor.
 
 ## Administração de usuários
@@ -13,6 +13,15 @@ Escopo: autenticação, refresh, cadastro inicial, administração de usuários 
 - `GET /api/v1/auth/me` permanece disponível para o usuário autenticado consultar os próprios dados. Esta correção não cria uma API de edição do perfil próprio.
 - O endpoint legado de diagnóstico de papéis foi removido: não possuía consumidor funcional e expunha dados administrativos desnecessários.
 - O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.
+- Alterações de senha, redefinição de senha e alterações de papéis revogam todas as sessões de refresh do usuário. O access token já emitido continua válido somente até sua expiração curta.
+
+## Sessão JWT
+
+- O access token é emitido com `typ=access`, emissor, audiência, `kid` e `jti`; sua duração padrão é 15 minutos (`security.jwt.duration`).
+- O refresh token é emitido com `typ=refresh`, `scope=REFRESH`, `jti` e `familyId`; sua duração padrão é 7 dias (`security.jwt.refresh-duration`).
+- `POST /api/v1/auth/refresh` aceita exclusivamente refresh tokens. Cada uso consome a sessão persistida, emite uma nova sessão da mesma família e registra a substituição.
+- Reuso de refresh token consumido, expirado ou revogado invalida toda a família. Não são armazenados tokens brutos: apenas SHA-256, identificadores e metadados de ciclo de vida.
+- `POST /api/v1/auth/logout` revoga a família do refresh token apresentado e retorna `204`.
 
 ## Recuperação de senha MVP
 Entrou neste MVP:
@@ -38,7 +47,7 @@ Entrou neste MVP:
 5. O frontend envia token bruto + nova senha + confirmacao para o backend.
 6. O backend valida token, expiracao, uso unico e revogacao.
 7. A senha e atualizada com o mesmo encoder BCrypt ja usado no projeto.
-8. O token e marcado como utilizado e nao pode ser reutilizado.
+8. O token e marcado como utilizado, as sessões de refresh existentes são revogadas e não podem ser reutilizadas.
 
 ## Configuracao local / HML
 Variaveis relevantes:
@@ -53,6 +62,9 @@ Variaveis relevantes:
 - `PASSWORD_RESET_FROM_ADDRESS`
 - `PASSWORD_RESET_TTL_MINUTES`
 - `PASSWORD_RESET_COOLDOWN_SECONDS`
+- `JWT_DURATION` (segundos; padrão local: 900)
+- `JWT_REFRESH_DURATION` (segundos; padrão local: 604800)
+- `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY_ID` (obrigatórios em produção)
 
 ## Validacao local com Mailpit
 1. Suba o ambiente: `docker compose -f docker/docker-compose.yml up -d mailpit`
@@ -66,12 +78,13 @@ Padrao local recomendado:
 - `PASSWORD_RESET_FRONTEND_BASE_URL=http://localhost:5173`
 
 ## O que ficou para fase 2
-- invalidacao de JWTs/sessoes ja emitidos
+- revogação imediata de access tokens (hoje a revogação é imediata para refresh tokens; access tokens expiram em até 15 minutos)
 - rate limit por IP
 - captcha / anti-abuso adicional
 - envio assincrono de email
 - templates de email mais ricos
 - observabilidade dedicada do fluxo
 
-## Observacao de seguranca
-Neste MVP, tokens JWT e sessoes ja emitidos **NAO** sao invalidados automaticamente quando a senha e redefinida. Essa melhoria fica explicitamente adiada para a fase 2.
+## Observação de segurança
+
+As sessões de refresh são invalidadas automaticamente quando a senha ou os papéis mudam. O access token não é consultado no banco a cada requisição; por isso a contenção total depende do seu TTL curto até que exista uma lista de revogação distribuída.

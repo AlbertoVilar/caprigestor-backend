@@ -12,4 +12,6 @@ public interface AuthManagementUseCase {
     LoginResponseVO login(LoginRequestVO loginRequest);
 
     LoginResponseVO refreshToken(RefreshTokenRequestVO refreshRequest);
+
+    void logout(RefreshTokenRequestVO refreshRequest);
 }

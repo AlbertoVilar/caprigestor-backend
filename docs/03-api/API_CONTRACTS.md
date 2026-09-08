@@ -23,9 +23,18 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 ### Segurança
 - Autenticação: JWT.
 - Autorização: ownership por `farmId` e/ou roles (`ROLE_ADMIN`, `ROLE_OPERATOR`, `ROLE_FARM_OWNER`).
+- Access tokens usam `typ=access`, emissor e audiência configurados; refresh tokens usam `typ=refresh` e só podem ser enviados para os endpoints de sessão.
 - Respostas de segurança:
   - `401` via `CustomAuthenticationEntryPoint`
   - `403` via `CustomAccessDeniedHandler` ou `AccessDeniedException`
+
+### Autenticação e sessão
+
+- `POST /api/v1/auth/login`: emite access token e refresh token.
+- `POST /api/v1/auth/refresh`: faz rotação de refresh token e devolve o mesmo contrato do login. Reuso de token já consumido retorna `401` e revoga a família de sessões.
+- `POST /api/v1/auth/logout`: recebe `{ "refreshToken": "..." }`, revoga a família e retorna `204`.
+- `GET /api/v1/auth/me`: requer access token; refresh tokens são rejeitados pelo resource server.
+- `expiresIn` é expresso em segundos e corresponde ao TTL efetivo do access token.
 
 ### Paginação
 - Parâmetros padrão: `page` (base 0), `size`, `sort`.
