@@ -202,12 +202,16 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
 
     @Transactional(readOnly = true)
     public FarmPermissionsVO getFarmPermissions(Long farmId) {
-        User current = ownershipService.getCurrentUser();
-        boolean isAdmin = ownershipService.isCurrentUserAdmin();
-        GoatFarm farm = goatFarmPort.findById(farmId)
+        // Resolve the farm first so callers receive the same 404 semantics as
+        // every other farm-scoped endpoint. Capabilities themselves are
+        // delegated to the central authorization policy, keeping this
+        // endpoint a source of truth instead of a second RBAC implementation.
+        goatFarmPort.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + farmId));
-        boolean isOwner = farm.getUser() != null && farm.getUser().getId().equals(current.getId());
-        return new FarmPermissionsVO(isAdmin || isOwner);
+        return new FarmPermissionsVO(
+                ownershipService.canManageFarm(farmId),
+                ownershipService.canAdministerFarm(farmId)
+        );
     }
 
     private User resolveOwner(UserRequestVO userVO, User currentUser) {
