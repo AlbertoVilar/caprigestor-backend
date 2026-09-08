@@ -99,6 +99,24 @@ public class OwnershipService {
     }
 
     /**
+     * Returns whether the current principal has the administrative capability
+     * represented by {@code @FarmOwnerOnly}: ADMIN globally, or the official
+     * FARM_OWNER role for the requested farm.
+     */
+    public boolean canAdministerFarm(Long farmId) {
+        try {
+            var current = getAuthenticatedPrincipal();
+            if (current.hasAuthority("ROLE_ADMIN")) return true;
+            if (!current.hasAuthority("ROLE_FARM_OWNER")) return false;
+            return ownerId(farmId).map(current.id()::equals).orElse(false);
+        } catch (RuntimeException ex) {
+            logger.debug("event=farm_administration_check_failed farmId={} exception={}",
+                    farmId, ex.getClass().getSimpleName());
+            return false;
+        }
+    }
+
+    /**
      * Verifica se o usuário pode gerenciar a fazenda.
      * Retorna true se:
      * - OWNER (dono da fazenda)

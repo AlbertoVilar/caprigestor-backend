@@ -152,7 +152,8 @@ public class GoatFarmController {
     public ResponseEntity<FarmPermissionsDTO> getFarmPermissions(@PathVariable Long farmId) {
         var vo = farmUseCase.getFarmPermissions(farmId);
         FarmPermissionsDTO dto = new FarmPermissionsDTO();
-        dto.setCanCreateGoat(vo.isCanCreateGoat());
+        dto.setCanOperateFarm(vo.isCanOperateFarm());
+        dto.setCanAdministerFarm(vo.isCanAdministerFarm());
         return ResponseEntity.ok(dto);
     }
 

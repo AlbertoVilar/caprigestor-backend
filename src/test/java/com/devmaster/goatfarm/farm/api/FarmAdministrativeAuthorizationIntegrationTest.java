@@ -189,18 +189,39 @@ class FarmAdministrativeAuthorizationIntegrationTest {
     }
 
     @Test
-    void farmPermissionsDoNotPromoteOperatorsWithoutAnAdministrativeCapability() throws Exception {
+    void farmPermissionsExposeFarmScopedOperationalAndAdministrativeCapabilities() throws Exception {
+        String adminToken = loginAndGetToken(admin.getEmail());
         String ownerToken = loginAndGetToken(owner.getEmail());
+        String otherOwnerToken = loginAndGetToken(otherOwner.getEmail());
         String linkedToken = loginAndGetToken(linkedOperator.getEmail());
         String unlinkedToken = loginAndGetToken(unlinkedOperator.getEmail());
-        String path = "/api/v1/goatfarms/" + managedFarm.getId() + "/permissions";
+        String managedPath = "/api/v1/goatfarms/" + managedFarm.getId() + "/permissions";
+        String otherPath = "/api/v1/goatfarms/" + otherFarm.getId() + "/permissions";
 
-        mockMvc.perform(get(path).header("Authorization", bearer(ownerToken)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.canCreateGoat").value(true));
-        mockMvc.perform(get(path).header("Authorization", bearer(linkedToken)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.canCreateGoat").value(false));
-        mockMvc.perform(get(path).header("Authorization", bearer(unlinkedToken)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.canCreateGoat").value(false));
+        mockMvc.perform(get(managedPath).header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canOperateFarm").value(true))
+                .andExpect(jsonPath("$.canAdministerFarm").value(true));
+        mockMvc.perform(get(managedPath).header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canOperateFarm").value(true))
+                .andExpect(jsonPath("$.canAdministerFarm").value(true));
+        mockMvc.perform(get(managedPath).header("Authorization", bearer(linkedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canOperateFarm").value(true))
+                .andExpect(jsonPath("$.canAdministerFarm").value(false));
+        mockMvc.perform(get(managedPath).header("Authorization", bearer(unlinkedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canOperateFarm").value(false))
+                .andExpect(jsonPath("$.canAdministerFarm").value(false));
+        mockMvc.perform(get(managedPath).header("Authorization", bearer(otherOwnerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canOperateFarm").value(false))
+                .andExpect(jsonPath("$.canAdministerFarm").value(false));
+        mockMvc.perform(get(otherPath).header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canOperateFarm").value(false))
+                .andExpect(jsonPath("$.canAdministerFarm").value(false));
     }
 
     @Test
