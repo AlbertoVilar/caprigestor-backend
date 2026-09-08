@@ -21,11 +21,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
-import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.time.Duration;
@@ -54,15 +51,54 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
             Pattern.DOTALL
     );
 
+    private long connectTimeoutSeconds = 30;
+    private long requestTimeoutSeconds = 60;
+    private int maxAttempts = 2;
+    private long retryBackoffMillis = 150;
+    private int maxResponseBytes = 2 * 1024 * 1024;
+
+    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.connect-timeout-seconds:30}")
+    void setConnectTimeoutSeconds(long value) {
+        connectTimeoutSeconds = value;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.request-timeout-seconds:60}")
+    void setRequestTimeoutSeconds(long value) {
+        requestTimeoutSeconds = value;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.max-attempts:2}")
+    void setMaxAttempts(int value) {
+        maxAttempts = value;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.retry-backoff-millis:150}")
+    void setRetryBackoffMillis(long value) {
+        retryBackoffMillis = value;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.max-response-bytes:2097152}")
+    void setMaxResponseBytes(int value) {
+        maxResponseBytes = value;
+    }
+
     @Override
     public List<GoatAbccRaceOptionVO> listRaces() {
         try {
             HttpClient client = newClient();
             String searchPage = get(client, SEARCH_PAGE_URL);
             return parseRaceOptions(searchPage);
-        } catch (Exception ex) {
+        } catch (AbccIntegrationException ex) {
             LOGGER.warn("Falha ao carregar lista de raças da ABCC pública.", ex);
-            throw new RuntimeException("Falha ao carregar lista de raças da ABCC pública.", ex);
+            throw ex;
+        } catch (IOException ex) {
+            throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Falha ao carregar lista de raças da ABCC pública.", ex);
+            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
         }
     }
 
@@ -105,9 +141,17 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
             pause();
             String pagedHtml = post(client, pagingUrl, Map.of("viewstate", viewstate));
             return parseSearchResult(pagedHtml);
-        } catch (Exception ex) {
+        } catch (AbccIntegrationException ex) {
             LOGGER.warn("Falha ao buscar animais na ABCC pública.", ex);
-            throw new RuntimeException("Falha ao buscar dados da ABCC pública.", ex);
+            throw ex;
+        } catch (IOException ex) {
+            throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Falha ao buscar animais na ABCC pública.", ex);
+            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
         }
     }
 
@@ -124,9 +168,17 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
                     "valueid", externalId
             ));
             return parsePreview(externalId, previewHtml);
-        } catch (Exception ex) {
+        } catch (AbccIntegrationException ex) {
             LOGGER.warn("Falha ao carregar preview de genealogia ABCC para externalId={}", externalId, ex);
-            throw new RuntimeException("Falha ao carregar preview da ABCC pública.", ex);
+            throw ex;
+        } catch (IOException ex) {
+            throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Falha ao carregar preview de genealogia ABCC para externalId={}", externalId, ex);
+            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
         }
     }
 
@@ -160,9 +212,17 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
 
             pause();
             return loadSnapshotByValueId(client, viewstate, externalId.get(), registrationLookup);
-        } catch (Exception ex) {
+        } catch (AbccIntegrationException ex) {
             LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
-            throw new RuntimeException("Falha ao consultar genealogia complementar da ABCC pública.", ex);
+            throw ex;
+        } catch (IOException ex) {
+            throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
+            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
         }
     }
 
@@ -237,7 +297,7 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
         return HttpClient.newBuilder()
                 .cookieHandler(cookieManager)
                 .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(30))
+                .connectTimeout(Duration.ofSeconds(Math.max(1, connectTimeoutSeconds)))
                 .build();
     }
 
@@ -331,7 +391,7 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
         Document document = Jsoup.parse(html);
         Elements boxes = document.select("div#divArvore div.bordaBox table");
         if (boxes.isEmpty()) {
-            throw new IllegalStateException("ABCC retornou HTML sem dados de genealogia.");
+            throw new AbccMalformedResponseException("ABCC retornou HTML sem dados de genealogia.");
         }
 
         Map<String, String> principal = parseKeyValues(boxes.getFirst());
@@ -545,40 +605,30 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
     private String extractViewstate(String html) {
         Matcher matcher = VIEWSTATE_PATTERN.matcher(Objects.requireNonNullElse(html, ""));
         if (matcher.find()) {
-            return matcher.group(1);
+            String viewstate = cleanText(matcher.group(1));
+            if (viewstate != null) {
+                return viewstate;
+            }
         }
-        return "";
+        throw new AbccMalformedResponseException("ABCC retornou HTML sem viewstate obrigatório.");
     }
 
     private String get(HttpClient client, String url) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .GET()
-                .timeout(Duration.ofSeconds(60))
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .header("Accept-Language", "pt-BR,pt;q=0.9")
-                .build();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("HTTP GET ABCC retornou status " + response.statusCode());
-        }
-        return response.body();
+        return transport(client).get(url);
     }
 
     private String post(HttpClient client, String url, Map<String, String> form) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .POST(HttpRequest.BodyPublishers.ofString(formEncode(form), StandardCharsets.UTF_8))
-                .timeout(Duration.ofSeconds(60))
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .header("Accept-Language", "pt-BR,pt;q=0.9")
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .build();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("HTTP POST ABCC retornou status " + response.statusCode());
-        }
-        return response.body();
+        return transport(client).post(url, formEncode(form));
+    }
+
+    private AbccHttpTransport transport(HttpClient client) {
+        return new AbccHttpTransport(
+                client,
+                Duration.ofSeconds(Math.max(1, requestTimeoutSeconds)),
+                maxAttempts,
+                retryBackoffMillis,
+                maxResponseBytes
+        );
     }
 
     private String formEncode(Map<String, String> form) {
