@@ -1,6 +1,6 @@
 # Qualidade, supply chain e observabilidade
 
-Última atualização: 2026-09-08  
+Última atualização: 2026-09-08
 Escopo: gates automatizados introduzidos na W5.
 
 ## Gates locais e CI
