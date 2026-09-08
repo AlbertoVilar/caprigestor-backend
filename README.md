@@ -192,6 +192,8 @@ Para detalhes de regras de acesso e ownership:
 
 - [AUTHORITY_ACCESS_MODULE.md](./docs/02-modules/AUTHORITY_ACCESS_MODULE.md)
 - [ARCHITECTURE.md](./docs/01-architecture/ARCHITECTURE.md)
+- [Resposta a incidentes de segurança](./docs/04-security/SECURITY_INCIDENT_RESPONSE.md)
+- [Rotação de chaves JWT](./docs/04-security/JWT_KEY_ROTATION_RUNBOOK.md)
 
 ## Banco de Dados e Mensageria
 

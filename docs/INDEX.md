@@ -1,7 +1,7 @@
 ﻿# Portal de Documentacao GoatFarm/CapriGestor Backend
 Ultima atualizacao: 2026-03-30
 Escopo: ponto unico de navegacao para a documentacao oficial do backend.
-Links relacionados: [Visao geral](./00-overview/BUSINESS_DOMAIN.md), [Arquitetura](./01-architecture/ARCHITECTURE.md), [Modulos](./02-modules), [API_CONTRACTS](./03-api/API_CONTRACTS.md)
+Links relacionados: [Visao geral](./00-overview/BUSINESS_DOMAIN.md), [Arquitetura](./01-architecture/ARCHITECTURE.md), [Modulos](./02-modules), [API_CONTRACTS](./03-api/API_CONTRACTS.md), [Seguranca](./04-security/SECURITY_INCIDENT_RESPONSE.md)
 
 ## Visao geral
 Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e contratos de API.
@@ -40,6 +40,11 @@ Este portal organiza os documentos oficiais de produto, arquitetura, roadmap e c
 
 ### 03-api
 - [API_CONTRACTS.md](./03-api/API_CONTRACTS.md)
+
+### 04-security
+- [SECURITY_INCIDENT_RESPONSE.md](./04-security/SECURITY_INCIDENT_RESPONSE.md)
+- [JWT_KEY_ROTATION_RUNBOOK.md](./04-security/JWT_KEY_ROTATION_RUNBOOK.md)
+- [W0_SECURITY_EVIDENCE.md](./04-security/W0_SECURITY_EVIDENCE.md)
 
 ## Referencias internas
 - Auditorias de documentacao: [docs/_work/DOCS_AUDIT_BEFORE.md](./_work/DOCS_AUDIT_BEFORE.md)

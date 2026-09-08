@@ -1,6 +1,6 @@
-﻿# Homologacao e operacao minima
+# Homologacao e operacao minima
 
-Ultima atualizacao: 2026-03-28  
+Ultima atualizacao: 2026-09-07
 Escopo: rotina minima, objetiva e reproduzivel para smoke de restore, smoke de homologacao do backend e smoke funcional critico de lactacao x prenhez x secagem.
 
 ## Objetivo
@@ -11,7 +11,7 @@ Garantir que o ambiente local/HML consiga:
 - validar o schema com Flyway apos restore;
 - subir o backend;
 - responder `health`;
-- autenticar;
+- autenticar sem manter credenciais no repositorio ou em logs;
 - executar uma leitura autenticada basica;
 - validar o comportamento critico de lactacao, secagem e bloqueios com prenhez ativa.
 
@@ -30,10 +30,12 @@ Regra pratica desta fase:
 
 ## Pre-requisitos
 
-- Docker em execucao
-- container `caprigestor-postgres` ativo
-- backend configurado para usar PostgreSQL local
-- credenciais de teste validas
+- Docker em execucao;
+- container `caprigestor-postgres` ativo;
+- backend configurado para usar PostgreSQL local;
+- conta sintetica de teste valida, com e-mail e senha obtidos de cofre de segredos ou variaveis protegidas;
+- nenhuma credencial copiada para documentacao, historico de shell, ticket, log ou artefato de CI.
+- `CAPRIGESTOR_DB_PASSWORD` definido externamente para os scripts de backup e restore.
 
 ## Restore smoke do banco
 
@@ -57,6 +59,10 @@ Parametros uteis:
 
 ## Smoke de homologacao do backend
 
+O script nao possui e-mail ou senha padrao. Injete ambos externamente. Prefira o
+cofre do ambiente ou secrets protegidos do CI. Para uma sessao local controlada,
+defina as variaveis apenas no processo atual e remova-as ao terminar.
+
 Script oficial:
 
 ```powershell
@@ -67,14 +73,29 @@ Fluxo executado pelo script:
 
 1. valida `/actuator/health`;
 2. faz login real;
-3. valida `/api/v1/auth/me`;
-4. executa uma leitura autenticada minima em `/api/v1/goatfarms`.
+3. valida `/api/v1/auth/me` sem imprimir identidade;
+4. executa uma leitura autenticada minima em `/api/v1/goatfarms`;
+5. descarta as referencias locais a senha, payload de login e token ao finalizar.
 
 Parametros uteis:
 
 ```powershell
-.\scripts\homologation-smoke.ps1 -BaseUrl http://localhost:8080 -Email albertovilar1@gmail.com -Password 132747
+.\scripts\homologation-smoke.ps1 -BaseUrl "https://homologacao.exemplo" -Email $env:CAPRIGESTOR_SMOKE_EMAIL -Password $env:CAPRIGESTOR_SMOKE_PASSWORD
 ```
+
+Limpeza da sessao local:
+
+```powershell
+Remove-Item Env:CAPRIGESTOR_SMOKE_EMAIL -ErrorAction SilentlyContinue
+Remove-Item Env:CAPRIGESTOR_SMOKE_PASSWORD -ErrorAction SilentlyContinue
+```
+
+O script falha antes de qualquer requisicao quando uma das credenciais nao foi
+fornecida. Nunca substitua esse comportamento por valores literais no arquivo.
+
+Os smokes funcionais de lactacao e carencia usam as mesmas variaveis externas.
+Os scripts de backup e restore usam `CAPRIGESTOR_DB_PASSWORD` e tambem falham
+antes de operar quando a senha nao foi fornecida.
 
 ## Smoke funcional: lactacao x prenhez x secagem
 
@@ -116,7 +137,7 @@ Quando usar:
 
 ## Checklist minima antes de promover alteracoes
 
-1. `.\mvnw.cmd -U -T 1C clean test`
+1. `.\mvnw.cmd -U -T 1C clean verify`
 2. backend em execucao com `health = UP`
 3. `.\scripts\restore-smoke-postgres.ps1`
 4. `.\scripts\homologation-smoke.ps1`
@@ -129,6 +150,7 @@ Quando usar:
 - nao editar migration historica para contornar drift;
 - nao usar `flyway:repair` sem evidenciar o diff;
 - nao promover sem health, login e leitura autenticada funcionando;
+- nao manter credenciais, tokens ou chaves em scripts, documentacao, logs ou artefatos;
 - nao tratar secagem como encerramento definitivo do ciclo quando ainda existir prenhez ativa;
 - nao liberar nova lactacao ou retomada durante prenhez ativa apos secagem confirmada.
 
@@ -189,18 +211,14 @@ Fluxo minimo recomendado:
 4. confirmar um animal com carencia de leite ativa;
 5. registrar uma producao individual nessa cabra e exigir snapshot sanitario no payload;
 6. salvar um consolidado diario da fazenda via `PUT /api/v1/goatfarms/{farmId}/milk-consolidated-productions/{productionDate}`;
-7. consultar:
-   - `daily`
-   - `monthly`
-   - `annual`
-8. validar que:
-   - `totalProduced` bate com o registro salvo;
-   - `withdrawalProduced` fica separado;
-   - `marketableProduced` nao inclui o volume restrito.
+7. consultar `daily`, `monthly` e `annual`;
+8. validar que `totalProduced` bate com o registro salvo;
+9. validar que `withdrawalProduced` fica separado;
+10. validar que `marketableProduced` nao inclui o volume restrito.
 
 Checklist minimo antes de promover alteracoes nesta frente:
 
-1. `./mvnw.cmd -U -T 1C clean test`
+1. `./mvnw.cmd -U -T 1C clean verify`
 2. `npm test -- --run`
 3. `npm run lint`
 4. `npm run build`

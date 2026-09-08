@@ -1,12 +1,20 @@
 param(
     [string]$BaseUrl = "http://localhost:8080",
     [int]$FarmId = 17,
-    [string]$Email = "albertovilar1@gmail.com",
-    [string]$Password = "132747",
+    [string]$Email = $env:CAPRIGESTOR_SMOKE_EMAIL,
+    [string]$Password = $env:CAPRIGESTOR_SMOKE_PASSWORD,
     [string]$GoatId = "QAT03281450"
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($Email)) {
+    throw "Defina CAPRIGESTOR_SMOKE_EMAIL ou informe -Email explicitamente."
+}
+
+if ([string]::IsNullOrWhiteSpace($Password)) {
+    throw "Defina CAPRIGESTOR_SMOKE_PASSWORD ou informe -Password explicitamente."
+}
 
 function Invoke-GoatFarmApi {
     param(
