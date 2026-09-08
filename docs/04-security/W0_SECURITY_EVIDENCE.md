@@ -38,7 +38,7 @@ credencial ou token deve ser anexado aqui.
 | Novos pares externos implantados | PARCIAL | Par local externo difere do historico | Implantacao e convergencia de HML/producao nao comprovadas |
 | Tokens antigos rejeitados | PENDENTE | Fingerprints local e historico divergem | Executar login/refresh novo e rejeicao de access/refresh antigos em cada ambiente |
 | Credencial de homologacao inerte ou revogada | PENDENTE | Literais removidos do estado atual | Revogar/rotacionar na origem e revisar logs/artefatos sem expor o valor |
-| Secret scanning e push protection | PARCIAL | Recursos nativos ativos; workflow Gitleaks fixado por SHA e versao preparado | Integrar o workflow e comprovar o check em PR; non-provider patterns/validity checks indisponiveis pela API |
+| Secret scanning e push protection | PARCIAL | Recursos nativos ativos; `Secret scan` da PR #189 passou em 10 segundos | Integrar o workflow; non-provider patterns/validity checks indisponiveis pela API |
 | Historico sanitizado ou excecao formal | PENDENTE | Commits e fingerprint historicos identificados; zero forks publicos listados | Decidir reescrita coordenada ou excecao formal apos revogacao; tratar clones/caches |
 | CI obrigatorio e bypass restrito | CONCLUIDO | `main` e `develop` exigem `deny_root_markdown`, `Clean test` e `Secret scan`, uma aprovacao, aprovacao do ultimo push, conversas resolvidas e aplicacao a administradores | Auditar periodicamente alteracoes nas regras |
 
@@ -62,6 +62,8 @@ credencial ou token deve ser anexado aqui.
 - Gitleaks 8.30.1: zero achados no staging da W0; dez achados preservados no
   historico para tratamento coordenado.
 - actionlint 1.7.12: todos os workflows validos, incluindo o novo gate.
+- GitHub PR #189: `Secret scan` verde em 10 segundos, `deny_root_markdown`
+  verde em 4 segundos e `Clean test` verde em 2 minutos e 57 segundos.
 - Maven: `clean verify` com 540 testes, 0 falhas, 0 erros, 3 ignorados e
   `BUILD SUCCESS`.
 - Artefato: nenhum arquivo de chave no JAR de producao; zero achados Gitleaks
@@ -77,7 +79,7 @@ credencial ou token deve ser anexado aqui.
 3. Rotacao JWT por ambiente e prova de convergencia de todas as replicas.
 4. Prova de rejeicao dos access tokens e refresh tokens antigos.
 5. Revisao sanitizada de logs e artefatos que possam conter credenciais/tokens.
-6. Execucao verde do check `Secret scan` em Pull Request.
+6. Integracao do workflow apos revisao e aprovacao da PR #189.
 7. Decisao formal sobre reescrita de historico, incluindo clones e caches.
 8. Aceite final do responsavel pelo incidente.
 
