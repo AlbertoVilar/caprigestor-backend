@@ -77,6 +77,12 @@ public class AuthController {
         return ResponseEntity.ok(authMapper.toLoginResponseDTO(authUseCase.refreshToken(authMapper.toRefreshRequestVO(refreshRequest))));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequestDTO refreshRequest) {
+        authUseCase.logout(authMapper.toRefreshRequestVO(refreshRequest));
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> getCurrentUser() {
         return ResponseEntity.ok(userMapper.toResponseDTO(userUseCase.getMe()));

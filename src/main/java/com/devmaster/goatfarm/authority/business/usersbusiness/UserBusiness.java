@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -25,12 +26,15 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     private final RolePersistencePort rolePort;
     private final AuthorityBusinessMapper authorityBusinessMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshSessionPersistencePort refreshSessionPersistencePort;
 
-    public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, AuthorityBusinessMapper authorityBusinessMapper, PasswordEncoder passwordEncoder) {
+    public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, AuthorityBusinessMapper authorityBusinessMapper,
+                        PasswordEncoder passwordEncoder, RefreshSessionPersistencePort refreshSessionPersistencePort) {
         this.userPort = userPort;
         this.rolePort = rolePort;
         this.authorityBusinessMapper = authorityBusinessMapper;
         this.passwordEncoder = passwordEncoder;
+        this.refreshSessionPersistencePort = refreshSessionPersistencePort;
     }
 
     @Transactional
@@ -96,11 +100,13 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
 
         if (encryptedPassword != null) {
             existingUser.setPassword(encryptedPassword);
+            refreshSessionPersistencePort.revokeAllForUser(existingUser.getId(), Instant.now(), "password_changed");
         }
 
         if (resolvedRoles != null) {
             existingUser.getRoles().clear();
             existingUser.getRoles().addAll(resolvedRoles);
+            refreshSessionPersistencePort.revokeAllForUser(existingUser.getId(), Instant.now(), "roles_changed");
         }
 
         User updated = userPort.save(existingUser);
@@ -137,6 +143,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
 
         String encrypted = passwordEncoder.encode(newPassword);
         userPort.updatePassword(userId, encrypted);
+        refreshSessionPersistencePort.revokeAllForUser(userId, Instant.now(), "password_changed_by_admin");
     }
 
     @Transactional
@@ -156,6 +163,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
         user.getRoles().clear();
         user.getRoles().addAll(resolved);
+        refreshSessionPersistencePort.revokeAllForUser(user.getId(), Instant.now(), "roles_changed");
         User saved = userPort.save(user);
         return authorityBusinessMapper.toResponseVO(saved);
     }

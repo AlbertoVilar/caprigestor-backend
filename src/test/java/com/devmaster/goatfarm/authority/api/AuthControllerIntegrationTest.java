@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.authority.api;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.persistence.repository.RefreshSessionRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,9 @@ public class AuthControllerIntegrationTest {
     private RoleRepository roleRepository;
 
     @Autowired
+    private RefreshSessionRepository refreshSessionRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private User testUser;
@@ -45,6 +49,7 @@ public class AuthControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        refreshSessionRepository.deleteAll();
         userRepository.deleteAll();
         roleRepository.deleteAll();
 
@@ -73,7 +78,46 @@ public class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists());
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.expiresIn").value(900));
+    }
+
+    @Test
+    void shouldRotateRefreshTokenAndRevokeFamilyWhenThePreviousTokenIsReplayed() throws Exception {
+        String originalRefreshToken = loginAndGetRefreshToken("test@example.com");
+
+        String rotatedResponse = mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + originalRefreshToken + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String replacementRefreshToken = new ObjectMapper().readTree(rotatedResponse).get("refreshToken").asText();
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + originalRefreshToken + "\"}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + replacementRefreshToken + "\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRevokeRefreshTokenFamilyOnLogout() throws Exception {
+        String refreshToken = loginAndGetRefreshToken("test@example.com");
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -190,5 +234,15 @@ public class AuthControllerIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         return new ObjectMapper().readTree(response).get("accessToken").asText();
+    }
+
+    private String loginAndGetRefreshToken(String email) throws Exception {
+        String loginPayload = "{\"email\":\"" + email + "\", \"password\":\"password\"}";
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginPayload))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return new ObjectMapper().readTree(response).get("refreshToken").asText();
     }
 }

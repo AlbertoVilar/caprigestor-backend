@@ -1,5 +1,5 @@
 ﻿# Arquitetura do Sistema GoatFarm
-Ultima atualizacao: 2026-02-10
+Ultima atualizacao: 2026-09-08
 Escopo: visao tecnica, modularizacao por dominio, shared kernel e gates de arquitetura.
 Links relacionados: [Portal](../INDEX.md), [ADR](./ADR), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulos](../02-modules), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
 
@@ -36,6 +36,8 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
    `milk.business -> PregnancySnapshotQueryPort -> adapter SQL -> snapshot`.
 3. Fluxo de erro:
    excecoes de dominio sobem para handlers globais e seguem padrao do [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+4. Fluxo de sessão:
+   `AuthBusiness -> RefreshSessionPersistencePort -> RefreshSessionPersistenceAdapter -> refresh_session`. O adapter persiste somente hashes de refresh token e faz a transição condicional de sessão ativa para consumida.
 
 ## Gates
 | Gate | Objetivo | Evidencia |

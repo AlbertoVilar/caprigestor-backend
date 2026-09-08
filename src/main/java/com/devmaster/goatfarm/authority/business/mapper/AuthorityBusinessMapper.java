@@ -25,15 +25,15 @@ public interface AuthorityBusinessMapper {
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringList")
     UserResponseVO toResponseVO(User user);
 
-    @Mapping(target = "user", source = "user")
-    @Mapping(target = "tokenType", constant = "Bearer")
-    @Mapping(target = "expiresIn", constant = "3600L")
-    LoginResponseVO toLoginResponseVO(User user, String accessToken, String refreshToken);
-
-    @Mapping(target = "user", ignore = true)
-    @Mapping(target = "tokenType", constant = "Bearer")
-    @Mapping(target = "expiresIn", constant = "3600L")
-    LoginResponseVO toLoginResponseVO(String accessToken, String refreshToken);
+    default LoginResponseVO toLoginResponseVO(User user, String accessToken, String refreshToken, long expiresIn) {
+        return LoginResponseVO.builder()
+                .user(toResponseVO(user))
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(expiresIn)
+                .build();
+    }
 
     @Named("rolesToStringList")
     default List<String> rolesToStringList(Set<Role> roles) {

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -44,6 +50,15 @@ public class SecurityConfig {
 
     @Value("${jwt.private.key}")
     private RSAPrivateKey rsaPrivateKey;
+
+    @Value("${security.jwt.issuer:https://caprigestor.local}")
+    private String jwtIssuer;
+
+    @Value("${security.jwt.audience:caprigestor-api}")
+    private String jwtAudience;
+
+    @Value("${security.jwt.key-id:caprigestor-current}")
+    private String jwtKeyId;
 
     private final UserDetailsService userDetailsService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
@@ -70,6 +85,7 @@ public class SecurityConfig {
                     "/api/v1/auth/login",
                     "/api/v1/auth/register",
                     "/api/v1/auth/refresh",
+                    "/api/v1/auth/logout",
                     "/api/v1/auth/register-farm",
                     "/api/v1/auth/password-reset/request",
                     "/api/v1/auth/password-reset/confirm",
@@ -149,14 +165,27 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Primary
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withPublicKey(this.rsaPublicKey).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(this.rsaPublicKey).build();
+        decoder.setJwtValidator(jwtValidator("access"));
+        return decoder;
+    }
+
+    @Bean("refreshJwtDecoder")
+    public JwtDecoder refreshJwtDecoder() {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(this.rsaPublicKey).build();
+        decoder.setJwtValidator(jwtValidator("refresh"));
+        return decoder;
     }
 
     @Bean
     public JwtEncoder jwtEncoder() {
         try {
-            JWK jwk = new RSAKey.Builder(this.rsaPublicKey).privateKey(this.rsaPrivateKey).build();
+            JWK jwk = new RSAKey.Builder(this.rsaPublicKey)
+                    .privateKey(this.rsaPrivateKey)
+                    .keyID(jwtKeyId)
+                    .build();
             JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(jwk));
             return new NimbusJwtEncoder(jwks);
         } catch (Exception e) {
@@ -174,5 +203,18 @@ public class SecurityConfig {
         converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
         
         return converter;
+    }
+
+    private OAuth2TokenValidator<Jwt> jwtValidator(String expectedType) {
+        OAuth2TokenValidator<Jwt> issuerValidator = JwtValidators.createDefaultWithIssuer(jwtIssuer);
+        OAuth2TokenValidator<Jwt> audienceValidator = token -> token.getAudience().contains(jwtAudience)
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new org.springframework.security.oauth2.core.OAuth2Error(
+                        "invalid_token", "JWT audience inválida", null));
+        OAuth2TokenValidator<Jwt> typeValidator = token -> expectedType.equals(token.getClaimAsString("typ"))
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new org.springframework.security.oauth2.core.OAuth2Error(
+                        "invalid_token", "JWT type inválido", null));
+        return new DelegatingOAuth2TokenValidator<>(issuerValidator, audienceValidator, typeValidator);
     }
 }
