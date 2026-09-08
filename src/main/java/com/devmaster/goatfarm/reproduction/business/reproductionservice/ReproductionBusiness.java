@@ -412,7 +412,9 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional
     public BirthResponseVO registerBirth(Long farmId, String goatId, Long pregnancyId, BirthRequestVO vo) {
-        Goat mother = goatGenderValidator.requireFemaleAndActive(farmId, goatId);
+        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
+        Goat mother = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (pregnancyId == null || pregnancyId <= 0) {
             throw new InvalidArgumentException("pregnancyId", "Identificador de gestacao invalido");
@@ -493,7 +495,9 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Override
     @Transactional
     public WeaningResponseVO registerWeaning(Long farmId, String goatId, WeaningRequestVO vo) {
-        Goat kid = goatGenderValidator.requireActive(farmId, goatId);
+        goatGenderValidator.requireActive(farmId, goatId);
+        Goat kid = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (vo.getWeaningDate() == null) {
             throw new InvalidArgumentException("weaningDate", "Data de desmame e obrigatoria");

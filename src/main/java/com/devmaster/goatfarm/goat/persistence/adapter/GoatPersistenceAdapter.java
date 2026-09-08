@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.persistence.adapter;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
@@ -22,7 +23,7 @@ import java.util.Optional;
  * Implementa a porta de saída GoatPersistencePort usando Spring Data JPA
  */
 @Component
-public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyQueryPort {
+public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyQueryPort, GoatValidationQueryPort {
 
     private final GoatRepository goatRepository;
 
@@ -104,6 +105,16 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     @Override
     public Optional<Goat> findByIdAndFarmId(String id, Long farmId) {
         return goatRepository.findByIdAndFarmId(id, farmId);
+    }
+
+    @Override
+    public Optional<GoatValidationSnapshot> findForValidation(String registrationNumber, Long farmId) {
+        return goatRepository.findByIdAndFarmId(registrationNumber, farmId)
+                .map(goat -> new GoatValidationSnapshot(
+                        goat.getRegistrationNumber(),
+                        goat.getGender(),
+                        goat.getStatus()
+                ));
     }
 
     @Override

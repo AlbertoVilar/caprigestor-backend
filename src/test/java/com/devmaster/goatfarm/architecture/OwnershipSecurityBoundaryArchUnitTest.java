@@ -21,4 +21,17 @@ class OwnershipSecurityBoundaryArchUnitTest {
                 .because("a autorização deve consultar persistência por portas mínimas")
                 .check(IMPORTED_CLASSES);
     }
+
+    @Test
+    void criticalApplicationPortsMustNotDependOnPersistenceEntities() {
+        noClasses()
+                .that().haveFullyQualifiedName("com.devmaster.goatfarm.events.application.ports.out.EventPublisher")
+                .or().haveFullyQualifiedName("com.devmaster.goatfarm.events.business.bo.EventPublication")
+                .or().haveFullyQualifiedName("com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort")
+                .or().haveFullyQualifiedName("com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort")
+                .or().haveFullyQualifiedName("com.devmaster.goatfarm.config.security.JwtService")
+                .should().dependOnClassesThat().resideInAPackage("..persistence.entity..")
+                .because("portas críticas devem transportar contratos de aplicação, não entidades JPA")
+                .check(IMPORTED_CLASSES);
+    }
 }

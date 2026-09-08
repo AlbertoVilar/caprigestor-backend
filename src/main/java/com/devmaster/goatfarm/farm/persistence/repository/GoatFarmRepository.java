@@ -28,6 +28,9 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
     // NOVO: Busca otimizada para verificação de posse
     Optional<GoatFarm> findByIdAndUserId(Long id, Long userId);
 
+    @Query("SELECT gf.user.id FROM GoatFarm gf WHERE gf.id = :id")
+    Optional<Long> findOwnerIdById(@Param("id") Long id);
+
     Optional<GoatFarm> findByAddressId(Long addressId);
 
     @Query("SELECT gf FROM GoatFarm gf LEFT JOIN FETCH gf.address LEFT JOIN FETCH gf.phones WHERE gf.id = :id")

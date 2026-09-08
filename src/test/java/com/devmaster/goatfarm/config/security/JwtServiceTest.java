@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,8 +34,12 @@ class JwtServiceTest {
         User user = user();
         ArgumentCaptor<JwtEncoderParameters> captor = ArgumentCaptor.forClass(JwtEncoderParameters.class);
 
-        service.generateToken(user);
-        service.issueRefreshToken(user, null);
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(
+                user.getId(), user.getEmail(), user.getName(),
+                user.getRoles().stream().map(Role::getAuthority).collect(java.util.stream.Collectors.toSet())
+        );
+        service.generateToken(principal);
+        service.issueRefreshToken(principal, null);
 
         org.mockito.Mockito.verify(jwtEncoder, org.mockito.Mockito.times(2)).encode(captor.capture());
         JwtClaimsSet accessClaims = captor.getAllValues().getFirst().getClaims();

@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.config.security;
 
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -41,18 +41,18 @@ public class JwtService {
         this.clock = Clock.systemUTC();
     }
 
-    public String generateToken(User user) {
+    public String generateToken(AuthenticatedPrincipal user) {
         Instant now = Instant.now(clock);
-        String scope = user.getRoles().stream().map(role -> role.getAuthority()).collect(Collectors.joining(" "));
+        String scope = user.authorities().stream().collect(Collectors.joining(" "));
         JwtClaimsSet claims = baseClaims(user, now, accessTokenDurationSeconds, "access", UUID.randomUUID())
                 .claim("scope", scope)
-                .claim("name", user.getName())
-                .claim("email", user.getEmail())
+                .claim("name", user.name())
+                .claim("email", user.email())
                 .build();
         return encode(claims);
     }
 
-    public IssuedRefreshToken issueRefreshToken(User user, UUID familyId) {
+    public IssuedRefreshToken issueRefreshToken(AuthenticatedPrincipal user, UUID familyId) {
         Instant now = Instant.now(clock);
         UUID tokenId = UUID.randomUUID();
         UUID resolvedFamilyId = familyId == null ? UUID.randomUUID() : familyId;
@@ -68,16 +68,16 @@ public class JwtService {
         return accessTokenDurationSeconds;
     }
 
-    private JwtClaimsSet.Builder baseClaims(User user, Instant now, long durationSeconds, String type, UUID tokenId) {
+    private JwtClaimsSet.Builder baseClaims(AuthenticatedPrincipal user, Instant now, long durationSeconds, String type, UUID tokenId) {
         return JwtClaimsSet.builder()
                 .issuer(issuer)
                 .audience(List.of(audience))
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(durationSeconds))
-                .subject(user.getEmail())
+                .subject(user.email())
                 .id(tokenId.toString())
                 .claim("typ", type)
-                .claim("userId", user.getId());
+                .claim("userId", user.id());
     }
 
     private String encode(JwtClaimsSet claims) {

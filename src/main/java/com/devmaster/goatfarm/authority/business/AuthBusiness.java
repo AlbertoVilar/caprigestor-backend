@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPers
 import com.devmaster.goatfarm.authority.business.bo.LoginRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.LoginResponseVO;
 import com.devmaster.goatfarm.authority.business.bo.RefreshTokenRequestVO;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.entity.RefreshSession;
@@ -78,8 +79,9 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             );
 
             User user = (User) authentication.getPrincipal();
-            String accessToken = jwtService.generateToken(user);
-            JwtService.IssuedRefreshToken refreshToken = jwtService.issueRefreshToken(user, null);
+            AuthenticatedPrincipal principal = toPrincipal(user);
+            String accessToken = jwtService.generateToken(principal);
+            JwtService.IssuedRefreshToken refreshToken = jwtService.issueRefreshToken(principal, null);
             persistRefreshSession(user, refreshToken);
             logger.info("event=login_succeeded userId={}", user.getId());
 
@@ -130,8 +132,9 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             throw new UnauthorizedException("Token inválido ou expirado");
         }
 
-        String newAccessToken = jwtService.generateToken(user);
-        JwtService.IssuedRefreshToken newRefreshToken = jwtService.issueRefreshToken(user, currentSession.getFamilyId());
+        AuthenticatedPrincipal principal = toPrincipal(user);
+        String newAccessToken = jwtService.generateToken(principal);
+        JwtService.IssuedRefreshToken newRefreshToken = jwtService.issueRefreshToken(principal, currentSession.getFamilyId());
         RefreshSession replacement = persistRefreshSession(user, newRefreshToken);
         refreshSessionPort.setReplacement(currentSession.getId(), replacement.getId());
 
@@ -198,5 +201,14 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 não disponível no ambiente", exception);
         }
+    }
+
+    private AuthenticatedPrincipal toPrincipal(User user) {
+        return new AuthenticatedPrincipal(
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRoles().stream().map(role -> role.getAuthority()).collect(java.util.stream.Collectors.toSet())
+        );
     }
 }

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(value = "caprigestor.messaging.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(value = "caprigestor.messaging.enabled", havingValue = "true", matchIfMissing = false)
 public class EventConsumer {
 
     @RabbitListener(queues = "${caprigestor.rabbitmq.queue}")

@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.persistence.entity.Goat;
@@ -32,6 +33,9 @@ class GenealogicalParentageServiceTest {
     private GoatPersistencePort goatPersistencePort;
 
     @Mock
+    private GoatValidationQueryPort goatValidationQueryPort;
+
+    @Mock
     private GenealogyAbccQueryPort genealogyAbccQueryPort;
 
     private GenealogicalParentageService service;
@@ -41,7 +45,7 @@ class GenealogicalParentageServiceTest {
         service = new GenealogicalParentageService(
                 goatPersistencePort,
                 genealogyAbccQueryPort,
-                new GoatGenderValidator(goatPersistencePort)
+                new GoatGenderValidator(goatValidationQueryPort)
         );
         org.mockito.Mockito.lenient().when(goatPersistencePort.findByRegistrationNumber(anyString())).thenReturn(Optional.empty());
         org.mockito.Mockito.lenient().when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber(anyString())).thenReturn(Optional.empty());
