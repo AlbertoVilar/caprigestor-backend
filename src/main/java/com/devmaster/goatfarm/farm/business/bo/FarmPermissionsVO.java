@@ -10,5 +10,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FarmPermissionsVO {
-    private boolean canCreateGoat;
+    /** Whether the authenticated principal may execute operational farm work. */
+    private boolean canOperateFarm;
+
+    /** Whether the authenticated principal may administer the farm itself. */
+    private boolean canAdministerFarm;
 }

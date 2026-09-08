@@ -75,6 +75,21 @@ Rotas canônicas:
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
 
+O endpoint de permissões retorna as capacidades efetivas do usuário para a
+fazenda informada:
+
+```json
+{
+  "canOperateFarm": true,
+  "canAdministerFarm": false
+}
+```
+
+`canOperateFarm` segue `@CanManageFarm` (ADMIN, FARM_OWNER da própria fazenda
+ou OPERATOR vinculado); `canAdministerFarm` segue `@FarmOwnerOnly` (ADMIN ou
+FARM_OWNER da própria fazenda). O vínculo operador–fazenda é sempre decidido
+no backend.
+
 Paginação atual:
 - As listagens continuam retornando `Page` do Spring (`content`, `totalElements`, `number`, etc.) para preservar compatibilidade com o frontend já publicado.
 

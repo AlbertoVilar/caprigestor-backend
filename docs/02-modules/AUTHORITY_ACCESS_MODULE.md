@@ -52,9 +52,13 @@ guard verifica que policies farm-scoped continuam recebendo um parâmetro
 `farmId`, evitando uma anotação aplicada silenciosamente ao identificador errado.
 
 `GET /api/v1/goatfarms/{farmId}/permissions` permanece uma exceção legítima:
-aceita qualquer papel oficial autenticado e calcula `canCreateGoat` no caso de
-uso, por isso mantém sua expressão explícita em vez de ser convertido para
-ownership ou operação.
+aceita qualquer papel oficial autenticado e retorna as capacidades calculadas
+para a fazenda solicitada. O contrato é farm-scoped e expõe apenas duas
+intenções semânticas: `canOperateFarm` (a mesma política de `@CanManageFarm`,
+incluindo OPERATOR vinculado) e `canAdministerFarm` (a mesma política de
+`@FarmOwnerOnly`, ADMIN global ou FARM_OWNER da própria fazenda). O backend é
+a fonte de verdade do vínculo operador–fazenda; clientes não devem inferir
+permissões operacionais apenas pela role do token.
 
 ### Limites de segurança
 
