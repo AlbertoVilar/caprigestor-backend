@@ -1,5 +1,5 @@
 # Contexto para Agentes (Trae/Codex)
-Ultima atualizacao: 2026-02-10
+Ultima atualizacao: 2026-09-09
 Escopo: regras operacionais e tecnicas para contribuicoes seguras no backend.
 Links relacionados: [Portal](../INDEX.md), [Status do Projeto](./PROJECT_STATUS.md), [Roadmap](./ROADMAP.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Contratos API](../03-api/API_CONTRACTS.md)
 
@@ -13,10 +13,11 @@ Links relacionados: [Portal](../INDEX.md), [Status do Projeto](./PROJECT_STATUS.
 - Roles oficiais: `ROLE_ADMIN`, `ROLE_OPERATOR`, `ROLE_FARM_OWNER`.
 - Documentacao:
 - Nao criar `.md` no root (exceto `README.md`).
-- Docs oficiais ficam em `docs/00-overview`, `docs/01-architecture`, `docs/02-modules`, `docs/03-api` (e `04/05` quando existirem).
-- Artefatos de trabalho ficam em `docs/_work`.
+- Docs oficiais ficam em `docs/00-overview`, `docs/01-architecture`, `docs/02-modules`, `docs/03-api` e `docs/04-security`.
+- Artefatos transitórios não são fonte oficial nem entram no portal; histórico durável fica em `docs/_archive` e auditorias encerradas em `docs/audits`.
+- `CAPRIGESTOR_CURRENT_STATE.md`, quando existir, é contexto local ignorado e opcional; confirme seus fatos nas fontes versionadas e no código.
 - Commits:
-- Mensagens sem espaco (usar underscore), por exemplo: `docs_add_project_status_and_roadmap`.
+- Usar Conventional Commits em inglês, por exemplo: `docs: consolidate backend documentation governance`.
 - Nao fazer push direto em `main`.
 
 ## 2. Onde encontrar contratos e contexto
@@ -47,13 +48,13 @@ Links relacionados: [Portal](../INDEX.md), [Status do Projeto](./PROJECT_STATUS.
 
 ## 4. Fluxo de branches e PR
 - Fluxo obrigatorio:
-- `feature/*` -> PR para `develop` -> merge -> PR `develop` -> `main`.
+- `docs/*` ou `feature/*` -> PR para `develop` -> merge -> PR `develop` -> `main`.
 - Nunca push direto para `main`.
 - Padrao de trabalho:
 ```bash
 git switch develop
 git pull origin develop
-git switch -c feature/nome_curto_sem_espaco
+git switch -c docs/nome-curto
 ```
 - PRs:
 - Descrever contexto tecnico, riscos, testes executados e docs atualizadas.
@@ -62,8 +63,8 @@ git switch -c feature/nome_curto_sem_espaco
 ## 5. Checklist antes de PR
 - [ ] `git status -sb` limpo (sem artefatos temporarios).
 - [ ] `./mvnw.cmd -Dtest=HexagonalArchitectureGuardTest test` verde.
-- [ ] `./mvnw.cmd test` verde (ou justificativa explicita para suite parcial).
+- [ ] `./mvnw.cmd -B clean verify` verde (ou justificativa explícita para suite parcial/bloqueio ambiental).
 - [ ] Sem `.md` novo no root (exceto `README.md`).
 - [ ] Links de docs sem protocolo local e sem caminho absoluto de maquina.
 - [ ] `docs/INDEX.md` atualizado quando houver novo documento oficial.
-- [ ] Commits com mensagem sem espaco.
+- [ ] Commits no padrão Conventional Commits.

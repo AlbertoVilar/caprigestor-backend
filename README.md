@@ -3,11 +3,14 @@
 Backend do CapriGestor, uma plataforma de gestão de caprinos construída com Java 21 e Spring Boot. O projeto cobre domínio real de fazenda, autenticação e autorização, rastreabilidade operacional, módulos de produção e saúde, e uma base arquitetural preparada para evolução contínua.
 
 [![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)](https://www.java.com)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?style=for-the-badge&logo=spring)](https://spring.io/projects/spring-boot)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.15-brightgreen?style=for-the-badge&logo=spring)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15%20dev%20%7C%20versao%20por%20ambiente-blue?style=for-the-badge&logo=postgresql)](https://www.postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com)
 
 [Portal de Documentação](./docs/INDEX.md) • [Arquitetura](./docs/01-architecture/ARCHITECTURE.md) • [Domínio](./docs/00-overview/BUSINESS_DOMAIN.md) • [Frontend](https://github.com/albertovilar/caprigestor-frontend) • [Roadmap](./docs/00-overview/ROADMAP.md)
+
+> O Compose local usa PostgreSQL 15. A versão de HML/produção é definida pelo
+> ambiente de implantação e deve ser registrada no runbook correspondente.
 
 ## Visão Geral
 

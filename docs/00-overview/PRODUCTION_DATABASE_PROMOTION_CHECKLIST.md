@@ -1,5 +1,9 @@
 # Checklist de promocao da base para producao
 
+Última atualização: 2026-09-09
+Escopo: promoção controlada de uma base saneada para PostgreSQL de produção.
+Links relacionados: [Portal](../INDEX.md), [Precheck entre fazendas](./CROSS_FARM_INTEGRITY_PRECHECK.md), [Runbook de saneamento](./PRODUCTION_BASE_SANITIZATION_RUNBOOK.md), [Deploy Docker](./PRODUCTION_DOCKER_DEPLOY_RUNBOOK.md)
+
 ## Objetivo
 
 Executar a promocao da base saneada para o banco de producao sem improviso.

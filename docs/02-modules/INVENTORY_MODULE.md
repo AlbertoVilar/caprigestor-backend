@@ -1,7 +1,7 @@
 # Módulo Inventory (Estoque)
 Última atualização: 2026-03-12
 Escopo: estado técnico e funcional do módulo Inventory após a formalização do ciclo de vida de lotes e o alinhamento da cadeia Flyway.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API Contracts](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [TODO MVP](../_work/INVENTORY_TODO_MVP.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API Contracts](../03-api/API_CONTRACTS.md), [ADR-002](../01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md), [Roadmap](../00-overview/ROADMAP.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Status do documento
 - Natureza: especificação + status de implementação.

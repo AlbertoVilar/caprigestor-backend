@@ -1,15 +1,16 @@
 # Qualidade, supply chain e observabilidade
 
-Última atualização: 2026-09-08
+Última atualização: 2026-09-09
 Escopo: gates automatizados introduzidos na W5.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [API](../03-api/API_CONTRACTS.md), [Runbook de homologação](../00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
 
 ## Gates locais e CI
 
 - `./mvnw -B clean verify` é o gate principal de compilação, testes, Flyway e
   verificação de cobertura.
 - JaCoCo gera `target/site/jacoco` e mantém um piso de cobertura de linhas de
-  70% no bundle. O valor foi escolhido como ratchet pragmático sobre o baseline
-  observado (76,11% em 2026-09-08); novos módulos não podem reduzir o piso.
+  `0.7588` (75,88%) no bundle. Esse é o valor efetivo configurado no `pom.xml`;
+  novos módulos não podem reduzir o piso.
 - Testes PostgreSQL com Testcontainers executam quando Docker está disponível;
   `disabledWithoutDocker=true` mantém o desenvolvimento local determinístico
   quando o daemon não está acessível, mas o CI Linux deve executá-los.

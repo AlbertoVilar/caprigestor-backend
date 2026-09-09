@@ -1,5 +1,9 @@
 # Integração pública ABCC
 
+Última atualização: 2026-09-09
+Escopo: transporte HTTP, parsing e regras de indisponibilidade da consulta pública ABCC.
+Links relacionados: [Portal](../INDEX.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Contratos da API](../03-api/API_CONTRACTS.md)
+
 A integração com a consulta pública da ABCC está dividida em duas responsabilidades:
 
 - `GoatAbccPublicHttpAdapter` mantém a sessão HTTP (cookies), composição dos formulários e parsing do HTML para os VOs da aplicação.

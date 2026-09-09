@@ -1,5 +1,9 @@
 # Logs e rastreamento de requisições
 
+Última atualização: 2026-09-09
+Escopo: correlation ID, MDC, logs HTTP e regras de sanitização observáveis.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [Quality gates](./QUALITY_GATES.md)
+
 ## Objetivo
 
 O CapriGestor usa a API SLF4J com Logback para registrar eventos da aplicação.

@@ -1,5 +1,9 @@
 # Precheck de integridade entre fazendas
 
+Última atualização: 2026-09-09
+Escopo: validação prévia de integridade para migrations e promoção de banco.
+Links relacionados: [Portal](../INDEX.md), [Status do projeto](./PROJECT_STATUS.md), [Runbook de saneamento](./PRODUCTION_BASE_SANITIZATION_RUNBOOK.md)
+
 Antes de criar ou validar uma constraint composta, execute
 `scripts/sql/cross-farm-integrity-precheck.sql` no banco de homologação e no
 alvo de produção com uma credencial somente leitura.
