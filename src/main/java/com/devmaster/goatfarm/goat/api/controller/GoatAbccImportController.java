@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccConfirmRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRegistrationLookupRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRegistrationLookupResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionsResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchResponseDTO;
@@ -89,6 +91,24 @@ public class GoatAbccImportController {
     ) {
         var responseVO = goatAbccImportUseCase.preview(farmId, goatAbccImportMapper.toPreviewRequestVO(requestDTO));
         return ResponseEntity.ok(goatAbccImportMapper.toPreviewResponseDTO(responseVO));
+    }
+
+    @PostMapping("/registration-lookup")
+    @PublicEndpoint
+    @Operation(summary = "Consulta animal ABCC por raça e número de registro, sem persistir dados")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Consulta concluída; o status diferencia encontrado, não encontrado e ambíguo."),
+            @ApiResponse(responseCode = "422", description = "Falha de validação ou regra de negócio.")
+    })
+    public ResponseEntity<GoatAbccRegistrationLookupResponseDTO> lookupByRegistration(
+            @PathVariable("farmId") Long farmId,
+            @Valid @RequestBody GoatAbccRegistrationLookupRequestDTO requestDTO
+    ) {
+        var responseVO = goatAbccImportUseCase.lookupByRegistration(
+                farmId,
+                goatAbccImportMapper.toRegistrationLookupRequestVO(requestDTO)
+        );
+        return ResponseEntity.ok(goatAbccImportMapper.toRegistrationLookupResponseDTO(responseVO));
     }
 
     @FarmOwnerOnly

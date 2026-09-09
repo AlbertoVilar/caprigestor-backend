@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponse
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchResponseVO;
 
@@ -19,6 +21,8 @@ public interface GoatAbccImportUseCase {
     GoatAbccSearchResponseVO search(Long farmId, GoatAbccSearchRequestVO requestVO);
 
     GoatAbccPreviewResponseVO preview(Long farmId, GoatAbccPreviewRequestVO requestVO);
+
+    GoatAbccRegistrationLookupResponseVO lookupByRegistration(Long farmId, GoatAbccRegistrationLookupRequestVO requestVO);
 
     GoatResponseVO confirm(Long farmId, String externalId, GoatRequestVO goatRequestVO);
 

@@ -137,7 +137,8 @@ public class SecurityConfig {
                 // Consultas ABCC públicas e somente leitura
                 .requestMatchers(HttpMethod.POST,
                         "/api/v1/goatfarms/*/goats/imports/abcc/search",
-                        "/api/v1/goatfarms/*/goats/imports/abcc/preview").permitAll()
+                        "/api/v1/goatfarms/*/goats/imports/abcc/preview",
+                        "/api/v1/goatfarms/*/goats/imports/abcc/registration-lookup").permitAll()
                 // Genealogias públicas (apenas leitura)
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms/*/goats/*/genealogies").permitAll()

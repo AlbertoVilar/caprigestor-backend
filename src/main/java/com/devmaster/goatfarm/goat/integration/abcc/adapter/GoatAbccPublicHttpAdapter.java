@@ -156,6 +156,28 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
     }
 
     @Override
+    public GoatAbccRawSearchResultVO searchByRegistration(Integer raceId, String registrationNumber) {
+        String normalized = normalizeRegistration(registrationNumber);
+        if (raceId == null || raceId < 1 || isBlank(normalized) || normalized.length() < 10) {
+            return GoatAbccRawSearchResultVO.builder()
+                    .currentPage(1)
+                    .totalPages(1)
+                    .items(List.of())
+                    .build();
+        }
+
+        String tod = normalized.substring(0, 5);
+        String toe = normalized.substring(5);
+        return search(GoatAbccSearchRequestVO.builder()
+                .raceId(raceId)
+                .affix("")
+                .page(1)
+                .tod(tod)
+                .toe(toe)
+                .build());
+    }
+
+    @Override
     public GoatAbccRawPreviewVO preview(String externalId) {
         try {
             HttpClient client = newClient();
