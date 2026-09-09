@@ -19,6 +19,12 @@ O catálogo abaixo reflete os controllers e contratos atuais; mudanças funciona
 - CPF, credenciais, papéis de acesso e endereço detalhado não pertencem ao contrato público. Para endereço, a resposta pública limita-se a município, estado e país.
 - Dados operacionais de sanidade, reprodução, lactação, estoque, alertas, relatórios e financeiro continuam protegidos por autenticação e autorização por fazenda.
 - A resposta pública de fazenda é sanitizada no backend; a ausência de CPF no frontend não substitui essa proteção.
+- A manutenção cadastral usa a leitura administrativa autenticada
+  `GET /api/v1/goatfarms/{farmId}/management`, que devolve os dados completos
+  necessários ao formulário somente para ADMIN ou FARM_OWNER da própria
+  fazenda. OPERATOR pode operar o contexto da fazenda, mas não administra seus
+  dados cadastrais. A leitura não persiste alterações; o `PUT /api/v1/goatfarms/{id}`
+  permanece o fluxo canônico de atualização.
 
 ## Regra de bloqueio operacional por status do animal
 - Animais com status diferente de `ATIVO` não podem sofrer escrita operacional.
@@ -37,6 +43,7 @@ Fazenda:
 - `POST /api/v1/goatfarms`
 - `PUT /api/v1/goatfarms/{id}`
 - `GET /api/v1/goatfarms/{id}`
+- `GET /api/v1/goatfarms/{id}/management`
 - `GET /api/v1/goatfarms`
 - `GET /api/v1/goatfarms/name?name=&page=&size=&sort=`
 - `DELETE /api/v1/goatfarms/{id}`
