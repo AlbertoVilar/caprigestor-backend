@@ -6,6 +6,8 @@ import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccBatchConfirmResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccPreviewResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRegistrationLookupRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatAbccRegistrationLookupResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccRaceOptionsResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatAbccSearchItemDTO;
@@ -16,6 +18,8 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
@@ -45,6 +49,22 @@ public class GoatAbccImportMapper {
     public GoatAbccPreviewRequestVO toPreviewRequestVO(GoatAbccPreviewRequestDTO dto) {
         return GoatAbccPreviewRequestVO.builder()
                 .externalId(dto.getExternalId())
+                .build();
+    }
+
+    public GoatAbccRegistrationLookupRequestVO toRegistrationLookupRequestVO(GoatAbccRegistrationLookupRequestDTO dto) {
+        return GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(dto.getRaceId())
+                .registrationNumber(dto.getRegistrationNumber())
+                .build();
+    }
+
+    public GoatAbccRegistrationLookupResponseDTO toRegistrationLookupResponseDTO(GoatAbccRegistrationLookupResponseVO vo) {
+        return GoatAbccRegistrationLookupResponseDTO.builder()
+                .status(vo.getStatus())
+                .message(vo.getMessage())
+                .preview(vo.getPreview() == null ? null : toPreviewResponseDTO(vo.getPreview()))
+                .candidates(vo.getCandidates() == null ? List.of() : vo.getCandidates().stream().map(this::toSearchItemDTO).toList())
                 .build();
     }
 

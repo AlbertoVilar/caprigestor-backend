@@ -28,3 +28,10 @@ As propriedades são configuráveis por ambiente:
 | `caprigestor.abcc.max-response-bytes` | 2 MiB (limite absoluto 10 MiB) | `ABCC_MAX_RESPONSE_BYTES` |
 
 Os retries só envolvem chamadas idempotentes do fluxo de consulta/preview. A confirmação de importação é uma operação local do CapriGestor e não é reenviada ao upstream.
+
+O lookup de registro (`registration-lookup`) permanece na mesma fronteira hexagonal: o caso
+de uso solicita `searchByRegistration(raceId, registrationNumber)` à porta de saída e o
+adapter deriva TOD/TOE apenas para compor o formulário da ABCC. O resultado é filtrado pela
+raça selecionada e pelo RG normalizado; o preview é carregado e validado novamente antes do
+status `FOUND`. `NOT_FOUND` e `AMBIGUOUS` são resultados funcionais, enquanto timeout ou
+resposta inválida continuam sendo indisponibilidade externa (HTTP 503).

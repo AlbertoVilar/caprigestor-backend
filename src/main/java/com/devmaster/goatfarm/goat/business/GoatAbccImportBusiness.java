@@ -20,6 +20,8 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponse
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
@@ -189,6 +191,77 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .farmId(farmId)
                 .farmName(farm.getName())
                 .normalizationWarnings(warnings)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GoatAbccRegistrationLookupResponseVO lookupByRegistration(
+            Long farmId,
+            GoatAbccRegistrationLookupRequestVO requestVO
+    ) {
+        if (requestVO == null || requestVO.getRaceId() == null || requestVO.getRaceId() < 1) {
+            throw new BusinessRuleException("raceId", "Raça ABCC é obrigatória antes da consulta.");
+        }
+
+        String requestedRegistration = normalizeRegistrationForLookup(requestVO.getRegistrationNumber());
+        if (requestedRegistration == null) {
+            throw new BusinessRuleException("registrationNumber", "Número de registro é obrigatório.");
+        }
+
+        GoatAbccRaceOptionVO selectedRace = fetchAbccRaceCatalog().stream()
+                .filter(option -> requestVO.getRaceId().equals(option.getId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessRuleException("raceId", "Raça ABCC inválida."));
+
+        GoatAbccRawSearchResultVO rawResult;
+        try {
+            rawResult = abccPublicQueryPort.searchByRegistration(requestVO.getRaceId(), requestedRegistration);
+        } catch (ExternalServiceUnavailableException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new BusinessRuleException("abcc", MSG_ABCC_UNAVAILABLE);
+        }
+
+        List<GoatAbccSearchItemVO> candidates = rawResult == null || rawResult.getItems() == null
+                ? List.of()
+                : rawResult.getItems().stream()
+                .filter(item -> matchesRegistrationAndRace(item, requestedRegistration, selectedRace))
+                .map(this::normalizeSearchItem)
+                .toList();
+
+        if (candidates.isEmpty()) {
+            return GoatAbccRegistrationLookupResponseVO.builder()
+                    .status("NOT_FOUND")
+                    .message("Animal não localizado na ABCC para a raça e registro informados.")
+                    .candidates(List.of())
+                    .build();
+        }
+
+        if (candidates.size() > 1) {
+            return GoatAbccRegistrationLookupResponseVO.builder()
+                    .status("AMBIGUOUS")
+                    .message("Mais de um animal foi localizado para a mesma raça e registro. Selecione um candidato.")
+                    .candidates(candidates)
+                    .build();
+        }
+
+        GoatAbccSearchItemVO candidate = candidates.getFirst();
+        if (isBlank(candidate.getExternalId())) {
+            throw new BusinessRuleException("abcc", "A ABCC retornou um candidato sem identificador externo.");
+        }
+
+        GoatAbccPreviewResponseVO previewResponse = preview(
+                farmId,
+                GoatAbccPreviewRequestVO.builder().externalId(candidate.getExternalId()).build()
+        );
+        validateLookupPreview(previewResponse, requestedRegistration, selectedRace);
+
+        return GoatAbccRegistrationLookupResponseVO.builder()
+                .status("FOUND")
+                .message("Animal localizado na ABCC. Revise os dados antes de confirmar.")
+                .preview(previewResponse)
+                .candidates(List.of())
                 .build();
     }
 
@@ -506,6 +579,56 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .build();
     }
 
+    private boolean matchesRegistrationAndRace(
+            GoatAbccRawSearchItemVO item,
+            String requestedRegistration,
+            GoatAbccRaceOptionVO selectedRace
+    ) {
+        String returnedRegistration = item == null
+                ? null
+                : normalizeRegistrationForLookup(valueOrEmpty(item.getTod()) + valueOrEmpty(item.getToe()));
+        if (item == null || !requestedRegistration.equals(returnedRegistration)) {
+            return false;
+        }
+        String returnedRace = normalizedToken(item.getRaca());
+        String selectedRaceName = normalizedToken(selectedRace.getName());
+        GoatBreed selectedBreed = normalizeBreedInternal(selectedRace.getName());
+        GoatBreed returnedBreed = normalizeBreedInternal(item.getRaca());
+        return returnedRace.equals(selectedRaceName)
+                || (selectedBreed != null && selectedBreed == returnedBreed);
+    }
+
+    private void validateLookupPreview(
+            GoatAbccPreviewResponseVO previewResponse,
+            String requestedRegistration,
+            GoatAbccRaceOptionVO selectedRace
+    ) {
+        String previewRegistration = normalizeRegistrationForLookup(previewResponse.getRegistrationNumber());
+        if (!requestedRegistration.equals(previewRegistration)) {
+            throw new BusinessRuleException("abcc", "A ABCC retornou registro divergente do solicitado.");
+        }
+
+        GoatBreed selectedBreed = normalizeBreedInternal(selectedRace.getName());
+        GoatBreed previewBreed = previewResponse.getBreed();
+        String selectedRaceName = normalizedToken(selectedRace.getName());
+        if (previewBreed == null
+                || (selectedBreed != null && previewBreed != selectedBreed)
+                || (selectedBreed == null && !selectedRaceName.equals(normalizedToken(previewResponse.getBreed().name())))) {
+            throw new BusinessRuleException("abcc", "A ABCC retornou raça divergente da selecionada.");
+        }
+    }
+
+    private String normalizeRegistrationForLookup(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        return value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
     private Gender normalizeGender(String value, List<String> warnings, String fieldLabel) {
         if (isBlank(value)) {
             return null;
@@ -613,6 +736,9 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     }
 
     private String normalizedToken(String value) {
+        if (value == null) {
+            return "";
+        }
         return Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .replaceAll("\\s+", " ")
