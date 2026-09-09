@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.goat.api.controller;
 
-import com.devmaster.goatfarm.config.security.authorization.AuthenticatedFarmRead;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import com.devmaster.goatfarm.config.security.authorization.PublicEndpoint;
@@ -169,7 +168,7 @@ public class GoatController {
     }
 
     @GetMapping("/summary")
-    @AuthenticatedFarmRead
+    @PublicEndpoint
     @Operation(summary = "Retorna o resumo agregado do rebanho da fazenda")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Resumo do rebanho retornado com sucesso.")

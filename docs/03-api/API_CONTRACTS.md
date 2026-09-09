@@ -170,14 +170,17 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - Administração de rascunhos, publicação, destaque e remoção:
   `/api/v1/articles/**`, exclusivamente para `ROLE_ADMIN`.
 
-### Leitura de resumo do rebanho
+### Leitura pública de resumo do rebanho
 
-`GET /api/v1/goatfarms/{farmId}/goats/summary` é marcado no controller com
-`@AuthenticatedFarmRead`. Atualmente essa anotação não implementa, sozinha,
-uma verificação de ownership; a regra efetiva depende dos matchers do
-`SecurityConfig`. Este documento registra o comportamento observado e deixa a
-decisão de política para uma intervenção posterior, sem alterar a implementação
-nesta atualização documental.
+`GET /api/v1/goatfarms/{farmId}/goats/summary` é uma consulta pública marcada
+com `@PublicEndpoint` no controller e liberada pelo `SecurityConfig`. Pode ser
+chamada sem token e retorna `200` quando a fazenda existe. O DTO contém apenas
+agregados do rebanho (total, sexo, situação e distribuição por raça), sem
+informações de mutação ou dados de autorização.
+
+As operações de escrita do mesmo recurso continuam exigindo suas políticas de
+fazenda (`@CanManageFarm` ou `@FarmOwnerOnly`); a consulta pública não altera
+ownership nem expõe mutações.
 
 Exemplo de alerta pendente:
 
