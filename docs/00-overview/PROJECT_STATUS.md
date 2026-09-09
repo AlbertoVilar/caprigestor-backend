@@ -43,9 +43,8 @@ Baseline desta atualizacao:
 - `@CanManageFarm` permite ADMIN, proprietario da fazenda ou operador vinculado.
 - `@FarmOwnerOnly` permite ADMIN ou proprietario da fazenda.
 - `@AdminOnly` permite somente ADMIN.
-- O comportamento efetivo de `GET .../goats/summary` e `AuthenticatedFarmRead`
-  permanece uma questao de politica a documentar em follow-up; esta wave nao
-  altera seu comportamento.
+- `GET /api/v1/goatfarms/{farmId}/goats/summary` é uma consulta pública de
+  agregados e usa `@PublicEndpoint`; as mutações de animais continuam protegidas.
 
 ## Banco, testes e entrega
 

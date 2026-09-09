@@ -239,9 +239,14 @@ Regras de decisão por item no lote:
 - Unit: [GoatFarmBusinessTest](../../src/test/java/com/devmaster/goatfarm/farm/business/GoatFarmBusinessTest.java), [GoatBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatBusinessTest.java), [GenealogicalParentageServiceTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GenealogicalParentageServiceTest.java), [GoatAbccImportBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatAbccImportBusinessTest.java)
 - Controller: [GoatFarmControllerTest](../../src/test/java/com/devmaster/goatfarm/farm/api/GoatFarmControllerTest.java), [GoatControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatControllerTest.java), [GoatAbccImportControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatAbccImportControllerTest.java)
 
-## Observacao sobre a leitura de resumo
+## Acesso ao resumo do rebanho
 
-O controller usa a marca `@AuthenticatedFarmRead`, mas essa anotacao atualmente
-nao implementa, sozinha, uma verificacao de seguranca. O comportamento efetivo
-da rota depende do `SecurityConfig` vigente e deve ser confirmado como parte da
-politica de autorizacao; esta documentacao nao altera esse comportamento.
+`GET /api/v1/goatfarms/{farmId}/goats/summary` é uma consulta pública e usa
+`@PublicEndpoint` no controller. O `SecurityConfig` libera a leitura sem token,
+e o endpoint retorna somente agregados do rebanho (quantidades por situação,
+sexo e raça), sem dados de operação ou mutação. A existência da fazenda continua
+sendo validada pelo caso de uso; uma fazenda inexistente retorna `404`.
+
+As mutações do módulo permanecem protegidas pelas políticas próprias de cada
+operação (`@CanManageFarm` ou `@FarmOwnerOnly`), portanto a abertura dessa
+consulta não torna cadastro, atualização, saída ou remoção de animais públicos.

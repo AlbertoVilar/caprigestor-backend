@@ -330,6 +330,16 @@ public class SecurityOwnershipIntegrationTest {
     }
 
     @Test
+    void publicGoatHerdSummary_shouldBeAccessibleWithoutToken_whileMutationsRemainProtected() throws Exception {
+        mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId() + "/goats/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2));
+
+        mockMvc.perform(post("/api/v1/goatfarms/" + ownerFarm.getId() + "/goats"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void privateLactationEndpoints_shouldReturn401WithoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active"))
