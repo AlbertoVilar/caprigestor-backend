@@ -3,6 +3,11 @@
 Ultima atualizacao: 2026-09-07
 Estado: **EM ANDAMENTO - NAO ENCERRADO**
 
+Escopo: evidências sanitizadas do incidente histórico de segredo JWT; não é um
+critério de aceite de produção nem substitui o runbook de rotação.
+
+Links relacionados: [Portal](../INDEX.md), [Rotação de chaves JWT](./JWT_KEY_ROTATION_RUNBOOK.md), [Resposta a incidentes](./SECURITY_INCIDENT_RESPONSE.md)
+
 Este documento registra somente metadados sanitizados. Nenhuma chave, senha,
 credencial ou token deve ser anexado aqui.
 

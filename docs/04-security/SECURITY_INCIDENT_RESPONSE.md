@@ -2,6 +2,7 @@
 
 Ultima atualizacao: 2026-09-07
 Escopo: segredos, credenciais, tokens JWT, logs e artefatos do backend CapriGestor.
+Links relacionados: [Portal](../INDEX.md), [Rotação de chaves JWT](./JWT_KEY_ROTATION_RUNBOOK.md), [Evidências W0](./W0_SECURITY_EVIDENCE.md)
 
 ## Principios
 

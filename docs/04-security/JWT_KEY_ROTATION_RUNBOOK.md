@@ -2,6 +2,7 @@
 
 Ultima atualizacao: 2026-09-07
 Escopo: pares RSA usados para assinar e validar access tokens e refresh tokens.
+Links relacionados: [Portal](../INDEX.md), [Módulo Authority](../02-modules/AUTHORITY_ACCESS_MODULE.md), [Resposta a incidentes](./SECURITY_INCIDENT_RESPONSE.md), [Evidências W0](./W0_SECURITY_EVIDENCE.md)
 
 ## Regras invariantes
 

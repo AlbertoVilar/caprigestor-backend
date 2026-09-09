@@ -1,5 +1,9 @@
 # Runbook de saneamento da base promovivel
 
+Última atualização: 2026-09-09
+Escopo: operação controlada de saneamento e validação da base antes da promoção.
+Links relacionados: [Portal](../INDEX.md), [Precheck entre fazendas](./CROSS_FARM_INTEGRITY_PRECHECK.md), [Checklist de promoção](./PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md), [Deploy Docker](./PRODUCTION_DOCKER_DEPLOY_RUNBOOK.md)
+
 ## Objetivo
 
 Definir como a base que vai para producao deve ser preparada e validada.
@@ -78,7 +82,7 @@ Antes de promover o backup saneado, confirmar:
 
 Para checagem apos o restore, usar:
 
-- [production-db-integrity-check.sql](C:\Dev\GoatFarm\scripts\production-db-integrity-check.sql)
+- [production-db-integrity-check.sql](../../scripts/production-db-integrity-check.sql)
 
 ## Gate
 

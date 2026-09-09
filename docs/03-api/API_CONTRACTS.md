@@ -1,9 +1,9 @@
 # API_CONTRACTS
-Última atualização: 2026-09-07
+Última atualização: 2026-09-09
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Authority](../02-modules/AUTHORITY_ACCESS_MODULE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Módulo Commercial](../02-modules/COMMERCIAL_MODULE.md), [Módulo Articles](../02-modules/ARTICLE_BLOG_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
-Atualizado em 2026-09-04 para os contratos de referências genealógicas externas.
+O catálogo de rotas abaixo é uma superfície resumida; os documentos dos módulos continuam sendo a referência detalhada de payloads e regras específicas.
 
 ## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
@@ -38,9 +38,13 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 ### Autenticação e sessão
 
 - `POST /api/v1/auth/login`: emite access token e refresh token.
+- `POST /api/v1/auth/register`: cadastro público de usuário com a autoridade padrão `ROLE_OPERATOR`.
+- `POST /api/v1/auth/register-farm`: cadastro público atômico de fazenda, usuário, endereço e telefones.
 - `POST /api/v1/auth/refresh`: faz rotação de refresh token e devolve o mesmo contrato do login. Reuso de token já consumido retorna `401` e revoga a família de sessões.
 - `POST /api/v1/auth/logout`: recebe `{ "refreshToken": "..." }`, revoga a família e retorna `204`.
 - `GET /api/v1/auth/me`: requer access token; refresh tokens são rejeitados pelo resource server.
+- `POST /api/v1/auth/password-reset/request`: solicitação pública com resposta neutra.
+- `POST /api/v1/auth/password-reset/confirm`: confirmação pública com token de uso único.
 - `expiresIn` é expresso em segundos e corresponde ao TTL efetivo do access token.
 
 ### Paginação
@@ -66,6 +70,7 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms/{farmId}/permissions`
 - `GET /api/v1/goatfarms/{farmId}/goats?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/search?name=&page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/goats/summary`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `POST /api/v1/goatfarms/{farmId}/goats`
 - `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}`
@@ -73,6 +78,7 @@ Rotas canônicas:
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/preview`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
+- `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm-batch`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
 
 O endpoint de permissões retorna as capacidades efetivas do usuário para a
@@ -156,6 +162,22 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - Consultas, resumos e cadastro de cliente exigem usuário autorizado a operar a fazenda: ADMIN, FARM_OWNER próprio ou OPERATOR formalmente vinculado.
 - Registro de venda de animal ou leite, baixa de pagamento e lançamento de despesa operacional são mutações financeiras ou patrimoniais definitivas e exigem ADMIN ou FARM_OWNER da própria fazenda.
 - A autorização das mutações sensíveis é aplicada no controller e validada novamente no caso de uso antes da persistência.
+
+### Articles
+
+- Leitura pública: `GET /public/articles`, `GET /public/articles/highlights` e
+  `GET /public/articles/{slug}`.
+- Administração de rascunhos, publicação, destaque e remoção:
+  `/api/v1/articles/**`, exclusivamente para `ROLE_ADMIN`.
+
+### Leitura de resumo do rebanho
+
+`GET /api/v1/goatfarms/{farmId}/goats/summary` é marcado no controller com
+`@AuthenticatedFarmRead`. Atualmente essa anotação não implementa, sozinha,
+uma verificação de ownership; a regra efetiva depende dos matchers do
+`SecurityConfig`. Este documento registra o comportamento observado e deixa a
+decisão de política para uma intervenção posterior, sem alterar a implementação
+nesta atualização documental.
 
 Exemplo de alerta pendente:
 

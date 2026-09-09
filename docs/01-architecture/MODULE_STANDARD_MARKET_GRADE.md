@@ -1,5 +1,9 @@
 # Padrão de Módulo “Nível Mercado”
 
+Última atualização: 2026-09-09
+Escopo: padrão replicável de arquitetura, rotas, erros, testes e documentação.
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [Quality gates](./QUALITY_GATES.md), [Contratos da API](../03-api/API_CONTRACTS.md)
+
 ## Objetivo
 
 Este documento consolida o padrão replicável para novos módulos e evoluções dos módulos existentes do CapriGestor.
@@ -20,7 +24,9 @@ Regras:
 - Base canônica: `/api/v1`
 - Versionamento obrigatório: somente `/api/v1` para endpoints de aplicação
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
-- Todo controller em `api/controller` deve manter class-level `@RequestMapping` com `/api/v1`
+- Todo controller de aplicação em `api/controller` deve manter class-level
+  `@RequestMapping` com `/api/v1`. Endpoints públicos deliberadamente separados,
+  como `/public/articles`, são exceções explícitas documentadas no contrato.
 
 ## Paginação, filtros e ordenação
 
