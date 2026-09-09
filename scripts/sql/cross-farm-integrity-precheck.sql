@@ -49,6 +49,22 @@ WHERE e.farm_id <> p.farm_id
 
 UNION ALL
 
+SELECT 'pregnancy_coverage_event_farm_mismatch', count(*)
+FROM pregnancy p
+JOIN reproductive_event e ON e.id = p.coverage_event_id
+WHERE p.coverage_event_id IS NOT NULL
+  AND p.farm_id <> e.farm_id
+
+UNION ALL
+
+SELECT 'reproductive_event_related_event_farm_mismatch', count(*)
+FROM reproductive_event e
+JOIN reproductive_event related ON related.id = e.related_event_id
+WHERE e.related_event_id IS NOT NULL
+  AND e.farm_id <> related.farm_id
+
+UNION ALL
+
 SELECT 'health_event_goat_farm_mismatch', count(*)
 FROM health_events h
 JOIN cabras g ON g.num_registro = h.goat_id
@@ -104,5 +120,50 @@ FROM inventory_movement m
 JOIN inventory_lot l ON l.id = m.lot_id
 WHERE m.lot_id IS NOT NULL
   AND (m.farm_id <> l.farm_id OR m.item_id <> l.item_id)
+
+UNION ALL
+
+SELECT 'inventory_lot_item_farm_mismatch', count(*)
+FROM inventory_lot l
+JOIN inventory_item i ON i.id = l.item_id
+WHERE l.farm_id <> i.farm_id
+
+UNION ALL
+
+SELECT 'lactation_goat_farm_mismatch', count(*)
+FROM lactation l
+JOIN cabras g ON g.num_registro = l.goat_id
+WHERE l.farm_id <> g.capril_id
+
+UNION ALL
+
+SELECT 'milk_production_goat_farm_mismatch', count(*)
+FROM milk_production mp
+JOIN cabras g ON g.num_registro = mp.goat_id
+WHERE mp.farm_id <> g.capril_id
+
+UNION ALL
+
+SELECT 'milk_production_lactation_context_mismatch', count(*)
+FROM milk_production mp
+JOIN lactation l ON l.id = mp.lactation_id
+WHERE mp.farm_id <> l.farm_id
+   OR mp.goat_id <> l.goat_id
+
+UNION ALL
+
+SELECT 'milk_production_withdrawal_event_farm_mismatch', count(*)
+FROM milk_production mp
+JOIN health_events h ON h.id = mp.milk_withdrawal_event_id
+WHERE mp.milk_withdrawal_event_id IS NOT NULL
+  AND mp.farm_id <> h.farm_id
+
+UNION ALL
+
+SELECT 'operational_audit_entry_goat_farm_mismatch', count(*)
+FROM operational_audit_entry a
+JOIN cabras g ON g.num_registro = a.goat_registration_number
+WHERE a.goat_registration_number IS NOT NULL
+  AND a.farm_id <> g.capril_id
 
 ORDER BY check_name;
