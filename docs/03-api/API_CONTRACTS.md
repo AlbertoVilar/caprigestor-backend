@@ -77,6 +77,7 @@ Rotas canônicas:
 - `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/preview`
+- `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/registration-lookup`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm-batch`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
@@ -102,6 +103,10 @@ Paginação atual:
 Importação ABCC:
 - Feature opcional do módulo Goat.
 - Não substitui nem deprecia o cadastro manual.
+- `registration-lookup` recebe `{ raceId, registrationNumber }` e retorna `FOUND`,
+  `NOT_FOUND` ou `AMBIGUOUS`. A consulta é somente leitura; nenhum resultado cria ou
+  atualiza um animal. A mesma combinação raça + RG é validada novamente no preview antes
+  de ser disponibilizada para pré-preenchimento.
 - O endpoint `confirm` reutiliza internamente as regras de criação manual de cabra para evitar duplicação de domínio.
 
 Genealogia complementar ABCC:

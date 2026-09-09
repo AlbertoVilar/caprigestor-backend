@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.business;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
+import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
@@ -15,6 +16,7 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
@@ -125,6 +127,154 @@ class GoatAbccImportBusinessTest {
         assertThat(requestCaptor.getValue().getTod()).isNull();
         verify(ownershipService, never()).verifyFarmOwnership(1L);
         verify(goatFarmPort, never()).findById(any());
+    }
+
+    @Test
+    void shouldLookupByRaceAndRegistrationAndReturnPreviewWithoutPersisting() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890")).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .items(List.of(GoatAbccRawSearchItemVO.builder()
+                        .externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build()))
+                .build());
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(
+                buildRawPreview("A-001", "1234567890", "ANIMAL", "12345", "67890")
+        );
+
+        var response = business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("12345 67890").build());
+
+        assertThat(response.getStatus()).isEqualTo("FOUND");
+        assertThat(response.getPreview().getRegistrationNumber()).isEqualTo("1234567890");
+        verify(goatManagementUseCase, never()).createGoat(any(), any());
+    }
+
+    @Test
+    void shouldReturnNotFoundForRegistrationAbsentInSelectedRace() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890"))
+                .thenReturn(GoatAbccRawSearchResultVO.builder().items(List.of()).build());
+
+        var response = business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build());
+
+        assertThat(response.getStatus()).isEqualTo("NOT_FOUND");
+        verify(abccPublicQueryPort, never()).preview(any());
+    }
+
+    @Test
+    void shouldReturnAmbiguousInsteadOfSelectingFirstCandidate() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890")).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .items(List.of(
+                        GoatAbccRawSearchItemVO.builder().externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build(),
+                        GoatAbccRawSearchItemVO.builder().externalId("A-002").tod("12345").toe("67890").raca("SAANEN").build()
+                )).build());
+
+        var response = business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build());
+
+        assertThat(response.getStatus()).isEqualTo("AMBIGUOUS");
+        assertThat(response.getCandidates()).hasSize(2);
+        verify(abccPublicQueryPort, never()).preview(any());
+    }
+
+    @Test
+    void shouldIgnoreCandidateFromAnotherRace() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890")).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .items(List.of(GoatAbccRawSearchItemVO.builder()
+                        .externalId("A-BOER")
+                        .tod("12345")
+                        .toe("67890")
+                        .raca("BOER")
+                        .build()))
+                .build());
+
+        var response = business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build());
+
+        assertThat(response.getStatus()).isEqualTo("NOT_FOUND");
+        verify(abccPublicQueryPort, never()).preview(any());
+    }
+
+    @Test
+    void shouldRejectFoundCandidateWhenPreviewRegistrationDiffers() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890")).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .items(List.of(GoatAbccRawSearchItemVO.builder()
+                        .externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build()))
+                .build());
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(
+                buildRawPreview("A-001", "9999999999", "ANIMAL", "12345", "67890")
+        );
+
+        assertThatThrownBy(() -> business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("registro divergente");
+    }
+
+    @Test
+    void shouldRejectFoundCandidateWhenPreviewRaceDiffers() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890")).thenReturn(GoatAbccRawSearchResultVO.builder()
+                .items(List.of(GoatAbccRawSearchItemVO.builder()
+                        .externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build()))
+                .build());
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        GoatAbccRawPreviewVO wrongRacePreview = buildRawPreview(
+                "A-001", "1234567890", "ANIMAL", "12345", "67890"
+        );
+        wrongRacePreview.setRaca("BOER");
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(wrongRacePreview);
+
+        assertThatThrownBy(() -> business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("raça divergente");
+    }
+
+    @Test
+    void shouldPropagateAbccUnavailableDuringRegistrationLookup() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        ExternalServiceUnavailableException failure = new ExternalServiceUnavailableException(
+                "ABCC indisponível", new RuntimeException("timeout")
+        );
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890")).thenThrow(failure);
+
+        assertThatThrownBy(() -> business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build()))
+                .isSameAs(failure);
+    }
+
+    @Test
+    void shouldTranslateUnexpectedAbccFailureDuringRegistrationLookup() {
+        when(abccPublicQueryPort.listRaces()).thenReturn(List.of(
+                GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").build()
+        ));
+        when(abccPublicQueryPort.searchByRegistration(9, "1234567890"))
+                .thenThrow(new RuntimeException("malformed response"));
+
+        assertThatThrownBy(() -> business.lookupByRegistration(1L, GoatAbccRegistrationLookupRequestVO.builder()
+                .raceId(9).registrationNumber("1234567890").build()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Não foi possível consultar a ABCC pública");
     }
 
     @Test

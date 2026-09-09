@@ -114,14 +114,22 @@ Importação ABCC (opcional):
 - `GET /api/v1/goatfarms/{farmId}/goats/imports/abcc/races`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/preview`
+- `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/registration-lookup`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm-batch`
 
 ## Fluxo de importação ABCC
+- `registration-lookup`: consulta a ABCC por `raceId + registrationNumber` normalizado, sem persistir.
+  A raça deve ser selecionada antes do RG e a combinação não assume unicidade global do RG.
+  O retorno diferencia `FOUND`, `NOT_FOUND` e `AMBIGUOUS`; candidatos ambíguos nunca são
+  escolhidos automaticamente. Em `NOT_FOUND` ou indisponibilidade da ABCC, o cadastro manual
+  permanece disponível.
 - `search`: consulta lista pública da ABCC por raça/afixo e retorna candidatos normalizados para seleção.
 - `preview`: carrega detalhes e genealogia do animal selecionado (pai/mãe quando disponíveis) sem persistir.
 - `confirm`: confirma dados revisados e cria a cabra na fazenda reutilizando o fluxo de criação manual do módulo Goat.
 - `confirm-batch`: importa em lote os animais selecionados da página atual da busca, sem derrubar o lote inteiro quando houver incompatibilidades.
+- O lookup por RG carrega o mesmo preview editável do fluxo existente; a confirmação continua
+  manual e usa exclusivamente `confirm` após a revisão do usuário.
 
 ## Regra de situação ABCC sem RGD
 - `Sem RGD` não impede importação patrimonial.

@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResu
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchResponseVO;
 import com.devmaster.goatfarm.goat.enums.Gender;
@@ -156,6 +157,34 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.breed").value("SAANEN"));
 
         verify(goatAbccImportUseCase).preview(eq(1L), any());
+    }
+
+    @Test
+    void shouldLookupAbccByRaceAndRegistrationWithoutPersisting() throws Exception {
+        when(goatAbccImportUseCase.lookupByRegistration(eq(1L), any())).thenReturn(
+                GoatAbccRegistrationLookupResponseVO.builder()
+                        .status("FOUND")
+                        .message("Animal localizado")
+                        .preview(GoatAbccPreviewResponseVO.builder()
+                                .externalId("4044")
+                                .registrationNumber("1234567890")
+                                .name("TOPAZIO")
+                                .breed(GoatBreed.SAANEN)
+                                .build())
+                        .candidates(List.of())
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/imports/abcc/registration-lookup")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"raceId\":9,\"registrationNumber\":\"1234567890\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FOUND"))
+                .andExpect(jsonPath("$.preview.externalId").value("4044"))
+                .andExpect(jsonPath("$.preview.registrationNumber").value("1234567890"));
+
+        verify(goatAbccImportUseCase).lookupByRegistration(eq(1L), any());
     }
 
     @Test

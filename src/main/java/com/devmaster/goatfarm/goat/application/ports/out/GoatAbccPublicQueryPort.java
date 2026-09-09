@@ -13,5 +13,7 @@ public interface GoatAbccPublicQueryPort {
 
     GoatAbccRawSearchResultVO search(GoatAbccSearchRequestVO requestVO);
 
+    GoatAbccRawSearchResultVO searchByRegistration(Integer raceId, String registrationNumber);
+
     GoatAbccRawPreviewVO preview(String externalId);
 }
