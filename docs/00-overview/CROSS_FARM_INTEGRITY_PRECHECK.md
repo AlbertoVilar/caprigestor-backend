@@ -15,6 +15,8 @@ use `flyway repair`, update em massa ou inferência automática para mascarar a
 divergência.
 
 O script cobre relações que hoje possuem chaves estrangeiras independentes ou
-não possuem chave composta: reprodução/cabra, evento/gestação, saúde/cabra,
-comercial/cliente e cabra, e estoque/item/lote. Ele é somente diagnóstico: não
-substitui backup, `flyway info`/`validate`, teste de upgrade nem o restore smoke.
+não possuem chave composta: reprodução/cabra/eventos, saúde/cabra, comercial/
+cliente e cabra, estoque/item/lote, lactação/produção de leite e auditoria
+operacional/cabra. Ele retorna 22 contagens agregadas no estado atual. É somente
+diagnóstico: não substitui backup, `flyway info`/`validate`, teste de upgrade nem
+o restore smoke.
