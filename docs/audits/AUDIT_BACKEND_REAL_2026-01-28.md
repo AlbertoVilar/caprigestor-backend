@@ -1,5 +1,12 @@
 # AUDIT_BACKEND_REAL_2026-01-28
 
+> Documento histórico: retrata o baseline observado em 2026-01-28 e não é a
+> fonte atual de verdade. Para o estado vigente, consulte
+> [PROJECT_STATUS](../00-overview/PROJECT_STATUS.md), o [portal](../INDEX.md) e
+> o código/migrations/testes do repositório.
+
+Escopo original: auditoria técnica do backend realizada em 2026-01-28.
+
 ## Resumo executivo (10 pontos)
 - Baseline de testes via `mvn -q verify` passou; total 136 testes, 0 falhas, 0 erros, 0 skipped (evidencia em `target/surefire-reports`).
 - `mvn -q clean test` e `mvn -q test` expiraram por timeout (~4 min cada) antes de concluir; testes confirmados pelo `verify`.

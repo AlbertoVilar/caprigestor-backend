@@ -1,52 +1,50 @@
-# Roadmap do Projeto GoatFarm/CapriGestor Backend
-Última atualização: 2026-08-08
-Escopo: próximos ciclos após fechamento técnico do MVP backend.
+# Roadmap do Projeto CapriGestor Backend
 
-Links relacionados: [Status do Projeto](./PROJECT_STATUS.md), [Prontidão do MVP](./MVP_READY.md), [Contratos API](../03-api/API_CONTRACTS.md), [Guia de Versionamento](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
+Ultima atualizacao: 2026-09-09
+Escopo: trabalho futuro ainda nao implementado; nao e um espelho do estado atual.
+Links relacionados: [Status](./PROJECT_STATUS.md), [MVP](./MVP_READY.md), [Contratos API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Portal](../INDEX.md)
 
-## 1. Estado atual
-- MVP backend concluído nos módulos: Security/Ownership, Goat/Farm, Reproduction, Lactation/MilkProduction, Health e Inventory.
-- Convenção de rotas padronizada exclusivamente em `/api/v1`.
-- Migração do frontend concluída e compatibilidade não versionada removida em 2026-08-07.
+## Estado de partida
 
-## 2. Próximos marcos (pós-MVP)
-### Marco 1 - Hardening operacional
-- Remover TODOs críticos e lacunas do fluxo assíncrono de eventos.
-- Consolidar monitoramento de erros funcionais e técnicos.
-- Reduzir warnings recorrentes de tooling em testes (Mockito/ByteBuddy).
+O backend ja possui Authority, Farm, Goat/Genealogy, Reproduction,
+Lactation/Milk, Health, Inventory, Commercial, Article e Audit. Esses modulos
+nao devem ser listados como trabalho futuro. A V38 de integridade referencial,
+os gates de CI e as rotas `/api/v1` fazem parte do estado atual.
 
-### Marco 2 - Evolução de domínio (após estabilização)
-- Compras e vendas com integração de estoque.
-- Consolidação financeira mínima por fazenda.
-- Painéis farm-level com agregação no backend, sem lógica pesada no frontend.
+## Proximos ciclos
 
-### Marco 3 - Vitrine pública de animais (planejado, não implementado)
-- Criar na página inicial a seção `Animais disponíveis`, com anúncios em destaque e acesso ao catálogo completo.
-- Permitir que gestores autorizados publiquem, pausem e encerrem anúncios dos animais da própria fazenda.
-- Exibir fotografia principal, galeria, descrição comercial, preço opcional, localização, dados zootécnicos e acesso à genealogia.
-- Usar os contatos públicos autorizados da fazenda para facilitar a negociação com o criador.
-- Disponibilizar consulta pública com filtros por raça, sexo, localização e faixa de preço.
-- Modelar o anúncio como recurso próprio (por exemplo, `AnimalListing`), separado do cadastro do animal e da venda concluída.
-- Manter o animal `ATIVO` enquanto estiver apenas anunciado; o status `VENDIDO` continua reservado para a conclusão da venda.
-- Ao registrar a venda no módulo Comercial, encerrar automaticamente o anúncio correspondente.
-- Impedir anúncios ativos para animais vendidos, falecidos, transferidos ou fora da operação.
-- Definir armazenamento de imagens fora do banco relacional, persistindo apenas metadados e URLs no domínio do anúncio.
+### 1. Homologacao e operacao controlada
 
-#### Recorte inicial sugerido
-1. Administração do anúncio: publicação, edição, pausa e encerramento.
-2. Uma fotografia principal, descrição e preço opcional.
-3. Destaques na página inicial e catálogo público de animais disponíveis.
-4. Página pública do anúncio com genealogia e contato da fazenda.
-5. Integração com a venda de animal já existente no módulo Comercial.
+- executar smoke de restore, Flyway e fluxos criticos no ambiente HML;
+- validar secrets, pares JWT, CORS, SMTP e conexoes por ambiente;
+- medir observabilidade, alertas e comportamento de rollback;
+- registrar achados funcionais sem alterar contratos fora de uma intervencao propria.
 
-## 3. Critérios de prioridade
-- Impacto direto na operação da fazenda.
-- Redução de risco de regressão e custo de manutenção.
-- Preservação da arquitetura hexagonal e limites entre módulos.
-- Contratos de API sempre atualizados junto com o código.
+### 2. Governanca tecnica
 
-## 4. Regras de execução
-- Fluxo obrigatório de Git: `feature/* -> develop -> main` via PR.
-- Sem push direto em branches protegidas.
-- Gate obrigatório antes de merge: `./mvnw -U -T 1C clean test`.
-- Não criar arquivos Markdown na raiz (exceto `README.md`).
+- manter contratos API sincronizados com controllers e testes;
+- ampliar guards ArchUnit para reduzir acoplamento JPA entre contextos;
+- automatizar verificacao de links, metadados e rotas documentadas;
+- acompanhar o piso de cobertura sem reduzir o ratchet atual de 75,88%.
+
+### 3. Evolucao de produto
+
+- vitrine publica de animais disponiveis, separada de venda concluida;
+- integracao comercial/estoque quando houver requisito fechado;
+- dashboards farm-scoped com agregacoes no backend;
+- evolucao da mensageria somente quando houver necessidade operacional comprovada.
+
+## Criterios para priorizacao
+
+- impacto direto na operacao da fazenda;
+- risco de regressao e custo de manutencao;
+- preservacao da arquitetura hexagonal e dos limites entre modulos;
+- contratos de API atualizados junto com qualquer mudanca funcional;
+- evidencias de homologacao antes de promover comportamento para producao.
+
+## Regras de execucao
+
+- fluxo Git: `feature/* -> develop -> main` via PR;
+- sem push direto em branches protegidas;
+- nenhum item entra neste roadmap depois de implementado: ele deve ser movido
+  para o PROJECT_STATUS.

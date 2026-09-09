@@ -1,5 +1,9 @@
 # Runbook de deploy Docker em producao
 
+Última atualização: 2026-09-09
+Escopo: primeiro cutover de produção com Docker, proxy reverso e banco privado.
+Links relacionados: [Portal](../INDEX.md), [Checklist de promoção](./PRODUCTION_DATABASE_PROMOTION_CHECKLIST.md), [Runbook de saneamento](./PRODUCTION_BASE_SANITIZATION_RUNBOOK.md), [Rotação JWT](../04-security/JWT_KEY_ROTATION_RUNBOOK.md)
+
 ## Objetivo
 
 Executar o primeiro cutover real do CapriGestor com:

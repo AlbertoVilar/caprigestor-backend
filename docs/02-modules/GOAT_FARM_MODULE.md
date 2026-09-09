@@ -1,9 +1,9 @@
 ﻿# GOAT_FARM_MODULE
-Última atualização: 2026-08-07
+Última atualização: 2026-09-09
 Escopo: contratos e bordas HTTP do módulo base de Fazendas e Cabras (Goat/Farm).
 Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Padrão Market-Grade](../01-architecture/MODULE_STANDARD_MARKET_GRADE.md)
 
-Atualizado em 2026-09-04 para as referências genealógicas locais e externas.
+O catálogo abaixo reflete os controllers e contratos atuais; mudanças funcionais devem ser confirmadas no código e nas migrations.
 
 ## Objetivo do módulo
 - Cadastrar fazendas caprinas.
@@ -49,6 +49,7 @@ Cabras:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `GET /api/v1/goatfarms/{farmId}/goats?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/search?name=&page=&size=&sort=`
+- `GET /api/v1/goatfarms/{farmId}/goats/summary`
 - `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/exit`
 
 Reprodução (Sprint 1 - parto + cria(s)):
@@ -235,5 +236,12 @@ Regras de decisão por item no lote:
   validação genealógica obrigatória.
 
 ## Cobertura mínima
-- Unit: [GoatFarmBusinessTest](../../src/test/java/com/devmaster/goatfarm/farm/business/GoatFarmBusinessTest), [GoatBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatBusinessTest), [GenealogicalParentageServiceTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GenealogicalParentageServiceTest), [GoatAbccImportBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatAbccImportBusinessTest)
-- Controller: [GoatFarmControllerTest](../../src/test/java/com/devmaster/goatfarm/farm/api/GoatFarmControllerTest), [GoatControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatControllerTest), [GoatAbccImportControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatAbccImportControllerTest)
+- Unit: [GoatFarmBusinessTest](../../src/test/java/com/devmaster/goatfarm/farm/business/GoatFarmBusinessTest.java), [GoatBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatBusinessTest.java), [GenealogicalParentageServiceTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GenealogicalParentageServiceTest.java), [GoatAbccImportBusinessTest](../../src/test/java/com/devmaster/goatfarm/goat/business/GoatAbccImportBusinessTest.java)
+- Controller: [GoatFarmControllerTest](../../src/test/java/com/devmaster/goatfarm/farm/api/GoatFarmControllerTest.java), [GoatControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatControllerTest.java), [GoatAbccImportControllerTest](../../src/test/java/com/devmaster/goatfarm/goat/api/GoatAbccImportControllerTest.java)
+
+## Observacao sobre a leitura de resumo
+
+O controller usa a marca `@AuthenticatedFarmRead`, mas essa anotacao atualmente
+nao implementa, sozinha, uma verificacao de seguranca. O comportamento efetivo
+da rota depende do `SecurityConfig` vigente e deve ser confirmado como parte da
+politica de autorizacao; esta documentacao nao altera esse comportamento.

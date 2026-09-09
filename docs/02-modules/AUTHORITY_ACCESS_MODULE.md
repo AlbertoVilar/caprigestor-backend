@@ -1,6 +1,7 @@
 ﻿# Módulo Authority / acesso / recuperação de senha
 Última atualização: 2026-09-08
 Escopo: autenticação, refresh, cadastro inicial, administração de usuários e recuperação de senha do CapriGestor.
+Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Rotação JWT](../04-security/JWT_KEY_ROTATION_RUNBOOK.md), [Resposta a incidentes](../04-security/SECURITY_INCIDENT_RESPONSE.md)
 
 ## Administração de usuários
 

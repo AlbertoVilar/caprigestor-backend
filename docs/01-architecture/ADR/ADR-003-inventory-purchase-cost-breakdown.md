@@ -1,5 +1,9 @@
 # ADR-003 — Composição do custo de compra no estoque
 
+Última atualização: 2026-09-09
+Escopo: decisão de cálculo e persistência do custo de compras no estoque.
+Links relacionados: [Portal](../../INDEX.md), [Contratos da API](../../03-api/API_CONTRACTS.md), [Módulo Inventory](../../02-modules/INVENTORY_MODULE.md), [ADR-002](./ADR-002-inventory-ledger-balance-and-lots.md)
+
 ## Status
 
 Aceita em 2026-08-09.

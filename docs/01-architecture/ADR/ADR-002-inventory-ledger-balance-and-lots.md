@@ -1,7 +1,7 @@
 ﻿# ADR-002 — Inventory: ledger, balance materializado e lotes
 Última atualização: 2026-02-19
 Escopo: decisão arquitetural para o módulo Inventory no backend GoatFarm/CapriGestor.
-Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Módulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [TODO MVP](../../_work/INVENTORY_TODO_MVP.md)
+Links relacionados: [Portal](../../INDEX.md), [Arquitetura](../ARCHITECTURE.md), [Módulo Inventory](../../02-modules/INVENTORY_MODULE.md), [API_CONTRACTS](../../03-api/API_CONTRACTS.md), [Roadmap](../../00-overview/ROADMAP.md)
 
 ## Status
 - **Aceito** (aprovado para implementação do MVP).
@@ -112,4 +112,4 @@ Critério de conformidade arquitetural:
 - alertas operacionais mais consistentes no front.
 
 ## Referência de implementação
-Backlog executável e ordem de entrega em: [INVENTORY_TODO_MVP.md](../../_work/INVENTORY_TODO_MVP.md)
+Backlog futuro e ordem de entrega em: [ROADMAP.md](../../00-overview/ROADMAP.md)
