@@ -156,6 +156,24 @@ class GoatPersistenceAdapterTest {
         verify(repository).deleteGoatsFromOtherUsers(2L);
     }
 
+    @Test
+    void preservesLegacyJpaViewsDuringTheTransition() {
+        Page<GoatEntity> page = new PageImpl<>(List.of(entity), PageRequest.of(0, 2), 1);
+        when(repository.save(entity)).thenReturn(entity);
+        when(repository.findAllByFarmId(1L, PageRequest.of(0, 2))).thenReturn(page);
+        when(repository.findAllByFarmIdAndBreed(1L, GoatBreed.SAANEN, PageRequest.of(0, 2))).thenReturn(page);
+        when(repository.findByNameAndFarmId(1L, "Matriz", PageRequest.of(0, 2))).thenReturn(page);
+        when(repository.findByNameAndFarmIdAndBreed(1L, "Matriz", GoatBreed.SAANEN, PageRequest.of(0, 2))).thenReturn(page);
+
+        GoatPersistenceAdapter legacyAdapter = new GoatPersistenceAdapter(repository);
+        assertThat(legacyAdapter.save(entity)).isSameAs(entity);
+        assertThat(legacyAdapter.findAllByFarmId(1L, PageRequest.of(0, 2))).isSameAs(page);
+        assertThat(legacyAdapter.findAllByFarmIdAndBreed(1L, GoatBreed.SAANEN, PageRequest.of(0, 2))).isSameAs(page);
+        assertThat(legacyAdapter.findByNameAndFarmId(1L, "Matriz", PageRequest.of(0, 2))).isSameAs(page);
+        assertThat(legacyAdapter.findByNameAndFarmIdAndBreed(1L, "Matriz", GoatBreed.SAANEN,
+                PageRequest.of(0, 2))).isSameAs(page);
+    }
+
     private GoatEntity entity(Long technicalId, String registration) {
         GoatEntity result = new GoatEntity();
         result.setTechnicalId(technicalId);

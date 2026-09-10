@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class GoatPersistenceMapperTest {
 
@@ -30,6 +31,12 @@ class GoatPersistenceMapperTest {
                 null, null, null, Category.PA, null, null, 2L, 2L, null, null);
 
         assertThat(first).isEqualTo(sameIdentity);
+        assertThat(first).isEqualTo(first);
+        assertThat(first).isNotEqualTo("not a goat");
+        assertThat(first.hashCode()).isEqualTo(new GoatId(3).hashCode());
+        Goat unsaved = Goat.register(RegistrationIdentity.of("UNSAVED", null, null), "Novo", Gender.FEMEA,
+                null, null, LocalDate.of(2025, 1, 1), GoatStatus.ATIVO, Category.PA, null, null, 1L, 1L);
+        assertThat(unsaved.hashCode()).isNotEqualTo(0);
     }
 
     @Test
@@ -68,5 +75,39 @@ class GoatPersistenceMapperTest {
         assertThat(entity.getRegistrationNumber()).isEqualTo("C1");
         assertThat(entity.getFatherTechnicalId()).isEqualTo(9L);
         assertThat(entity.getExternalFatherRegistrationNumber()).isNull();
+    }
+
+    @Test
+    void mapsLocalParentFromRelationOrTechnicalShadowAndRejectsInvalidValueObjects() {
+        GoatEntity localParent = new GoatEntity();
+        localParent.setRegistrationNumber("PARENT");
+        localParent.setName("Pai");
+        localParent.setTechnicalId(null);
+        GoatEntity child = new GoatEntity();
+        child.setTechnicalId(20L);
+        child.setRegistrationNumber("CHILD");
+        child.setName("Cria");
+        child.setGender(Gender.FEMEA);
+        child.setBirthDate(LocalDate.of(2025, 1, 1));
+        child.setStatus(GoatStatus.ATIVO);
+        child.setFather(localParent);
+        child.setFatherTechnicalId(9L);
+        Goat mapped = mapper.toDomain(child);
+
+        assertThat(mapped.father().id()).isEqualTo(new GoatId(9L));
+        assertThat(mapped.father().registrationNumber()).isEqualTo("PARENT");
+
+        GoatEntity shadowOnly = new GoatEntity();
+        shadowOnly.setTechnicalId(21L);
+        shadowOnly.setRegistrationNumber("SHADOW");
+        shadowOnly.setName("Sombra");
+        shadowOnly.setGender(Gender.FEMEA);
+        shadowOnly.setBirthDate(LocalDate.of(2025, 1, 1));
+        shadowOnly.setStatus(GoatStatus.ATIVO);
+        shadowOnly.setMotherTechnicalId(8L);
+        assertThat(mapper.toDomain(shadowOnly).mother().id()).isEqualTo(new GoatId(8L));
+
+        assertThatThrownBy(() -> new GoatId(0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> RegistrationIdentity.of(" ", null, null)).isInstanceOf(IllegalArgumentException.class);
     }
 }
