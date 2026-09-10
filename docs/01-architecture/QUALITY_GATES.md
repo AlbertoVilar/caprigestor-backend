@@ -1,6 +1,6 @@
 # Qualidade, supply chain e observabilidade
 
-Última atualização: 2026-09-09
+Última atualização: 2026-09-10
 Escopo: gates automatizados introduzidos na W5.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [API](../03-api/API_CONTRACTS.md), [Runbook de homologação](../00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
 
@@ -22,6 +22,9 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [AP
   Trivy de forma explícita e auditável.
 - `supply_chain.yml` publica um SBOM CycloneDX como artefato e verifica a imagem
   Docker com Trivy, falhando em vulnerabilidades altas/críticas corrigíveis.
+- Todas as ações reutilizáveis dos workflows são fixadas por SHA imutável. As
+  ações oficiais usam gerações compatíveis com o runtime Node.js 24 dos runners,
+  evitando dependência das ações Node.js 20 obsoletas.
 
 ## Observabilidade
 
