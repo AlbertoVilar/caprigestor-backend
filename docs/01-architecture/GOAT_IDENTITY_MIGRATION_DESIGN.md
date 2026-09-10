@@ -26,7 +26,7 @@ Esta ID3 não implementa `GoatId`, `RegistrationIdentity`, Java/JPA, repository,
 
 1. O mesmo animal biológico conserva o mesmo `GoatId`.
 2. TOD + TOE formam o RG conforme normalização canônica: trim externo, remoção de espaços internos, maiúsculas `Locale.ROOT`, preservação de zeros à esquerda, sem hífen/padding/inferência implícitos.
-3. `GoatFarm.tod` é origem/escopo de novos registros; `Goat.tod` não é sincronizado automaticamente depois da criação.
+3. `GoatFarm.tod` é origem/escopo **somente de animais que se originam/nascem naquele criatório**; não fornece o TOD de todo animal cadastrado naquela fazenda. Animal adquirido/external-origin preserva seu próprio TOD/TOE/RG, mesmo no primeiro cadastro local; `Goat.tod` não é sincronizado automaticamente depois da criação.
 4. Cadastro manual é válido antes de o animal existir na ABCC.
 5. ABCC é fronteira externa: usa raça + dados registrais e não conhece `GoatId`.
 6. RG atual é globalmente único no CapriGestor, independente de raça, fazenda ou status; raça é filtro do lookup ABCC. A constraint definitiva ainda deve ser confirmada antes da ID4.
@@ -65,6 +65,21 @@ O inventário ID1/ADR-004 chama o conjunto de “11 FKs diretas”. A leitura li
 | 10 | payloads/consultas de leite | sem FK adicional | lookup/apresentação | varia | sem FK | GoatId interno + RG display | alto |
 
 As nove constraints ativas são as duas de `cabras`, eventos, pregnancy, reproductive_event, health, lactation, animal_sale e audit. O inventário de “11 referências” não pode ser usado para omitir a auditoria da coluna de leite nem para recriar `genealogia`.
+
+### 4.2 Dependências estruturais fora de FKs declaradas
+
+O inventário ID3 inclui também usos que não aparecem como constraint SQL, pois uma troca de PK pode quebrá-los mesmo sem o PostgreSQL acusar violação:
+
+| Dependência | Evidência atual | Tratamento futuro |
+| --- | --- | --- |
+| SQL nativo de limpeza | `events/persistence/repository/EventRepository.java`, `deleteEventsFromOtherUsers`, consulta `DELETE FROM eventos ... g.num_registro` | atribuir à ID6-B; trocar para GoatId/farm scope e cobrir com teste de integração |
+| Seeds/bootstrap | `src/main/resources/seed/seed_capril_vilar.sql` insere `cabras.num_registro`, `pai_num_registro` e `mae_num_registro`, com `ON CONFLICT (num_registro)` | atribuir à ID4/ID6; manter RG como dado de carga, resolver pais por id quando o schema exigir, sem transformar seed em contrato ABCC |
+| JPQL e queries Spring Data | `GoatRepository` pesquisa `registrationNumber` e a consulta de grafo usa `g.id` apesar de não haver `id` atual | classificar cada query como structural, lookup ou legacy; corrigir `g.id` antes da troca de tipo |
+| Serviços/adapters | `GoatGenderValidator`, reprodução, eventos, saúde, leite e comercial recebem `String goatId` e fazem lookup por RG | migrar para ports por GoatId; manter métodos de busca por RG somente como compatibilidade |
+| Fixtures/helpers | testes de eventos, reprodução, saúde e genealogia constroem `Goat`/filhos com RG como `goatId` | atualizar na onda do módulo; adicionar fixtures dual e prova de continuidade |
+| Relatórios/limpeza | consultas de auditoria, eventos e telas usam `goatRegistrationNumber` para filtro/apresentação | separar filtro por GoatId de snapshot RG; atribuir às ondas de API/frontend/audit |
+
+Nenhuma dependência não-FK pode ficar sem uma onda responsável. A ID4 deve executar uma busca de código e de scripts/seeds, além de `information_schema`, e registrar cada ocorrência como `STRUCTURAL_ID`, `BUSINESS_IDENTIFIER`, `LOOKUP`, `PRESENTATION`, `EXTERNAL` ou `LEGACY`.
 
 V38 deve continuar protegendo o escopo da fazenda. No alvo, validar `(farm_id, GoatId)` contra `(capril_id, id)` ou manter GoatId global e uma validação equivalente; não remover a proteção cross-farm durante a troca.
 
@@ -232,4 +247,3 @@ Gates obrigatórios: Flyway clean e upgrade V7–V38; Testcontainers PostgreSQL 
 Se HML possuir dados reais, a identidade estrutural deve estar completa antes da entrada. Se a base atual for realmente descartável, o reset controlado reduz somente `DATA MIGRATION COST`; não reduz `ARCHITECTURAL MIGRATION COST` e não justifica levar RG como PK para HML.
 
 A próxima etapa é revisar os bloqueadores e abrir a primeira onda de implementação (ID4-A) a partir do `develop` reconciliado. Este documento não autoriza código, migration, schema, API, frontend ou alteração de dados.
-
