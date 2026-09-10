@@ -53,6 +53,7 @@ auxiliar e nao e necessario para um clone limpo.
 - [ADR-001 - Registro atomico (PT)](./01-architecture/ADR/ADR-001-atomic-goatfarm-registration-pt-br.md)
 - [ADR-002 - Inventory ledger](./01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md)
 - [ADR-003 - Purchase cost](./01-architecture/ADR/ADR-003-inventory-purchase-cost-breakdown.md)
+- [ADR-004 - Goat identity model](./01-architecture/ADR/ADR-004-goat-identity-model.md)
 
 ## Modules
 
