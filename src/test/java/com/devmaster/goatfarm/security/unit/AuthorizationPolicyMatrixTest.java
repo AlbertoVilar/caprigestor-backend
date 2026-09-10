@@ -7,7 +7,7 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -42,7 +42,7 @@ class AuthorizationPolicyMatrixTest {
 
         UserPersistencePort userPort = Mockito.mock(UserPersistencePort.class);
         GoatFarmPersistencePort farmPort = Mockito.mock(GoatFarmPersistencePort.class);
-        GoatPersistencePort goatPort = Mockito.mock(GoatPersistencePort.class);
+        LegacyGoatPersistencePort goatPort = Mockito.mock(LegacyGoatPersistencePort.class);
         FarmAccessQueryPort accessPort = Mockito.mock(FarmAccessQueryPort.class);
         when(userPort.findByEmail("matrix@example.com")).thenReturn(Optional.of(current));
         when(farmPort.findById(10L)).thenReturn(Optional.of(farm));

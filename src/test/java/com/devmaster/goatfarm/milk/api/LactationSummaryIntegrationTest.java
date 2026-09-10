@@ -8,7 +8,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
@@ -72,7 +72,7 @@ class LactationSummaryIntegrationTest {
 
     private User ownerUser;
     private GoatFarm ownerFarm;
-    private Goat ownerGoat;
+    private GoatEntity ownerGoat;
     private Lactation lactation;
 
     @BeforeEach
@@ -99,8 +99,8 @@ class LactationSummaryIntegrationTest {
         ownerFarm.setUser(ownerUser);
         ownerFarm = goatFarmRepository.save(ownerFarm);
 
-        ownerGoat = new Goat();
-        ownerGoat.setName("Goat 1");
+        ownerGoat = new GoatEntity();
+        ownerGoat.setName("GoatEntity 1");
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setFarm(ownerFarm);
         ownerGoat.setGender(Gender.FEMEA);
@@ -201,8 +201,8 @@ class LactationSummaryIntegrationTest {
     void summaryShouldReturn422ForMaleGoat() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
 
-        Goat maleGoat = new Goat();
-        maleGoat.setName("Goat Male");
+        GoatEntity maleGoat = new GoatEntity();
+        maleGoat.setName("GoatEntity Male");
         maleGoat.setRegistrationNumber("GOAT-002");
         maleGoat.setFarm(ownerFarm);
         maleGoat.setGender(Gender.MACHO);
@@ -236,4 +236,3 @@ class LactationSummaryIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 }
-

@@ -8,7 +8,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
@@ -74,7 +74,7 @@ class MilkProductionCancellationIntegrationTest {
 
     private User ownerUser;
     private GoatFarm ownerFarm;
-    private Goat ownerGoat;
+    private GoatEntity ownerGoat;
     private Lactation activeLactation;
 
     @BeforeEach
@@ -101,7 +101,7 @@ class MilkProductionCancellationIntegrationTest {
         ownerFarm.setUser(ownerUser);
         ownerFarm = goatFarmRepository.save(ownerFarm);
 
-        ownerGoat = new Goat();
+        ownerGoat = new GoatEntity();
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setName("Mimosinha");
         ownerGoat.setGender(Gender.FEMEA);
@@ -249,4 +249,3 @@ class MilkProductionCancellationIntegrationTest {
         return milkProductionRepository.save(production);
     }
 }
-

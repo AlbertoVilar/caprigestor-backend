@@ -35,7 +35,8 @@ public class GoatResponseVO {
     private String motherName;
     private String motherRegistrationNumber;
 
-    private String userName;      private Long farmId;
+    private String userName;
+    private Long farmId;
 
     private String farmName;
 
@@ -44,8 +45,8 @@ public class GoatResponseVO {
 
     public GoatResponseVO(String registrationNumber, String name, Gender gender, GoatBreed breed,
                          String color, LocalDate birthDate, GoatStatus status, GoatExitType exitType, LocalDate exitDate, String exitNotes, String tod, String toe,
-                         Category category, String fatherName, String fatherRegistrationNumber, 
-                         String motherName, String motherRegistrationNumber, String userName, 
+                         Category category, String fatherName, String fatherRegistrationNumber,
+                         String motherName, String motherRegistrationNumber, String userName,
                          Long farmId, String farmName) {
         this.registrationNumber = registrationNumber;
         this.name = name;
@@ -71,22 +72,22 @@ public class GoatResponseVO {
 
         public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
-    
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    
+
     public Gender getGender() { return gender; }
     public void setGender(Gender gender) { this.gender = gender; }
-    
+
     public GoatBreed getBreed() { return breed; }
     public void setBreed(GoatBreed breed) { this.breed = breed; }
-    
+
     public String getColor() { return color; }
     public void setColor(String color) { this.color = color; }
-    
+
     public LocalDate getBirthDate() { return birthDate; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
-    
+
     public GoatStatus getStatus() { return status; }
     public void setStatus(GoatStatus status) { this.status = status; }
 
@@ -98,36 +99,35 @@ public class GoatResponseVO {
 
     public String getExitNotes() { return exitNotes; }
     public void setExitNotes(String exitNotes) { this.exitNotes = exitNotes; }
-    
+
     public String getTod() { return tod; }
     public void setTod(String tod) { this.tod = tod; }
-    
+
     public String getToe() { return toe; }
     public void setToe(String toe) { this.toe = toe; }
-    
+
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
-    
+
     public String getFatherName() { return fatherName; }
     public void setFatherName(String fatherName) { this.fatherName = fatherName; }
-    
+
     public String getFatherRegistrationNumber() { return fatherRegistrationNumber; }
     public void setFatherRegistrationNumber(String fatherRegistrationNumber) { this.fatherRegistrationNumber = fatherRegistrationNumber; }
-    
+
     public String getMotherName() { return motherName; }
     public void setMotherName(String motherName) { this.motherName = motherName; }
-    
+
     public String getMotherRegistrationNumber() { return motherRegistrationNumber; }
     public void setMotherRegistrationNumber(String motherRegistrationNumber) { this.motherRegistrationNumber = motherRegistrationNumber; }
-    
+
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
-    
+
     public Long getFarmId() { return farmId; }
     public void setFarmId(Long farmId) { this.farmId = farmId; }
-    
+
     public String getFarmName() { return farmName; }
     public void setFarmName(String farmName) { this.farmName = farmName; }
 
 }
-

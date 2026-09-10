@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.goat.persistence.repository;
 
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
@@ -15,16 +15,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-public interface GoatRepository extends JpaRepository<Goat, String> {
+public interface GoatRepository extends JpaRepository<GoatEntity, String> {
 
-    Optional<Goat> findByRegistrationNumber(String registrationNumber);
+    Optional<GoatEntity> findByRegistrationNumber(String registrationNumber);
 
-    @Query("SELECT g FROM Goat g WHERE g.id = :id AND g.farm.id = :farmId")
-    Optional<Goat> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
+    @Query("SELECT g FROM GoatEntity g WHERE g.registrationNumber = :id AND g.farm.id = :farmId")
+    Optional<GoatEntity> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
 
-    Page<Goat> findAllByFarmId(Long farmId, Pageable pageable);
+    @Query("SELECT g FROM GoatEntity g WHERE g.technicalId = :technicalId")
+    Optional<GoatEntity> findByTechnicalId(@Param("technicalId") Long technicalId);
 
-    Page<Goat> findAllByFarmIdAndBreed(Long farmId, GoatBreed breed, Pageable pageable);
+    @Query("SELECT g FROM GoatEntity g WHERE g.technicalId = :technicalId AND g.farm.id = :farmId")
+    Optional<GoatEntity> findByTechnicalIdAndFarmId(@Param("technicalId") Long technicalId, @Param("farmId") Long farmId);
+
+    Page<GoatEntity> findAllByFarmId(Long farmId, Pageable pageable);
+
+    Page<GoatEntity> findAllByFarmIdAndBreed(Long farmId, GoatBreed breed, Pageable pageable);
 
     long countByFarmId(Long farmId);
 
@@ -32,21 +38,21 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
 
     long countByFarmIdAndStatus(Long farmId, GoatStatus status);
 
-    @Query("SELECT COUNT(g) FROM Goat g WHERE g.farm.id = :farmId AND g.breed IS NULL")
+    @Query("SELECT COUNT(g) FROM GoatEntity g WHERE g.farm.id = :farmId AND g.breed IS NULL")
     long countByFarmIdWithoutBreed(@Param("farmId") Long farmId);
 
-    @Query("SELECT g.breed AS breed, COUNT(g) AS total FROM Goat g WHERE g.farm.id = :farmId AND g.breed IS NOT NULL GROUP BY g.breed ORDER BY COUNT(g) DESC, g.breed ASC")
+    @Query("SELECT g.breed AS breed, COUNT(g) AS total FROM GoatEntity g WHERE g.farm.id = :farmId AND g.breed IS NOT NULL GROUP BY g.breed ORDER BY COUNT(g) DESC, g.breed ASC")
     java.util.List<GoatBreedCountProjection> countBreedsByFarmId(@Param("farmId") Long farmId);
 
-    @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
-    Page<Goat> findByNameAndFarmId(@Param("farmId") Long farmId, @Param("name") String name, Pageable pageable);
+    @Query("SELECT g FROM GoatEntity g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Page<GoatEntity> findByNameAndFarmId(@Param("farmId") Long farmId, @Param("name") String name, Pageable pageable);
 
-    @Query("SELECT g FROM Goat g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')) AND g.breed = :breed")
-    Page<Goat> findByNameAndFarmIdAndBreed(@Param("farmId") Long farmId, @Param("name") String name, @Param("breed") GoatBreed breed, Pageable pageable);
+    @Query("SELECT g FROM GoatEntity g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')) AND g.breed = :breed")
+    Page<GoatEntity> findByNameAndFarmIdAndBreed(@Param("farmId") Long farmId, @Param("name") String name, @Param("breed") GoatBreed breed, Pageable pageable);
 
     @Query("""
             SELECT g
-            FROM Goat g
+            FROM GoatEntity g
             WHERE g.farm.id = :farmId
               AND (
                   g.mother.registrationNumber = :parentRegistrationNumber
@@ -54,7 +60,10 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
               )
             ORDER BY CASE WHEN g.birthDate IS NULL THEN 1 ELSE 0 END, g.birthDate DESC, g.registrationNumber ASC
             """)
-    List<Goat> findOffspringByParentRegistration(@Param("farmId") Long farmId, @Param("parentRegistrationNumber") String parentRegistrationNumber);
+    List<GoatEntity> findOffspringByParentRegistration(@Param("farmId") Long farmId, @Param("parentRegistrationNumber") String parentRegistrationNumber);
+
+    @Query("SELECT g FROM GoatEntity g WHERE g.farm.id = :farmId AND (g.fatherTechnicalId = :parentId OR g.motherTechnicalId = :parentId) ORDER BY g.birthDate DESC, g.registrationNumber ASC")
+    List<GoatEntity> findOffspringByParentTechnicalId(@Param("farmId") Long farmId, @Param("parentId") Long parentId);
 
     @Modifying
     @Transactional
@@ -63,7 +72,7 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
 
     // Carregamento completo com JOIN FETCH para genealogia (pai/mãe, avós e bisavós)
     @Query(
-        "SELECT g FROM Goat g " +
+        "SELECT g FROM GoatEntity g " +
         "LEFT JOIN FETCH g.farm gf " +
         "LEFT JOIN FETCH gf.user " +
         "LEFT JOIN FETCH g.father f " +
@@ -82,6 +91,5 @@ public interface GoatRepository extends JpaRepository<Goat, String> {
         "LEFT JOIN FETCH mm.mother mmm " +
         "WHERE g.registrationNumber = :id AND g.farm.id = :farmId"
     )
-    Optional<Goat> findByIdAndFarmIdWithFamilyGraph(@Param("id") String id, @Param("farmId") Long farmId);
+    Optional<GoatEntity> findByIdAndFarmIdWithFamilyGraph(@Param("id") String id, @Param("farmId") Long farmId);
 }
-

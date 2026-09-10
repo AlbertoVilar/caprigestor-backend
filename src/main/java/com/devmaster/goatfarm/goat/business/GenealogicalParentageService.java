@@ -6,10 +6,10 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,12 +25,12 @@ import java.util.Optional;
 @Service
 public class GenealogicalParentageService {
 
-    private final GoatPersistencePort goatPersistencePort;
+    private final LegacyGoatPersistencePort goatPersistencePort;
     private final GenealogyAbccQueryPort genealogyAbccQueryPort;
     private final GoatGenderValidator goatGenderValidator;
 
     public GenealogicalParentageService(
-            GoatPersistencePort goatPersistencePort,
+            LegacyGoatPersistencePort goatPersistencePort,
             GenealogyAbccQueryPort genealogyAbccQueryPort,
             GoatGenderValidator goatGenderValidator
     ) {
@@ -88,7 +88,7 @@ public class GenealogicalParentageService {
             throw new InvalidArgumentException(role.fieldName(), "O " + role.label() + " não pode ser o próprio animal.");
         }
 
-        Optional<Goat> localParent = goatPersistencePort.findByRegistrationNumber(registration);
+        Optional<GoatEntity> localParent = goatPersistencePort.findByRegistrationNumber(registration);
         if (localParent.isPresent()) {
             validateGender(localParent.get().getGender(), role);
             return ParentReference.local(localParent.get());
@@ -154,19 +154,19 @@ public class GenealogicalParentageService {
     }
 
     public record ResolvedParentage(
-            Goat father,
-            Goat mother,
+            GoatEntity father,
+            GoatEntity mother,
             String externalFatherRegistrationNumber,
             String externalMotherRegistrationNumber
     ) {
     }
 
-    private record ParentReference(Goat localGoat, String externalRegistrationNumber) {
+    private record ParentReference(GoatEntity localGoat, String externalRegistrationNumber) {
         private static ParentReference empty() {
             return new ParentReference(null, null);
         }
 
-        private static ParentReference local(Goat goat) {
+        private static ParentReference local(GoatEntity goat) {
             return new ParentReference(goat, null);
         }
 

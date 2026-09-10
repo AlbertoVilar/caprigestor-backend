@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
@@ -28,7 +28,7 @@ import java.time.LocalDate;
 public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEventQueryUseCase {
 
     private final HealthEventPersistencePort persistencePort;
-    private final GoatPersistencePort goatPersistencePort;
+    private final LegacyGoatPersistencePort goatPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
     private final HealthEventBusinessMapper mapper;
     private final EntityFinder entityFinder;
@@ -36,7 +36,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
-            GoatPersistencePort goatPersistencePort,
+            LegacyGoatPersistencePort goatPersistencePort,
             GoatGenderValidator goatGenderValidator,
             HealthEventBusinessMapper mapper,
             EntityFinder entityFinder,

@@ -20,7 +20,11 @@ import java.time.LocalDate;
 @Setter
 @Entity
 @Table(name = "cabras")
-public class Goat {
+public class GoatEntity {
+
+        /** Technical identity introduced by V39; RG remains the transitional JPA id. */
+        @Column(name = "id", insertable = false, updatable = false)
+        private Long technicalId;
 
         @Id
         @Column(name = "num_registro", unique = true, nullable = false, length = 20)
@@ -69,11 +73,17 @@ public class Goat {
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "pai_num_registro", referencedColumnName = "num_registro")
-        private Goat father;
+        private GoatEntity father;
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "mae_num_registro", referencedColumnName = "num_registro")
-        private Goat mother;
+        private GoatEntity mother;
+
+        @Column(name = "pai_goat_id")
+        private Long fatherTechnicalId;
+
+        @Column(name = "mae_goat_id")
+        private Long motherTechnicalId;
 
         @Column(name = "pai_rg_externo", length = 20)
         private String externalFatherRegistrationNumber;
@@ -90,8 +100,17 @@ public class Goat {
         @JoinColumn(name = "capril_id")
         private GoatFarm farm;
 
-        public Goat() {
+        public GoatEntity() {
     }
+
+        public Long getTechnicalId() { return technicalId; }
+    public void setTechnicalId(Long technicalId) { this.technicalId = technicalId; }
+
+    public Long getFatherTechnicalId() { return fatherTechnicalId; }
+    public void setFatherTechnicalId(Long fatherTechnicalId) { this.fatherTechnicalId = fatherTechnicalId; }
+
+    public Long getMotherTechnicalId() { return motherTechnicalId; }
+    public void setMotherTechnicalId(Long motherTechnicalId) { this.motherTechnicalId = motherTechnicalId; }
 
         public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
@@ -132,11 +151,11 @@ public class Goat {
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
     
-    public Goat getFather() { return father; }
-    public void setFather(Goat father) { this.father = father; }
+    public GoatEntity getFather() { return father; }
+    public void setFather(GoatEntity father) { this.father = father; }
     
-    public Goat getMother() { return mother; }
-    public void setMother(Goat mother) { this.mother = mother; }
+    public GoatEntity getMother() { return mother; }
+    public void setMother(GoatEntity mother) { this.mother = mother; }
 
     public String getExternalFatherRegistrationNumber() { return externalFatherRegistrationNumber; }
     public void setExternalFatherRegistrationNumber(String externalFatherRegistrationNumber) { this.externalFatherRegistrationNumber = externalFatherRegistrationNumber; }
@@ -152,11 +171,9 @@ public class Goat {
 
     @Override
     public String toString() {
-        return "Goat{" +
+        return "GoatEntity{" +
                 "registrationNumber='" + registrationNumber + '\'' +
                 ", name='" + name + '\'' +
                 '}';
     }
-
 }
-

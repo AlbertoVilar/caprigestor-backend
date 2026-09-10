@@ -10,13 +10,13 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthKidRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthKidResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
@@ -79,7 +79,7 @@ class ReproductionBusinessTest {
     private ReproductiveEventPersistencePort reproductiveEventPersistencePort;
 
     @Mock
-    private GoatPersistencePort goatPersistencePort;
+    private LegacyGoatPersistencePort goatPersistencePort;
 
     @Mock
     private GoatFarmPersistencePort goatFarmPersistencePort;
@@ -962,7 +962,7 @@ class ReproductionBusinessTest {
         Long pregnancyId = 10L;
         BirthRequestVO requestVO = validBirthRequestVO();
         Pregnancy activePregnancy = activePregnancyEntity();
-        Goat motherFromAnotherFarm = motherGoatEntity();
+        GoatEntity motherFromAnotherFarm = motherGoatEntity();
         motherFromAnotherFarm.setTod("99999");
         doNothing().when(goatGenderValidator).requireFemaleAndActive(FARM_ID, GOAT_ID);
         when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID)).thenReturn(Optional.of(motherFromAnotherFarm));
@@ -1188,12 +1188,12 @@ class ReproductionBusinessTest {
                 .notes("Desmame sem intercorrencias")
                 .build();
 
-        Goat kid = weanableKidEntity();
+        GoatEntity kid = weanableKidEntity();
         doNothing().when(goatGenderValidator).requireActive(FARM_ID, GOAT_ID);
         when(goatPersistencePort.findByIdAndFarmId(GOAT_ID, FARM_ID)).thenReturn(Optional.of(kid));
         when(reproductiveEventPersistencePort.findLatestByFarmIdAndGoatIdAndEventType(FARM_ID, GOAT_ID, ReproductiveEventType.WEANING))
                 .thenReturn(Optional.empty());
-        when(goatPersistencePort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(goatPersistencePort.save(any(GoatEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ReproductiveEvent savedEvent = ReproductiveEvent.builder()
                 .id(700L)
@@ -1220,7 +1220,7 @@ class ReproductionBusinessTest {
         assertThat(capturedEvent.getEventType()).isEqualTo(ReproductiveEventType.WEANING);
         assertThat(capturedEvent.getEventDate()).isEqualTo(requestVO.getWeaningDate());
 
-        verify(goatPersistencePort).save(any(Goat.class));
+        verify(goatPersistencePort).save(any(GoatEntity.class));
 
         assertThat(result.getGoatId()).isEqualTo(GOAT_ID);
         assertThat(result.getWeaningDate()).isEqualTo(weaningDate);
@@ -1240,12 +1240,12 @@ class ReproductionBusinessTest {
                 .hasMessageContaining("Data de desmame nao pode ser futura");
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(goatPersistencePort, never()).save(any(GoatEntity.class));
     }
 
     @Test
     void registerWeaning_shouldRejectWhenDateIsBeforeBirthDate() {
-        Goat kid = weanableKidEntity();
+        GoatEntity kid = weanableKidEntity();
         kid.setBirthDate(LocalDate.now(clock).minusDays(1));
 
         WeaningRequestVO requestVO = WeaningRequestVO.builder()
@@ -1260,7 +1260,7 @@ class ReproductionBusinessTest {
                 .hasMessageContaining("Data de desmame nao pode ser anterior a data de nascimento");
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(goatPersistencePort, never()).save(any(GoatEntity.class));
     }
 
     @Test
@@ -1286,12 +1286,12 @@ class ReproductionBusinessTest {
                 .hasMessageContaining("Ja existe desmame registrado");
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(goatPersistencePort, never()).save(any(GoatEntity.class));
     }
 
     @Test
     void registerWeaning_shouldRejectWhenKidHasNoMotherLink() {
-        Goat kid = weanableKidEntity();
+        GoatEntity kid = weanableKidEntity();
         kid.setMother(null);
 
         WeaningRequestVO requestVO = WeaningRequestVO.builder()
@@ -1306,7 +1306,7 @@ class ReproductionBusinessTest {
                 .hasMessageContaining("Desmame so pode ser registrado para animal vinculado a uma matriz");
 
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
-        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(goatPersistencePort, never()).save(any(GoatEntity.class));
     }
 
     // ==================================================================================
@@ -1528,15 +1528,15 @@ class ReproductionBusinessTest {
                 .build();
     }
 
-    private Goat weanableKidEntity() {
-        Goat kid = new Goat();
+    private GoatEntity weanableKidEntity() {
+        GoatEntity kid = new GoatEntity();
         kid.setRegistrationNumber(GOAT_ID);
         kid.setGender(Gender.FEMEA);
         kid.setBreed(GoatBreed.SAANEN);
         kid.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
         kid.setBirthDate(LocalDate.of(2026, 1, 15));
 
-        Goat mother = new Goat();
+        GoatEntity mother = new GoatEntity();
         mother.setRegistrationNumber("MOTHER-001");
         mother.setGender(Gender.FEMEA);
         kid.setMother(mother);
@@ -1544,8 +1544,8 @@ class ReproductionBusinessTest {
         return kid;
     }
 
-    private Goat motherGoatEntity() {
-        Goat goat = new Goat();
+    private GoatEntity motherGoatEntity() {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(GOAT_ID);
         goat.setGender(Gender.FEMEA);
         goat.setBreed(GoatBreed.SAANEN);
@@ -1562,8 +1562,8 @@ class ReproductionBusinessTest {
         return farm;
     }
 
-    private Goat fatherGoatEntity() {
-        Goat goat = new Goat();
+    private GoatEntity fatherGoatEntity() {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("SIRE-001");
         goat.setGender(Gender.MACHO);
         goat.setBreed(GoatBreed.SAANEN);
@@ -1641,4 +1641,3 @@ class ReproductionBusinessTest {
         return PregnancyResponseVO.builder().build();
     }
 }
-

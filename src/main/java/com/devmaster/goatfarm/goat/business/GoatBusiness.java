@@ -4,30 +4,31 @@ import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
-import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
-import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.goat.business.mapper.GoatBusinessMapper;
-import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.domain.Goat;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
-import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,270 +37,173 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
+/** Application service for Goat, depending on the domain-facing persistence boundary. */
 @Service
 public class GoatBusiness implements GoatManagementUseCase {
     private final GoatPersistencePort goatPort;
     private final GoatFarmPersistencePort goatFarmPort;
     private final OwnershipService ownershipService;
-    private final GoatBusinessMapper goatBusinessMapper;
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase operationalAuditUseCase;
-    private final GenealogicalParentageService genealogicalParentageService;
+    private final GoatParentagePort parentagePort;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
-                        OwnershipService ownershipService, GoatBusinessMapper goatBusinessMapper, EntityFinder entityFinder,
-                        OperationalAuditUseCase operationalAuditUseCase,
-                        GenealogicalParentageService genealogicalParentageService) {
+                        OwnershipService ownershipService, EntityFinder entityFinder,
+                        OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
-        this.goatBusinessMapper = goatBusinessMapper;
         this.entityFinder = entityFinder;
         this.operationalAuditUseCase = operationalAuditUseCase;
-        this.genealogicalParentageService = genealogicalParentageService;
+        this.parentagePort = parentagePort;
     }
 
     @Transactional
+    @Override
     public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmManagement(farmId);
-
-        if (requestVO.getRegistrationNumber() != null && goatPort.existsByRegistrationNumber(requestVO.getRegistrationNumber())) {
-            throw new DuplicateEntityException("Número de registro já existe.");
-        }
-
-        GoatFarm farm = entityFinder.findOrThrow(
-                () -> goatFarmPort.findById(farmId),
-                "Fazenda não encontrada."
-        );
-        GenealogicalParentageService.ResolvedParentage parentage = genealogicalParentageService.resolve(
-                requestVO.getCategory(),
-                requestVO.getRegistrationNumber(),
-                requestVO.getFatherRegistrationNumber(),
-                requestVO.getMotherRegistrationNumber()
-        );
-
-        Goat goat = goatBusinessMapper.toEntity(requestVO);
-        User user = ownershipService.getCurrentUser();
-        goat.setUser(user);
-        goat.setFarm(farm);
-        goat.setFather(parentage.father());
-        goat.setMother(parentage.mother());
-        goat.setExternalFatherRegistrationNumber(parentage.externalFatherRegistrationNumber());
-        goat.setExternalMotherRegistrationNumber(parentage.externalMotherRegistrationNumber());
-        
-        Goat savedGoat = goatPort.save(goat);
-
-        return goatBusinessMapper.toResponseVO(savedGoat);
+        String registration = normalize(requestVO.getRegistrationNumber());
+        if (registration == null) throw new InvalidArgumentException("registrationNumber", "Número de registro é obrigatório");
+        if (goatPort.existsByRegistrationNumber(registration)) throw new DuplicateEntityException("Número de registro já existe.");
+        entityFinder.findOrThrow(() -> goatFarmPort.findById(farmId), "Fazenda não encontrada.");
+        GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), registration,
+                requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
+        Goat goat = Goat.register(RegistrationIdentity.of(registration, requestVO.getTod(), requestVO.getToe()),
+                requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(), requestVO.getBirthDate(),
+                requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother(), farmId,
+                ownershipService.getCurrentUser().getId());
+        return toResponse(goatPort.save(goat));
     }
 
     @Transactional
+    @Override
     public GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-
-        Goat goatToUpdate = entityFinder.findOrThrow(
-                () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra não encontrada nesta fazenda."
-        );
-
-        GenealogicalParentageService.ResolvedParentage parentage = genealogicalParentageService.resolve(
-                requestVO.getCategory(),
-                goatToUpdate.getRegistrationNumber(),
-                requestVO.getFatherRegistrationNumber(),
-                requestVO.getMotherRegistrationNumber()
-        );
-
-        goatBusinessMapper.updateEntity(goatToUpdate, requestVO, parentage.father(), parentage.mother());
-        goatToUpdate.setExternalFatherRegistrationNumber(parentage.externalFatherRegistrationNumber());
-        goatToUpdate.setExternalMotherRegistrationNumber(parentage.externalMotherRegistrationNumber());
-        
-        Goat updatedGoat = goatPort.save(goatToUpdate);
-        return goatBusinessMapper.toResponseVO(updatedGoat);
+        Goat goat = findOrThrow(farmId, goatId);
+        GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), goat.registrationNumber(),
+                requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
+        goat.updateProfile(requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(),
+                requestVO.getBirthDate(), requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother());
+        return toResponse(goatPort.save(goat));
     }
 
     @Transactional
+    @Override
     public GoatExitResponseVO exitGoat(Long farmId, String goatId, GoatExitRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-
-        Goat goat = entityFinder.findOrThrow(
-                () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra nao encontrada nesta fazenda."
-        );
-
-        if (requestVO.getExitType() == null) {
-            throw new InvalidArgumentException("exitType", "Tipo de saida e obrigatorio");
-        }
-        if (requestVO.getExitDate() == null) {
-            throw new InvalidArgumentException("exitDate", "Data de saida e obrigatoria");
-        }
-        if (requestVO.getExitDate().isAfter(LocalDate.now())) {
-            throw new InvalidArgumentException("exitDate", "Data de saida nao pode ser futura");
-        }
-        if (goat.getBirthDate() != null && requestVO.getExitDate().isBefore(goat.getBirthDate())) {
-            throw new InvalidArgumentException("exitDate", "Data de saida nao pode ser anterior a data de nascimento");
-        }
-        if (goat.getStatus() != GoatStatus.ATIVO) {
-            throw new BusinessRuleException(
-                    "status",
-                    "A saida controlada so e permitida para animais com status ATIVO. Status atual: " + goat.getStatus()
-            );
-        }
-        if (goat.getExitType() != null || goat.getExitDate() != null) {
-            throw new BusinessRuleException("exitDate", "Ja existe saida registrada para este animal");
-        }
-
-        GoatStatus previousStatus = goat.getStatus();
+        Goat goat = findOrThrow(farmId, goatId);
+        validateExit(goat, requestVO);
+        GoatStatus previousStatus = goat.status();
         GoatStatus currentStatus = mapExitStatus(requestVO.getExitType());
-
-        goat.setStatus(currentStatus);
-        goat.setExitType(requestVO.getExitType());
-        goat.setExitDate(requestVO.getExitDate());
-        goat.setExitNotes(normalizeNotes(requestVO.getNotes()));
-
-        Goat savedGoat = goatPort.save(goat);
-        operationalAuditUseCase.record(new OperationalAuditRecordVO(
-                farmId,
-                savedGoat.getRegistrationNumber(),
-                OperationalAuditActionType.GOAT_EXIT,
-                savedGoat.getRegistrationNumber(),
-                "Saida do rebanho registrada como " + requestVO.getExitType().getPortugueseValue()
-                        + " com status final " + savedGoat.getStatus() + "."
-        ));
-
-        return GoatExitResponseVO.builder()
-                .goatId(savedGoat.getRegistrationNumber())
-                .exitType(savedGoat.getExitType())
-                .exitDate(savedGoat.getExitDate())
-                .notes(savedGoat.getExitNotes())
-                .previousStatus(previousStatus)
-                .currentStatus(savedGoat.getStatus())
-                .build();
+        goat.markExit(requestVO.getExitType(), requestVO.getExitDate(), normalizeNotes(requestVO.getNotes()), currentStatus);
+        Goat saved = goatPort.save(goat);
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(farmId, saved.registrationNumber(),
+                OperationalAuditActionType.GOAT_EXIT, saved.registrationNumber(), "Saída do rebanho registrada como "
+                + requestVO.getExitType().getPortugueseValue() + " com status final " + saved.status() + "."));
+        return GoatExitResponseVO.builder().goatId(saved.registrationNumber()).exitType(saved.exitType())
+                .exitDate(saved.exitDate()).notes(saved.exitNotes()).previousStatus(previousStatus)
+                .currentStatus(saved.status()).build();
     }
 
     @Transactional
+    @Override
     public void deleteGoat(Long farmId, String goatId) {
         ownershipService.verifyGoatOwnership(farmId, goatId);
-        entityFinder.findOrThrow(
-                () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra não encontrada nesta fazenda."
-        );
-        goatPort.deleteById(goatId);
+        goatPort.deleteById(findOrThrow(farmId, goatId).id());
     }
 
     @Transactional(readOnly = true)
-    public GoatResponseVO findGoatById(Long farmId, String goatId) {
-        Goat goat = entityFinder.findOrThrow(
-                () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra não encontrada nesta fazenda."
-        );
-        return goatBusinessMapper.toResponseVO(goat);
-    }
+    @Override
+    public GoatResponseVO findGoatById(Long farmId, String goatId) { return toResponse(findOrThrow(farmId, goatId)); }
 
     @Transactional(readOnly = true)
+    @Override
     public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable) {
-        return goatPort.findAllByFarmId(farmId, pageable).map(goatBusinessMapper::toResponseVO);
+        return toSpringPage(goatPort.findAllByFarmId(farmId, toQuery(pageable)));
     }
 
     @Transactional(readOnly = true)
+    @Override
     public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, Pageable pageable) {
-        if (breed == null) {
-            return findAllGoatsByFarm(farmId, pageable);
-        }
-
-        return goatPort.findAllByFarmIdAndBreed(farmId, breed, pageable).map(goatBusinessMapper::toResponseVO);
+        return breed == null ? findAllGoatsByFarm(farmId, pageable)
+                : toSpringPage(goatPort.findAllByFarmIdAndBreed(farmId, breed, toQuery(pageable)));
     }
 
     @Transactional(readOnly = true)
+    @Override
     public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable) {
-        return goatPort.findByNameAndFarmId(farmId, name, pageable).map(goatBusinessMapper::toResponseVO);
+        return toSpringPage(goatPort.findByNameAndFarmId(farmId, name, toQuery(pageable)));
     }
 
     @Transactional(readOnly = true)
+    @Override
     public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, Pageable pageable) {
-        if (breed == null) {
-            return findGoatsByNameAndFarm(farmId, name, pageable);
-        }
-
-        return goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, pageable).map(goatBusinessMapper::toResponseVO);
+        return breed == null ? findGoatsByNameAndFarm(farmId, name, pageable)
+                : toSpringPage(goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, toQuery(pageable)));
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<GoatResponseVO> listOffspring(Long farmId, String goatId) {
-        Goat goat = entityFinder.findOrThrow(
-                () -> goatPort.findByIdAndFarmId(goatId, farmId),
-                "Cabra não encontrada nesta fazenda."
-        );
-
-        return goatPort.findOffspringByParentRegistration(farmId, goat.getRegistrationNumber()).stream()
-                .map(goatBusinessMapper::toResponseVO)
-                .toList();
+        return goatPort.findOffspringByParentId(farmId, findOrThrow(farmId, goatId).id()).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
+    @Override
     public GoatHerdSummaryVO getGoatHerdSummary(Long farmId) {
-        long total = goatPort.countByFarmId(farmId);
-        long males = goatPort.countByFarmIdAndGender(farmId, Gender.MACHO);
-        long females = goatPort.countByFarmIdAndGender(farmId, Gender.FEMEA);
-        long active = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.ATIVO);
-        long inactive = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.INATIVO);
-        long sold = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.VENDIDO);
-        long deceased = goatPort.countByFarmIdAndStatus(farmId, GoatStatus.FALECIDO);
-
-        List<GoatBreedSummaryVO> breeds = new ArrayList<>(
-                goatPort.countBreedsByFarmId(farmId).stream()
-                        .map(this::toBreedSummary)
-                        .toList()
-        );
-
-        long withoutBreed = goatPort.countByFarmIdWithoutBreed(farmId);
-        if (withoutBreed > 0) {
-            breeds.add(GoatBreedSummaryVO.builder()
-                    .breed(null)
-                    .label("Não informada")
-                    .count(withoutBreed)
-                    .build());
-        }
-
-        breeds.sort(Comparator
-                .comparingLong(GoatBreedSummaryVO::getCount)
-                .reversed()
-                .thenComparing(GoatBreedSummaryVO::getLabel, String.CASE_INSENSITIVE_ORDER));
-
-        return GoatHerdSummaryVO.builder()
-                .total(total)
-                .males(males)
-                .females(females)
-                .active(active)
-                .inactive(inactive)
-                .sold(sold)
-                .deceased(deceased)
-                .breeds(breeds)
-                .build();
+        GoatHerdSnapshot summary = goatPort.getHerdSummary(farmId);
+        List<GoatBreedSummaryVO> breeds = new ArrayList<>(summary.breeds().stream()
+                .map(b -> GoatBreedSummaryVO.builder().breed(b.breed()).label(b.breed().getLabel()).count(b.total()).build()).toList());
+        if (summary.withoutBreed() > 0) breeds.add(GoatBreedSummaryVO.builder().breed(null).label("Não informada").count(summary.withoutBreed()).build());
+        breeds.sort(Comparator.comparingLong(GoatBreedSummaryVO::getCount).reversed().thenComparing(GoatBreedSummaryVO::getLabel, String.CASE_INSENSITIVE_ORDER));
+        return GoatHerdSummaryVO.builder().total(summary.total()).males(summary.males()).females(summary.females())
+                .active(summary.active()).inactive(summary.inactive()).sold(summary.sold()).deceased(summary.deceased()).breeds(breeds).build();
     }
 
-    private GoatBreedSummaryVO toBreedSummary(GoatBreedCountProjection projection) {
-        return GoatBreedSummaryVO.builder()
-                .breed(projection.getBreed())
-                .label(projection.getBreed().getLabel())
-                .count(projection.getTotal())
-                .build();
+    private Goat findOrThrow(Long farmId, String token) {
+        Goat found = null;
+        try { long id = Long.parseLong(token); if (id > 0) found = goatPort.findByIdAndFarmId(new GoatId(id), farmId).orElse(null); }
+        catch (RuntimeException ignored) { /* Transitional URLs carry an RG. */ }
+        if (found == null) found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
+        if (found == null) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda.");
+        return found;
     }
 
-    private GoatStatus mapExitStatus(GoatExitType exitType) {
-        return switch (exitType) {
-            case VENDA -> GoatStatus.VENDIDO;
-            case MORTE -> GoatStatus.FALECIDO;
-            case DESCARTE, DOACAO, TRANSFERENCIA -> GoatStatus.INATIVO;
-        };
+    private Page<GoatResponseVO> toSpringPage(GoatPage<Goat> page) {
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(page.page(), page.size());
+        return new PageImpl<>(page.content().stream().map(this::toResponse).toList(), pageable, page.totalElements());
     }
 
-    private String normalizeNotes(String notes) {
-        if (notes == null) {
-            return null;
-        }
-        String normalized = notes.trim();
-        return normalized.isEmpty() ? null : normalized;
+    private GoatPageQuery toQuery(Pageable pageable) {
+        String sort = pageable.getSort().stream().findFirst().map(o -> o.getProperty() + "," + o.getDirection().name()).orElse("");
+        return new GoatPageQuery(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
+
+    private GoatResponseVO toResponse(Goat goat) {
+        GoatResponseVO response = new GoatResponseVO();
+        response.setRegistrationNumber(goat.registrationNumber()); response.setName(goat.name()); response.setGender(goat.gender());
+        response.setBreed(goat.breed()); response.setColor(goat.color()); response.setBirthDate(goat.birthDate()); response.setStatus(goat.status());
+        response.setExitType(goat.exitType()); response.setExitDate(goat.exitDate()); response.setExitNotes(goat.exitNotes()); response.setTod(goat.tod());
+        response.setToe(goat.toe()); response.setCategory(goat.category()); response.setFarmId(goat.farmId()); response.setFarmName(goat.farmName()); response.setUserName(goat.userName());
+        if (goat.father() != null) { response.setFatherRegistrationNumber(goat.father().registrationNumber()); response.setFatherName(goat.father().name()); }
+        if (goat.mother() != null) { response.setMotherRegistrationNumber(goat.mother().registrationNumber()); response.setMotherName(goat.mother().name()); }
+        return response;
+    }
+
+    private void validateExit(Goat goat, GoatExitRequestVO requestVO) {
+        if (requestVO.getExitType() == null) throw new InvalidArgumentException("exitType", "Tipo de saída é obrigatório");
+        if (requestVO.getExitDate() == null) throw new InvalidArgumentException("exitDate", "Data de saída é obrigatória");
+        if (requestVO.getExitDate().isAfter(LocalDate.now())) throw new InvalidArgumentException("exitDate", "Data de saída não pode ser futura");
+        if (goat.birthDate() != null && requestVO.getExitDate().isBefore(goat.birthDate())) throw new InvalidArgumentException("exitDate", "Data de saída não pode ser anterior à data de nascimento");
+        if (goat.status() != GoatStatus.ATIVO) throw new BusinessRuleException("status", "A saída controlada só é permitida para animais com status ATIVO. Status atual: " + goat.status());
+        if (goat.exitType() != null || goat.exitDate() != null) throw new BusinessRuleException("exitDate", "Já existe saída registrada para este animal");
+    }
+
+    private GoatStatus mapExitStatus(GoatExitType type) {
+        return switch (type) { case VENDA -> GoatStatus.VENDIDO; case MORTE -> GoatStatus.FALECIDO; case DESCARTE, DOACAO, TRANSFERENCIA -> GoatStatus.INATIVO; };
+    }
+    private String normalize(String value) { return value == null ? null : value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT); }
+    private String normalizeNotes(String value) { if (value == null) return null; String normalized = value.trim(); return normalized.isEmpty() ? null : normalized; }
 }
-
-

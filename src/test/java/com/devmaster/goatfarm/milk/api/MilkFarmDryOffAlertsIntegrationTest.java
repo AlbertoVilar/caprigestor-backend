@@ -8,7 +8,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
@@ -208,9 +208,9 @@ class MilkFarmDryOffAlertsIntegrationTest {
                 .andExpect(jsonPath("$.alerts.length()").value(0));
     }
 
-    private Goat createGoatAndActiveLactation(String goatId, Integer dryAtPregnancyDays) {
-        Goat goat = new Goat();
-        goat.setName("Goat " + goatId);
+    private GoatEntity createGoatAndActiveLactation(String goatId, Integer dryAtPregnancyDays) {
+        GoatEntity goat = new GoatEntity();
+        goat.setName("GoatEntity " + goatId);
         goat.setRegistrationNumber(goatId);
         goat.setFarm(ownerFarm);
         goat.setGender(Gender.FEMEA);
@@ -268,4 +268,3 @@ class MilkFarmDryOffAlertsIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
-

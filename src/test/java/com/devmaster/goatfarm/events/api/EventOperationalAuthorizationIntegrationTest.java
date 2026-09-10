@@ -13,7 +13,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -73,9 +73,9 @@ class EventOperationalAuthorizationIntegrationTest {
     private User linkedOperator;
     private User unlinkedOperator;
     private GoatFarm managedFarm;
-    private Goat managedGoat;
+    private GoatEntity managedGoat;
     private GoatFarm otherFarm;
-    private Goat otherGoat;
+    private GoatEntity otherGoat;
     private Event otherFarmEvent;
 
     @BeforeEach
@@ -220,7 +220,7 @@ class EventOperationalAuthorizationIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
-    private long createEvent(String token, GoatFarm farm, Goat goat, String description) throws Exception {
+    private long createEvent(String token, GoatFarm farm, GoatEntity goat, String description) throws Exception {
         MvcResult result = mockMvc.perform(post(eventPath(farm, goat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -247,8 +247,8 @@ class EventOperationalAuthorizationIntegrationTest {
         return goatFarmRepository.save(farm);
     }
 
-    private Goat createGoat(GoatFarm farm, String registrationNumber, String name) {
-        Goat goat = new Goat();
+    private GoatEntity createGoat(GoatFarm farm, String registrationNumber, String name) {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(registrationNumber);
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
@@ -258,7 +258,7 @@ class EventOperationalAuthorizationIntegrationTest {
         return goatRepository.save(goat);
     }
 
-    private Event createPersistedEvent(Goat goat, String description) {
+    private Event createPersistedEvent(GoatEntity goat, String description) {
         Event event = new Event();
         event.setGoat(goat);
         event.setEventType(EventType.VACINACAO);
@@ -279,11 +279,11 @@ class EventOperationalAuthorizationIntegrationTest {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("accessToken").asText();
     }
 
-    private String eventPath(GoatFarm farm, Goat goat) {
+    private String eventPath(GoatFarm farm, GoatEntity goat) {
         return "/api/v1/goatfarms/" + farm.getId() + "/goats/" + goat.getRegistrationNumber() + "/events";
     }
 
-    private String eventPayload(Goat goat, String description) {
+    private String eventPayload(GoatEntity goat, String description) {
         return "{\"goatId\":\"" + goat.getRegistrationNumber() + "\","
                 + "\"eventType\":\"VACINACAO\","
                 + "\"date\":\"" + LocalDate.now().minusDays(1) + "\","

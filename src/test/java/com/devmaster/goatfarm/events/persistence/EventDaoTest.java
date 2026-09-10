@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.events.persistence;
 import com.devmaster.goatfarm.events.enums.EventType;
 import com.devmaster.goatfarm.events.persistence.entity.Event;
 import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.events.persistence.adapter.EventPersistenceAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +29,7 @@ public class EventDaoTest {
 
     @Test
     void whenSaveEvent_thenEventIsSaved() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("R-123");
 
         Event event = new Event();
@@ -60,7 +60,7 @@ public class EventDaoTest {
 
     @Test
     void whenFindByGoat_thenAdapterDelegatesToRepository() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("R-123");
 
         Event e1 = new Event();
