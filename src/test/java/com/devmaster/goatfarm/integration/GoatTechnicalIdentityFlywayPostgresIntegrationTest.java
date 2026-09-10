@@ -24,7 +24,7 @@ class GoatTechnicalIdentityFlywayPostgresIntegrationTest {
 
     @Test
     void cleanInstallHandlesEmptyCabrasAndGeneratesIdentityFromOne() throws SQLException {
-        flyway().migrate();
+        flyway("39").migrate();
 
         try (Connection connection = openConnection()) {
             assertIdentityColumn(connection);
@@ -60,7 +60,7 @@ class GoatTechnicalIdentityFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(2L);
         }
 
-        flyway().migrate();
+        flyway("39").migrate();
 
         try (Connection connection = openConnection()) {
             assertIdentityColumn(connection);
