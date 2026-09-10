@@ -11,7 +11,7 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [Pa
 3. [OBSERVABILITY_LOGGING.md](./OBSERVABILITY_LOGGING.md) - logging e correlation id.
 4. [ABCC_INTEGRATION.md](./ABCC_INTEGRATION.md) - fronteira de integracao externa.
 5. [QUALITY_GATES.md](./QUALITY_GATES.md) - validacoes locais e CI.
-6. [ADR-002](./ADR/ADR-002-inventory-ledger-balance-and-lots.md) e [ADR-003](./ADR/ADR-003-inventory-purchase-cost-breakdown.md) - decisoes vigentes.
+6. [ADR-002](./ADR/ADR-002-inventory-ledger-balance-and-lots.md), [ADR-003](./ADR/ADR-003-inventory-purchase-cost-breakdown.md) e [ADR-004](./ADR/ADR-004-goat-identity-model.md) - decisoes e propostas vigentes.
 
 ## ADR-001
 
