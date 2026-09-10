@@ -234,17 +234,22 @@ fazenda e rejeita animal cujo TOD ABCC diverge dele. Na criação manual atual,
 no código atual.
 
 Decisão de domínio encerrada na ID2.1: `GoatFarm.tod` é a fonte de origem e
-escopo registral para animais que nascem ou são registrados naquele capril. No
-modelo-alvo, seu valor é copiado para `Goat.tod` no ato de criação/origem; a
-identidade registral do animal passa então a ser própria e não deve ser
-sincronizada automaticamente com alterações posteriores na fazenda.
+escopo registral **somente para animais que se originam/nascem naquele
+criatório**. Ele não é fonte do TOD de todo animal que é cadastrado no banco
+daquela fazenda. Para um animal adquirido, transferido ou de origem externa,
+`Goat.tod`, `Goat.toe` e RG vêm da identidade registral já pertencente ao
+indivíduo, mesmo que seja a primeira vez que ele aparece no CapriGestor. No
+modelo-alvo, o TOD da fazenda é copiado para `Goat.tod` apenas no fluxo de
+criação cuja origem seja aquele criatório; a identidade registral do animal
+passa então a ser própria e não deve ser sincronizada automaticamente com
+alterações posteriores na fazenda.
 
 Consequentemente:
 
 - alteração de ownership ou transferência de fazenda não altera `Goat.tod`,
   `Goat.toe` ou RG;
 - o TOD da fazenda continua servindo para validação do fluxo ABCC e para a
-  origem de novas crias;
+  origem de novas crias, sem substituir o TOD de animais adquiridos;
 - divergência entre `GoatFarm.tod` e `Goat.tod` de um animal existente não é
   corrigida por sincronização implícita; deve ser tratada por política explícita
   de retificação/reconciliação na ID3;
