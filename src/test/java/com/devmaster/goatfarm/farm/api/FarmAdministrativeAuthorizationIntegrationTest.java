@@ -225,6 +225,51 @@ class FarmAdministrativeAuthorizationIntegrationTest {
     }
 
     @Test
+    void managementReadReturnsCompleteDataOnlyToAdminOrOwningFarmOwner() throws Exception {
+        String adminToken = loginAndGetToken(admin.getEmail());
+        String ownerToken = loginAndGetToken(owner.getEmail());
+        String otherOwnerToken = loginAndGetToken(otherOwner.getEmail());
+        String linkedOperatorToken = loginAndGetToken(linkedOperator.getEmail());
+        String managementPath = "/api/v1/goatfarms/" + managedFarm.getId() + "/management";
+
+        mockMvc.perform(get(managementPath).header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value(owner.getEmail()))
+                .andExpect(jsonPath("$.user.cpf").value(owner.getCpf()))
+                .andExpect(jsonPath("$.address.street").value(managedAddress.getStreet()))
+                .andExpect(jsonPath("$.phones[0].number").value(managedPhone.getNumber()));
+
+        mockMvc.perform(get(managementPath).header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value(owner.getEmail()))
+                .andExpect(jsonPath("$.user.cpf").value(owner.getCpf()))
+                .andExpect(jsonPath("$.address.street").value(managedAddress.getStreet()))
+                .andExpect(jsonPath("$.address.neighborhood").value(managedAddress.getNeighborhood()))
+                .andExpect(jsonPath("$.address.zipCode").value(managedAddress.getZipCode()))
+                .andExpect(jsonPath("$.phones[0].id").value(managedPhone.getId()))
+                .andExpect(jsonPath("$.phones[0].ddd").value(managedPhone.getDdd()))
+                .andExpect(jsonPath("$.phones[0].number").value(managedPhone.getNumber()));
+
+        mockMvc.perform(get(managementPath).header("Authorization", bearer(otherOwnerToken)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(managementPath).header("Authorization", bearer(linkedOperatorToken)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(managementPath)).andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/goatfarms/999999/management")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/v1/goatfarms/" + managedFarm.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value(owner.getEmail()))
+                .andExpect(jsonPath("$.user.cpf").doesNotExist())
+                .andExpect(jsonPath("$.address.street").doesNotExist())
+                .andExpect(jsonPath("$.address.zipCode").doesNotExist())
+                .andExpect(jsonPath("$.phones").doesNotExist());
+    }
+
+    @Test
     void publicFullRegistrationCreatesTheOwnerAddressAndPhonesAtomically() throws Exception {
         long farmsBefore = goatFarmRepository.count();
         long addressesBefore = addressRepository.count();
