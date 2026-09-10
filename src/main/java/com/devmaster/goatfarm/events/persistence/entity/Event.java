@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.events.persistence.entity;
 
 import com.devmaster.goatfarm.events.enums.EventType;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,7 +25,7 @@ public class Event {
 
     @ManyToOne
     @JoinColumn(name = "goat_registration_number", referencedColumnName = "num_registro", nullable = false)
-    private Goat goat;
+    private GoatEntity goat;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_evento", nullable = false)
@@ -46,6 +46,6 @@ public class Event {
     @Column(name = "resultado")
     private String outcome;
 
-    public Goat getGoat() { return goat; }
-    public void setGoat(Goat goat) { this.goat = goat; }
+    public GoatEntity getGoat() { return goat; }
+    public void setGoat(GoatEntity goat) { this.goat = goat; }
 }

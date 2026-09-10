@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
@@ -24,7 +24,7 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +58,7 @@ class GoatAbccImportBusinessTest {
     @Mock
     private GoatManagementUseCase goatManagementUseCase;
     @Mock
-    private GoatPersistencePort goatPersistencePort;
+    private LegacyGoatPersistencePort goatPersistencePort;
     @Mock
     private EntityFinder entityFinder;
 
@@ -515,7 +515,7 @@ class GoatAbccImportBusinessTest {
 
         when(goatPersistencePort.findByIdAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
         when(goatPersistencePort.findByIdAndFarmId("2222222222", 1L)).thenReturn(Optional.empty());
-        when(goatPersistencePort.findByIdAndFarmId("3333333333", 1L)).thenReturn(Optional.of(new Goat()));
+        when(goatPersistencePort.findByIdAndFarmId("3333333333", 1L)).thenReturn(Optional.of(new GoatEntity()));
 
         GoatResponseVO created = new GoatResponseVO();
         created.setRegistrationNumber("1111111111");

@@ -5,14 +5,14 @@ import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.events.application.ports.out.EventPersistencePort;
 import com.devmaster.goatfarm.events.application.ports.out.EventPublisher;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.business.bo.EventPublication;
 import com.devmaster.goatfarm.events.enums.EventType;
 import com.devmaster.goatfarm.events.business.mapper.EventBusinessMapper;
 import com.devmaster.goatfarm.events.persistence.entity.Event;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,13 +29,13 @@ import java.util.Optional;
 public class EventBusiness implements EventManagementUseCase {
 
     private final EventPersistencePort eventPersistencePort;
-    private final GoatPersistencePort goatPersistencePort;
+    private final LegacyGoatPersistencePort goatPersistencePort;
     private final OwnershipService ownershipService;
     private final EventBusinessMapper eventMapper;
     private final EventPublisher eventPublisher;
 
     public EventBusiness(EventPersistencePort eventPersistencePort,
-                         GoatPersistencePort goatPersistencePort,
+                         LegacyGoatPersistencePort goatPersistencePort,
                          OwnershipService ownershipService,
                          EventBusinessMapper eventMapper,
                          EventPublisher eventPublisher) {
@@ -47,7 +47,7 @@ public class EventBusiness implements EventManagementUseCase {
     }
     @Override
     public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        Goat goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
+        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatRegistrationNumber));
 
         verifyFarmManagement(goat);
@@ -62,14 +62,14 @@ public class EventBusiness implements EventManagementUseCase {
 
     @Override
     public EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
-        Goat goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
+        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatRegistrationNumber));
 
         Event event = eventPersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
 
         if (!Optional.ofNullable(event.getGoat())
-                .map(Goat::getRegistrationNumber)
+                .map(GoatEntity::getRegistrationNumber)
                 .orElse("").equals(goatRegistrationNumber)) {
             throw new ResourceNotFoundException("Este evento não pertence à cabra de registro: " + goatRegistrationNumber);
         }
@@ -92,7 +92,7 @@ public class EventBusiness implements EventManagementUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<EventResponseVO> findEventsByGoat(String goatNumRegistration) {
-        Goat goat = goatPersistencePort.findByRegistrationNumber(goatNumRegistration)
+        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(goatNumRegistration)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatNumRegistration));
 
         verifyFarmManagement(goat);
@@ -111,7 +111,7 @@ public class EventBusiness implements EventManagementUseCase {
                                                       LocalDate startDate,
                                                       LocalDate endDate,
                                                       Pageable pageable) {
-        Goat goat = goatPersistencePort.findByRegistrationNumber(registrationNumber)
+        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(registrationNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + registrationNumber));
 
         verifyFarmManagement(goat);
@@ -133,11 +133,11 @@ public class EventBusiness implements EventManagementUseCase {
         eventPersistencePort.deleteEventsFromOtherUsers(adminId);
     }
 
-    private void verifyFarmOwnership(Goat goat) {
+    private void verifyFarmOwnership(GoatEntity goat) {
         ownershipService.verifyGoatOwnership(goat.getFarm().getId(), goat.getRegistrationNumber());
     }
 
-    private void verifyFarmManagement(Goat goat) {
+    private void verifyFarmManagement(GoatEntity goat) {
         Long farmId = goat.getFarm().getId();
         if (!ownershipService.canManageFarm(farmId)) {
             throw new AccessDeniedException("Usuário não pode operar esta fazenda.");
@@ -145,7 +145,7 @@ public class EventBusiness implements EventManagementUseCase {
     }
 
     private EventPublication toPublication(Event event) {
-        Goat goat = event.getGoat();
+        GoatEntity goat = event.getGoat();
         Long farmId = goat == null || goat.getFarm() == null ? null : goat.getFarm().getId();
         return new EventPublication(
                 event.getId(),

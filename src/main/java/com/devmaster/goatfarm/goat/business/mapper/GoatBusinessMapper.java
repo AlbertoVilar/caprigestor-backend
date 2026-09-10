@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.goat.business.mapper;
 
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -16,17 +16,23 @@ public interface GoatBusinessMapper {
     @Mapping(target = "userName", source = "user.name")
     @Mapping(target = "farmId", source = "farm.id")
     @Mapping(target = "farmName", source = "farm.name")
-    GoatResponseVO toResponseVO(Goat entity);
+    GoatResponseVO toResponseVO(GoatEntity entity);
 
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "farm", ignore = true)
+    @Mapping(target = "technicalId", ignore = true)
+    @Mapping(target = "fatherTechnicalId", ignore = true)
+    @Mapping(target = "motherTechnicalId", ignore = true)
     @Mapping(target = "father", ignore = true)
     @Mapping(target = "mother", ignore = true)
     @Mapping(target = "externalFatherRegistrationNumber", ignore = true)
     @Mapping(target = "externalMotherRegistrationNumber", ignore = true)
-    Goat toEntity(GoatRequestVO vo);
+    GoatEntity toEntity(GoatRequestVO vo);
 
     @Mapping(target = "registrationNumber", ignore = true)
+    @Mapping(target = "technicalId", ignore = true)
+    @Mapping(target = "fatherTechnicalId", ignore = true)
+    @Mapping(target = "motherTechnicalId", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "farm", ignore = true)
     @Mapping(target = "name", source = "vo.name")
@@ -45,5 +51,5 @@ public interface GoatBusinessMapper {
     @Mapping(target = "mother", source = "mother")
     @Mapping(target = "externalFatherRegistrationNumber", ignore = true)
     @Mapping(target = "externalMotherRegistrationNumber", ignore = true)
-    void updateEntity(@MappingTarget Goat entity, GoatRequestVO vo, Goat father, Goat mother);
+    void updateEntity(@MappingTarget GoatEntity entity, GoatRequestVO vo, GoatEntity father, GoatEntity mother);
 }

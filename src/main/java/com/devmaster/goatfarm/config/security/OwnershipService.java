@@ -6,7 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import org.slf4j.Logger;
@@ -20,13 +20,13 @@ public class OwnershipService {
 
     private final GoatFarmPersistencePort goatFarmPort;
     private final UserPersistencePort userPort;
-    private final GoatPersistencePort goatPort;
+    private final LegacyGoatPersistencePort goatPort;
     private final FarmAccessQueryPort farmAccessQueryPort;
     private final FarmOwnerQueryPort farmOwnerQueryPort;
 
     @org.springframework.beans.factory.annotation.Autowired
     public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort,
-                            GoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort,
+                            LegacyGoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort,
                             FarmOwnerQueryPort farmOwnerQueryPort) {
         this.goatFarmPort = goatFarmPort;
         this.userPort = userPort;
@@ -36,7 +36,7 @@ public class OwnershipService {
     }
 
     /** Compatibility constructor for isolated unit tests and legacy callers. */
-    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, GoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort) {
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, LegacyGoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort) {
         this(goatFarmPort, userPort, goatPort, farmAccessQueryPort, null);
     }
 
@@ -187,4 +187,3 @@ public class OwnershipService {
                 .map(farm -> farm.getUser() == null ? null : farm.getUser().getId());
     }
 }
-

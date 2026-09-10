@@ -1,107 +1,44 @@
 package com.devmaster.goatfarm.goat.application.ports.out;
 
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
-import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goat.domain.Goat;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
-import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Porta de saída para persistência de cabras
- * Define as operações de persistência necessárias para cabras
+ * Persistence boundary owned by the Goat application core.
+ *
+ * <p>No Spring Data, JPA entity or infrastructure projection crosses this
+ * interface. Transitional legacy modules use {@link LegacyGoatPersistencePort}
+ * until their own migration waves are complete.</p>
  */
 public interface GoatPersistencePort {
 
-    /**
-     * Salva uma cabra
-     * @param goat Cabra a ser salva
-     * @return Cabra salva
-     */
     Goat save(Goat goat);
 
-    /**
-     * Busca uma cabra pelo registrationNumber (ID primário)
-     * @param registrationNumber Número de registro da cabra
-     * @return Optional contendo a cabra se encontrada
-     */
-    Optional<Goat> findById(String registrationNumber);
+    Optional<Goat> findById(GoatId id);
 
-    /**
-     * Alias explícito para busca por número de registro
-     * @param registrationNumber Número de registro da cabraA
-     * @return Optional contendo a cabra se encontrada
-     */
-    Optional<Goat> findByRegistrationNumber(String registrationNumber);
+    Optional<Goat> findByIdAndFarmId(GoatId id, Long farmId);
 
-    /**
-     * Busca todas as cabras de um capril
-     * @param goatFarmId ID do capril
-     * @return Lista de cabras do capril
-     */
-    List<Goat> findByGoatFarmId(Long goatFarmId);
+    Optional<Goat> findDomainByRegistrationNumber(String registrationNumber);
 
-    long countByFarmId(Long goatFarmId);
+    Optional<Goat> findByRegistrationNumberAndFarmId(String registrationNumber, Long farmId);
 
-    long countByFarmIdAndGender(Long goatFarmId, Gender gender);
+    GoatPage<Goat> findAllByFarmId(Long farmId, GoatPageQuery query);
 
-    long countByFarmIdAndStatus(Long goatFarmId, GoatStatus status);
+    GoatPage<Goat> findAllByFarmIdAndBreed(Long farmId, GoatBreed breed, GoatPageQuery query);
 
-    long countByFarmIdWithoutBreed(Long goatFarmId);
+    GoatPage<Goat> findByNameAndFarmId(Long farmId, String name, GoatPageQuery query);
 
-    List<GoatBreedCountProjection> countBreedsByFarmId(Long goatFarmId);
+    GoatPage<Goat> findByNameAndFarmIdAndBreed(Long farmId, String name, GoatBreed breed, GoatPageQuery query);
 
-    /**
-     * Busca cabras de um capril com paginação
-     * @param goatFarmId ID do capril
-     * @param pageable Configuração de paginação
-     * @return Página de cabras
-     */
-    Page<Goat> findAllByFarmId(Long goatFarmId, Pageable pageable);
+    List<Goat> findOffspringByParentId(Long farmId, GoatId parentId);
 
-    Page<Goat> findAllByFarmIdAndBreed(Long goatFarmId, GoatBreed breed, Pageable pageable);
+    GoatHerdSnapshot getHerdSummary(Long farmId);
 
-    /**
-     * Busca cabras por nome e capril com paginação
-     * @param goatFarmId ID do capril
-     * @param name Nome para filtro
-     * @param pageable Configuração de paginação
-     * @return Página de cabras filtradas
-     */
-    Page<Goat> findByNameAndFarmId(Long goatFarmId, String name, Pageable pageable);
+    void deleteById(GoatId id);
 
-    Page<Goat> findByNameAndFarmIdAndBreed(Long goatFarmId, String name, GoatBreed breed, Pageable pageable);
-
-    List<Goat> findOffspringByParentRegistration(Long goatFarmId, String parentRegistrationNumber);
-
-    /**
-     * Busca cabra por registrationNumber e farmId
-     * @param id Número de registro
-     * @param farmId ID do capril
-     * @return Optional contendo a cabra se encontrada
-     */
-    Optional<Goat> findByIdAndFarmId(String id, Long farmId);
-
-    /**
-     * Remove uma cabra pelo registrationNumber
-     * @param registrationNumber Número de registro da cabra
-     */
-    void deleteById(String registrationNumber);
-
-    /**
-     * Verifica se uma cabra existe por número de registro
-     * @param registrationNumber Número de registro da cabra
-     * @return true se a cabra existe
-     */
     boolean existsByRegistrationNumber(String registrationNumber);
-
-    /**
-     * Remove cabras de outros usuários (operação administrativa)
-     * @param adminId ID do administrador
-     */
-    void deleteGoatsFromOtherUsers(Long adminId);
 }

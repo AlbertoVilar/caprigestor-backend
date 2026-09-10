@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryNodeVO
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryResponseVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +34,7 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
     @Override
     @Transactional(readOnly = true)
     public GenealogyComplementaryResponseVO findComplementaryGenealogy(Long farmId, String goatId) {
-        Goat goat = goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
+        GoatEntity goat = goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (isBlank(goat.getRegistrationNumber())) {
@@ -66,19 +66,19 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
     }
 
     private GenealogyComplementaryResponseVO buildResponse(
-            Goat root,
+            GoatEntity root,
             GenealogyAbccSnapshotVO abcc,
             GenealogyAbccSnapshotVO externalFather,
             GenealogyAbccSnapshotVO externalMother,
             GenealogyComplementaryIntegrationVO integration
     ) {
-        Goat paiLocal = root.getFather();
-        Goat maeLocal = root.getMother();
+        GoatEntity paiLocal = root.getFather();
+        GoatEntity maeLocal = root.getMother();
 
-        Goat avoPaternoLocal = paiLocal != null ? paiLocal.getFather() : null;
-        Goat avoPaternaLocal = paiLocal != null ? paiLocal.getMother() : null;
-        Goat avoMaternoLocal = maeLocal != null ? maeLocal.getFather() : null;
-        Goat avoMaternaLocal = maeLocal != null ? maeLocal.getMother() : null;
+        GoatEntity avoPaternoLocal = paiLocal != null ? paiLocal.getFather() : null;
+        GoatEntity avoPaternaLocal = paiLocal != null ? paiLocal.getMother() : null;
+        GoatEntity avoMaternoLocal = maeLocal != null ? maeLocal.getFather() : null;
+        GoatEntity avoMaternaLocal = maeLocal != null ? maeLocal.getMother() : null;
 
         return GenealogyComplementaryResponseVO.builder()
                 .animalPrincipal(buildNode("animalPrincipal", root, abcc != null ? abcc.getAnimalName() : null, abcc != null ? abcc.getAnimalRegistrationNumber() : null))
@@ -108,7 +108,7 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
     private GenealogyComplementaryNodeVO buildNode(
             String relationship,
-            Goat localGoat,
+            GoatEntity localGoat,
             String abccName,
             String abccRegistrationNumber
     ) {
@@ -117,7 +117,7 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
     private GenealogyComplementaryNodeVO buildNode(
             String relationship,
-            Goat localGoat,
+            GoatEntity localGoat,
             String abccName,
             String abccRegistrationNumber,
             boolean declared
@@ -182,4 +182,3 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-

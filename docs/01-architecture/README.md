@@ -2,7 +2,7 @@
 
 Ultima atualizacao: 2026-09-09
 Escopo: indice da arquitetura atual, seus gates e decisoes arquiteturais duradouras.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [Padrao de modulo](./MODULE_STANDARD_MARKET_GRADE.md), [Quality gates](./QUALITY_GATES.md)
+Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [Padrao de modulo](./MODULE_STANDARD_MARKET_GRADE.md), [Quality gates](./QUALITY_GATES.md), [Goat ID4-B2](./GOAT_HEXAGONAL_CORE_ID4_B2.md)
 
 ## Ordem de leitura
 
@@ -12,6 +12,7 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [Pa
 4. [ABCC_INTEGRATION.md](./ABCC_INTEGRATION.md) - fronteira de integracao externa.
 5. [QUALITY_GATES.md](./QUALITY_GATES.md) - validacoes locais e CI.
 6. [ADR-002](./ADR/ADR-002-inventory-ledger-balance-and-lots.md), [ADR-003](./ADR/ADR-003-inventory-purchase-cost-breakdown.md) e [ADR-004](./ADR/ADR-004-goat-identity-model.md) - decisoes e propostas vigentes.
+7. [GOAT_HEXAGONAL_CORE_ID4_B2](./GOAT_HEXAGONAL_CORE_ID4_B2.md) - primeira fronteira hexagonal implementada para o agregado Goat.
 
 ## ADR-001
 

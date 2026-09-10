@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQuery
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,11 +33,11 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldReturnFoundAndComplementMissingNodesFromAbcc() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("1643218012");
         goat.setName("XEQUE");
 
-        Goat mother = new Goat();
+        GoatEntity mother = new GoatEntity();
         mother.setRegistrationNumber("2114517012");
         mother.setName("NAIDE");
         goat.setMother(mother);
@@ -68,7 +68,7 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldReturnInsufficientDataWhenLocalRegistrationIsMissing() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("  ");
         goat.setName("SEM REGISTRO");
 
@@ -83,7 +83,7 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldReturnNotFoundWhenAbccDoesNotFindRegistration() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("1643218012");
         goat.setName("XEQUE");
 
@@ -99,7 +99,7 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldExposeAnUnknownExternalFatherAsDeclaredInsteadOfAbccValidated() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("KID-001");
         goat.setExternalFatherRegistrationNumber("1635719026A");
 
@@ -118,7 +118,7 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldExposeAnAbccValidatedExternalFatherWithoutCreatingALocalGoat() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("KID-001");
         goat.setExternalFatherRegistrationNumber("1635719026A");
 
@@ -142,7 +142,7 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldReturnUnavailableWhenAbccPortFails() {
-        Goat goat = new Goat();
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber("1643218012");
         goat.setName("XEQUE");
 
@@ -166,4 +166,3 @@ class GenealogyComplementaryBusinessTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 }
-

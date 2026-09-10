@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
@@ -114,9 +114,9 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate referenceDate = LocalDate.now();
 
-        Goat goatEligible = saveGoat("GOAT-ELIGIBLE");
-        Goat goatNotEligible = saveGoat("GOAT-NOT-ELIGIBLE");
-        Goat goatResolved = saveGoat("GOAT-RESOLVED");
+        GoatEntity goatEligible = saveGoat("GOAT-ELIGIBLE");
+        GoatEntity goatNotEligible = saveGoat("GOAT-NOT-ELIGIBLE");
+        GoatEntity goatResolved = saveGoat("GOAT-RESOLVED");
 
         saveCoverage(goatEligible.getRegistrationNumber(), referenceDate.minusDays(70));
         saveCoverage(goatNotEligible.getRegistrationNumber(), referenceDate.minusDays(30));
@@ -238,17 +238,17 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
     }
 
     private void savePregnancy(String goatId, GoatFarm farm, LocalDate dueDate, PregnancyStatus status) {
-        Goat goat = saveGoat(goatId);
+        GoatEntity goat = saveGoat(goatId);
         goat.setFarm(farm);
         goatRepository.save(goat);
         pregnancyRepository.save(Pregnancy.builder()
                 .farmId(farm.getId()).goatId(goatId).status(status).expectedDueDate(dueDate).build());
     }
 
-    private Goat saveGoat(String registrationNumber) {
-        Goat goat = new Goat();
+    private GoatEntity saveGoat(String registrationNumber) {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(registrationNumber);
-        goat.setName("Goat " + registrationNumber);
+        goat.setName("GoatEntity " + registrationNumber);
         goat.setGender(Gender.FEMEA);
         goat.setBirthDate(LocalDate.now().minusYears(2));
         goat.setFarm(ownerFarm);
@@ -290,4 +290,3 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
-

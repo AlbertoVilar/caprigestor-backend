@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
@@ -31,7 +31,7 @@ class HealthWithdrawalBusinessTest {
     private HealthEventPersistencePort healthEventPersistencePort;
 
     @Mock
-    private GoatPersistencePort goatPersistencePort;
+    private LegacyGoatPersistencePort goatPersistencePort;
 
     @Test
     void getGoatWithdrawalStatus_shouldDeriveActiveWithdrawals() {
@@ -45,7 +45,7 @@ class HealthWithdrawalBusinessTest {
         String goatId = "QA-WD-001";
         LocalDate referenceDate = LocalDate.of(2026, 3, 29);
 
-        when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.of(new Goat()));
+        when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.of(new GoatEntity()));
         when(healthEventPersistencePort.findPerformedWithWithdrawalByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(List.of(
                         buildPerformedEvent(10L, farmId, goatId, "Antibiotico A", LocalDate.of(2026, 3, 28), 4, 0),
@@ -76,7 +76,7 @@ class HealthWithdrawalBusinessTest {
         String goatId = "QA-WD-002";
         LocalDate referenceDate = LocalDate.of(2026, 3, 29);
 
-        when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.of(new Goat()));
+        when(goatPersistencePort.findByIdAndFarmId(goatId, farmId)).thenReturn(Optional.of(new GoatEntity()));
         when(healthEventPersistencePort.findPerformedWithWithdrawalByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(List.of(buildPerformedEvent(12L, farmId, goatId, "Anti-inflamatorio", LocalDate.of(2026, 3, 10), 3, 5)));
 

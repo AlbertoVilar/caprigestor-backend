@@ -6,11 +6,11 @@ import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailabl
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 class GenealogicalParentageServiceTest {
 
     @Mock
-    private GoatPersistencePort goatPersistencePort;
+    private LegacyGoatPersistencePort goatPersistencePort;
 
     @Mock
     private GoatValidationQueryPort goatValidationQueryPort;
@@ -76,11 +76,11 @@ class GenealogicalParentageServiceTest {
 
     @Test
     void acceptsLocalParentsIncludingAFatherFromAnotherFarmWithoutChangingOwnership() {
-        Goat father = goat("FATHER-001", Gender.MACHO);
+        GoatEntity father = goat("FATHER-001", Gender.MACHO);
         GoatFarm otherFarm = new GoatFarm();
         otherFarm.setId(99L);
         father.setFarm(otherFarm);
-        Goat mother = goat("MOTHER-001", Gender.FEMEA);
+        GoatEntity mother = goat("MOTHER-001", Gender.FEMEA);
         when(goatPersistencePort.findByRegistrationNumber("FATHER-001")).thenReturn(Optional.of(father));
         when(goatPersistencePort.findByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
 
@@ -116,7 +116,7 @@ class GenealogicalParentageServiceTest {
 
     @Test
     void acceptsAnAbccFatherAndPreservesTheAlphabeticRegistrationSuffix() {
-        Goat mother = goat("MOTHER-001", Gender.FEMEA);
+        GoatEntity mother = goat("MOTHER-001", Gender.FEMEA);
         when(goatPersistencePort.findByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635719026A"))
                 .thenReturn(Optional.of(snapshot("1635719026A", Gender.MACHO)));
@@ -147,8 +147,8 @@ class GenealogicalParentageServiceTest {
                 .hasMessage("A consulta à ABCC está temporariamente indisponível.");
     }
 
-    private Goat goat(String registrationNumber, Gender gender) {
-        Goat goat = new Goat();
+    private GoatEntity goat(String registrationNumber, Gender gender) {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(registrationNumber);
         goat.setGender(gender);
         return goat;

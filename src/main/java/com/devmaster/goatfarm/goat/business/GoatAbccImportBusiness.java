@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
@@ -67,7 +67,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     private final GoatFarmPersistencePort goatFarmPort;
     private final GoatAbccPublicQueryPort abccPublicQueryPort;
     private final GoatManagementUseCase goatManagementUseCase;
-    private final GoatPersistencePort goatPersistencePort;
+    private final LegacyGoatPersistencePort goatPersistencePort;
     private final EntityFinder entityFinder;
 
     public GoatAbccImportBusiness(
@@ -75,7 +75,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             GoatFarmPersistencePort goatFarmPort,
             GoatAbccPublicQueryPort abccPublicQueryPort,
             GoatManagementUseCase goatManagementUseCase,
-            GoatPersistencePort goatPersistencePort,
+            LegacyGoatPersistencePort goatPersistencePort,
             EntityFinder entityFinder
     ) {
         this.ownershipService = ownershipService;

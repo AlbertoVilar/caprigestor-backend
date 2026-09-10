@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.farm.persistence.entity;
 
 import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.phone.persistence.entity.Phone;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -45,7 +45,7 @@ public class GoatFarm {
 
     @OneToMany(mappedBy = "farm", cascade = CascadeType.ALL)
     @JsonManagedReference
-    private List<Goat> goats;
+    private List<GoatEntity> goats;
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
@@ -66,5 +66,3 @@ public class GoatFarm {
         updatedAt = Instant.now();
     }
 }
-
-

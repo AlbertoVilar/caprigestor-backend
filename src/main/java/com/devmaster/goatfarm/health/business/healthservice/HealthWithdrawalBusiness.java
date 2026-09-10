@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
@@ -21,12 +21,12 @@ import java.util.Optional;
 public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
 
     private final HealthEventPersistencePort healthEventPersistencePort;
-    private final GoatPersistencePort goatPersistencePort;
+    private final LegacyGoatPersistencePort goatPersistencePort;
     private final EntityFinder entityFinder;
 
     public HealthWithdrawalBusiness(
             HealthEventPersistencePort healthEventPersistencePort,
-            GoatPersistencePort goatPersistencePort,
+            LegacyGoatPersistencePort goatPersistencePort,
             EntityFinder entityFinder
     ) {
         this.healthEventPersistencePort = healthEventPersistencePort;

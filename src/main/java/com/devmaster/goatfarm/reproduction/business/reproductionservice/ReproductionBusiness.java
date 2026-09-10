@@ -12,14 +12,14 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthKidRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthKidResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
@@ -73,7 +73,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
-    private final GoatPersistencePort goatPersistencePort;
+    private final LegacyGoatPersistencePort goatPersistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final GoatManagementUseCase goatManagementUseCase;
     private final GoatGenderValidator goatGenderValidator;
@@ -82,7 +82,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
-                                GoatPersistencePort goatPersistencePort,
+                                LegacyGoatPersistencePort goatPersistencePort,
                                 GoatFarmPersistencePort goatFarmPersistencePort,
                                 GoatManagementUseCase goatManagementUseCase,
                                 GoatGenderValidator goatGenderValidator,
@@ -413,7 +413,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional
     public BirthResponseVO registerBirth(Long farmId, String goatId, Long pregnancyId, BirthRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
-        Goat mother = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
+        GoatEntity mother = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (pregnancyId == null || pregnancyId <= 0) {
@@ -496,7 +496,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional
     public WeaningResponseVO registerWeaning(Long farmId, String goatId, WeaningRequestVO vo) {
         goatGenderValidator.requireActive(farmId, goatId);
-        Goat kid = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
+        GoatEntity kid = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
         if (vo.getWeaningDate() == null) {
@@ -520,7 +520,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
         GoatStatus previousStatus = kid.getStatus();
         kid.setStatus(GoatStatus.ATIVO);
-        Goat savedKid = goatPersistencePort.save(kid);
+        GoatEntity savedKid = goatPersistencePort.save(kid);
 
         ReproductiveEvent weaningEvent = ReproductiveEvent.builder()
                 .farmId(farmId)
@@ -740,7 +740,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
     private GoatRequestVO buildKidRequestVO(Long farmId,
                                             String motherGoatId,
-                                            Goat mother,
+                                            GoatEntity mother,
                                             String fatherRegistrationNumber,
                                             String birthFarmTod,
                                             LocalDate defaultBirthDate,
@@ -884,5 +884,3 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
-
-

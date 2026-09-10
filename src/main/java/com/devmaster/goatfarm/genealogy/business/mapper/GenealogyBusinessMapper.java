@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.genealogy.business.mapper;
 
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -48,5 +48,5 @@ public interface GenealogyBusinessMapper {
     @Mapping(target = "maternalGreatGrandfather2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getFather() != null ? goat.getMother().getMother().getFather().getRegistrationNumber() : null)")
     @Mapping(target = "maternalGreatGrandmother2Name", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getName() : null)")
     @Mapping(target = "maternalGreatGrandmother2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getRegistrationNumber() : null)")
-    GenealogyResponseVO toResponseVO(Goat goat);
+    GenealogyResponseVO toResponseVO(GoatEntity goat);
 }

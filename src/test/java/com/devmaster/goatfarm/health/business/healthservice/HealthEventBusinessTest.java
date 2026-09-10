@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCreateRequestVO;
@@ -42,7 +42,7 @@ class HealthEventBusinessTest {
     @Mock
     private HealthEventPersistencePort persistencePort;
     @Mock
-    private GoatPersistencePort goatPersistencePort;
+    private LegacyGoatPersistencePort goatPersistencePort;
     @Mock
     private GoatGenderValidator goatGenderValidator;
     @Mock

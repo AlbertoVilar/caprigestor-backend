@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.business.mapper.GenealogyBusinessMapper;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,14 +32,14 @@ class GenealogyBusinessTest {
 
     private Long farmId;
     private String goatId;
-    private Goat mockGoat;
+    private GoatEntity mockGoat;
     private GenealogyResponseVO mockResponseVO;
 
     @BeforeEach
     void setUp() {
         farmId = 1L;
         goatId = "goat-123";
-        mockGoat = new Goat();
+        mockGoat = new GoatEntity();
         mockGoat.setRegistrationNumber(goatId);
         
         mockResponseVO = GenealogyResponseVO.builder()
