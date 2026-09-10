@@ -13,7 +13,7 @@ Este documento define contratos comuns para todos os controllers oficiais do bac
 - Base geral: `/api/v1`
 - Escopo por fazenda: `/api/v1/goatfarms/{farmId}/...`
 - Rotas públicas sem autenticação (quando aplicável) usam namespace separado, por exemplo: `/public/articles`.
-- As consultas `GET` de fazendas, animais e genealogia sob `/api/v1/goatfarms` são públicas por decisão de produto. Fazendas públicas podem incluir nome do responsável e e-mail de contato, mas não incluem telefones, CPF, credenciais, papéis ou endereço detalhado.
+- As consultas públicas `GET` de fazendas, animais e genealogia sob `/api/v1/goatfarms` são públicas por decisão de produto, exceto rotas explicitamente administrativas como `/api/v1/goatfarms/{farmId}/management`. Fazendas públicas podem incluir nome do responsável e e-mail de contato, mas não incluem telefones, CPF, credenciais, papéis ou endereço detalhado.
 
 ### Versionamento
 - Endpoints de aplicação são publicados exclusivamente em `/api/v1/...`.
@@ -65,6 +65,7 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms`
 - `GET /api/v1/goatfarms/name?name=&page=&size=&sort=`
 - `GET /api/v1/goatfarms/{id}`
+- `GET /api/v1/goatfarms/{id}/management`
 - `PUT /api/v1/goatfarms/{id}`
 - `DELETE /api/v1/goatfarms/{id}`
 - `GET /api/v1/goatfarms/{farmId}/permissions`
@@ -96,6 +97,16 @@ fazenda informada:
 ou OPERATOR vinculado); `canAdministerFarm` segue `@FarmOwnerOnly` (ADMIN ou
 FARM_OWNER da própria fazenda). O vínculo operador–fazenda é sempre decidido
 no backend.
+
+`GET /api/v1/goatfarms/{id}` permanece público e sanitizado para o catálogo.
+Para preencher a tela de edição, o frontend usa
+`GET /api/v1/goatfarms/{farmId}/management`, protegido por `@FarmOwnerOnly`.
+Essa leitura administrativa retorna o `GoatFarmFullResponseDTO` completo
+(fazenda, proprietário, endereço e telefones) somente para ADMIN ou para o
+FARM_OWNER oficial da própria fazenda. OPERATOR e proprietários de outras
+fazendas recebem `403`; anônimos não recebem dados administrativos. A operação
+é somente leitura e não altera a persistência. O `PUT /api/v1/goatfarms/{id}`
+continua sendo o único fluxo de atualização.
 
 Paginação atual:
 - As listagens continuam retornando `Page` do Spring (`content`, `totalElements`, `number`, etc.) para preservar compatibilidade com o frontend já publicado.

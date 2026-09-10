@@ -101,6 +101,19 @@ public class GoatFarmController {
         return ResponseEntity.ok(toPublicSafeDTO(farmMapper.toFullDTO(farmUseCase.findGoatFarmById(id))));
     }
 
+    @FarmOwnerOnly
+    @GetMapping("/{farmId}/management")
+    @Operation(summary = "Busca os dados completos de uma fazenda para administração")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dados administrativos encontrados com sucesso."),
+            @ApiResponse(responseCode = "401", description = "Autenticação obrigatória."),
+            @ApiResponse(responseCode = "403", description = "Usuário não pode administrar esta fazenda."),
+            @ApiResponse(responseCode = "404", description = "Fazenda não encontrada.")
+    })
+    public ResponseEntity<GoatFarmFullResponseDTO> findGoatFarmForManagement(@PathVariable Long farmId) {
+        return ResponseEntity.ok(farmMapper.toFullDTO(farmUseCase.findGoatFarmById(farmId)));
+    }
+
     @GetMapping("/name")
     @PublicEndpoint
     @Operation(summary = "Busca fazendas por nome com paginação")

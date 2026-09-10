@@ -34,6 +34,13 @@ Os controllers usam poucas annotations de intenção, definidas em
 - `@AuthenticatedFarmRead`: marca uma leitura farm-scoped que exige somente
   autenticação por compatibilidade, sem transformar essa leitura em ownership.
 
+O contrato administrativo de fazenda é separado do catálogo público:
+`GET /api/v1/goatfarms/{farmId}/management` usa `@FarmOwnerOnly` e devolve os
+dados completos necessários à edição apenas para ADMIN ou FARM_OWNER oficial
+da fazenda. OPERATOR não recebe capacidade administrativa. O endpoint público
+`GET /api/v1/goatfarms/{farmId}` permanece sanitizado e não deve ser reutilizado
+como fonte de dados privados para telas de manutenção.
+
 O resumo agregado do rebanho (`GET /api/v1/goatfarms/{farmId}/goats/summary`)
 usa `@PublicEndpoint`, pois sua política aprovada é pública. A marca
 `@AuthenticatedFarmRead` permanece disponível para futuras leituras farm-scoped
