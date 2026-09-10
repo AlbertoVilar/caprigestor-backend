@@ -11,12 +11,19 @@ Links relacionados: [Portal](../../INDEX.md),
 
 ## 1. Status
 
-- **Proposta para revisão arquitetural.**
+- **ID2.1 encerrada — decisão aprovada para revisão arquitetural.**
+- A estratégia limitada **B — MINIMAL DOMAIN ENRICHMENT DURING GOATID MIGRATION**
+  foi aprovada: enriquecer gradualmente o modelo `Goat` sem separar agora a
+  entidade de domínio da entidade JPA e sem transformar a migração de identidade
+  em uma reescrita do módulo.
 - Design only: não implementada.
 - Não cria GoatId, migration, alteração de entidade, mudança de API ou
   alteração de dados.
-- A decisão de identidade estrutural é definida aqui; a mecânica de migration
-  permanece para a ID3.
+- A decisão de identidade estrutural e o modelo de domínio limitado são
+  definidos aqui; o desenho de contratos e migration permanece para a ID3.
+- **Resultado da reavaliação:** `READY FOR ID3` para planejamento e desenho,
+  mas nenhuma migration, alteração de schema ou implementação da ID3 está
+  autorizada por esta ADR.
 
 ## 2. Contexto
 
@@ -146,9 +153,56 @@ RegistrationIdentity, mas nenhuma classe é criada nesta ADR.
 ### Normalização
 
 O comportamento-alvo deve normalizar espaços, formato e comparação de dados
-registrais de forma determinística. A regra exata de padding, caracteres
-permitidos e composição TOD + TOE será fechada na ID3 com base nos contratos e
-nos dados reais. A ID2 não inventa uma representação textual nova.
+registrais de forma determinística. A verificação ID2.1 confirmou, no código e
+nos testes atuais, a seguinte normalização canônica para lookup e comparação:
+
+- remover espaços nas extremidades;
+- remover separadores de espaço internos;
+- converter letras para maiúsculas com `Locale.ROOT`;
+- preservar zeros à esquerda;
+- não remover hífens ou outros sinais que o contrato do fluxo não autorize;
+- não fazer padding, truncamento ou inferência de dígitos.
+
+Essa regra é observável em `GoatAbccPublicHttpAdapter.normalizeRegistration`,
+em `GoatAbccImportBusiness.normalizeRegistrationForLookup` e nos testes que
+convertem `" 1635719026a "` em `"1635719026A"` e
+`"12345 67890"` em `"1234567890"`.
+
+O adapter da ABCC divide um registro normalizado nos cinco primeiros dígitos
+de TOD e no restante de TOE. O fluxo de parto acrescenta a validação de
+10–12 caracteres, somente números e uma letra final opcional, e exige TOD de
+cinco dígitos no início. Exemplos de formato observados nos testes e nas
+verificações operacionais são `12345 + 67890 = 1234567890`,
+`1635719026A` e `16432 + 22003 = 1643222003`.
+
+Esses fatos definem a normalização canônica do CapriGestor para a ID2.1. Eles
+não constituem uma nova especificação oficial da ABCC: a ID3 deve confrontar a
+regra com os contratos externos e decidir a validação de cada fluxo. Em
+particular, o cadastro manual atual ainda aceita uma faixa mais ampla que o
+fluxo de parto; a ID3 deve harmonizar essa diferença sem inventar padding ou
+alterar silenciosamente registros existentes.
+
+Não há evidência de que raça, hífen ou remoção de zeros faça parte da identidade
+registral local. A raça continua sendo filtro do lookup externo da ABCC, não
+componente do RG local.
+
+### 7.1 Fechamento da avaliação ID2.1-C
+
+| Item | Decisão encerrada |
+| --- | --- |
+| Modelo | **B — enriquecimento mínimo durante a migração do GoatId** |
+| Entidade JPA versus domínio separado | Manter `Goat` como entidade JPA e enriquecer apenas as invariantes de identidade nesta onda |
+| `GoatId` | Long/BIGINT imutável como identidade estrutural futura |
+| `RegistrationIdentity` | Conceito de domínio aprovado; representação `@Embeddable` fica para depois da migração |
+| RG | Permanece armazenado durante a transição e deve ser coerente com TOD + TOE |
+| Criação | `Goat.register(...)` é direção futura; o MapStruct e os testes atuais exigem adaptação controlada |
+| Retificação | `rectifyRegistration(...)` é comportamento futuro do Goat, mantendo o mesmo GoatId |
+| Setters críticos | Restrição gradual de `setRegistrationNumber`, `setTod` e `setToe`; não há remoção em massa nesta onda |
+| ABCC | Continua adapter externo; cadastro manual não depende de confirmação ABCC |
+| Genealogia e ciclo de vida | Mantidos fora do enriquecimento limitado, para ondas futuras |
+
+O fechamento foi feito sem alterar Java, testes, DTOs, mappers, banco,
+migrations, frontend, branches ou commits de implementação.
 
 ## 8. TOD, TOE e RG: invariantes
 
@@ -176,15 +230,27 @@ O código demonstra dois níveis relacionados, mas não idênticos:
 
 Para usuários não administrativos, a importação ABCC exige TOD configurado na
 fazenda e rejeita animal cujo TOD ABCC diverge dele. Na criação manual atual,
-GoatBusiness recebe TOD no request do animal; não há cópia automática do
-GoatFarm.tod demonstrada no código.
+`GoatBusiness` recebe TOD no request do animal; a cópia automática não existe
+no código atual.
 
-Decisão de domínio para o alvo: TOD pertence ao contexto registral do
-capril/registro e aparece como componente da identidade registral do Goat. O
-GoatFarm.tod continua sendo a origem/escopo de referência da fazenda; Goat.tod
-é o valor registral do animal e deve ser validado contra esse escopo quando a
-regra do fluxo exigir. A ID3 deve definir a fonte canônica de escrita, o
-backfill e o comportamento administrativo quando os valores divergirem.
+Decisão de domínio encerrada na ID2.1: `GoatFarm.tod` é a fonte de origem e
+escopo registral para animais que nascem ou são registrados naquele capril. No
+modelo-alvo, seu valor é copiado para `Goat.tod` no ato de criação/origem; a
+identidade registral do animal passa então a ser própria e não deve ser
+sincronizada automaticamente com alterações posteriores na fazenda.
+
+Consequentemente:
+
+- alteração de ownership ou transferência de fazenda não altera `Goat.tod`,
+  `Goat.toe` ou RG;
+- o TOD da fazenda continua servindo para validação do fluxo ABCC e para a
+  origem de novas crias;
+- divergência entre `GoatFarm.tod` e `Goat.tod` de um animal existente não é
+  corrigida por sincronização implícita; deve ser tratada por política explícita
+  de retificação/reconciliação na ID3;
+- o código atual ainda aceita TOD no request manual, portanto a ID3 deve
+  especificar a origem de escrita e o backfill sem apagar a proveniência dos
+  dados existentes.
 
 Essa distinção evita transformar o TOD da fazenda em PK do animal e evita
 assumir, sem evidência, que qualquer ausência na ABCC elimina o RG local.
@@ -265,7 +331,24 @@ retificação, mas deve permanecer historicamente pesquisável para responder:
 “Qual animal usou anteriormente o RG X?”
 
 Decisão de requisito: o alvo deve possuir um conceito de histórico registral
-ligado ao GoatId, com valor anterior, intervalo/instante, origem e motivo.
+ligado ao GoatId, com valor anterior, intervalo/instante, origem, motivo e
+classificação do valor anterior.
+
+A classificação precisa separar dois casos:
+
+- **RG anteriormente válido:** o registro pertenceu legitimamente ao animal e
+  foi substituído por retificação, atualização oficial ou reconciliação. Deve
+  permanecer historicamente pesquisável como registro que o animal utilizou,
+  sem continuar ativo.
+- **RG digitado/incorreto:** o valor foi associado por erro e nunca identificou
+  legitimamente aquele animal. Deve ser preservado como evidência de correção
+  no audit trail, marcado como `ERRONEOUS` no histórico quando este existir e
+  não deve reservar o número nem responder que o animal o utilizou validamente.
+
+Em ambos os casos, a operação mantém o mesmo GoatId, grava antes/depois, autor,
+origem, motivo e instante. Um valor histórico não se torna automaticamente
+uma chave ativa nem pode ser reutilizado sem a política de colisão aprovada.
+
 Uma tabela dedicada é preferível a depender apenas da auditoria operacional,
 porque consultas históricas de registro são uma necessidade de domínio. O
 formato físico e a relação com a auditoria serão definidos na ID3.
@@ -312,23 +395,32 @@ identidade técnica.
 - O código de criação verifica existência por registrationNumber.
 - Lookup ABCC filtra por raça + RG normalizado.
 
-### Decisão da ID2
+### Decisão encerrada na ID2.1
 
-RG não será a PK estrutural. A unicidade de GoatId será global por definição
-da identidade técnica.
+O RG atual normalizado é um identificador de negócio **globalmente único no
+CapriGestor**, independentemente de raça, fazenda ou status. A raça não faz
+parte da unicidade local: ela é somente um critério de consulta da ABCC.
 
-A constraint de unicidade de negócio do RG permanece **bloqueio aberto para
-ID3/ID4**. Não é seguro escolher global, raça + RG, registro + RG ou outra
-composição apenas observando a PK atual e o lookup ABCC. É necessário obter:
+Essa decisão é sustentada por três evidências complementares:
 
-- regra oficial aplicável ao registro/ABCC;
-- confirmação se RG pode repetir entre raças, registros ou fazendas;
-- política do produto para dois animais manuais com a mesma numeração;
-- tratamento de registros antigos e retificados;
-- comportamento de animais com dados incompletos.
+- `cabras.num_registro` é a PK global desde a V7;
+- `GoatBusiness` verifica existência pelo número de registro antes de criar e
+  o repository expõe `existsByRegistrationNumber`/`existsById` sem escopo de
+  fazenda;
+- a combinação raça + RG existe apenas no lookup externo, que pode retornar
+  `NOT_FOUND` ou `AMBIGUOUS` e não define a identidade local.
 
-Até essa evidência, não se deve perpetuar automaticamente a unicidade global
-nem removê-la sem substituto aprovado.
+A constraint composta `capril_id + num_registro` adicionada na V38 é
+redundante enquanto a PK global existir. Na migração futura, a unicidade ativa
+deverá ser transferida para o RG normalizado, com a estratégia de histórico e
+registros antigos definida na ID3/ID4. O banco atual ainda compara o texto
+armazenado exatamente e o fluxo manual não aplica a normalização canônica de
+lookup; isso é uma lacuna de implementação a ser tratada antes da migration,
+não uma mudança de decisão.
+
+Esta decisão é sobre o namespace local. Ela não afirma que a ABCC garanta
+unicidade global sem raça, nem transforma a consulta externa em fonte de
+existência do animal.
 
 ## 17. Semântica alvo de HTTP/API
 
@@ -468,16 +560,19 @@ de controle de acesso.
 | Exposição de GoatId ser tratada como segurança | média | Manter autorização farm-scoped independente do ID. |
 | Dados de teste serem confundidos com dados descartáveis em HML | média | Procedimento de reset separado, com inventário e aprovação. |
 
-## 25. Decisões pendentes e evidências exigidas
+## 25. Decisões remanescentes para ID3/ID4
 
-1. Fechar a unicidade registral com evidência de ABCC/domínio.
-2. Definir normalização e padding exatos de TOD, TOE e RG.
-3. Definir fonte canônica e sincronização entre GoatFarm.tod e Goat.tod.
-4. Definir formato físico do histórico registral.
-5. Definir compatibilidade e prazo das rotas baseadas em RG.
-6. Definir schema/payload de eventos durante a transição.
-7. Confirmar se haverá consumidores externos reais antes da HML.
-8. Confirmar procedimento e critérios do reset de massa de teste.
+1. Transformar a normalização canônica em validações coerentes por fluxo,
+   incluindo a diferença atual entre cadastro manual e parto.
+2. Definir formato físico do histórico registral e da classificação
+   `ERRONEOUS`/anteriormente válido.
+3. Desenhar a migração reversível e o backfill de `GoatId`/FKs.
+4. Definir compatibilidade e prazo das rotas baseadas em RG.
+5. Definir schema/payload de eventos durante a transição.
+6. Confirmar se haverá consumidores externos reais antes da HML.
+7. Confirmar procedimento e critérios do reset de massa de teste.
+8. Confrontar a normalização observada com qualquer contrato oficial ABCC que
+   seja disponibilizado antes da implementação.
 
 ## 26. Pré-condições para ID3
 
@@ -492,14 +587,23 @@ Antes de desenhar migrations e compatibilidade, devem estar aprovados:
 - fronteira ABCC;
 - semântica HTTP e frontend;
 - distinção TOD de fazenda versus TOD registral do animal;
-- regra de unicidade registral ou evidência formal que permita fechá-la.
+- normalização canônica de comparação, preservação de zeros e ausência de
+  padding implícito;
+- unicidade local global do RG normalizado, independente de raça;
+- distinção histórica entre RG anteriormente válido e valor digitado incorreto.
 
 ### Resultado de entrada
 
-**ID3 BLOCKED** para desenho de migration executável e alteração estrutural,
-porque a regra exata de unicidade registral e a fonte canônica/sincronização do
-TOD ainda exigem evidência e decisão. A revisão arquitetural desta ADR pode
-ocorrer agora; ID3 deve começar somente após resolver esses bloqueios.
+**READY FOR ID3** para planejamento, contratos e desenho técnico. A ID2.1
+fechou a direção B, a normalização observada, a unicidade local independente de
+raça, a semântica de `GoatFarm.tod` e a distinção histórica entre RG válido e
+RG errôneo.
+
+Isso não libera implementação estrutural. A ID3 ainda deve produzir o mapa de
+compatibilidade, critérios de backfill, migration reversível e contratos
+coordenados antes de qualquer alteração de código ou schema. A validação de
+qualquer regra oficial adicional da ABCC também permanece como gate de
+implementação, sem reabrir a decisão local de identidade sem evidência nova.
 
 ## 27. Alternativas rejeitadas
 
@@ -561,6 +665,14 @@ registral. O alvo aprovado para avaliação é GoatId Long/BIGINT imutável,
 enquanto TOD, TOE e RG permanecem dados de negócio opcionais, corrigíveis e
 auditáveis, independentes da confirmação na ABCC.
 
-A migração não deve começar enquanto a regra de unicidade registral e a
-governança do TOD não estiverem fechadas com evidência suficiente. Até lá, a
-ADR está pronta para revisão humana e a ID3 permanece bloqueada.
+A ID2.1 está encerrada com a estratégia B aprovada. A identidade estrutural
+futura é GoatId Long/BIGINT imutável; TOD, TOE e RG formam a identidade
+registral de negócio, com RG armazenado durante a transição, normalização
+determinística e unicidade local global independente de raça. `GoatFarm.tod` é
+origem/escopo de criação, não um valor sincronizado durante todo o ciclo de
+vida. Retificações mantêm o mesmo GoatId e distinguem histórico legítimo de
+valor digitado incorretamente.
+
+A ADR está pronta para revisão humana e a ID3 está liberada somente para
+planejamento e desenho. Nenhuma migration, alteração de schema, código,
+frontend ou reset de dados começa por esta decisão.
