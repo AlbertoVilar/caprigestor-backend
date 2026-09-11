@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
@@ -43,13 +43,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     private final LactationPersistencePort lactationPersistencePort;
     private final MilkProductionPersistencePort milkProductionPersistencePort;
-    private final PregnancySnapshotQueryPort pregnancySnapshotQueryPort;
+    private final PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort;
     private final GoatGenderValidator goatGenderValidator;
     private final LactationBusinessMapper lactationMapper;
 
     public LactationBusiness(LactationPersistencePort lactationPersistencePort,
                              MilkProductionPersistencePort milkProductionPersistencePort,
-                             PregnancySnapshotQueryPort pregnancySnapshotQueryPort,
+                             PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort,
                              GoatGenderValidator goatGenderValidator,
                              LactationBusinessMapper lactationMapper) {
         this.lactationPersistencePort = lactationPersistencePort;

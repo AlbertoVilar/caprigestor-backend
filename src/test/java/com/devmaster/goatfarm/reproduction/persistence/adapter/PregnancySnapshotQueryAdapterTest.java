@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.milk.persistence.adapter;
+package com.devmaster.goatfarm.reproduction.persistence.adapter;
 
-import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ class PregnancySnapshotQueryAdapterTest {
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
-    private PregnancySnapshotQueryPort queryPort;
+    private PregnancySnapshotQueryUseCase queryUseCase;
 
     @BeforeEach
     void setUp() {
@@ -48,7 +48,7 @@ class PregnancySnapshotQueryAdapterTest {
     void shouldKeepPregnancyWhenBreedingDateIsBeforeReferenceEvenIfConfirmDateIsAfter() {
         insertPregnancy(1L, "GOAT-001", "ACTIVE", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 1), null);
 
-        Optional<PregnancySnapshot> result = queryPort.findLatestByFarmIdAndGoatId(
+        Optional<PregnancySnapshot> result = queryUseCase.findLatestByFarmIdAndGoatId(
                 1L,
                 "GOAT-001",
                 LocalDate.of(2026, 2, 1)
@@ -63,12 +63,12 @@ class PregnancySnapshotQueryAdapterTest {
     void shouldResolveActiveAsOfReferenceDateUsingClosedAt() {
         insertPregnancy(1L, "GOAT-001", "ACTIVE", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 15));
 
-        Optional<PregnancySnapshot> beforeClose = queryPort.findLatestByFarmIdAndGoatId(
+        Optional<PregnancySnapshot> beforeClose = queryUseCase.findLatestByFarmIdAndGoatId(
                 1L,
                 "GOAT-001",
                 LocalDate.of(2026, 2, 10)
         );
-        Optional<PregnancySnapshot> afterClose = queryPort.findLatestByFarmIdAndGoatId(
+        Optional<PregnancySnapshot> afterClose = queryUseCase.findLatestByFarmIdAndGoatId(
                 1L,
                 "GOAT-001",
                 LocalDate.of(2026, 2, 20)
@@ -86,7 +86,7 @@ class PregnancySnapshotQueryAdapterTest {
         insertPregnancy(1L, "GOAT-001", "CLOSED", LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 20), LocalDate.of(2026, 2, 1));
         insertPregnancy(1L, "GOAT-001", "ACTIVE", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 10), null);
 
-        Optional<PregnancySnapshot> result = queryPort.findLatestByFarmIdAndGoatId(
+        Optional<PregnancySnapshot> result = queryUseCase.findLatestByFarmIdAndGoatId(
                 1L,
                 "GOAT-001",
                 LocalDate.of(2026, 2, 15)
@@ -95,6 +95,13 @@ class PregnancySnapshotQueryAdapterTest {
         assertTrue(result.isPresent());
         assertEquals(LocalDate.of(2026, 1, 10), result.get().breedingDate());
         assertFalse(result.get().active());
+    }
+
+    @Test
+    void shouldEnforceFarmScoping() {
+        insertPregnancy(1L, "GOAT-001", "ACTIVE", LocalDate.of(2026, 1, 1), null, null);
+
+        assertTrue(queryUseCase.findLatestByFarmIdAndGoatId(2L, "GOAT-001", LocalDate.of(2026, 2, 1)).isEmpty());
     }
 
     private void insertPregnancy(Long farmId,
@@ -118,4 +125,3 @@ class PregnancySnapshotQueryAdapterTest {
                 """, params);
     }
 }
-
