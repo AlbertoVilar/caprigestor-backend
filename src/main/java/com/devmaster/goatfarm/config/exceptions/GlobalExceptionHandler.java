@@ -172,8 +172,14 @@ public class GlobalExceptionHandler {
         Throwable rootCause = e.getRootCause();
         String message = rootCause != null ? rootCause.getMessage() : e.getMessage();
 
-        if (message != null && message.toLowerCase().contains("ux_pregnancy_single_active_per_goat")) {
+        String normalizedMessage = message == null ? "" : message.toLowerCase();
+        if (normalizedMessage.contains("ux_pregnancy_single_active_per_goat")) {
             err.addError("status", "Já existe uma gestação ativa para esta cabra");
+        } else if (normalizedMessage.contains("ux_lactation_single_active_per_goat_technical")) {
+            err.addError("status", "Já existe uma lactação ativa para esta cabra");
+        } else if (normalizedMessage.contains("uk_cabras_registration_number")
+                || normalizedMessage.contains("uk_cabras_farm_registration")) {
+            err.addError("registrationNumber", "Número de registro já existe para outro animal");
         } else {
             err.addError("integrity", "Violação de integridade no banco de dados");
         }
