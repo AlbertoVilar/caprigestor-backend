@@ -49,6 +49,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldHandleDataIntegrityViolationException_forDuplicateActiveLactation() {
+        Throwable rootCause = new RuntimeException(
+                "duplicate key value violates unique constraint \"ux_lactation_single_active_per_goat_technical\"");
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Constraint violation", rootCause);
+
+        ResponseEntity<ValidationError> response =
+                globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "status".equals(error.getFieldName())
+                        && "Já existe uma lactação ativa para esta cabra".equals(error.getMessage())));
+    }
+
+    @Test
+    void shouldHandleDataIntegrityViolationException_forDuplicateGoatRegistration() {
+        Throwable rootCause = new RuntimeException(
+                "duplicate key value violates unique constraint \"uk_cabras_farm_registration\"");
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Constraint violation", rootCause);
+
+        ResponseEntity<ValidationError> response =
+                globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "registrationNumber".equals(error.getFieldName())
+                        && "Número de registro já existe para outro animal".equals(error.getMessage())));
+    }
+
+    @Test
     void shouldHandleDataIntegrityViolationException_genericCase() {
         DataIntegrityViolationException exception = new DataIntegrityViolationException("Some other constraint violation");
 
