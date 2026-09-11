@@ -15,6 +15,8 @@ import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestD
 import com.devmaster.goatfarm.goat.enums.RegistrationRectificationSource;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -23,10 +25,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -124,8 +122,8 @@ class GoatControllerTest {
     void shouldGetAllGoatsSuccessfully() throws Exception {
         // Arrange
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
-        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class))).thenReturn(goatPage);
+        GoatPage<GoatResponseVO> goatPage = new GoatPage<>(goats, 1, 0, 10);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")))).thenReturn(goatPage);
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/goatfarms/1/goats")
@@ -139,15 +137,35 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].status").value("ATIVO"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class));
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")));
+    }
+
+    @Test
+    void shouldMapSpringPageableToApplicationQueryAndPreserveHttpMetadata() throws Exception {
+        GoatPage<GoatResponseVO> goatPage = new GoatPage<>(List.of(goatResponseVO), 25, 1, 10);
+        GoatPageQuery query = new GoatPageQuery(1, 10, "name,DESC");
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), eq(query))).thenReturn(goatPage);
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats")
+                        .param("page", "1")
+                        .param("size", "10")
+                        .param("sort", "name,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].registrationNumber").value("001"))
+                .andExpect(jsonPath("$.totalElements").value(25))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.number").value(1))
+                .andExpect(jsonPath("$.size").value(10));
+
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), eq(query));
     }
 
     @Test
     @WithMockUser(roles = "OPERATOR")
     void shouldGetAllGoatsFilteredByBreedSuccessfully() throws Exception {
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
-        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatUseCase.findAllGoatsByFarm(eq(1L), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), any(Pageable.class))).thenReturn(goatPage);
+        GoatPage<GoatResponseVO> goatPage = new GoatPage<>(goats, 1, 0, 10);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), eq(new GoatPageQuery(0, 10, "")))).thenReturn(goatPage);
 
         mockMvc.perform(get("/api/v1/goatfarms/1/goats")
                         .param("page", "0")
@@ -157,15 +175,15 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].registrationNumber").value("001"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatUseCase).findAllGoatsByFarm(eq(1L), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), any(Pageable.class));
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), eq(new GoatPageQuery(0, 10, "")));
     }
 
     @Test
     @WithMockUser(roles = "OPERATOR")
     void shouldSearchGoatsByNameAndBreedSuccessfully() throws Exception {
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
-        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatUseCase.findGoatsByNameAndFarm(eq(1L), eq("Cabra"), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), any(Pageable.class))).thenReturn(goatPage);
+        GoatPage<GoatResponseVO> goatPage = new GoatPage<>(goats, 1, 0, 10);
+        when(goatUseCase.findGoatsByNameAndFarm(eq(1L), eq("Cabra"), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), eq(new GoatPageQuery(0, 10, "")))).thenReturn(goatPage);
 
         mockMvc.perform(get("/api/v1/goatfarms/1/goats/search")
                         .param("name", "Cabra")
@@ -176,7 +194,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].registrationNumber").value("001"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatUseCase).findGoatsByNameAndFarm(eq(1L), eq("Cabra"), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), any(Pageable.class));
+        verify(goatUseCase).findGoatsByNameAndFarm(eq(1L), eq("Cabra"), eq(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN), eq(new GoatPageQuery(0, 10, "")));
     }
 
     @Test
@@ -557,8 +575,8 @@ class GoatControllerTest {
     void shouldAllowPublicAccessToGoatListWithoutAuth() throws Exception {
         // Arrange
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
-        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class))).thenReturn(goatPage);
+        GoatPage<GoatResponseVO> goatPage = new GoatPage<>(goats, 1, 0, 10);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")))).thenReturn(goatPage);
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/goatfarms/1/goats")
@@ -567,14 +585,14 @@ class GoatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class));
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")));
     }
 
     @Test
     void shouldAllowLegacyGoatListRouteDuringCompatibilityWindow() throws Exception {
         List<GoatResponseVO> goats = Arrays.asList(goatResponseVO);
-        Page<GoatResponseVO> goatPage = new PageImpl<>(goats, PageRequest.of(0, 10), 1);
-        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class))).thenReturn(goatPage);
+        GoatPage<GoatResponseVO> goatPage = new GoatPage<>(goats, 1, 0, 10);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")))).thenReturn(goatPage);
 
         mockMvc.perform(get("/api/v1/goatfarms/1/goats")
                         .param("page", "0")
@@ -582,7 +600,7 @@ class GoatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class));
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")));
     }
 
     @Test
@@ -632,8 +650,8 @@ class GoatControllerTest {
     void shouldGetGoatsByFarmSuccessfully() throws Exception {
         // Arrange
         List<GoatResponseVO> goats2 = Arrays.asList(goatResponseVO);
-        Page<GoatResponseVO> goatPage2 = new PageImpl<>(goats2, PageRequest.of(0, 10), 1);
-        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class))).thenReturn(goatPage2);
+        GoatPage<GoatResponseVO> goatPage2 = new GoatPage<>(goats2, 1, 0, 10);
+        when(goatUseCase.findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")))).thenReturn(goatPage2);
 
         // Act & Assert
         mockMvc.perform(get("/api/v1/goatfarms/1/goats")
@@ -644,7 +662,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.content[0].name").value("Cabra Teste"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), any(Pageable.class));
+        verify(goatUseCase).findAllGoatsByFarm(eq(1L), isNull(), eq(new GoatPageQuery(0, 10, "")));
     }
 }
 

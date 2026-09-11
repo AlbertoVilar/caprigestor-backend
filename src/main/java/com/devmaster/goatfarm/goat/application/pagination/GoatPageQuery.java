@@ -1,6 +1,6 @@
-package com.devmaster.goatfarm.goat.application.ports.out;
+package com.devmaster.goatfarm.goat.application.pagination;
 
-/** Pagination contract that does not expose Spring Data to the application port. */
+/** Pagination query owned by the Goat application boundary. */
 public record GoatPageQuery(int page, int size, String sort) {
 
     public GoatPageQuery {

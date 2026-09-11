@@ -10,9 +10,9 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
@@ -27,9 +27,6 @@ import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -135,28 +132,28 @@ public class GoatBusiness implements GoatManagementUseCase {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable) {
-        return toSpringPage(goatPort.findAllByFarmId(farmId, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatPageQuery query) {
+        return goatPort.findAllByFarmId(farmId, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, Pageable pageable) {
-        return breed == null ? findAllGoatsByFarm(farmId, pageable)
-                : toSpringPage(goatPort.findAllByFarmIdAndBreed(farmId, breed, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, GoatPageQuery query) {
+        return breed == null ? findAllGoatsByFarm(farmId, query)
+                : goatPort.findAllByFarmIdAndBreed(farmId, breed, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable) {
-        return toSpringPage(goatPort.findByNameAndFarmId(farmId, name, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatPageQuery query) {
+        return goatPort.findByNameAndFarmId(farmId, name, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, Pageable pageable) {
-        return breed == null ? findGoatsByNameAndFarm(farmId, name, pageable)
-                : toSpringPage(goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, GoatPageQuery query) {
+        return breed == null ? findGoatsByNameAndFarm(farmId, name, query)
+                : goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -190,16 +187,6 @@ public class GoatBusiness implements GoatManagementUseCase {
         Goat found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
         if (found == null) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda.");
         return found;
-    }
-
-    private Page<GoatResponseVO> toSpringPage(GoatPage<Goat> page) {
-        Pageable pageable = org.springframework.data.domain.PageRequest.of(page.page(), page.size());
-        return new PageImpl<>(page.content().stream().map(this::toResponse).toList(), pageable, page.totalElements());
-    }
-
-    private GoatPageQuery toQuery(Pageable pageable) {
-        String sort = pageable.getSort().stream().findFirst().map(o -> o.getProperty() + "," + o.getDirection().name()).orElse("");
-        return new GoatPageQuery(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     private GoatResponseVO toResponse(Goat goat) {

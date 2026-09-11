@@ -61,6 +61,16 @@ Cabras:
 - `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/registration`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/registration-history`
 
+### Paginação do catálogo de cabras
+
+As rotas HTTP de listagem e busca mantêm o contrato público baseado em
+`Page` do Spring, incluindo `content` e os metadados existentes (`number`,
+`size`, `totalElements`, `totalPages`). Internamente, o caso de uso
+`GoatManagementUseCase` usa apenas `GoatPageQuery` e `GoatPage`, definidos em
+`goat.application.pagination`; a conversão para `Pageable`/`Page` fica restrita
+ao controller e ao adapter de persistência. Isso mantém a API compatível sem
+levar Spring Data para a fronteira da aplicação.
+
 ## Retificação registral administrativa (ID5-A)
 
 O RG atual continua sendo um identificador de negócio e pode ser corrigido

@@ -6,6 +6,8 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.*;
@@ -18,10 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -147,10 +145,11 @@ class GoatBusinessTest {
 
     @Test
     void returnsCleanPageAndSummary() {
-        when(goatPort.findAllByFarmId(1L, new com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery(0, 12, "")))
-                .thenReturn(new com.devmaster.goatfarm.goat.application.ports.out.GoatPage<>(List.of(goat), 1, 0, 12));
-        Page<GoatResponseVO> page = business.findAllGoatsByFarm(1L, PageRequest.of(0, 12));
-        assertThat(page.getTotalElements()).isEqualTo(1);
+        GoatPageQuery query = new GoatPageQuery(0, 12, "");
+        when(goatPort.findAllByFarmId(1L, query))
+                .thenReturn(new GoatPage<>(List.of(goat), 1, 0, 12));
+        GoatPage<GoatResponseVO> page = business.findAllGoatsByFarm(1L, query);
+        assertThat(page.totalElements()).isEqualTo(1);
 
         when(goatPort.getHerdSummary(1L)).thenReturn(new com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot(1, 1, 0, 1, 0, 0, 0, List.of(), 1));
         assertThat(business.getGoatHerdSummary(1L).getTotal()).isEqualTo(1);
