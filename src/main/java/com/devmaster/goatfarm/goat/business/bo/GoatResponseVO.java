@@ -15,6 +15,7 @@ import java.time.LocalDate;
 @Setter
 public class GoatResponseVO {
 
+    private Long technicalId;
     private String registrationNumber;
     private String name;
     private Gender gender;

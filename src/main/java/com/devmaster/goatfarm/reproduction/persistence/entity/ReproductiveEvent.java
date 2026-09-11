@@ -28,6 +28,10 @@ public class ReproductiveEvent {
     @Column(name = "goat_id", nullable = false, length = 50)
     private String goatId;
 
+    /** Stable structural identity. goat_id remains the historical/public RG snapshot. */
+    @Column(name = "goat_technical_id")
+    private Long goatTechnicalId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false)
     private ReproductiveEventType eventType;

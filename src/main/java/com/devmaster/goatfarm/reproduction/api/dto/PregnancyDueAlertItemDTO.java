@@ -14,6 +14,7 @@ import java.time.LocalDate;
 public class PregnancyDueAlertItemDTO {
     private Long pregnancyId;
     private String goatId;
+    private Long goatTechnicalId;
     private LocalDate expectedDueDate;
     private int daysOverdue;
 }

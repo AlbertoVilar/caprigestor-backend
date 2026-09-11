@@ -36,7 +36,7 @@ public class CommercialApiMapper {
     }
 
     public AnimalSaleResponseDTO toDTO(AnimalSaleResponseVO vo) {
-        return new AnimalSaleResponseDTO(vo.id(), vo.goatRegistrationNumber(), vo.goatName(), vo.customerId(), vo.customerName(), vo.saleDate(), vo.amount(), vo.dueDate(), vo.paymentStatus(), vo.paymentDate(), vo.notes());
+        return new AnimalSaleResponseDTO(vo.id(), vo.goatTechnicalId(), vo.goatRegistrationNumber(), vo.goatName(), vo.customerId(), vo.customerName(), vo.saleDate(), vo.amount(), vo.dueDate(), vo.paymentStatus(), vo.paymentDate(), vo.notes());
     }
 
     public MilkSaleRequestVO toVO(MilkSaleRequestDTO dto) {

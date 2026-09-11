@@ -11,6 +11,10 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCH
 ## Visao geral
 O modulo `commercial` concentra a camada comercial e o financeiro operacional minimo por fazenda.
 
+Vendas carregam o `goatTechnicalId` imutável junto do RG da venda, que é
+preservado como snapshot comercial. A FK técnica farm-scoped é a referência
+estrutural após a V41.
+
 O escopo atual cobre:
 - cadastro basico de clientes e compradores;
 - venda de animal com coerencia com a saida controlada do rebanho;

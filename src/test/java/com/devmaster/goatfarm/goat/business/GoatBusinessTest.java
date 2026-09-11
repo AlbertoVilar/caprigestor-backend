@@ -76,23 +76,39 @@ class GoatBusinessTest {
     }
 
     @Test
-    void updatesByTechnicalIdWithoutLeakingEntity() {
+    void updatesByRegistrationNumberWithoutReinterpretingANumericRgAsTechnicalId() {
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
-        when(goatPort.findByIdAndFarmId(new GoatId(77), 1L)).thenReturn(Optional.of(goat));
+        request.setRegistrationNumber("77");
+        goat = Goat.rehydrate(new GoatId(99), RegistrationIdentity.of("77", request.getTod(), request.getToe()),
+                request.getName(), request.getGender(), request.getBreed(), request.getColor(), request.getBirthDate(), request.getStatus(),
+                null, null, null, request.getCategory(), null, null, 1L, 1L, "Capril", "Alberto");
+        when(goatPort.findByRegistrationNumberAndFarmId("77", 1L)).thenReturn(Optional.of(goat));
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
 
         request.setName("Xeque atualizado");
         GoatResponseVO result = business.updateGoat(1L, "77", request);
 
         assertThat(result.getName()).isEqualTo("Xeque atualizado");
-        verify(goatPort).findByIdAndFarmId(new GoatId(77), 1L);
+        verify(goatPort).findByRegistrationNumberAndFarmId("77", 1L);
+        verify(goatPort, never()).findByIdAndFarmId(any(), any());
+    }
+
+    @Test
+    void resolvesExplicitTechnicalRouteTokenWithoutRegistrationCollision() {
+        when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
+
+        GoatResponseVO result = business.findGoatById(1L, "technical-77");
+
+        assertThat(result.getTechnicalId()).isEqualTo(77L);
+        verify(goatPort).findByIdAndFarmId(new GoatId(77L), 1L);
+        verify(goatPort, never()).findByRegistrationNumberAndFarmId(anyString(), anyLong());
     }
 
     @Test
     void rejectsExitForInactiveGoat() {
         Goat inactive = Goat.rehydrate(new GoatId(77), goat.registrationIdentity(), goat.name(), goat.gender(), goat.breed(), goat.color(),
                 goat.birthDate(), GoatStatus.INATIVO, null, null, null, goat.category(), null, null, 1L, 1L, "Capril", "Alberto");
-        when(goatPort.findByIdAndFarmId(new GoatId(77), 1L)).thenReturn(Optional.of(inactive));
+        when(goatPort.findByRegistrationNumberAndFarmId("77", 1L)).thenReturn(Optional.of(inactive));
         GoatExitRequestVO exit = GoatExitRequestVO.builder().exitType(GoatExitType.VENDA).exitDate(LocalDate.now()).build();
 
         assertThatThrownBy(() -> business.exitGoat(1L, "77", exit)).isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);

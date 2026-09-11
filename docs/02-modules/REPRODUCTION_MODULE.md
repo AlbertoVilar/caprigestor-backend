@@ -1,5 +1,5 @@
 ﻿# Modulo Reproduction
-Ultima atualizacao: 2026-09-05
+Ultima atualizacao: 2026-09-10
 Escopo: cobertura, diagnostico, acompanhamento, alertas e encerramento de gestacoes.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Lactacao](./LACTATION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -7,6 +7,11 @@ Atualizado em 2026-09-04 para o caso de uso de parto com referências genealógi
 
 ## Visao geral
 O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente e parto devido.
+
+As respostas de prenhez, eventos, parto, desmame e alertas carregam
+`goatTechnicalId` de forma aditiva. `goatId` continua sendo o RG utilizado nas
+rotas v1 e nas mensagens de compatibilidade; a relação persistida usa a chave
+técnica introduzida por V39/V40 e exigida por V41.
 
 ## Cobertura: regra ativa do ciclo
 - Coberturas validas em data posterior sao permitidas e preservam o historico do animal.
@@ -133,7 +138,8 @@ O alerta `births-due` inclui somente gestações `ACTIVE` da fazenda com
 `expectedDueDate <= referenceDate`, excluindo previsão nula, futura e gestação
 encerrada. A referência omitida usa a data do relógio da aplicação. A ordenação
 é previsão crescente e, em empate, ID crescente. Cada item expõe
-`pregnancyId`, `goatId`, `expectedDueDate` e `daysOverdue` (zero no dia previsto).
+`pregnancyId`, `goatId`, `expectedDueDate` e `daysOverdue` (zero no dia previsto),
+com `goatTechnicalId` aditivo quando a referência técnica estiver disponível.
 A consulta reutiliza as portas de reprodução; não há scheduler, mensageria ou
 persistência de notificações. A exibição no sininho depende do consumidor frontend.
 

@@ -22,7 +22,7 @@ public class GenealogyBusiness implements GenealogyQueryUseCase {
     @Transactional(readOnly = true)
     @Override
     public GenealogyResponseVO findGenealogy(Long farmId, String goatId) {
-        return goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
+        return goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId(goatId, farmId)
                 .map(genealogyMapper::toResponseVO)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Cabra não encontrada ou não pertence à fazenda informada: " + goatId));

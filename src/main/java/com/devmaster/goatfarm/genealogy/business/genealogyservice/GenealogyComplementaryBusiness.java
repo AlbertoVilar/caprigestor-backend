@@ -9,12 +9,16 @@ import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryNodeVO
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryResponseVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Projects a technical local genealogy graph and enriches only missing local
+ * ancestry with the external ABCC read boundary.
+ */
 @Service
 public class GenealogyComplementaryBusiness implements GenealogyComplementaryQueryUseCase {
 
@@ -33,26 +37,26 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
     @Override
     @Transactional(readOnly = true)
-    public GenealogyComplementaryResponseVO findComplementaryGenealogy(Long farmId, String goatId) {
-        GoatEntity goat = goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)
+    public GenealogyComplementaryResponseVO findComplementaryGenealogy(Long farmId, String registrationNumber) {
+        GoatGenealogySnapshot goat = goatGenealogyQueryPort
+                .findGenealogyByRegistrationNumberAndFarmId(registrationNumber, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
-        if (isBlank(goat.getRegistrationNumber())) {
+        if (isBlank(goat.registrationNumber())) {
             return buildResponse(goat, null, null, null, integration("INSUFFICIENT_DATA",
                     "Registro do animal ausente ou inválido para consulta complementar na ABCC."));
         }
 
         try {
-            Optional<GenealogyAbccSnapshotVO> abccSnapshot = genealogyAbccQueryPort.findGenealogyByRegistrationNumber(
-                    goat.getRegistrationNumber()
-            );
+            Optional<GenealogyAbccSnapshotVO> abccSnapshot = genealogyAbccQueryPort
+                    .findGenealogyByRegistrationNumber(goat.registrationNumber());
 
             if (abccSnapshot.isEmpty()) {
                 return buildResponse(
                         goat,
                         null,
-                        findExternalParentSnapshot(goat.getExternalFatherRegistrationNumber()),
-                        findExternalParentSnapshot(goat.getExternalMotherRegistrationNumber()),
+                        findExternalParentSnapshot(externalFatherOf(goat)),
+                        findExternalParentSnapshot(externalMotherOf(goat)),
                         integration("NOT_FOUND", "Não foi possível localizar genealogia complementar na ABCC para este registro.")
                 );
             }
@@ -66,49 +70,74 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
     }
 
     private GenealogyComplementaryResponseVO buildResponse(
-            GoatEntity root,
+            GoatGenealogySnapshot root,
             GenealogyAbccSnapshotVO abcc,
             GenealogyAbccSnapshotVO externalFather,
             GenealogyAbccSnapshotVO externalMother,
             GenealogyComplementaryIntegrationVO integration
     ) {
-        GoatEntity paiLocal = root.getFather();
-        GoatEntity maeLocal = root.getMother();
-
-        GoatEntity avoPaternoLocal = paiLocal != null ? paiLocal.getFather() : null;
-        GoatEntity avoPaternaLocal = paiLocal != null ? paiLocal.getMother() : null;
-        GoatEntity avoMaternoLocal = maeLocal != null ? maeLocal.getFather() : null;
-        GoatEntity avoMaternaLocal = maeLocal != null ? maeLocal.getMother() : null;
+        GoatGenealogySnapshot father = fatherOf(root);
+        GoatGenealogySnapshot mother = motherOf(root);
+        GoatGenealogySnapshot paternalGrandfather = fatherOf(father);
+        GoatGenealogySnapshot paternalGrandmother = motherOf(father);
+        GoatGenealogySnapshot maternalGrandfather = fatherOf(mother);
+        GoatGenealogySnapshot maternalGrandmother = motherOf(mother);
 
         return GenealogyComplementaryResponseVO.builder()
-                .animalPrincipal(buildNode("animalPrincipal", root, abcc != null ? abcc.getAnimalName() : null, abcc != null ? abcc.getAnimalRegistrationNumber() : null))
-                .pai(buildNode("pai", paiLocal,
-                        abcc != null ? abcc.getFatherName() : externalFather != null ? externalFather.getAnimalName() : null,
-                        abcc != null ? abcc.getFatherRegistrationNumber() : externalFather != null ? externalFather.getAnimalRegistrationNumber() : root.getExternalFatherRegistrationNumber(),
-                        abcc == null && externalFather == null && !isBlank(root.getExternalFatherRegistrationNumber())))
-                .mae(buildNode("mae", maeLocal,
-                        abcc != null ? abcc.getMotherName() : externalMother != null ? externalMother.getAnimalName() : null,
-                        abcc != null ? abcc.getMotherRegistrationNumber() : externalMother != null ? externalMother.getAnimalRegistrationNumber() : root.getExternalMotherRegistrationNumber(),
-                        abcc == null && externalMother == null && !isBlank(root.getExternalMotherRegistrationNumber())))
-                .avoPaterno(buildNode("avoPaterno", avoPaternoLocal, abcc != null ? abcc.getPaternalGrandfatherName() : null, abcc != null ? abcc.getPaternalGrandfatherRegistrationNumber() : null))
-                .avoPaterna(buildNode("avoPaterna", avoPaternaLocal, abcc != null ? abcc.getPaternalGrandmotherName() : null, abcc != null ? abcc.getPaternalGrandmotherRegistrationNumber() : null))
-                .avoMaterno(buildNode("avoMaterno", avoMaternoLocal, abcc != null ? abcc.getMaternalGrandfatherName() : null, abcc != null ? abcc.getMaternalGrandfatherRegistrationNumber() : null))
-                .avoMaterna(buildNode("avoMaterna", avoMaternaLocal, abcc != null ? abcc.getMaternalGrandmotherName() : null, abcc != null ? abcc.getMaternalGrandmotherRegistrationNumber() : null))
-                .bisavoPaternoPai(buildNode("bisavoPaternoPai", avoPaternoLocal != null ? avoPaternoLocal.getFather() : null, abcc != null ? abcc.getBisavoPaternoPaiName() : null, abcc != null ? abcc.getBisavoPaternoPaiRegistrationNumber() : null))
-                .bisavoPaternaPai(buildNode("bisavoPaternaPai", avoPaternoLocal != null ? avoPaternoLocal.getMother() : null, abcc != null ? abcc.getBisavoPaternaPaiName() : null, abcc != null ? abcc.getBisavoPaternaPaiRegistrationNumber() : null))
-                .bisavoPaternoMae(buildNode("bisavoPaternoMae", avoPaternaLocal != null ? avoPaternaLocal.getFather() : null, abcc != null ? abcc.getBisavoPaternoMaeName() : null, abcc != null ? abcc.getBisavoPaternoMaeRegistrationNumber() : null))
-                .bisavoPaternaMae(buildNode("bisavoPaternaMae", avoPaternaLocal != null ? avoPaternaLocal.getMother() : null, abcc != null ? abcc.getBisavoPaternaMaeName() : null, abcc != null ? abcc.getBisavoPaternaMaeRegistrationNumber() : null))
-                .bisavoMaternoPai(buildNode("bisavoMaternoPai", avoMaternoLocal != null ? avoMaternoLocal.getFather() : null, abcc != null ? abcc.getBisavoMaternoPaiName() : null, abcc != null ? abcc.getBisavoMaternoPaiRegistrationNumber() : null))
-                .bisavoMaternaPai(buildNode("bisavoMaternaPai", avoMaternoLocal != null ? avoMaternoLocal.getMother() : null, abcc != null ? abcc.getBisavoMaternaPaiName() : null, abcc != null ? abcc.getBisavoMaternaPaiRegistrationNumber() : null))
-                .bisavoMaternoMae(buildNode("bisavoMaternoMae", avoMaternaLocal != null ? avoMaternaLocal.getFather() : null, abcc != null ? abcc.getBisavoMaternoMaeName() : null, abcc != null ? abcc.getBisavoMaternoMaeRegistrationNumber() : null))
-                .bisavoMaternaMae(buildNode("bisavoMaternaMae", avoMaternaLocal != null ? avoMaternaLocal.getMother() : null, abcc != null ? abcc.getBisavoMaternaMaeName() : null, abcc != null ? abcc.getBisavoMaternaMaeRegistrationNumber() : null))
+                .animalPrincipal(buildNode("animalPrincipal", root,
+                        abcc == null ? null : abcc.getAnimalName(),
+                        abcc == null ? null : abcc.getAnimalRegistrationNumber()))
+                .pai(buildNode("pai", father,
+                        abcc != null ? abcc.getFatherName() : externalFather == null ? null : externalFather.getAnimalName(),
+                        abcc != null ? abcc.getFatherRegistrationNumber() : externalFather == null ? externalFatherOf(root) : externalFather.getAnimalRegistrationNumber(),
+                        abcc == null && externalFather == null && !isBlank(externalFatherOf(root))))
+                .mae(buildNode("mae", mother,
+                        abcc != null ? abcc.getMotherName() : externalMother == null ? null : externalMother.getAnimalName(),
+                        abcc != null ? abcc.getMotherRegistrationNumber() : externalMother == null ? externalMotherOf(root) : externalMother.getAnimalRegistrationNumber(),
+                        abcc == null && externalMother == null && !isBlank(externalMotherOf(root))))
+                .avoPaterno(buildNode("avoPaterno", paternalGrandfather,
+                        abcc == null ? null : abcc.getPaternalGrandfatherName(),
+                        abcc == null ? null : abcc.getPaternalGrandfatherRegistrationNumber()))
+                .avoPaterna(buildNode("avoPaterna", paternalGrandmother,
+                        abcc == null ? null : abcc.getPaternalGrandmotherName(),
+                        abcc == null ? null : abcc.getPaternalGrandmotherRegistrationNumber()))
+                .avoMaterno(buildNode("avoMaterno", maternalGrandfather,
+                        abcc == null ? null : abcc.getMaternalGrandfatherName(),
+                        abcc == null ? null : abcc.getMaternalGrandfatherRegistrationNumber()))
+                .avoMaterna(buildNode("avoMaterna", maternalGrandmother,
+                        abcc == null ? null : abcc.getMaternalGrandmotherName(),
+                        abcc == null ? null : abcc.getMaternalGrandmotherRegistrationNumber()))
+                .bisavoPaternoPai(buildNode("bisavoPaternoPai", fatherOf(paternalGrandfather),
+                        abcc == null ? null : abcc.getBisavoPaternoPaiName(),
+                        abcc == null ? null : abcc.getBisavoPaternoPaiRegistrationNumber()))
+                .bisavoPaternaPai(buildNode("bisavoPaternaPai", motherOf(paternalGrandfather),
+                        abcc == null ? null : abcc.getBisavoPaternaPaiName(),
+                        abcc == null ? null : abcc.getBisavoPaternaPaiRegistrationNumber()))
+                .bisavoPaternoMae(buildNode("bisavoPaternoMae", fatherOf(paternalGrandmother),
+                        abcc == null ? null : abcc.getBisavoPaternoMaeName(),
+                        abcc == null ? null : abcc.getBisavoPaternoMaeRegistrationNumber()))
+                .bisavoPaternaMae(buildNode("bisavoPaternaMae", motherOf(paternalGrandmother),
+                        abcc == null ? null : abcc.getBisavoPaternaMaeName(),
+                        abcc == null ? null : abcc.getBisavoPaternaMaeRegistrationNumber()))
+                .bisavoMaternoPai(buildNode("bisavoMaternoPai", fatherOf(maternalGrandfather),
+                        abcc == null ? null : abcc.getBisavoMaternoPaiName(),
+                        abcc == null ? null : abcc.getBisavoMaternoPaiRegistrationNumber()))
+                .bisavoMaternaPai(buildNode("bisavoMaternaPai", motherOf(maternalGrandfather),
+                        abcc == null ? null : abcc.getBisavoMaternaPaiName(),
+                        abcc == null ? null : abcc.getBisavoMaternaPaiRegistrationNumber()))
+                .bisavoMaternoMae(buildNode("bisavoMaternoMae", fatherOf(maternalGrandmother),
+                        abcc == null ? null : abcc.getBisavoMaternoMaeName(),
+                        abcc == null ? null : abcc.getBisavoMaternoMaeRegistrationNumber()))
+                .bisavoMaternaMae(buildNode("bisavoMaternaMae", motherOf(maternalGrandmother),
+                        abcc == null ? null : abcc.getBisavoMaternaMaeName(),
+                        abcc == null ? null : abcc.getBisavoMaternaMaeRegistrationNumber()))
                 .integration(integration)
                 .build();
     }
 
     private GenealogyComplementaryNodeVO buildNode(
             String relationship,
-            GoatEntity localGoat,
+            GoatGenealogySnapshot localGoat,
             String abccName,
             String abccRegistrationNumber
     ) {
@@ -117,18 +146,21 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
     private GenealogyComplementaryNodeVO buildNode(
             String relationship,
-            GoatEntity localGoat,
+            GoatGenealogySnapshot localGoat,
             String abccName,
             String abccRegistrationNumber,
             boolean declared
     ) {
         if (localGoat != null) {
+            Long technicalId = localGoat.id() == null ? null : localGoat.id().value();
             return GenealogyComplementaryNodeVO.builder()
                     .relationship(relationship)
-                    .name(localGoat.getName())
-                    .registrationNumber(localGoat.getRegistrationNumber())
+                    .name(localGoat.name())
+                    .registrationNumber(localGoat.registrationNumber())
                     .source(GenealogyNodeSource.LOCAL)
-                    .localGoatId(localGoat.getRegistrationNumber())
+                    // Legacy response field: retains its historical RG value.
+                    .localGoatId(localGoat.registrationNumber())
+                    .localTechnicalGoatId(technicalId)
                     .build();
         }
 
@@ -139,6 +171,7 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
                     .registrationNumber(trimOrNull(abccRegistrationNumber))
                     .source(declared ? GenealogyNodeSource.DECLARADO : GenealogyNodeSource.ABCC)
                     .localGoatId(null)
+                    .localTechnicalGoatId(null)
                     .build();
         }
 
@@ -148,7 +181,28 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
                 .registrationNumber(null)
                 .source(GenealogyNodeSource.AUSENTE)
                 .localGoatId(null)
+                .localTechnicalGoatId(null)
                 .build();
+    }
+
+    private GoatGenealogySnapshot fatherOf(GoatGenealogySnapshot goat) {
+        return localGoat(goat == null ? null : goat.father());
+    }
+
+    private GoatGenealogySnapshot motherOf(GoatGenealogySnapshot goat) {
+        return localGoat(goat == null ? null : goat.mother());
+    }
+
+    private GoatGenealogySnapshot localGoat(GoatGenealogySnapshot.ParentReference parent) {
+        return parent == null ? null : parent.localGoat();
+    }
+
+    private String externalFatherOf(GoatGenealogySnapshot goat) {
+        return goat == null || goat.father() == null ? null : goat.father().externalRegistrationNumber();
+    }
+
+    private String externalMotherOf(GoatGenealogySnapshot goat) {
+        return goat == null || goat.mother() == null ? null : goat.mother().externalRegistrationNumber();
     }
 
     private GenealogyComplementaryIntegrationVO integration(String status, String message) {

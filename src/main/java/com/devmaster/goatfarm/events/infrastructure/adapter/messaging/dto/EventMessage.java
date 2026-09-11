@@ -22,6 +22,7 @@ public class EventMessage implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long eventId;
+    private Long goatTechnicalId;
     private String goatRegistrationNumber;
     private String goatName;
     private EventType eventType;

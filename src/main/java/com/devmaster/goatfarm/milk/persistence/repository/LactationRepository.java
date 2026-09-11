@@ -20,9 +20,17 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
             LactationStatus status
     );
 
+    Optional<Lactation> findByFarmIdAndGoatTechnicalIdAndStatus(
+            Long farmId,
+            Long goatTechnicalId,
+            LactationStatus status
+    );
+
     Optional<Lactation> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<Lactation> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
 
     Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+    Page<Lactation> findAllByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, Pageable pageable);
 
     @Query(
             value = """
@@ -30,7 +38,9 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                         select
                             p.id,
                             p.farm_id,
+                            p.goat_technical_id,
                             p.goat_id,
+                            coalesce(cast(p.goat_technical_id as varchar), p.goat_id) as goat_key,
                             p.status,
                             p.breeding_date,
                             p.confirm_date,
@@ -45,7 +55,9 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                         select
                             ranked.id,
                             ranked.farm_id,
+                            ranked.goat_technical_id,
                             ranked.goat_id,
+                            ranked.goat_key,
                             ranked.status,
                             ranked.breeding_date,
                             ranked.confirm_date,
@@ -55,7 +67,7 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                             select
                                 pc.*,
                                 row_number() over (
-                                    partition by pc.goat_id
+                                    partition by pc.goat_key
                                     order by pc.start_date desc, pc.id desc
                                 ) as rn
                             from pregnancy_candidates pc
@@ -64,6 +76,7 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                     )
                     select
                         l.id as lactationId,
+                        l.goat_technical_id as goatTechnicalId,
                         l.goat_id as goatId,
                         coalesce(l.dry_at_pregnancy_days, :defaultDryDays) as dryAtPregnancyDays,
                         lp.start_date as startDatePregnancy,
@@ -72,8 +85,9 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                         (lp.start_date + coalesce(l.dry_at_pregnancy_days, :defaultDryDays)) as dryOffDate
                     from lactation l
                     join latest_pregnancy lp
-                      on lp.farm_id = l.farm_id
-                     and lp.goat_id = l.goat_id
+                     on lp.farm_id = l.farm_id
+                     and coalesce(cast(lp.goat_technical_id as varchar), lp.goat_id)
+                         = coalesce(cast(l.goat_technical_id as varchar), l.goat_id)
                     where l.farm_id = :farmId
                       and l.status = 'ACTIVE'
                       and upper(lp.status) = 'ACTIVE'
@@ -86,7 +100,9 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                         select
                             p.id,
                             p.farm_id,
+                            p.goat_technical_id,
                             p.goat_id,
+                            coalesce(cast(p.goat_technical_id as varchar), p.goat_id) as goat_key,
                             p.status,
                             p.breeding_date,
                             p.confirm_date,
@@ -101,7 +117,9 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                         select
                             ranked.id,
                             ranked.farm_id,
+                            ranked.goat_technical_id,
                             ranked.goat_id,
+                            ranked.goat_key,
                             ranked.status,
                             ranked.closed_at,
                             ranked.start_date
@@ -109,7 +127,7 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                             select
                                 pc.*,
                                 row_number() over (
-                                    partition by pc.goat_id
+                                    partition by pc.goat_key
                                     order by pc.start_date desc, pc.id desc
                                 ) as rn
                             from pregnancy_candidates pc
@@ -119,8 +137,9 @@ public interface LactationRepository extends JpaRepository<Lactation, Long> {
                     select count(*)
                     from lactation l
                     join latest_pregnancy lp
-                      on lp.farm_id = l.farm_id
-                     and lp.goat_id = l.goat_id
+                     on lp.farm_id = l.farm_id
+                     and coalesce(cast(lp.goat_technical_id as varchar), lp.goat_id)
+                         = coalesce(cast(l.goat_technical_id as varchar), l.goat_id)
                     where l.farm_id = :farmId
                       and l.status = 'ACTIVE'
                       and upper(lp.status) = 'ACTIVE'

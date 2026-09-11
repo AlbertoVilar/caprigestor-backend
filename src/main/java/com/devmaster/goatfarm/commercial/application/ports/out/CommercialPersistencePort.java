@@ -21,6 +21,8 @@ public interface CommercialPersistencePort {
 
     boolean existsAnimalSaleByGoatRegistrationNumber(String goatRegistrationNumber);
 
+    boolean existsAnimalSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
+
     Optional<AnimalSale> findAnimalSaleByIdAndFarmId(Long saleId, Long farmId);
 
     List<AnimalSale> findAnimalSalesByFarmId(Long farmId);

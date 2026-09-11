@@ -1,6 +1,6 @@
 # Status do Projeto CapriGestor Backend
 
-Ultima atualizacao: 2026-09-09
+Ultima atualizacao: 2026-09-10
 Escopo: estado funcional humano e versionado do backend no commit integrado de develop.
 Links relacionados: [Portal](../INDEX.md), [MVP](./MVP_READY.md), [Roadmap](./ROADMAP.md), [Contratos API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md)
 
@@ -11,13 +11,21 @@ hexagonal, PostgreSQL/Flyway, seguranca JWT farm-scoped e CI/CD com gates de
 qualidade. O estado tecnico deve ser conferido no codigo, nas migrations, nos
 testes, no `pom.xml`, nos workflows e nos manifestos Docker.
 
+Nesta onda, `cabras.id` passou a ser propagado como GoatId técnico nos
+consumidores de eventos, genealogia, reprodução, saúde, lactação/leite,
+comercial e auditoria. O RG continua como identidade registral/snapshot e as
+rotas RG permanecem compatíveis durante a transição. A integridade técnica é
+fechada pelas migrations V41 e V42; as rotas estruturais versionadas e a
+retirada dos aliases RG continuam documentadas em
+[GOAT_IDENTITY_DEPENDENT_MODULES_WAVE](../01-architecture/GOAT_IDENTITY_DEPENDENT_MODULES_WAVE.md).
+
 Baseline desta atualizacao:
 
-- branch: `develop`;
-- commit: `651f25d6c9362d497ac25d5c6a492799a6aaa2bd`;
+- branch: `refactor/goat-genealogy-events`;
+- commit: see the merge commit for PR #239;
 - `origin/main`: `b9aaa94c007e7865ec218816ce99e51b6a7864a5`;
 - a arvore de trabalho estava limpa na coleta deste status;
-- relatorios de teste existentes: 558 testes, 0 falhas, 0 erros e 1 ignorado.
+- relatorios de teste existentes: 589 testes, 0 falhas, 0 erros e 1 ignorado.
 
 ## Modulos implementados
 
@@ -48,8 +56,10 @@ Baseline desta atualizacao:
 
 ## Banco, testes e entrega
 
-- Flyway possui migrations V1 a V38; a V38 reforca referencias compostas por
-  fazenda.
+- Flyway possui migrations V1 a V42; V38 reforca referencias compostas por
+  fazenda, V39 introduz GoatId, V40 cria sombras técnicas, V41 exige GoatId
+  nos consumidores dependentes e V42 promove a PK técnica. Migrations
+  publicadas não foram editadas.
 - Desenvolvimento usa PostgreSQL; testes usam H2 e testes de integracao
   PostgreSQL quando Docker esta disponivel.
 - O piso de cobertura efetivo do `pom.xml` e `0.7588` (75,88%).
@@ -58,6 +68,14 @@ Baseline desta atualizacao:
   efetiva no runbook do ambiente.
 
 ## Limites atuais e proximos passos
+
+- `GoatEntity` usa `id` como `@Id` JPA técnico; `num_registro` permanece RG
+  único e corrigível como dado de negócio. As rotas v1 ainda são aliases
+  registrais explícitos e não inferem GoatId pelo formato da URL.
+- Fallbacks por RG permanecem apenas para compatibilidade de fixtures e rotas
+  legadas. A futura API estrutural deverá declarar GoatId explicitamente.
+- A base de desenvolvimento continua descartável, mas não foi resetada; o
+  reset pré-HML será uma operação separada, após a migração coerente.
 
 Este documento representa onde o produto esta. O trabalho futuro deve ficar no
 [ROADMAP](./ROADMAP.md). Nao use este arquivo para registrar hashes efemeros de

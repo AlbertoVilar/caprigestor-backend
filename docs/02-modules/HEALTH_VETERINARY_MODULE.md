@@ -6,6 +6,10 @@ Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCH
 ## Visão geral
 O módulo `health` registra, atualiza e consulta eventos de saúde (vacina, medicação, procedimento e ocorrências), com escopo farm-level e validação de ownership.
 
+Eventos sanitários, carência e alertas carregam `goatTechnicalId` de forma
+aditiva. O RG em `goatId` é mantido como snapshot e para as URLs v1 legadas;
+FKs farm-scoped usam a identidade técnica.
+
 ## Regras / Contratos
 - Status de evento: `AGENDADO`, `REALIZADO`, `CANCELADO`.
 - Tipos principais: `VACINA`, `VERMIFUGACAO`, `MEDICACAO`, `PROCEDIMENTO`, `DOENCA`.

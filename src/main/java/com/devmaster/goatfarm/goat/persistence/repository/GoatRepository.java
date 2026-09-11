@@ -15,9 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-public interface GoatRepository extends JpaRepository<GoatEntity, String> {
+public interface GoatRepository extends JpaRepository<GoatEntity, Long> {
 
     Optional<GoatEntity> findByRegistrationNumber(String registrationNumber);
+
+    boolean existsByRegistrationNumber(String registrationNumber);
 
     @Query("SELECT g FROM GoatEntity g WHERE g.registrationNumber = :id AND g.farm.id = :farmId")
     Optional<GoatEntity> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
@@ -70,26 +72,31 @@ public interface GoatRepository extends JpaRepository<GoatEntity, String> {
     @Query(nativeQuery = true, value = "DELETE FROM cabras WHERE capril_id IN (SELECT c.id FROM capril c WHERE c.user_id != :adminId)")
     void deleteGoatsFromOtherUsers(@Param("adminId") Long adminId);
 
-    // Carregamento completo com JOIN FETCH para genealogia (pai/mãe, avós e bisavós)
+    // Carregamento completo pelo grafo técnico de genealogia (pai/mãe, avós e bisavós).
+    // A rota v1 continua usando RG como lookup explícito; os joins internos não o usam como FK.
     @Query(
         "SELECT g FROM GoatEntity g " +
         "LEFT JOIN FETCH g.farm gf " +
         "LEFT JOIN FETCH gf.user " +
-        "LEFT JOIN FETCH g.father f " +
-        "LEFT JOIN FETCH f.father ff " +
-        "LEFT JOIN FETCH ff.father fff " +
-        "LEFT JOIN FETCH ff.mother ffm " +
-        "LEFT JOIN FETCH f.mother fm " +
-        "LEFT JOIN FETCH fm.father fmf " +
-        "LEFT JOIN FETCH fm.mother fmm " +
-        "LEFT JOIN FETCH g.mother m " +
-        "LEFT JOIN FETCH m.father mf " +
-        "LEFT JOIN FETCH mf.father mff " +
-        "LEFT JOIN FETCH mf.mother mfm " +
-        "LEFT JOIN FETCH m.mother mm " +
-        "LEFT JOIN FETCH mm.father mmf " +
-        "LEFT JOIN FETCH mm.mother mmm " +
-        "WHERE g.registrationNumber = :id AND g.farm.id = :farmId"
+        "LEFT JOIN FETCH g.user " +
+        "LEFT JOIN FETCH g.technicalFather f " +
+        "LEFT JOIN FETCH f.technicalFather ff " +
+        "LEFT JOIN FETCH ff.technicalFather fff " +
+        "LEFT JOIN FETCH ff.technicalMother ffm " +
+        "LEFT JOIN FETCH f.technicalMother fm " +
+        "LEFT JOIN FETCH fm.technicalFather fmf " +
+        "LEFT JOIN FETCH fm.technicalMother fmm " +
+        "LEFT JOIN FETCH g.technicalMother m " +
+        "LEFT JOIN FETCH m.technicalFather mf " +
+        "LEFT JOIN FETCH mf.technicalFather mff " +
+        "LEFT JOIN FETCH mf.technicalMother mfm " +
+        "LEFT JOIN FETCH m.technicalMother mm " +
+        "LEFT JOIN FETCH mm.technicalFather mmf " +
+        "LEFT JOIN FETCH mm.technicalMother mmm " +
+        "WHERE g.registrationNumber = :registrationNumber AND g.farm.id = :farmId"
     )
-    Optional<GoatEntity> findByIdAndFarmIdWithFamilyGraph(@Param("id") String id, @Param("farmId") Long farmId);
+    Optional<GoatEntity> findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph(
+            @Param("registrationNumber") String registrationNumber,
+            @Param("farmId") Long farmId
+    );
 }

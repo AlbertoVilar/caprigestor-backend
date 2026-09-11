@@ -10,6 +10,8 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,11 +24,12 @@ import java.time.LocalDate;
 @Table(name = "cabras")
 public class GoatEntity {
 
-        /** Technical identity introduced by V39; RG remains the transitional JPA id. */
-        @Column(name = "id", insertable = false, updatable = false)
+        /** Immutable technical identity promoted to the JPA identity by V42. */
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name = "id", nullable = false, updatable = false)
         private Long technicalId;
 
-        @Id
         @Column(name = "num_registro", unique = true, nullable = false, length = 20)
         private String registrationNumber;
 
@@ -85,6 +88,22 @@ public class GoatEntity {
         @Column(name = "mae_goat_id")
         private Long motherTechnicalId;
 
+        /**
+         * Technical genealogy relation introduced by V40. The scalar id remains
+         * the writable mapping during the dual-reference transition; this
+         * association is the read model used by new genealogy consumers.
+         */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pai_goat_id", referencedColumnName = "id", insertable = false, updatable = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private GoatEntity technicalFather;
+
+        /** See {@link #technicalFather}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mae_goat_id", referencedColumnName = "id", insertable = false, updatable = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private GoatEntity technicalMother;
+
         @Column(name = "pai_rg_externo", length = 20)
         private String externalFatherRegistrationNumber;
 
@@ -111,6 +130,10 @@ public class GoatEntity {
 
     public Long getMotherTechnicalId() { return motherTechnicalId; }
     public void setMotherTechnicalId(Long motherTechnicalId) { this.motherTechnicalId = motherTechnicalId; }
+
+    public GoatEntity getTechnicalFather() { return technicalFather; }
+
+    public GoatEntity getTechnicalMother() { return technicalMother; }
 
         public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }

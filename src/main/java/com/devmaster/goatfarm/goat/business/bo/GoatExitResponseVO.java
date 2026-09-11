@@ -17,6 +17,8 @@ import java.time.LocalDate;
 @Builder
 public class GoatExitResponseVO {
     private String goatId;
+    /** Stable structural identity; goatId remains the RG compatibility/display value. */
+    private Long goatTechnicalId;
     private GoatExitType exitType;
     private LocalDate exitDate;
     private String notes;

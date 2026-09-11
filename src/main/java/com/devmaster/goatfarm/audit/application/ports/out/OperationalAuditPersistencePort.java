@@ -11,4 +11,6 @@ public interface OperationalAuditPersistencePort {
     List<OperationalAuditEntry> findByFarmId(Long farmId, int limit);
 
     List<OperationalAuditEntry> findByFarmIdAndGoatRegistrationNumber(Long farmId, String goatRegistrationNumber, int limit);
+
+    List<OperationalAuditEntry> findByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, int limit);
 }

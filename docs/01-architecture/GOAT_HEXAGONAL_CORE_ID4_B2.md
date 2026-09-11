@@ -1,5 +1,9 @@
 # ID4-B2 — Goat Hexagonal Core
 
+> Nota de continuidade: a promoção estrutural posterior foi concluída pela
+> migration V42. Este documento preserva o escopo histórico do B2; o estado
+> corrente está em `GOAT_IDENTITY_DEPENDENT_MODULES_WAVE.md`.
+
 **Status:** IMPLEMENTED (first bounded core)
 
 This wave establishes the first usable hexagonal boundary for the Goat module

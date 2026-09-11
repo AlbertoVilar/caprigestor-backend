@@ -24,6 +24,7 @@ public record FarmHealthAlertsResponseDTO(
 
     public record AlertItemDTO(
             Long id,
+            Long goatTechnicalId,
             String goatId,
             HealthEventType type,
             HealthEventStatus status,
@@ -34,6 +35,7 @@ public record FarmHealthAlertsResponseDTO(
 
     public record WithdrawalAlertItemDTO(
             Long eventId,
+            Long goatTechnicalId,
             String goatId,
             String title,
             String productName,

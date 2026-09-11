@@ -1,10 +1,14 @@
 ﻿# Modulo Lactacao
-Ultima atualizacao: 2026-03-28
+Ultima atualizacao: 2026-09-10
 Escopo: abertura, secagem, retomada, consulta de lactacoes e alertas de secagem por fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Milk Production](./MILK_PRODUCTION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Visao geral
 O modulo de lactacao pertence ao contexto `milk` e controla o ciclo produtivo da cabra (abertura, historico, sumarios, secagem e retomada operacional quando a prenhez deixa de estar ativa sem parto).
+
+As respostas de lactação retornam `goatTechnicalId` de forma aditiva. O campo
+`goatId` permanece o RG compatível da rota; as referências persistidas usam
+`lactation.goat_technical_id`.
 
 ## Regras operacionais atuais
 - `ACTIVE`: lactacao em producao, apta a receber registros de leite.

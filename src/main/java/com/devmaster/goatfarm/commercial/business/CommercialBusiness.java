@@ -113,13 +113,17 @@ public class CommercialBusiness implements CommercialUseCase {
         String goatId = normalizeRequiredText("goatId", requestVO.goatId(), "Cabra e obrigatoria");
         GoatResponseVO goat = ensureGoatReadyForSale(farmId, goatId, saleDate, normalizeOptionalText(requestVO.notes()));
 
-        if (commercialPersistencePort.existsAnimalSaleByGoatRegistrationNumber(goat.getRegistrationNumber())) {
+        if ((goat.getTechnicalId() != null
+                && commercialPersistencePort.existsAnimalSaleByFarmIdAndGoatTechnicalId(farmId, goat.getTechnicalId()))
+                || (goat.getTechnicalId() == null
+                    && commercialPersistencePort.existsAnimalSaleByGoatRegistrationNumber(goat.getRegistrationNumber()))) {
             throw new DuplicateEntityException("goatId", "Ja existe uma venda registrada para esta cabra.");
         }
 
         AnimalSale animalSale = AnimalSale.builder()
                 .farm(farm)
                 .customer(customer)
+                .goatTechnicalId(goat.getTechnicalId())
                 .goatRegistrationNumber(goat.getRegistrationNumber())
                 .goatName(goat.getName())
                 .saleDate(saleDate)
@@ -133,6 +137,7 @@ public class CommercialBusiness implements CommercialUseCase {
         AnimalSale savedAnimalSale = commercialPersistencePort.saveAnimalSale(animalSale);
         operationalAuditUseCase.record(new OperationalAuditRecordVO(
                 farmId,
+                savedAnimalSale.getGoatTechnicalId(),
                 savedAnimalSale.getGoatRegistrationNumber(),
                 OperationalAuditActionType.ANIMAL_SALE_CREATED,
                 String.valueOf(savedAnimalSale.getId()),
@@ -169,6 +174,7 @@ public class CommercialBusiness implements CommercialUseCase {
         AnimalSale savedAnimalSale = commercialPersistencePort.saveAnimalSale(animalSale);
         operationalAuditUseCase.record(new OperationalAuditRecordVO(
                 farmId,
+                savedAnimalSale.getGoatTechnicalId(),
                 savedAnimalSale.getGoatRegistrationNumber(),
                 OperationalAuditActionType.ANIMAL_SALE_PAYMENT_REGISTERED,
                 String.valueOf(savedAnimalSale.getId()),
@@ -506,6 +512,7 @@ public class CommercialBusiness implements CommercialUseCase {
     private AnimalSaleResponseVO toAnimalSaleResponse(AnimalSale animalSale) {
         return new AnimalSaleResponseVO(
                 animalSale.getId(),
+                animalSale.getGoatTechnicalId(),
                 animalSale.getGoatRegistrationNumber(),
                 animalSale.getGoatName(),
                 animalSale.getCustomer().getId(),

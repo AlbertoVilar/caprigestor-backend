@@ -5,6 +5,8 @@ import java.time.LocalDate;
 public interface LactationDryOffAlertProjection {
     Long getLactationId();
 
+    Long getGoatTechnicalId();
+
     String getGoatId();
 
     Integer getDryAtPregnancyDays();

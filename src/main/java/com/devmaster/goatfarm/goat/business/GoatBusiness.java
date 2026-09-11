@@ -22,8 +22,8 @@ import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.domain.Goat;
-import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
+import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
@@ -99,10 +99,12 @@ public class GoatBusiness implements GoatManagementUseCase {
         GoatStatus currentStatus = mapExitStatus(requestVO.getExitType());
         goat.markExit(requestVO.getExitType(), requestVO.getExitDate(), normalizeNotes(requestVO.getNotes()), currentStatus);
         Goat saved = goatPort.save(goat);
-        operationalAuditUseCase.record(new OperationalAuditRecordVO(farmId, saved.registrationNumber(),
+        operationalAuditUseCase.record(new OperationalAuditRecordVO(farmId,
+                saved.id() == null ? null : saved.id().value(), saved.registrationNumber(),
                 OperationalAuditActionType.GOAT_EXIT, saved.registrationNumber(), "Saída do rebanho registrada como "
                 + requestVO.getExitType().getPortugueseValue() + " com status final " + saved.status() + "."));
-        return GoatExitResponseVO.builder().goatId(saved.registrationNumber()).exitType(saved.exitType())
+        return GoatExitResponseVO.builder().goatId(saved.registrationNumber())
+                .goatTechnicalId(saved.id() == null ? null : saved.id().value()).exitType(saved.exitType())
                 .exitDate(saved.exitDate()).notes(saved.exitNotes()).previousStatus(previousStatus)
                 .currentStatus(saved.status()).build();
     }
@@ -163,10 +165,24 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 
     private Goat findOrThrow(Long farmId, String token) {
-        Goat found = null;
-        try { long id = Long.parseLong(token); if (id > 0) found = goatPort.findByIdAndFarmId(new GoatId(id), farmId).orElse(null); }
-        catch (RuntimeException ignored) { /* Transitional URLs carry an RG. */ }
-        if (found == null) found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
+        // Explicit technical tokens are unambiguous even when an RG happens
+        // to contain only digits. The numeric fallback remains only for old
+        // clients that used the transitional route before this vocabulary was
+        // published; registration lookup is still attempted first there.
+        var explicitTechnicalId = GoatRouteIdentifier.technicalId(token);
+        if (explicitTechnicalId.isPresent()) {
+            return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId)
+                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        }
+
+        Goat found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
+        if (found == null && token != null && token.matches("\\d+")) {
+            try {
+                found = goatPort.findByIdAndFarmId(new com.devmaster.goatfarm.goat.domain.GoatId(Long.parseLong(token)), farmId).orElse(null);
+            } catch (NumberFormatException ignored) {
+                // Keep the not-found result for values outside Long range.
+            }
+        }
         if (found == null) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda.");
         return found;
     }
@@ -183,6 +199,7 @@ public class GoatBusiness implements GoatManagementUseCase {
 
     private GoatResponseVO toResponse(Goat goat) {
         GoatResponseVO response = new GoatResponseVO();
+        response.setTechnicalId(goat.id() == null ? null : goat.id().value());
         response.setRegistrationNumber(goat.registrationNumber()); response.setName(goat.name()); response.setGender(goat.gender());
         response.setBreed(goat.breed()); response.setColor(goat.color()); response.setBirthDate(goat.birthDate()); response.setStatus(goat.status());
         response.setExitType(goat.exitType()); response.setExitDate(goat.exitDate()); response.setExitNotes(goat.exitNotes()); response.setTod(goat.tod());

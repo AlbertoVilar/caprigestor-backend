@@ -52,9 +52,9 @@ public class GoatPersistenceMapper {
                 RegistrationIdentity.of(entity.getRegistrationNumber(), entity.getTod(), entity.getToe()),
                 entity.getName(), entity.getGender(), entity.getBreed(), entity.getColor(),
                 entity.getBirthDate(), entity.getStatus(), entity.getExitType(), entity.getExitDate(),
-                entity.getExitNotes(), entity.getCategory(), toParent(entity.getFather(),
+                entity.getExitNotes(), entity.getCategory(), toParent(entity.getTechnicalFather(), entity.getFather(),
                         entity.getFatherTechnicalId(), entity.getExternalFatherRegistrationNumber()),
-                toParent(entity.getMother(), entity.getMotherTechnicalId(), entity.getExternalMotherRegistrationNumber()),
+                toParent(entity.getTechnicalMother(), entity.getMother(), entity.getMotherTechnicalId(), entity.getExternalMotherRegistrationNumber()),
                 entity.getFarm() == null ? null : entity.getFarm().getId(),
                 entity.getUser() == null ? null : entity.getUser().getId(),
                 entity.getFarm() == null ? null : entity.getFarm().getName(),
@@ -62,7 +62,13 @@ public class GoatPersistenceMapper {
         );
     }
 
-    private Goat.ParentReference toParent(GoatEntity local, Long technicalId, String externalRegistration) {
+    private Goat.ParentReference toParent(
+            GoatEntity technicalLocal,
+            GoatEntity legacyLocal,
+            Long technicalId,
+            String externalRegistration
+    ) {
+        GoatEntity local = technicalLocal != null ? technicalLocal : legacyLocal;
         if (local != null) {
             return Goat.ParentReference.local(
                     GoatId.of(local.getTechnicalId() != null ? local.getTechnicalId() : technicalId),

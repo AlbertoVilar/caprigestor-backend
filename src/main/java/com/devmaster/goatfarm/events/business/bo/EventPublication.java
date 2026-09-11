@@ -10,6 +10,7 @@ import java.time.LocalDate;
  */
 public record EventPublication(
         Long eventId,
+        Long goatTechnicalId,
         String goatRegistrationNumber,
         String goatName,
         EventType eventType,

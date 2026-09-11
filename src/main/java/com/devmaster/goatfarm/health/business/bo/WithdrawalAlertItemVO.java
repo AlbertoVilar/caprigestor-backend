@@ -7,6 +7,7 @@ import java.time.LocalDate;
 @Builder
 public record WithdrawalAlertItemVO(
         Long eventId,
+        Long goatTechnicalId,
         String goatId,
         String title,
         String productName,

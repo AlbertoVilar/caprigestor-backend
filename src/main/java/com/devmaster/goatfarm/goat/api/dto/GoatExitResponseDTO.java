@@ -17,6 +17,7 @@ import java.time.LocalDate;
 @Builder
 public class GoatExitResponseDTO {
     private String goatId;
+    private Long goatTechnicalId;
     private GoatExitType exitType;
     private LocalDate exitDate;
     private String notes;

@@ -36,6 +36,10 @@ public class HealthEvent {
     @Column(name = "goat_id", nullable = false)
     private String goatId;
 
+    /** Stable structural identity. goat_id remains the historical/public RG snapshot. */
+    @Column(name = "goat_technical_id")
+    private Long goatTechnicalId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
     private HealthEventType type;

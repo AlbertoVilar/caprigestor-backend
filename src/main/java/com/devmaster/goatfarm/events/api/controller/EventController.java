@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.events.api.controller;
 
 import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
+import com.devmaster.goatfarm.events.application.ports.out.EventPage;
+import com.devmaster.goatfarm.events.application.ports.out.EventPageQuery;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import com.devmaster.goatfarm.events.api.dto.EventRequestDTO;
@@ -13,6 +15,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -43,7 +47,7 @@ public class EventController {
             @PathVariable String goatId,
             @Valid @RequestBody EventRequestDTO requestDTO) {
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
-        EventResponseVO responseVO = eventUseCase.createEvent(requestVO, goatId);
+        EventResponseVO responseVO = eventUseCase.createEvent(farmId, goatId, requestVO);
         return ResponseEntity.status(HttpStatus.CREATED).body(eventMapper.toResponseDTO(responseVO));
     }
 
@@ -56,7 +60,7 @@ public class EventController {
             @PathVariable Long eventId,
             @Valid @RequestBody EventRequestDTO requestDTO) {
         EventRequestVO requestVO = eventMapper.toRequestVO(requestDTO);
-        EventResponseVO responseVO = eventUseCase.updateEvent(eventId, requestVO, goatId);
+        EventResponseVO responseVO = eventUseCase.updateEvent(farmId, goatId, eventId, requestVO);
         return ResponseEntity.ok(eventMapper.toResponseDTO(responseVO));
     }
 
@@ -67,7 +71,7 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId) {
-        EventResponseVO responseVO = eventUseCase.findEventById(eventId);
+        EventResponseVO responseVO = eventUseCase.findEventById(farmId, goatId, eventId);
         return ResponseEntity.ok(eventMapper.toResponseDTO(responseVO));
     }
 
@@ -78,9 +82,8 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PageableDefault(size = 12) Pageable pageable) {
-        Page<EventResponseVO> responseVOs = eventUseCase.findEventsWithFilters(goatId, null, null, null, pageable);
-        Page<EventResponseDTO> responseDTOs = responseVOs.map(eventMapper::toResponseDTO);
-        return ResponseEntity.ok(responseDTOs);
+        return ResponseEntity.ok(toResponsePage(eventUseCase.findEventsWithFilters(
+                farmId, goatId, null, null, null, toPageQuery(pageable))));
     }
 
     @CanManageFarm
@@ -93,9 +96,8 @@ public class EventController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 12) Pageable pageable) {
-        Page<EventResponseVO> responseVOs = eventUseCase.findEventsWithFilters(goatId, eventType, startDate, endDate, pageable);
-        Page<EventResponseDTO> responseDTOs = responseVOs.map(eventMapper::toResponseDTO);
-        return ResponseEntity.ok(responseDTOs);
+        return ResponseEntity.ok(toResponsePage(eventUseCase.findEventsWithFilters(
+                farmId, goatId, eventType, startDate, endDate, toPageQuery(pageable))));
     }
 
     @FarmOwnerOnly
@@ -105,7 +107,19 @@ public class EventController {
             @PathVariable Long farmId,
             @PathVariable String goatId,
             @PathVariable Long eventId) {
-        eventUseCase.deleteEvent(eventId);
+        eventUseCase.deleteEvent(farmId, goatId, eventId);
         return ResponseEntity.noContent().build();
+    }
+
+    private EventPageQuery toPageQuery(Pageable pageable) {
+        String sort = pageable.getSort().stream().findFirst()
+                .map(order -> order.getProperty() + "," + order.getDirection().name())
+                .orElse("");
+        return new EventPageQuery(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
+    private Page<EventResponseDTO> toResponsePage(EventPage<EventResponseVO> page) {
+        return new PageImpl<>(page.content().stream().map(eventMapper::toResponseDTO).toList(),
+                PageRequest.of(page.page(), page.size()), page.totalElements());
     }
 }

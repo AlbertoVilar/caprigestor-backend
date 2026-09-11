@@ -42,6 +42,7 @@ public class RabbitMQEventPublisher implements EventPublisher {
 
         EventMessage message = EventMessage.builder()
                 .eventId(event.eventId())
+                .goatTechnicalId(event.goatTechnicalId())
                 .goatRegistrationNumber(event.goatRegistrationNumber())
                 .goatName(event.goatName())
                 .eventType(event.eventType())
