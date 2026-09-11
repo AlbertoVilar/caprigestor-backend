@@ -10,10 +10,8 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
-import org.hibernate.generator.EventType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,7 +21,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
-@Table(name = "cabras", uniqueConstraints = @UniqueConstraint(name = "uk_cabras_technical_id_hibernate", columnNames = "id"))
+@Table(name = "cabras")
 public class GoatEntity {
 
         /** Immutable technical identity promoted to the JPA identity by V42. */
