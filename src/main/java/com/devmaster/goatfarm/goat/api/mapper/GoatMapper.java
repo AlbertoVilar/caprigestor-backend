@@ -10,6 +10,12 @@ import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationHistoryResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationRectificationRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationRectificationResponseVO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationHistoryResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationResponseDTO;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
@@ -23,4 +29,10 @@ public interface GoatMapper {
     GoatExitRequestVO toExitRequestVO(GoatExitRequestDTO dto);
 
     GoatExitResponseDTO toExitResponseDTO(GoatExitResponseVO vo);
+
+    GoatRegistrationRectificationRequestVO toRegistrationRectificationRequestVO(GoatRegistrationRectificationRequestDTO dto);
+
+    GoatRegistrationRectificationResponseDTO toRegistrationRectificationResponseDTO(GoatRegistrationRectificationResponseVO vo);
+
+    GoatRegistrationHistoryResponseDTO toRegistrationHistoryResponseDTO(GoatRegistrationHistoryResponseVO vo);
 }

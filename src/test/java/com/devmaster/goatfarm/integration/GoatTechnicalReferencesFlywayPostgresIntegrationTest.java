@@ -26,10 +26,9 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
 
         try (Connection connection = openConnection()) {
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
-                    // Six legacy farm-scoped RG constraints remain as a
-                    // compatibility graph; single-column RG FKs are
-                    // recreated against the unique business key in V42.
-                    .isEqualTo(6L);
+                    // V43 removes every direct structural FK to the mutable
+                    // RG. All goat-dependent structural references target id.
+                    .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
                     .isEqualTo(7L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in ('fk_cabras_pai_goat_id','fk_cabras_mae_goat_id')"))
@@ -38,6 +37,9 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
                     .isEqualTo(1L);
             assertThat(hasConstraint(connection, "uk_cabras_farm_id", "UNIQUE")).isTrue();
             assertThat(hasConstraint(connection, "uk_lactation_farm_goat_technical_id", "UNIQUE")).isTrue();
+            assertThat(hasConstraint(connection, "fk_goat_registration_history_goat", "FOREIGN KEY")).isTrue();
+            assertThat(hasConstraint(connection, "fk_goat_registration_history_farm_goat", "FOREIGN KEY")).isTrue();
+            assertThat(queryLong(connection, "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'goat_registration_history'")).isEqualTo(1L);
             assertNullable(connection, "cabras", "pai_goat_id");
             assertNullable(connection, "cabras", "mae_goat_id");
             assertNotNullable(connection, "eventos", "goat_technical_id");
@@ -94,7 +96,7 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(queryString(connection, "select goat_registration_number from operational_audit_entry where id = 80"))
                     .isEqualTo("G-101");
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
-                    .isEqualTo(6L);
+                    .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
                     .isEqualTo(7L);
         }
@@ -138,7 +140,9 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from eventos where id = 201")).isZero();
 
             execute(connection, "delete from cabras where num_registro = 'G-PARENT'");
-            assertThat(queryLong(connection, "select count(*) from cabras where num_registro = 'G-CHILD' and pai_num_registro is null and pai_goat_id is null")).isEqualTo(1L);
+            // The technical local link is nulled by ON DELETE SET NULL, while
+            // pai_num_registro remains an immutable historical snapshot.
+            assertThat(queryLong(connection, "select count(*) from cabras where num_registro = 'G-CHILD' and pai_num_registro = 'G-PARENT' and pai_goat_id is null")).isEqualTo(1L);
 
             assertThatThrownBy(() -> execute(connection, "insert into health_events (id, farm_id, goat_id, type, status, title, scheduled_date) values (202, 101, 'G-NOPE', 'VACCINE', 'SCHEDULED', 'Invalid', date '2026-01-01')"))
                     .isInstanceOf(SQLException.class);

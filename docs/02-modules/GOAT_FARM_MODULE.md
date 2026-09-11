@@ -1,5 +1,5 @@
 ﻿# GOAT_FARM_MODULE
-Última atualização: 2026-09-09
+Última atualização: 2026-09-11
 Escopo: contratos e bordas HTTP do módulo base de Fazendas e Cabras (Goat/Farm).
 Links relacionados: [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md), [Padrão Market-Grade](../01-architecture/MODULE_STANDARD_MARKET_GRADE.md)
 
@@ -58,6 +58,20 @@ Cabras:
 - `GET /api/v1/goatfarms/{farmId}/goats/search?name=&page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/goats/summary`
 - `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/exit`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/registration`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/registration-history`
+
+## Retificação registral administrativa (ID5-A)
+
+O RG atual continua sendo um identificador de negócio e pode ser corrigido
+quando TOD/TOE estiverem comprovadamente errados. A correção é feita somente
+no endpoint explícito de retificação, que deriva o RG a partir de TOD + TOE,
+mantém o `GoatId`, preserva snapshots históricos e grava o motivo, evidência,
+origem, ator e data em `goat_registration_history`. O `PUT` cadastral comum
+rejeita mudanças de identidade e continua destinado apenas ao perfil do
+animal. A operação exige `ADMIN` ou `FARM_OWNER`; `OPERATOR` não pode
+retificar nem consultar o histórico. A ABCC pode fornecer evidência, mas não é
+obrigatória para animais sem registro externo.
 
 Reprodução (Sprint 1 - parto + cria(s)):
 - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/{pregnancyId}/births`

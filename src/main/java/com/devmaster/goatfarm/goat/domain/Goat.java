@@ -140,6 +140,20 @@ public final class Goat {
         this.mother = mother;
     }
 
+    /**
+     * Corrects the registral identity of this same biological animal. The
+     * technical GoatId is intentionally final and is never touched here.
+     */
+    public void rectifyRegistration(RegistrationIdentity correctedIdentity) {
+        if (correctedIdentity == null) {
+            throw new IllegalArgumentException("correctedIdentity must not be null");
+        }
+        if (registrationIdentity.equals(correctedIdentity)) {
+            throw new IllegalArgumentException("registration identity is already equal to the requested value");
+        }
+        this.registrationIdentity = correctedIdentity;
+    }
+
     public void markExit(GoatExitType exitType, LocalDate exitDate, String exitNotes, GoatStatus resultingStatus) {
         this.exitType = exitType;
         this.exitDate = exitDate;

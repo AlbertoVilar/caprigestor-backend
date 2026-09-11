@@ -36,24 +36,26 @@ os gates de CI e as rotas `/api/v1` fazem parte do estado atual.
 
 ### 4. Debitos tecnicos priorizados — identidade e ciclo de vida do animal
 
-#### TD-ANIMAL-01 — Correcao de cadastro com RG/TOD/TOE divergentes
+#### TD-ANIMAL-01 — Correcao de cadastro com RG/TOD/TOE divergentes (ID5-A)
 
 - **Prioridade:** alta; risco de integridade de identidade e de referencias
-  entre modulos.
+  entre modulos. **Implementado na branch
+  `feat/goat-registration-rectification`; aguarda revisão e merge.**
 - O `registrationNumber` representa o RG formado por `TOD + TOE` e hoje e a
   chave primaria de `cabras`. O formulario ativo permite editar o `TOE`, mas
   nao recalcula o RG durante a edicao; o backend tambem ignora um novo RG no
   `PUT`. Isso pode persistir um animal com RG diferente da composicao de seus
   identificadores auriculares.
-- **Decisao provisoria:** o RG nao deve ser alterado diretamente depois da
-  persistencia. A ABCC permanece opcional: animais sem registro ABCC continuam
-  validos e podem ser cadastrados manualmente.
-- **Intervencao futura:** manter a geracao/validacao canonica de `RG = TOD +
-  TOE`, bloquear alteracoes de identidade no `PUT` comum e criar um fluxo
-  administrativo de correcao por recadastro. O fluxo deve verificar
-  dependencias, invalidar o cadastro incorreto quando necessario, criar o
-  registro corrigido e preservar a relacao entre RG antigo e novo sempre que
-  houver historico.
+- **Decisao:** o RG nao e alterado pelo `PUT` comum. A ABCC permanece
+  opcional: animais sem registro ABCC continuam validos e podem ser cadastrados
+  manualmente.
+- **Entrega ID5-A:** a geracao/validacao canonica de `RG = TOD + TOE`, o
+  bloqueio de mudança de identidade no `PUT` comum e o endpoint administrativo
+  `PATCH .../registration` foram implementados. A retificação mantém o mesmo
+  GoatId, não reescreve dependências históricas, registra evidência/motivo/ator
+  em `goat_registration_history` e na auditoria, e rejeita RG duplicado.
+- **Pendente:** frontend para consumir o fluxo, eventual API estrutural futura
+  por GoatId e a operação separada de reset pré-HML.
 - A consulta ABCC pode ser oferecida como verificacao ou pre-preenchimento,
   mas nao deve ser requisito para o cadastro manual de animais sem registro.
 

@@ -47,7 +47,7 @@ class GoatPersistenceAdapterTest {
         adapter = new GoatPersistenceAdapter(repository, mapper);
         entity = entity(10L, "RG-10");
         domain = Goat.rehydrate(new GoatId(10L),
-                RegistrationIdentity.of("RG-10", "10", "10"),
+                RegistrationIdentity.of("RG-10", null, null),
                 "Matriz", Gender.FEMEA, GoatBreed.SAANEN, "Branca",
                 LocalDate.of(2024, 1, 1), GoatStatus.ATIVO, null, null, null,
                 Category.PA, null, null, 1L, 2L, "Capril", "Alberto");
@@ -57,11 +57,11 @@ class GoatPersistenceAdapterTest {
     @Test
     void savesDomainAggregateUsingTechnicalIdentityWhenPresent() {
         when(repository.findByTechnicalId(10L)).thenReturn(Optional.of(entity));
-        when(mapper.toEntity(domain, entity, null, null)).thenReturn(entity);
+        when(mapper.toEntity(domain, entity)).thenReturn(entity);
         when(repository.save(entity)).thenReturn(entity);
 
         assertThat(adapter.save(domain)).isSameAs(domain);
-        verify(mapper).toEntity(domain, entity, null, null);
+        verify(mapper).toEntity(domain, entity);
     }
 
     @Test

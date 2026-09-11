@@ -71,7 +71,7 @@ class GoatBusinessBehavioralCoverageTest {
     @BeforeEach
     void setUp() {
         business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage);
-        goat = goat(77L, "164322002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
+        goat = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
         lenient().when(parentage.resolve(any(), any(), any(), any()))
                 .thenReturn(new GoatParentagePort.ResolvedParentage(null, null));
@@ -87,21 +87,21 @@ class GoatBusinessBehavioralCoverageTest {
         user.setId(1L);
         Goat.ParentReference father = Goat.ParentReference.local(new GoatId(11L), "164321001", "Reprodutor Alpha");
         Goat.ParentReference mother = Goat.ParentReference.local(new GoatId(12L), "164321002", "Matriz Beta");
-        GoatRequestVO request = request("164322002", "Xeque");
+        GoatRequestVO request = request("1643222002", "Xeque");
         request.setFatherRegistrationNumber("164321001");
         request.setMotherRegistrationNumber("164321002");
 
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
         when(ownershipService.getCurrentUser()).thenReturn(user);
-        when(goatPort.existsByRegistrationNumber("164322002")).thenReturn(false);
-        when(parentage.resolve(Category.PA, "164322002", "164321001", "164321002"))
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(parentage.resolve(Category.PA, "1643222002", "164321001", "164321002"))
                 .thenReturn(new GoatParentagePort.ResolvedParentage(father, mother));
         when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         GoatResponseVO result = business.createGoat(1L, request);
 
-        assertThat(result.getRegistrationNumber()).isEqualTo("164322002");
+        assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
         ArgumentCaptor<Goat> saved = ArgumentCaptor.forClass(Goat.class);
         verify(goatPort).save(saved.capture());
         assertThat(saved.getValue().father()).isEqualTo(father);
@@ -138,14 +138,14 @@ class GoatBusinessBehavioralCoverageTest {
     void listsOffspringByParentRegistrationWithinFarm() {
         Goat kid = goat(88L, "164322900", "Cria Teste", Gender.FEMEA, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
-        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(goat));
         when(goatPort.findOffspringByParentId(1L, new GoatId(77L))).thenReturn(List.of(kid));
 
-        List<GoatResponseVO> result = business.listOffspring(1L, "164322002");
+        List<GoatResponseVO> result = business.listOffspring(1L, "1643222002");
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getRegistrationNumber()).isEqualTo("164322900");
-        verify(goatPort).findByRegistrationNumberAndFarmId("164322002", 1L);
+        verify(goatPort).findByRegistrationNumberAndFarmId("1643222002", 1L);
         verify(goatPort).findOffspringByParentId(1L, new GoatId(77L));
     }
 
@@ -176,12 +176,12 @@ class GoatBusinessBehavioralCoverageTest {
         GoatExitRequestVO request = GoatExitRequestVO.builder()
                 .exitType(GoatExitType.VENDA).exitDate(LocalDate.now().minusDays(1))
                 .notes("Venda confirmada").build();
-        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(goat));
         when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        GoatExitResponseVO result = business.exitGoat(1L, "164322002", request);
+        GoatExitResponseVO result = business.exitGoat(1L, "1643222002", request);
 
-        assertThat(result.getGoatId()).isEqualTo("164322002");
+        assertThat(result.getGoatId()).isEqualTo("1643222002");
         assertThat(result.getExitType()).isEqualTo(GoatExitType.VENDA);
         assertThat(result.getCurrentStatus()).isEqualTo(GoatStatus.VENDIDO);
         assertThat(result.getPreviousStatus()).isEqualTo(GoatStatus.ATIVO);
@@ -194,9 +194,9 @@ class GoatBusinessBehavioralCoverageTest {
     void rejectsGoatExitWithFutureDate() {
         GoatExitRequestVO request = GoatExitRequestVO.builder()
                 .exitType(GoatExitType.DESCARTE).exitDate(LocalDate.now().plusDays(1)).build();
-        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(goat));
 
-        assertThatThrownBy(() -> business.exitGoat(1L, "164322002", request))
+        assertThatThrownBy(() -> business.exitGoat(1L, "1643222002", request))
                 .isInstanceOf(InvalidArgumentException.class)
                 .hasMessageContaining("Data de saída não pode ser futura");
         verify(goatPort, never()).save(any(Goat.class));
@@ -204,13 +204,13 @@ class GoatBusinessBehavioralCoverageTest {
 
     @Test
     void rejectsDuplicatedGoatExit() {
-        Goat exited = goat(77L, "164322002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
+        Goat exited = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 GoatExitType.VENDA, LocalDate.now().minusDays(10), null);
         GoatExitRequestVO request = GoatExitRequestVO.builder()
                 .exitType(GoatExitType.TRANSFERENCIA).exitDate(LocalDate.now().minusDays(1)).build();
-        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(exited));
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(exited));
 
-        assertThatThrownBy(() -> business.exitGoat(1L, "164322002", request))
+        assertThatThrownBy(() -> business.exitGoat(1L, "1643222002", request))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Já existe saída registrada para este animal");
         verify(goatPort, never()).save(any(Goat.class));
@@ -234,7 +234,9 @@ class GoatBusinessBehavioralCoverageTest {
 
     private Goat goat(Long id, String registration, String name, Gender gender, GoatBreed breed, GoatStatus status,
                       GoatExitType exitType, LocalDate exitDate, String exitNotes) {
-        return Goat.rehydrate(new GoatId(id), RegistrationIdentity.of(registration, "16432", "22002"),
+        String tod = "1643222002".equals(registration) ? "16432" : null;
+        String toe = "1643222002".equals(registration) ? "22002" : null;
+        return Goat.rehydrate(new GoatId(id), RegistrationIdentity.of(registration, tod, toe),
                 name, gender, breed, "Marrom", LocalDate.of(2025, 1, 1), status,
                 exitType, exitDate, exitNotes, Category.PA, null, null, 1L, 1L, "Capril", "Alberto");
     }

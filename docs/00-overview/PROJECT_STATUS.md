@@ -1,6 +1,6 @@
 # Status do Projeto CapriGestor Backend
 
-Ultima atualizacao: 2026-09-10
+Ultima atualizacao: 2026-09-11
 Escopo: estado funcional humano e versionado do backend no commit integrado de develop.
 Links relacionados: [Portal](../INDEX.md), [MVP](./MVP_READY.md), [Roadmap](./ROADMAP.md), [Contratos API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md)
 
@@ -22,6 +22,15 @@ Na revisão ID4-C1, os consumidores de produção também deixaram de depender d
 `LegacyGoatPersistencePort`; a resolução de tokens passou a ser explícita e
 centralizada em `GoatReferenceResolver`, com guarda ArchUnit para evitar o
 retorno de entidades e repositórios JPA ao core.
+
+Na ID5-A (branch `feat/goat-registration-rectification`), o fluxo explícito
+de retificação registral foi implementado sem trocar o `GoatId`: somente
+`ADMIN` e `FARM_OWNER` podem corrigir TOD/TOE/RG pelo endpoint administrativo,
+com validação canônica, proteção contra duplicidade, auditoria operacional e
+histórico imutável em `goat_registration_history`. O `PUT` comum permanece
+restrito a alterações de perfil e rejeita mudança de identidade. Esta onda
+ainda aguarda revisão/integração em `develop`; não inclui frontend nem reset
+da base descartável de desenvolvimento.
 
 Baseline desta atualizacao:
 
@@ -60,9 +69,11 @@ Baseline desta atualizacao:
 
 ## Banco, testes e entrega
 
-- Flyway possui migrations V1 a V42; V38 reforca referencias compostas por
+- Flyway possui migrations V1 a V43; V38 reforca referencias compostas por
   fazenda, V39 introduz GoatId, V40 cria sombras técnicas, V41 exige GoatId
-  nos consumidores dependentes e V42 promove a PK técnica. Migrations
+  nos consumidores dependentes, V42 promove a PK técnica e V43 retira as FKs
+  estruturais que ainda apontavam para RG, preservando RG como identificador
+  de negócio/snapshot e criando o histórico de retificações. Migrations
   publicadas não foram editadas.
 - Desenvolvimento usa PostgreSQL; testes usam H2 e testes de integracao
   PostgreSQL quando Docker esta disponivel.

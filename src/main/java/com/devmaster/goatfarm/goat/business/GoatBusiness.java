@@ -82,6 +82,19 @@ public class GoatBusiness implements GoatManagementUseCase {
     public GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         Goat goat = findOrThrow(farmId, goatId);
+        RegistrationIdentity submittedIdentity;
+        try {
+            submittedIdentity = RegistrationIdentity.of(requestVO.getRegistrationNumber(), requestVO.getTod(), requestVO.getToe());
+        } catch (IllegalArgumentException ex) {
+            throw new BusinessRuleException("registrationNumber",
+                    "TOD, TOE e número de registro devem formar uma identidade consistente. "
+                            + "Use o endpoint explícito de retificação para corrigir a identidade.");
+        }
+        if (!goat.registrationIdentity().equals(submittedIdentity)) {
+            throw new BusinessRuleException("registrationNumber",
+                    "A identidade registral não pode ser alterada na atualização cadastral comum. "
+                            + "Use o endpoint explícito de retificação.");
+        }
         GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), goat.registrationNumber(),
                 requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
         goat.updateProfile(requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(),
