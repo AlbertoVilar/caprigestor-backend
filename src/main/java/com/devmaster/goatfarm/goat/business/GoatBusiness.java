@@ -166,9 +166,8 @@ public class GoatBusiness implements GoatManagementUseCase {
 
     private Goat findOrThrow(Long farmId, String token) {
         // Explicit technical tokens are unambiguous even when an RG happens
-        // to contain only digits. The numeric fallback remains only for old
-        // clients that used the transitional route before this vocabulary was
-        // published; registration lookup is still attempted first there.
+        // to contain only digits. Every other route token is an RG; a bare
+        // numeric token must never be guessed to be a technical id.
         var explicitTechnicalId = GoatRouteIdentifier.technicalId(token);
         if (explicitTechnicalId.isPresent()) {
             return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId)
@@ -176,13 +175,6 @@ public class GoatBusiness implements GoatManagementUseCase {
         }
 
         Goat found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
-        if (found == null && token != null && token.matches("\\d+")) {
-            try {
-                found = goatPort.findByIdAndFarmId(new com.devmaster.goatfarm.goat.domain.GoatId(Long.parseLong(token)), farmId).orElse(null);
-            } catch (NumberFormatException ignored) {
-                // Keep the not-found result for values outside Long range.
-            }
-        }
         if (found == null) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda.");
         return found;
     }

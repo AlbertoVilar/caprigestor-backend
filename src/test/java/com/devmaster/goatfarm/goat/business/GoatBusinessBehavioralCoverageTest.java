@@ -176,10 +176,10 @@ class GoatBusinessBehavioralCoverageTest {
         GoatExitRequestVO request = GoatExitRequestVO.builder()
                 .exitType(GoatExitType.VENDA).exitDate(LocalDate.now().minusDays(1))
                 .notes("Venda confirmada").build();
-        when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
         when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        GoatExitResponseVO result = business.exitGoat(1L, "77", request);
+        GoatExitResponseVO result = business.exitGoat(1L, "164322002", request);
 
         assertThat(result.getGoatId()).isEqualTo("164322002");
         assertThat(result.getExitType()).isEqualTo(GoatExitType.VENDA);
@@ -194,9 +194,9 @@ class GoatBusinessBehavioralCoverageTest {
     void rejectsGoatExitWithFutureDate() {
         GoatExitRequestVO request = GoatExitRequestVO.builder()
                 .exitType(GoatExitType.DESCARTE).exitDate(LocalDate.now().plusDays(1)).build();
-        when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(goat));
 
-        assertThatThrownBy(() -> business.exitGoat(1L, "77", request))
+        assertThatThrownBy(() -> business.exitGoat(1L, "164322002", request))
                 .isInstanceOf(InvalidArgumentException.class)
                 .hasMessageContaining("Data de saída não pode ser futura");
         verify(goatPort, never()).save(any(Goat.class));
@@ -208,9 +208,9 @@ class GoatBusinessBehavioralCoverageTest {
                 GoatExitType.VENDA, LocalDate.now().minusDays(10), null);
         GoatExitRequestVO request = GoatExitRequestVO.builder()
                 .exitType(GoatExitType.TRANSFERENCIA).exitDate(LocalDate.now().minusDays(1)).build();
-        when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(exited));
+        when(goatPort.findByRegistrationNumberAndFarmId("164322002", 1L)).thenReturn(Optional.of(exited));
 
-        assertThatThrownBy(() -> business.exitGoat(1L, "77", request))
+        assertThatThrownBy(() -> business.exitGoat(1L, "164322002", request))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Já existe saída registrada para este animal");
         verify(goatPort, never()).save(any(Goat.class));

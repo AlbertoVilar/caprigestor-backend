@@ -147,6 +147,11 @@ public final class Goat {
         this.status = resultingStatus;
     }
 
+    /** Activates a kid when the weaning lifecycle transition is completed. */
+    public void activateAfterWeaning() {
+        this.status = GoatStatus.ATIVO;
+    }
+
     public GoatId id() { return id; }
     public RegistrationIdentity registrationIdentity() { return registrationIdentity; }
     public String registrationNumber() { return registrationIdentity.registrationNumber(); }
