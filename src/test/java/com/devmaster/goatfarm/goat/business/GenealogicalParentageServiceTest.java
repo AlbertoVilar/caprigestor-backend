@@ -3,8 +3,7 @@ package com.devmaster.goatfarm.goat.business;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
-import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
-import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatExternalParentQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
@@ -36,7 +35,7 @@ class GenealogicalParentageServiceTest {
     private GoatValidationQueryPort goatValidationQueryPort;
 
     @Mock
-    private GenealogyAbccQueryPort genealogyAbccQueryPort;
+    private GoatExternalParentQueryPort goatExternalParentQueryPort;
 
     private GenealogicalParentageService service;
 
@@ -44,11 +43,11 @@ class GenealogicalParentageServiceTest {
     void setUp() {
         service = new GenealogicalParentageService(
                 goatReferenceQueryPort,
-                genealogyAbccQueryPort,
+                goatExternalParentQueryPort,
                 new GoatGenderValidator(goatValidationQueryPort)
         );
         org.mockito.Mockito.lenient().when(goatReferenceQueryPort.findReferenceByRegistrationNumber(anyString())).thenReturn(Optional.empty());
-        org.mockito.Mockito.lenient().when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber(anyString())).thenReturn(Optional.empty());
+        org.mockito.Mockito.lenient().when(goatExternalParentQueryPort.findByRegistrationNumber(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -104,8 +103,8 @@ class GenealogicalParentageServiceTest {
 
     @Test
     void rejectsAnAbccMaleDeclaredAsMother() {
-        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("MALE-001"))
-                .thenReturn(Optional.of(snapshot("MALE-001", Gender.MACHO)));
+        when(goatExternalParentQueryPort.findByRegistrationNumber("MALE-001"))
+                .thenReturn(Optional.of(new GoatExternalParentQueryPort.ExternalParentReference("MALE-001", Gender.MACHO)));
 
         assertThatThrownBy(() -> service.resolve(Category.PA, "KID-001", null, "MALE-001"))
                 .isInstanceOf(BusinessRuleException.class)
@@ -116,8 +115,8 @@ class GenealogicalParentageServiceTest {
     void acceptsAnAbccFatherAndPreservesTheAlphabeticRegistrationSuffix() {
         GoatReference mother = goat("MOTHER-001", Gender.FEMEA, 12L, 10L);
         when(goatReferenceQueryPort.findReferenceByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
-        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635719026A"))
-                .thenReturn(Optional.of(snapshot("1635719026A", Gender.MACHO)));
+        when(goatExternalParentQueryPort.findByRegistrationNumber("1635719026A"))
+                .thenReturn(Optional.of(new GoatExternalParentQueryPort.ExternalParentReference("1635719026A", Gender.MACHO)));
 
         GenealogicalParentageService.ResolvedParentage result = service.resolve(
                 Category.PO, "KID-001", "1635719026a", "MOTHER-001"
@@ -137,7 +136,7 @@ class GenealogicalParentageServiceTest {
 
     @Test
     void reportsAbccUnavailabilityInsteadOfTreatingItAsNotFoundEvenForPa() {
-        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("OFFLINE-001"))
+        when(goatExternalParentQueryPort.findByRegistrationNumber("OFFLINE-001"))
                 .thenThrow(new IllegalStateException("timeout"));
 
         assertThatThrownBy(() -> service.resolve(Category.PA, "KID-001", "OFFLINE-001", null))
@@ -149,10 +148,4 @@ class GenealogicalParentageServiceTest {
         return new GoatReference(new GoatId(id), farmId, registrationNumber, registrationNumber, gender);
     }
 
-    private GenealogyAbccSnapshotVO snapshot(String registrationNumber, Gender gender) {
-        return GenealogyAbccSnapshotVO.builder()
-                .animalRegistrationNumber(registrationNumber)
-                .animalGender(gender)
-                .build();
-    }
 }

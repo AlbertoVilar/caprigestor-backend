@@ -4,8 +4,8 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatGenealogyReadUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class GenealogyComplementaryBusinessTest {
 
     @Mock
-    private GoatGenealogyQueryPort goatGenealogyQueryPort;
+    private GoatGenealogyReadUseCase goatGenealogyQueryPort;
     @Mock
     private GenealogyAbccQueryPort genealogyAbccQueryPort;
 

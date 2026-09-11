@@ -1,7 +1,7 @@
-package com.devmaster.goatfarm.goat.integration.abcc;
+package com.devmaster.goatfarm.integration.abcc;
 
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
-import com.devmaster.goatfarm.goat.integration.abcc.adapter.GoatAbccPublicHttpAdapter;
+import com.devmaster.goatfarm.integration.abcc.adapter.GoatAbccPublicHttpAdapter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 

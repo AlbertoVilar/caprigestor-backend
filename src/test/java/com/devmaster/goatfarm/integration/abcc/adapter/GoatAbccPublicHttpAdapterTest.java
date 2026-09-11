@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.goat.integration.abcc.adapter;
+package com.devmaster.goatfarm.integration.abcc.adapter;
 
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import org.junit.jupiter.api.Test;

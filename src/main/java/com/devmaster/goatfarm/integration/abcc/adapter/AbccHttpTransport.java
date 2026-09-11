@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.goat.integration.abcc.adapter;
+package com.devmaster.goatfarm.integration.abcc.adapter;
 
 import java.io.IOException;
 import java.net.URI;

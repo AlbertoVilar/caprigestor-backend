@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.goat.application.ports.out;
+package com.devmaster.goatfarm.goat.application.model;
 
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.Category;

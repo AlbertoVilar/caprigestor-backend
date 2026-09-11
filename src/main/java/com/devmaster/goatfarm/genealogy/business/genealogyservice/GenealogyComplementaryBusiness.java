@@ -8,8 +8,8 @@ import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryIntegr
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryNodeVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryResponseVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatGenealogyReadUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,21 +24,21 @@ public class GenealogyComplementaryBusiness implements GenealogyComplementaryQue
 
     private static final String LOOKUP_KEY = "registrationNumber";
 
-    private final GoatGenealogyQueryPort goatGenealogyQueryPort;
+    private final GoatGenealogyReadUseCase goatGenealogyReadUseCase;
     private final GenealogyAbccQueryPort genealogyAbccQueryPort;
 
     public GenealogyComplementaryBusiness(
-            GoatGenealogyQueryPort goatGenealogyQueryPort,
+            GoatGenealogyReadUseCase goatGenealogyReadUseCase,
             GenealogyAbccQueryPort genealogyAbccQueryPort
     ) {
-        this.goatGenealogyQueryPort = goatGenealogyQueryPort;
+        this.goatGenealogyReadUseCase = goatGenealogyReadUseCase;
         this.genealogyAbccQueryPort = genealogyAbccQueryPort;
     }
 
     @Override
     @Transactional(readOnly = true)
     public GenealogyComplementaryResponseVO findComplementaryGenealogy(Long farmId, String registrationNumber) {
-        GoatGenealogySnapshot goat = goatGenealogyQueryPort
+        GoatGenealogySnapshot goat = goatGenealogyReadUseCase
                 .findGenealogyByRegistrationNumberAndFarmId(registrationNumber, farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
 
