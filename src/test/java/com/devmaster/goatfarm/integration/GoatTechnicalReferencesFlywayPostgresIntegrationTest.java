@@ -26,7 +26,10 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
 
         try (Connection connection = openConnection()) {
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
-                    .isEqualTo(11L);
+                    // Six legacy farm-scoped RG constraints remain as a
+                    // compatibility graph; single-column RG FKs are
+                    // recreated against the unique business key in V42.
+                    .isEqualTo(6L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
                     .isEqualTo(7L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in ('fk_cabras_pai_goat_id','fk_cabras_mae_goat_id')"))
@@ -91,7 +94,7 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(queryString(connection, "select goat_registration_number from operational_audit_entry where id = 80"))
                     .isEqualTo("G-101");
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
-                    .isEqualTo(11L);
+                    .isEqualTo(6L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
                     .isEqualTo(7L);
         }

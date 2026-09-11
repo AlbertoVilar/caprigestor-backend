@@ -102,12 +102,12 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
 
     @Override
     public Optional<GoatEntity> findById(String registrationNumber) {
-        return goatRepository.findById(registrationNumber);
+        return registrationNumber == null ? Optional.empty() : goatRepository.findByRegistrationNumber(registrationNumber);
     }
 
     @Override
     public Optional<GoatEntity> findByRegistrationNumber(String registrationNumber) {
-        return goatRepository.findByRegistrationNumber(registrationNumber);
+        return registrationNumber == null ? Optional.empty() : goatRepository.findByRegistrationNumber(registrationNumber);
     }
 
     @Override
@@ -257,17 +257,17 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
 
     @Override
     public void deleteById(String registrationNumber) {
-        goatRepository.deleteById(registrationNumber);
+        goatRepository.findByRegistrationNumber(registrationNumber).ifPresent(goatRepository::delete);
     }
 
     @Override
     public void deleteById(GoatId id) {
-        goatRepository.findByTechnicalId(id.value()).ifPresent(entity -> goatRepository.deleteById(entity.getRegistrationNumber()));
+        goatRepository.findByTechnicalId(id.value()).ifPresent(goatRepository::delete);
     }
 
     @Override
     public boolean existsByRegistrationNumber(String registrationNumber) {
-        return goatRepository.existsById(registrationNumber);
+        return goatRepository.existsByRegistrationNumber(registrationNumber);
     }
 
     @Override

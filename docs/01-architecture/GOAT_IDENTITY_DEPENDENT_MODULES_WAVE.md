@@ -10,7 +10,7 @@ primária de verdade.
 
 ## Resultado arquitetural
 
-`cabras.id` (GoatId) agora é propagado como referência técnica estável nos
+`cabras.id` (GoatId) agora é a identidade estrutural JPA/PK e é propagado como referência técnica estável nos
 registros que dependem do animal. O RG (`num_registro` ou seu snapshot
 equivalente) permanece disponível para exibição, busca registral, integração
 ABCC e histórico. A separação é aditiva: nenhuma rota RG existente foi
@@ -48,7 +48,7 @@ fazenda é preservada pelas FKs compostas `(farm_id, goat_technical_id)`.
   componentes antigos continuam consumindo o alias `id` e as rotas RG até a
   onda de contrato estrutural explícito.
 
-## Migration V41
+## Migrations V41 e V42
 
 `V41__enforce_goat_technical_identity_consumers.sql` completa a primeira onda
 estrutural sem editar V39 ou V40. Em uma instalação limpa, ela:
@@ -63,6 +63,14 @@ estrutural sem editar V39 ou V40. Em uma instalação limpa, ela:
 6. preserva a regra de que auditoria sem animal pode ter `goatTechnicalId`
    nulo, mas auditoria com RG precisa apontar para um Goat.
 
+`V42__promote_goat_technical_identity.sql` conclui a promoção estrutural:
+
+1. troca a PK de `cabras.num_registro` para `cabras.id`;
+2. mantém `num_registro` com unicidade própria para lookup, ABCC e contratos
+   de compatibilidade;
+3. recria as FKs simples legadas contra a chave única registral, sem reverter
+   a integridade técnica de V40/V41.
+
 As migrations publicadas V1–V40 não foram alteradas ou condensadas. A política
 de reset da base descartável de desenvolvimento continua separada: nenhuma
 base local foi resetada nesta onda.
@@ -75,26 +83,25 @@ de dual-write; esse fallback não enfraquece a instalação PostgreSQL final,
 onde V41 exige a coluna técnica. O fallback deve ser removido somente depois
 que todas as rotas e fixtures estiverem na API estrutural.
 
-O JPA de `GoatEntity` ainda usa o RG como `@Id` transitório; `id` é uma coluna
-identity técnica. A troca de `JpaRepository<GoatEntity, String>` para
-`JpaRepository<GoatEntity, Long>`, a retirada das FKs RG, as rotas explícitas
-por GoatId e a retificação registral pertencem a ondas posteriores e não
-devem ser simuladas por inferência de números na URL.
+O JPA de `GoatEntity` usa `id` como `@Id` técnico e o repository é tipado com
+`Long`. As rotas v1 ainda recebem RG por compatibilidade explícita; elas não
+inferem GoatId pelo formato numérico. A retirada dos aliases de RG, as rotas
+versionadas por GoatId e a retificação registral pertencem às próximas ondas.
 
 ## Evidência de validação
 
-- instalação Testcontainers PostgreSQL V1→V41 validada;
+- instalação Testcontainers PostgreSQL V1→V42 validada;
 - integridade cross-farm validada com inserções válidas e rejeitadas;
 - testes de reprodução, lactação, saúde, comercial e segurança executados;
 - frontend: typecheck, suíte unitária, build de produção e lint executados.
+- suíte backend completa: 589 testes, 0 falhas, 0 erros e 1 ignorado; gate
+  JaCoCo aprovado.
 
 ## Próximas ondas
 
-1. migrar o `@Id` JPA e os ports remanescentes para `GoatId` após contrato
-   estrutural explícito;
+1. migrar os ports legados e casos de uso restantes para `GoatId` sem JPA;
 2. introduzir rotas versionadas por GoatId e aliases de RG mensuráveis;
 3. atualizar cache, contexto e navegação do frontend para usar GoatId
    internamente;
 4. criar histórico registral/retificação mantendo o mesmo GoatId;
 5. somente depois tornar RG estruturalmente removível e retirar fallbacks.
-

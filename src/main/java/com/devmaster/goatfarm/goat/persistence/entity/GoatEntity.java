@@ -26,13 +26,12 @@ import java.time.LocalDate;
 @Table(name = "cabras", uniqueConstraints = @UniqueConstraint(name = "uk_cabras_technical_id_hibernate", columnNames = "id"))
 public class GoatEntity {
 
-        /** Technical identity introduced by V39; RG remains the transitional JPA id. */
-        @Generated(event = EventType.INSERT)
-        @Column(name = "id", columnDefinition = "BIGINT GENERATED ALWAYS AS IDENTITY",
-                unique = true, insertable = false, updatable = false)
+        /** Immutable technical identity promoted to the JPA identity by V42. */
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name = "id", nullable = false, updatable = false)
         private Long technicalId;
 
-        @Id
         @Column(name = "num_registro", unique = true, nullable = false, length = 20)
         private String registrationNumber;
 

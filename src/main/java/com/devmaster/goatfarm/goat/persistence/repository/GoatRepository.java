@@ -15,9 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-public interface GoatRepository extends JpaRepository<GoatEntity, String> {
+public interface GoatRepository extends JpaRepository<GoatEntity, Long> {
 
     Optional<GoatEntity> findByRegistrationNumber(String registrationNumber);
+
+    boolean existsByRegistrationNumber(String registrationNumber);
 
     @Query("SELECT g FROM GoatEntity g WHERE g.registrationNumber = :id AND g.farm.id = :farmId")
     Optional<GoatEntity> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
