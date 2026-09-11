@@ -1,8 +1,9 @@
-package com.devmaster.goatfarm.goat.integration.abcc.adapter;
+package com.devmaster.goatfarm.integration.abcc.adapter;
 
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatExternalParentQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
@@ -40,7 +41,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
-public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, GenealogyAbccQueryPort {
+public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort,
+        GoatExternalParentQueryPort, GenealogyAbccQueryPort {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GoatAbccPublicHttpAdapter.class);
     private static final String BASE_URL = "https://siscapri.abccaprinos.com.br";
@@ -248,6 +250,15 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
             LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
             throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
         }
+    }
+
+    @Override
+    public Optional<ExternalParentReference> findByRegistrationNumber(String registrationNumber) {
+        return findGenealogyByRegistrationNumber(registrationNumber)
+                .map(snapshot -> new ExternalParentReference(
+                        snapshot.getAnimalRegistrationNumber(),
+                        snapshot.getAnimalGender()
+                ));
     }
 
     private Optional<String> findExternalIdByRegistration(

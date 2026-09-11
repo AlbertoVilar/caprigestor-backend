@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.goat.persistence.adapter;
 
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatGenealogyReadUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
@@ -39,7 +39,7 @@ import java.util.Optional;
  * repository projections remain private to the persistence boundary.</p>
  */
 @Component
-public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyQueryPort,
+public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyReadUseCase,
         GoatReferenceQueryPort, GoatValidationQueryPort {
 
     private final GoatRepository goatRepository;

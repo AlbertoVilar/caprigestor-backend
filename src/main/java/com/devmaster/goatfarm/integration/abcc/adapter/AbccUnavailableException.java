@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.goat.integration.abcc.adapter;
+package com.devmaster.goatfarm.integration.abcc.adapter;
 
 public class AbccUnavailableException extends AbccIntegrationException {
 

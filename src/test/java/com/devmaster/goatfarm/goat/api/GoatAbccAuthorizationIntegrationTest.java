@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatExternalParentQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
@@ -56,6 +57,7 @@ class GoatAbccAuthorizationIntegrationTest {
 
     @MockBean private GoatAbccPublicQueryPort abccPublicQueryPort;
     @MockBean private GenealogyAbccQueryPort genealogyAbccQueryPort;
+    @MockBean private GoatExternalParentQueryPort goatExternalParentQueryPort;
 
     private User admin;
     private User owner;

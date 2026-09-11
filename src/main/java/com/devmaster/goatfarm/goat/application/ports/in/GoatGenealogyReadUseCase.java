@@ -1,5 +1,6 @@
-package com.devmaster.goatfarm.goat.application.ports.out;
+package com.devmaster.goatfarm.goat.application.ports.in;
 
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import java.util.Optional;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Optional;
  * infer a technical GoatId merely because a registration is numeric; future
  * technical routes will use a distinct, versioned contract.</p>
  */
-public interface GoatGenealogyQueryPort {
+public interface GoatGenealogyReadUseCase {
 
     /**
      * Loads the local family graph through technical parent references while
