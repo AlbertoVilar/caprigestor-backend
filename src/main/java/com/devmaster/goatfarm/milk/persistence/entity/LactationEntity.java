@@ -8,14 +8,14 @@ import java.time.LocalDateTime;
 
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 
-@Entity
+@Entity(name = "Lactation")
 @Table(name = "lactation")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Lactation {
+public class LactationEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

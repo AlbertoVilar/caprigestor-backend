@@ -35,7 +35,7 @@ public class MilkProduction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lactation_id", nullable = false)
-    private Lactation lactation;
+    private LactationEntity lactation;
 
     @Column(name = "date", nullable = false)
     private LocalDate date;

@@ -4,9 +4,8 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionSummaryQueryPort;
 import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
@@ -15,8 +14,8 @@ import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
-import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
+import com.devmaster.goatfarm.milk.application.model.LactationDryOffAlertSnapshot;
+import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +52,7 @@ class LactationBusinessTest {
     private LactationPersistencePort lactationPersistencePort;
 
     @Mock
-    private MilkProductionPersistencePort milkProductionPersistencePort;
+    private MilkProductionSummaryQueryPort milkProductionSummaryQueryPort;
 
     @Mock
     private PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort;
@@ -87,8 +86,6 @@ class LactationBusinessTest {
                 .thenReturn(Optional.empty());
 
         Lactation savedEntity = savedLactationEntity();
-        savedEntity.setFarmId(farmId);
-        savedEntity.setGoatId(goatId);
 
         when(lactationPersistencePort.save(any(Lactation.class))).thenReturn(savedEntity);
 
@@ -139,14 +136,9 @@ class LactationBusinessTest {
         String goatId = "123";
         LactationRequestVO requestVO = validRequestVO();
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(20L);
-        dryLactation.setFarmId(farmId);
-        dryLactation.setGoatId(goatId);
-        dryLactation.setStatus(LactationStatus.DRY);
-        dryLactation.setStartDate(LocalDate.of(2025, 11, 1));
-        dryLactation.setEndDate(LocalDate.of(2026, 3, 28));
-        dryLactation.setDryStartDate(LocalDate.of(2026, 3, 28));
+        Lactation dryLactation = Lactation.rehydrate(20L, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2025, 11, 1), LocalDate.of(2026, 3, 28), null,
+                LocalDate.of(2026, 3, 28), 90, 60, null, null);
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.empty());
@@ -194,12 +186,8 @@ class LactationBusinessTest {
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
         dryRequestVO.setEndDate(endDate);
 
-        Lactation existingLactation = new Lactation();
-        existingLactation.setId(lactationId);
-        existingLactation.setFarmId(farmId);
-        existingLactation.setGoatId(goatId);
-        existingLactation.setStatus(LactationStatus.ACTIVE);
-        existingLactation.setStartDate(startDate);
+        Lactation existingLactation = Lactation.rehydrate(lactationId, farmId, goatId, null,
+                LactationStatus.ACTIVE, startDate, null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(existingLactation));
@@ -248,8 +236,8 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation closedLactation = new Lactation();
-        closedLactation.setStatus(LactationStatus.CLOSED);
+        Lactation closedLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.CLOSED,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(closedLactation));
@@ -267,9 +255,8 @@ class LactationBusinessTest {
         Long lactationId = 10L;
         LocalDate startDate = LocalDate.of(2026, 5, 1);
 
-        Lactation activeLactation = new Lactation();
-        activeLactation.setStatus(LactationStatus.ACTIVE);
-        activeLactation.setStartDate(startDate);
+        Lactation activeLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.ACTIVE,
+                startDate, null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(activeLactation));
@@ -287,14 +274,9 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(lactationId);
-        dryLactation.setFarmId(farmId);
-        dryLactation.setGoatId(goatId);
-        dryLactation.setStatus(LactationStatus.DRY);
-        dryLactation.setStartDate(LocalDate.of(2025, 11, 15));
-        dryLactation.setEndDate(LocalDate.of(2026, 3, 28));
-        dryLactation.setDryStartDate(LocalDate.of(2026, 3, 28));
+        Lactation dryLactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2025, 11, 15), LocalDate.of(2026, 3, 28), null,
+                LocalDate.of(2026, 3, 28), 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(dryLactation));
@@ -328,9 +310,8 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(lactationId);
-        dryLactation.setStatus(LactationStatus.DRY);
+        Lactation dryLactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(dryLactation));
@@ -357,9 +338,8 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(lactationId);
-        dryLactation.setStatus(LactationStatus.DRY);
+        Lactation dryLactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(dryLactation));
@@ -455,15 +435,12 @@ class LactationBusinessTest {
         Long lactationId = 10L;
         LocalDate breedingDate = LocalDate.now().minusDays(100);
 
-        Lactation lactation = activeLactationEntity();
-        lactation.setId(lactationId);
-        lactation.setFarmId(farmId);
-        lactation.setGoatId(goatId);
-        lactation.setDryAtPregnancyDays(90);
+        Lactation lactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(lactation));
-        when(milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+        when(milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
                 eq(farmId), eq(goatId), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
         when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
@@ -484,15 +461,12 @@ class LactationBusinessTest {
         Long lactationId = 10L;
         LocalDate breedingDate = LocalDate.now().minusDays(100);
 
-        Lactation lactation = activeLactationEntity();
-        lactation.setId(lactationId);
-        lactation.setFarmId(farmId);
-        lactation.setGoatId(goatId);
-        lactation.setDryAtPregnancyDays(90);
+        Lactation lactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(lactation));
-        when(milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+        when(milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
                 eq(farmId), eq(goatId), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
         when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
@@ -519,14 +493,9 @@ class LactationBusinessTest {
         LocalDate referenceDate = LocalDate.of(2026, 2, 1);
         Pageable pageable = PageRequest.of(0, 10);
 
-        LactationDryOffAlertProjection projection = mock(LactationDryOffAlertProjection.class);
-        when(projection.getLactationId()).thenReturn(11L);
-        when(projection.getGoatId()).thenReturn("GOAT-001");
-        when(projection.getStartDatePregnancy()).thenReturn(LocalDate.of(2025, 10, 20));
-        when(projection.getBreedingDate()).thenReturn(LocalDate.of(2025, 10, 20));
-        when(projection.getConfirmDate()).thenReturn(LocalDate.of(2025, 12, 20));
-        when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 1, 18));
-        when(projection.getDryAtPregnancyDays()).thenReturn(90);
+        LactationDryOffAlertSnapshot projection = new LactationDryOffAlertSnapshot(
+                11L, null, "GOAT-001", 90, LocalDate.of(2025, 10, 20),
+                LocalDate.of(2025, 10, 20), LocalDate.of(2025, 12, 20), LocalDate.of(2026, 1, 18));
 
         when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, 90, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
@@ -548,14 +517,9 @@ class LactationBusinessTest {
         LocalDate referenceDate = LocalDate.of(2026, 1, 10);
         Pageable pageable = PageRequest.of(0, 10);
 
-        LactationDryOffAlertProjection projection = mock(LactationDryOffAlertProjection.class);
-        when(projection.getLactationId()).thenReturn(22L);
-        when(projection.getGoatId()).thenReturn("GOAT-002");
-        when(projection.getStartDatePregnancy()).thenReturn(LocalDate.of(2025, 12, 1));
-        when(projection.getBreedingDate()).thenReturn(LocalDate.of(2025, 12, 1));
-        when(projection.getConfirmDate()).thenReturn(LocalDate.of(2026, 1, 1));
-        when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 3, 1));
-        when(projection.getDryAtPregnancyDays()).thenReturn(90);
+        LactationDryOffAlertSnapshot projection = new LactationDryOffAlertSnapshot(
+                22L, null, "GOAT-002", 90, LocalDate.of(2025, 12, 1),
+                LocalDate.of(2025, 12, 1), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 1));
 
         when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, 90, pageable))
                 .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
@@ -576,19 +540,13 @@ class LactationBusinessTest {
     }
 
     private Lactation activeLactationEntity() {
-        Lactation entity = new Lactation();
-        entity.setId(10L);
-        entity.setStatus(LactationStatus.ACTIVE);
-        entity.setStartDate(LocalDate.of(2026, 1, 1));
-        return entity;
+        return Lactation.rehydrate(10L, 1L, "123", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
     }
 
     private Lactation savedLactationEntity() {
-        Lactation entity = new Lactation();
-        entity.setId(11L);
-        entity.setStatus(LactationStatus.ACTIVE);
-        entity.setStartDate(LocalDate.of(2026, 1, 1));
-        return entity;
+        return Lactation.rehydrate(11L, 1L, "123", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
     }
 
     private LactationResponseVO responseVO() {

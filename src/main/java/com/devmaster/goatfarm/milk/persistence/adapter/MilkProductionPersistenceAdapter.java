@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.milk.persistence.adapter;
 
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionSummaryQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-public class MilkProductionPersistenceAdapter implements MilkProductionPersistencePort {
+public class MilkProductionPersistenceAdapter implements MilkProductionPersistencePort, MilkProductionSummaryQueryPort {
 
     private final MilkProductionRepository milkProductionRepository;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
@@ -120,6 +121,15 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
             }
         }
         return milkProductionRepository.findByFarmIdAndGoatIdAndDateBetween(farmId, goatId, from, to);
+    }
+
+    @Override
+    public List<MilkProductionSnapshot> findSummaryByFarmIdAndGoatIdAndDateBetween(
+            Long farmId, String goatId, LocalDate from, LocalDate to) {
+        return findByFarmIdAndGoatIdAndDateBetween(farmId, goatId, from, to).stream()
+                .map(production -> new MilkProductionSnapshot(
+                        production.getDate(), production.getVolumeLiters()))
+                .toList();
     }
 
     private Optional<Long> technicalId(Long farmId, String registrationNumber) {

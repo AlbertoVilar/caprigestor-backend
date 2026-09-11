@@ -17,7 +17,8 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.domain.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -85,7 +86,9 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         MilkProduction milkProduction = milkProductionMapper.toEntity(requestVO);
         milkProduction.setFarmId(farmId);
         milkProduction.setGoatId(goatId);
-        milkProduction.setLactation(lactation);
+        LactationEntity lactationReference = new LactationEntity();
+        lactationReference.setId(lactation.getId());
+        milkProduction.setLactation(lactationReference);
         milkProduction.setStatus(MilkProductionStatus.ACTIVE);
         milkProduction.setCanceledAt(null);
         milkProduction.setCanceledReason(null);

@@ -15,7 +15,7 @@ import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
@@ -83,7 +83,7 @@ class MilkOperationalAuthorizationIntegrationTest {
     private GoatFarm farm;
     private GoatEntity goat;
     private GoatEntity goatWithoutLactation;
-    private Lactation activeLactation;
+    private LactationEntity activeLactation;
     private MilkProduction production;
 
     @BeforeEach
@@ -112,7 +112,7 @@ class MilkOperationalAuthorizationIntegrationTest {
         goat = createActiveFemaleGoat("MILK-001", "Lactating GoatEntity");
         goatWithoutLactation = createActiveFemaleGoat("MILK-002", "Fresh GoatEntity");
 
-        activeLactation = new Lactation();
+        activeLactation = new LactationEntity();
         activeLactation.setFarmId(farm.getId());
         activeLactation.setGoatId(goat.getRegistrationNumber());
         activeLactation.setStartDate(LocalDate.now().minusDays(10));

@@ -12,7 +12,7 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
@@ -109,7 +109,7 @@ public class SecurityOwnershipIntegrationTest {
     private GoatEntity anotherGoat;
     private Phone ownerPhone;
     private Address ownerAddress;
-    private Lactation ownerLactation;
+    private LactationEntity ownerLactation;
 
     @BeforeEach
     void setUp() {
@@ -196,7 +196,7 @@ public class SecurityOwnershipIntegrationTest {
         anotherGoat.setStatus(GoatStatus.ATIVO);
         goatRepository.save(anotherGoat);
 
-        Lactation lactation = new Lactation();
+        LactationEntity lactation = new LactationEntity();
         lactation.setFarmId(ownerFarm.getId());
         lactation.setGoatId(ownerGoat.getRegistrationNumber());
         lactation.setStartDate(LocalDate.now().minusDays(10));

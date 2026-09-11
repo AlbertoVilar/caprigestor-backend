@@ -14,7 +14,7 @@ import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
@@ -75,7 +75,7 @@ class MilkProductionCancellationIntegrationTest {
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
-    private Lactation activeLactation;
+    private LactationEntity activeLactation;
 
     @BeforeEach
     void setUp() {
@@ -110,7 +110,7 @@ class MilkProductionCancellationIntegrationTest {
         ownerGoat.setStatus(GoatStatus.ATIVO);
         ownerGoat = goatRepository.save(ownerGoat);
 
-        activeLactation = new Lactation();
+        activeLactation = new LactationEntity();
         activeLactation.setFarmId(ownerFarm.getId());
         activeLactation.setGoatId(ownerGoat.getRegistrationNumber());
         activeLactation.setStartDate(LocalDate.now().minusDays(10));
