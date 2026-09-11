@@ -26,7 +26,6 @@ public interface FarmBusinessMapper {
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "address", ignore = true)
     @Mapping(target = "phones", ignore = true)
-    @Mapping(target = "goats", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     GoatFarm toEntity(GoatFarmRequestVO vo);
@@ -35,7 +34,6 @@ public interface FarmBusinessMapper {
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "address", ignore = true)
     @Mapping(target = "phones", ignore = true)
-    @Mapping(target = "goats", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     void updateEntity(@MappingTarget GoatFarm entity, GoatFarmRequestVO vo);
