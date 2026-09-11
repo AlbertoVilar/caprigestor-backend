@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,10 +61,9 @@ class GoatBusinessTest {
     @Test
     void createsUsingDomainPort() {
         GoatFarm farm = new GoatFarm(); farm.setId(1L);
-        User user = new User(); user.setId(1L);
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentUser()).thenReturn(user);
+        when(ownershipService.getCurrentPrincipal()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -89,9 +89,8 @@ class GoatBusinessTest {
     void derivesRegistrationFromTodAndToeOnCreation() {
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         GoatFarm farm = new GoatFarm(); farm.setId(1L);
-        User user = new User(); user.setId(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentUser()).thenReturn(user);
+        when(ownershipService.getCurrentPrincipal()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -100,6 +99,10 @@ class GoatBusinessTest {
 
         assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
         verify(goatPort).existsByRegistrationNumber("1643222002");
+    }
+
+    private AuthenticatedPrincipal principal(Long id) {
+        return new AuthenticatedPrincipal(id, "test@example.com", "Test", Set.of());
     }
 
     @Test

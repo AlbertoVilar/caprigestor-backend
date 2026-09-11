@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
@@ -28,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,7 +61,8 @@ class GoatRegistrationRectificationBusinessTest {
                 .thenReturn(Optional.of(new GoatReference(new GoatId(7L), 1L, goat.registrationNumber(), goat.name(), goat.gender())));
         when(goatPersistencePort.findByIdAndFarmId(new GoatId(7L), 1L)).thenReturn(Optional.of(goat));
         lenient().when(goatPersistencePort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(ownershipService.getCurrentUser()).thenReturn(user(9L));
+        lenient().when(ownershipService.getCurrentPrincipal()).thenReturn(
+                new AuthenticatedPrincipal(9L, "alberto@example.com", "Alberto", Set.of()));
         lenient().when(historyPersistencePort.save(any(GoatRegistrationHistory.class))).thenAnswer(invocation -> {
             GoatRegistrationHistory value = invocation.getArgument(0);
             return new GoatRegistrationHistory(11L, value.goatId(), value.farmId(), value.oldIdentity(), value.newIdentity(),
@@ -116,11 +118,4 @@ class GoatRegistrationRectificationBusinessTest {
                 tod, toe, RegistrationRectificationSource.ABCC, "ABCC-2026-001", reason);
     }
 
-    private User user(Long id) {
-        User user = new User();
-        user.setId(id);
-        user.setName("Alberto");
-        user.setEmail("alberto@example.com");
-        return user;
-    }
 }

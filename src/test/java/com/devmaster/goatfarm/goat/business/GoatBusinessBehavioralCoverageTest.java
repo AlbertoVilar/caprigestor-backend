@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -36,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -80,8 +81,6 @@ class GoatBusinessBehavioralCoverageTest {
     void createsGoatWithLocalParentsThroughParentagePort() {
         GoatFarm farm = new GoatFarm();
         farm.setId(1L);
-        User user = new User();
-        user.setId(1L);
         Goat.ParentReference father = Goat.ParentReference.local(new GoatId(11L), "164321001", "Reprodutor Alpha");
         Goat.ParentReference mother = Goat.ParentReference.local(new GoatId(12L), "164321002", "Matriz Beta");
         GoatRequestVO request = request("1643222002", "Xeque");
@@ -90,7 +89,8 @@ class GoatBusinessBehavioralCoverageTest {
 
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentUser()).thenReturn(user);
+        when(ownershipService.getCurrentPrincipal()).thenReturn(
+                new AuthenticatedPrincipal(1L, "test@example.com", "Test", Set.of()));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(parentage.resolve(Category.PA, "1643222002", "164321001", "164321002"))
                 .thenReturn(new GoatParentagePort.ResolvedParentage(father, mother));

@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.audit.application.ports.out.OperationalAuditPersis
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -63,13 +64,11 @@ class OperationalAuditBusinessTest {
         GoatFarm farm = new GoatFarm();
         farm.setId(1L);
 
-        User currentUser = new User();
-        currentUser.setId(7L);
-        currentUser.setName("Operador QA");
-        currentUser.setEmail("operator@example.com");
+        AuthenticatedPrincipal currentUser = new AuthenticatedPrincipal(
+                7L, "operator@example.com", "Operador QA", Set.of());
 
         when(goatFarmPersistencePort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentUser()).thenReturn(currentUser);
+        when(ownershipService.getCurrentPrincipal()).thenReturn(currentUser);
         when(operationalAuditPersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         operationalAuditBusiness.record(new OperationalAuditRecordVO(

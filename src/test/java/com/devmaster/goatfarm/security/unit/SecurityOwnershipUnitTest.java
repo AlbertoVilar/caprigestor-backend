@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.security.unit;
 
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.FarmAccessQueryPort;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -24,6 +25,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -181,5 +183,20 @@ class SecurityOwnershipUnitTest {
         boolean result = ownershipService.canManageFarm(10L);
 
         assertFalse(result);
+    }
+
+    @Test
+    void getCurrentPrincipal_shouldExposeOnlyApplicationIdentity() {
+        currentUser.setName("Alberto");
+        Role ownerRole = new Role();
+        ownerRole.setAuthority("ROLE_FARM_OWNER");
+        currentUser.addRole(ownerRole);
+
+        AuthenticatedPrincipal principal = ownershipService.getCurrentPrincipal();
+
+        assertEquals(1L, principal.id());
+        assertEquals("user@test.com", principal.email());
+        assertEquals("Alberto", principal.name());
+        assertTrue(principal.hasAuthority("ROLE_FARM_OWNER"));
     }
 }

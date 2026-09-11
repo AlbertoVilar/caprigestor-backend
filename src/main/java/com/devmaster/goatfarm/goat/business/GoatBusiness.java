@@ -70,7 +70,7 @@ public class GoatBusiness implements GoatManagementUseCase {
         Goat goat = Goat.register(identity,
                 requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(), requestVO.getBirthDate(),
                 requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother(), farmId,
-                ownershipService.getCurrentUser().getId());
+                ownershipService.getCurrentPrincipal().id());
         return toResponse(goatPort.save(goat));
     }
 

@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.audit.application.ports.out.OperationalAuditPersis
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditEntryVO;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
@@ -73,7 +73,7 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
         String description = normalizeRequiredText("description", recordVO.description(), "Descricao da auditoria e obrigatoria.");
 
         GoatFarm farm = requireFarm(recordVO.farmId());
-        User currentUser = ownershipService.getCurrentUser();
+        AuthenticatedPrincipal currentUser = ownershipService.getCurrentPrincipal();
 
         operationalAuditPersistencePort.save(OperationalAuditEntry.builder()
                 .farm(farm)
@@ -81,9 +81,9 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
                 .goatRegistrationNumber(normalizeOptionalText(recordVO.goatRegistrationNumber()))
                 .actionType(recordVO.actionType())
                 .targetId(normalizeOptionalText(recordVO.targetId()))
-                .actorUserId(currentUser.getId())
-                .actorName(currentUser.getName())
-                .actorEmail(currentUser.getEmail())
+                .actorUserId(currentUser.id())
+                .actorName(currentUser.name())
+                .actorEmail(currentUser.email())
                 .description(description)
                 .build());
     }
