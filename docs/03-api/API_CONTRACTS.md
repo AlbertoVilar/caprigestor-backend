@@ -1,5 +1,5 @@
 # API_CONTRACTS
-Última atualização: 2026-09-10
+Última atualização: 2026-09-11
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Authority](../02-modules/AUTHORITY_ACCESS_MODULE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Módulo Commercial](../02-modules/COMMERCIAL_MODULE.md), [Módulo Articles](../02-modules/ARTICLE_BLOG_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -84,6 +84,8 @@ Rotas canônicas:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `POST /api/v1/goatfarms/{farmId}/goats`
 - `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}`
+- `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/registration`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/registration-history`
 - `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/search`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/preview`
@@ -91,6 +93,21 @@ Rotas canônicas:
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm`
 - `POST /api/v1/goatfarms/{farmId}/goats/imports/abcc/confirm-batch`
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/genealogies?complementaryAbcc=true`
+
+Retificação registral (ID5-A):
+- o `PATCH .../registration` recebe `tod`, `toe`, `source`,
+  `evidenceReference` e `reason`; o servidor deriva o RG canônico como
+  `TOD + TOE` e rejeita uma combinação inconsistente;
+- a operação mantém o `GoatId`, não altera snapshots históricos de eventos,
+  genealogia, reprodução, lactação, saúde, comercial ou auditoria, e cria uma
+  entrada em `goat_registration_history` e na auditoria operacional;
+- a autorização é `@FarmOwnerOnly`: `ADMIN` e `FARM_OWNER` da fazenda podem
+  executar/listar o histórico; `OPERATOR`, usuários de outra fazenda e
+  anônimos recebem `403`/`401` conforme o caso;
+- um RG atual já utilizado na mesma fazenda retorna `409`. Para alterar apenas
+  perfil, use o `PUT` comum; para alterar identidade registral, use este fluxo
+  administrativo explícito. A consulta ABCC continua opcional e não é
+  modificada por esta operação.
 
 O endpoint de permissões retorna as capacidades efetivas do usuário para a
 fazenda informada:

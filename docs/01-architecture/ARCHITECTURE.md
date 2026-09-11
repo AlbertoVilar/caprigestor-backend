@@ -1,5 +1,5 @@
 ﻿# Arquitetura do Sistema GoatFarm
-Ultima atualizacao: 2026-09-08
+Ultima atualizacao: 2026-09-11
 Escopo: visao tecnica, modularizacao por dominio, shared kernel e gates de arquitetura.
 Links relacionados: [Portal](../INDEX.md), [ADR](./ADR), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulos](../02-modules), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
 
@@ -77,3 +77,19 @@ validação crítica e publicação de eventos.
 - Modulos mapeados: `address`, `article`, `authority`, `events`, `farm`, `genealogy`, `goat`, `health`, `milk`, `phone`, `reproduction`.
 - Convencao de API: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
 - Decisoes arquiteturais historicas: [ADR](./ADR).
+
+## Retificacao da identidade registral (ID5-A)
+
+A identidade estrutural do animal é o `GoatId` (`cabras.id`). O RG
+(`num_registro`) permanece identificador de negócio/ABCC e snapshot histórico.
+Correções de TOD/TOE/RG não reutilizam o `PUT` genérico: o caso de uso
+administrativo de retificação mantém o mesmo GoatId, não reescreve snapshots
+históricos, grava `goat_registration_history` e exige `ADMIN` ou `FARM_OWNER`.
+
+O fluxo segue `Controller -> GoatRegistrationRectificationUseCase ->
+GoatRegistrationRectificationBusiness -> GoatPersistencePort +
+GoatRegistrationHistoryPersistencePort -> adapters`. A camada ABCC continua
+uma fronteira externa opcional e não é a autoridade de existência do animal
+local. A migration V43 remove as FKs estruturais que ainda apontavam para RG;
+as referências locais de genealogia usam GoatId e os RGs permanecem como
+snapshots/documentos de negócio.

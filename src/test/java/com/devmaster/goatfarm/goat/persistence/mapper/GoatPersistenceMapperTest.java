@@ -62,15 +62,15 @@ class GoatPersistenceMapperTest {
 
     @Test
     void mapsLocalParentTechnicalShadowAndProfileBackToEntity() {
-        Goat parent = Goat.rehydrate(new GoatId(9), RegistrationIdentity.of("P1", "1", "1"),
+        Goat parent = Goat.rehydrate(new GoatId(9), RegistrationIdentity.of("P1", null, null),
                 "Pai", Gender.MACHO, null, null, LocalDate.of(2020, 1, 1), GoatStatus.ATIVO,
                 null, null, null, Category.PA, null, null, 7L, 8L, null, null);
-        Goat child = Goat.register(RegistrationIdentity.of("C1", "2", "2"), "Cria", Gender.FEMEA,
+        Goat child = Goat.register(RegistrationIdentity.of("C1", null, null), "Cria", Gender.FEMEA,
                 GoatBreed.SAANEN, "Branca", LocalDate.of(2025, 1, 1), GoatStatus.ATIVO, Category.PA,
                 Goat.ParentReference.local(parent.id(), parent.registrationNumber(), parent.name()), null, 7L, 8L);
 
-        GoatEntity entity = mapper.toNewEntity(child, null, null, null, null);
-        mapper.toEntity(child, entity, null, null);
+        GoatEntity entity = mapper.toNewEntity(child, null, null);
+        mapper.toEntity(child, entity);
 
         assertThat(entity.getRegistrationNumber()).isEqualTo("C1");
         assertThat(entity.getFatherTechnicalId()).isEqualTo(9L);
@@ -79,10 +79,6 @@ class GoatPersistenceMapperTest {
 
     @Test
     void mapsLocalParentFromRelationOrTechnicalShadowAndRejectsInvalidValueObjects() {
-        GoatEntity localParent = new GoatEntity();
-        localParent.setRegistrationNumber("PARENT");
-        localParent.setName("Pai");
-        localParent.setTechnicalId(null);
         GoatEntity child = new GoatEntity();
         child.setTechnicalId(20L);
         child.setRegistrationNumber("CHILD");
@@ -90,12 +86,11 @@ class GoatPersistenceMapperTest {
         child.setGender(Gender.FEMEA);
         child.setBirthDate(LocalDate.of(2025, 1, 1));
         child.setStatus(GoatStatus.ATIVO);
-        child.setFather(localParent);
         child.setFatherTechnicalId(9L);
         Goat mapped = mapper.toDomain(child);
 
         assertThat(mapped.father().id()).isEqualTo(new GoatId(9L));
-        assertThat(mapped.father().registrationNumber()).isEqualTo("PARENT");
+        assertThat(mapped.father().registrationNumber()).isNull();
 
         GoatEntity shadowOnly = new GoatEntity();
         shadowOnly.setTechnicalId(21L);
@@ -109,5 +104,17 @@ class GoatPersistenceMapperTest {
 
         assertThatThrownBy(() -> new GoatId(0)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> RegistrationIdentity.of(" ", null, null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void derivesCanonicalRegistrationAndRejectsInconsistentTriple() {
+        RegistrationIdentity identity = RegistrationIdentity.fromTodAndToe(" 001 ", " 002 ");
+
+        assertThat(identity.registrationNumber()).isEqualTo("001002");
+        assertThat(identity.tod()).isEqualTo("001");
+        assertThat(identity.toe()).isEqualTo("002");
+        assertThatThrownBy(() -> RegistrationIdentity.of("999999", "001", "002"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("TOD + TOE");
     }
 }
