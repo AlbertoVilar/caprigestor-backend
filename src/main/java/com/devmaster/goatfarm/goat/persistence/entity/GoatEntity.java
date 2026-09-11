@@ -120,6 +120,7 @@ public class GoatEntity {
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "capril_id")
+        @OnDelete(action = OnDeleteAction.CASCADE)
         private GoatFarm farm;
 
         public GoatEntity() {
