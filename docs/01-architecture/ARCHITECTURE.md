@@ -49,6 +49,13 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
     entidades/repositórios/projeções JPA do Goat. A resolução de referências
     fica em `GoatReferenceResolver`, mantendo tokens técnicos explícitos e RG
     como lookup registral.
+  - A paginação do módulo Goat pertence ao boundary da aplicação em
+    `goat.application.pagination`: `GoatPage` e `GoatPageQuery` não dependem de
+    Spring Data. O `GoatController` converte `Pageable` HTTP para o modelo da
+    aplicação, e o `GoatPersistenceAdapter` faz a conversão inversa para
+    `Pageable`/`Page` apenas dentro do adapter. O contrato JSON publicado foi
+    preservado; `GoatHexagonalCoreArchUnitTest` impede o retorno dessa
+    dependência ao pacote de aplicação.
 
 Essas regras não afirmam que todo o domínio já esteja livre de JPA. Módulos
 legados ainda manipulam entidades em alguns casos de uso; a W4 isolou os

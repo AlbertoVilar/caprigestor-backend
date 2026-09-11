@@ -13,6 +13,8 @@ import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestD
 import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,6 +23,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -193,7 +197,7 @@ public class GoatController {
             @RequestParam(required = false) GoatBreed breed,
             @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(
-                goatUseCase.findAllGoatsByFarm(farmId, breed, pageable).map(goatMapper::toResponseDTO)
+                toHttpPage(goatUseCase.findAllGoatsByFarm(farmId, breed, toPageQuery(pageable)))
         );
     }
 
@@ -210,7 +214,7 @@ public class GoatController {
             @RequestParam(required = false) GoatBreed breed,
             @PageableDefault(size = 12) Pageable pageable) {
         return ResponseEntity.ok(
-                goatUseCase.findGoatsByNameAndFarm(farmId, name, breed, pageable).map(goatMapper::toResponseDTO)
+                toHttpPage(goatUseCase.findGoatsByNameAndFarm(farmId, name, breed, toPageQuery(pageable)))
         );
     }
 
@@ -222,6 +226,22 @@ public class GoatController {
     })
     public ResponseEntity<GoatHerdSummaryDTO> getGoatHerdSummary(@PathVariable("farmId") Long farmId) {
         return ResponseEntity.ok(goatMapper.toHerdSummaryDTO(goatUseCase.getGoatHerdSummary(farmId)));
+    }
+
+    private GoatPageQuery toPageQuery(Pageable pageable) {
+        String sort = pageable.getSort().stream()
+                .findFirst()
+                .map(order -> order.getProperty() + "," + order.getDirection().name())
+                .orElse("");
+        return new GoatPageQuery(pageable.getPageNumber(), pageable.getPageSize(), sort);
+    }
+
+    private Page<GoatResponseDTO> toHttpPage(GoatPage<com.devmaster.goatfarm.goat.business.bo.GoatResponseVO> page) {
+        return new PageImpl<>(
+                page.content().stream().map(goatMapper::toResponseDTO).toList(),
+                PageRequest.of(page.page(), page.size()),
+                page.totalElements()
+        );
     }
 }
 

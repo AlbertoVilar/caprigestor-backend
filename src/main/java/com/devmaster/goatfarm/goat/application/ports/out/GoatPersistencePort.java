@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.goat.application.ports.out;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 
 import java.util.List;
 import java.util.Optional;

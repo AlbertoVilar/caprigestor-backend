@@ -29,4 +29,11 @@ class GoatHexagonalCoreArchUnitTest {
                         "..persistence..", "org.springframework..", "jakarta.persistence..")
                 .check(classes);
     }
+
+    @Test
+    void goatApplicationMustNotDependOnSpringData() {
+        noClasses().that().resideInAnyPackage("..goat.application..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.data..")
+                .check(classes);
+    }
 }

@@ -10,8 +10,8 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBreedCount;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
@@ -33,9 +33,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -110,28 +107,28 @@ class GoatBusinessBehavioralCoverageTest {
 
     @Test
     void filtersGoatsByBreedInFarmList() {
-        PageRequest pageable = PageRequest.of(0, 12);
+        GoatPageQuery query = new GoatPageQuery(0, 12, "");
         when(goatPort.findAllByFarmIdAndBreed(eq(1L), eq(GoatBreed.SAANEN),
-                eq(new GoatPageQuery(0, 12, ""))))
+                eq(query)))
                 .thenReturn(new GoatPage<>(List.of(goat), 1, 0, 12));
 
-        Page<GoatResponseVO> result = business.findAllGoatsByFarm(1L, GoatBreed.SAANEN, pageable);
+        GoatPage<GoatResponseVO> result = business.findAllGoatsByFarm(1L, GoatBreed.SAANEN, query);
 
-        assertThat(result.getTotalElements()).isEqualTo(1L);
-        verify(goatPort).findAllByFarmIdAndBreed(1L, GoatBreed.SAANEN, new GoatPageQuery(0, 12, ""));
+        assertThat(result.totalElements()).isEqualTo(1L);
+        verify(goatPort).findAllByFarmIdAndBreed(1L, GoatBreed.SAANEN, query);
     }
 
     @Test
     void filtersGoatsByNameAndBreedInFarmSearch() {
-        PageRequest pageable = PageRequest.of(0, 12);
+        GoatPageQuery query = new GoatPageQuery(0, 12, "");
         when(goatPort.findByNameAndFarmIdAndBreed(eq(1L), eq("Xeque"), eq(GoatBreed.ALPINA),
-                eq(new GoatPageQuery(0, 12, ""))))
+                eq(query)))
                 .thenReturn(new GoatPage<>(List.of(goat), 1, 0, 12));
 
-        Page<GoatResponseVO> result = business.findGoatsByNameAndFarm(1L, "Xeque", GoatBreed.ALPINA, pageable);
+        GoatPage<GoatResponseVO> result = business.findGoatsByNameAndFarm(1L, "Xeque", GoatBreed.ALPINA, query);
 
-        assertThat(result.getTotalElements()).isEqualTo(1L);
-        verify(goatPort).findByNameAndFarmIdAndBreed(1L, "Xeque", GoatBreed.ALPINA, new GoatPageQuery(0, 12, ""));
+        assertThat(result.totalElements()).isEqualTo(1L);
+        verify(goatPort).findByNameAndFarmIdAndBreed(1L, "Xeque", GoatBreed.ALPINA, query);
     }
 
     @Test

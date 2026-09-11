@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.goat.persistence.adapter;
 
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
@@ -20,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -85,6 +88,22 @@ class GoatPersistenceAdapterTest {
         assertThat(adapter.findAllByFarmId(1L, new GoatPageQuery(0, 2, "")).content()).containsExactly(domain);
         assertThat(adapter.findOffspringByParentId(1L, new GoatId(10L))).containsExactly(domain);
         assertThat(adapter.findOffspringByParentId(1L, null)).isEmpty();
+    }
+
+    @Test
+    void mapsApplicationPaginationToSpringDataAtPersistenceBoundary() {
+        Page<GoatEntity> page = new PageImpl<>(List.of(entity), PageRequest.of(2, 5), 21);
+        when(repository.findAllByFarmId(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        GoatPageQuery query = new GoatPageQuery(2, 5, "name,DESC");
+        assertThat(adapter.findAllByFarmId(1L, query).totalElements()).isEqualTo(21);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findAllByFarmId(eq(1L), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isEqualTo(2);
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(5);
+        assertThat(pageable.getValue().getSort().getOrderFor("name").getDirection())
+                .isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
     }
 
     @Test

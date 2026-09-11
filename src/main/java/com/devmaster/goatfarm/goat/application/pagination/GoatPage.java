@@ -1,9 +1,9 @@
-package com.devmaster.goatfarm.goat.application.ports.out;
+package com.devmaster.goatfarm.goat.application.pagination;
 
 import java.util.List;
 import java.util.function.Function;
 
-/** Immutable page result owned by the application boundary. */
+/** Immutable page result owned by the Goat application boundary. */
 public record GoatPage<T>(List<T> content, long totalElements, int page, int size) {
 
     public GoatPage {
