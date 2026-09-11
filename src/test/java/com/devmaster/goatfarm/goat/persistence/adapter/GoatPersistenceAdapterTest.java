@@ -117,7 +117,7 @@ class GoatPersistenceAdapterTest {
         when(repository.findByIdAndFarmId("RG-10", 1L)).thenReturn(Optional.of(entity));
         when(repository.findById("RG-10")).thenReturn(Optional.of(entity));
         when(repository.findByRegistrationNumber("RG-10")).thenReturn(Optional.of(entity));
-        when(repository.findByIdAndFarmIdWithFamilyGraph("RG-10", 1L)).thenReturn(Optional.of(entity));
+        when(repository.findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph("RG-10", 1L)).thenReturn(Optional.of(entity));
         when(repository.existsById("RG-10")).thenReturn(true);
         when(repository.findByTechnicalId(10L)).thenReturn(Optional.of(entity));
         when(repository.countByFarmId(1L)).thenReturn(20L);
@@ -139,7 +139,12 @@ class GoatPersistenceAdapterTest {
             assertThat(snapshot.gender()).isEqualTo(Gender.FEMEA);
             assertThat(snapshot.status()).isEqualTo(GoatStatus.ATIVO);
         });
-        assertThat(adapter.findByIdAndFarmIdWithFamilyGraph("RG-10", 1L)).contains(entity);
+        assertThat(adapter.findGenealogyByRegistrationNumberAndFarmId("RG-10", 1L))
+                .get()
+                .satisfies(snapshot -> {
+                    assertThat(snapshot.id()).isEqualTo(new GoatId(10L));
+                    assertThat(snapshot.registrationNumber()).isEqualTo("RG-10");
+                });
         assertThat(adapter.getHerdSummary(1L).total()).isEqualTo(20L);
         assertThat(adapter.countByFarmId(1L)).isEqualTo(20L);
         assertThat(adapter.countByFarmIdAndGender(1L, Gender.MACHO)).isEqualTo(4L);

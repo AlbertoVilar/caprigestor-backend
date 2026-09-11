@@ -31,6 +31,10 @@ public class OperationalAuditEntry {
     @Column(name = "goat_registration_number", length = 20)
     private String goatRegistrationNumber;
 
+    /** Stable structural identity; RG is retained as an audit-time snapshot. */
+    @Column(name = "goat_technical_id")
+    private Long goatTechnicalId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "action_type", nullable = false, length = 50)
     private OperationalAuditActionType actionType;

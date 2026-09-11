@@ -346,6 +346,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
         return LactationDryOffAlertVO.builder()
                 .lactationId(alert.getLactationId())
+                .goatTechnicalId(alert.getGoatTechnicalId())
                 .goatId(alert.getGoatId())
                 .startDatePregnancy(gestationStartDate)
                 .breedingDate(alert.getBreedingDate())

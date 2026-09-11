@@ -16,6 +16,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BirthKidResponseDTO {
+    private Long goatTechnicalId;
     private String registrationNumber;
     private String name;
     private Gender gender;

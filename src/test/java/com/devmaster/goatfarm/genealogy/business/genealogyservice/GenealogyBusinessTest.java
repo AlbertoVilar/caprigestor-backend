@@ -1,10 +1,11 @@
 package com.devmaster.goatfarm.genealogy.business.genealogyservice;
 
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.business.mapper.GenealogyBusinessMapper;
-import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,15 +33,15 @@ class GenealogyBusinessTest {
 
     private Long farmId;
     private String goatId;
-    private GoatEntity mockGoat;
+    private GoatGenealogySnapshot mockGoat;
     private GenealogyResponseVO mockResponseVO;
 
     @BeforeEach
     void setUp() {
         farmId = 1L;
         goatId = "goat-123";
-        mockGoat = new GoatEntity();
-        mockGoat.setRegistrationNumber(goatId);
+        mockGoat = new GoatGenealogySnapshot(new GoatId(91L), goatId, "Matriz", null, null,
+                null, null, null, null, null, null, null, null, null, null);
         
         mockResponseVO = GenealogyResponseVO.builder()
                 .goatRegistration(goatId)
@@ -51,7 +52,7 @@ class GenealogyBusinessTest {
     @DisplayName("Should return GenealogyResponseVO when goat exists")
     void shouldReturnGenealogyResponseVO_WhenGoatExists() {
         // Arrange
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)).thenReturn(Optional.of(mockGoat));
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId(goatId, farmId)).thenReturn(Optional.of(mockGoat));
         when(genealogyMapper.toResponseVO(mockGoat)).thenReturn(mockResponseVO);
 
         // Act
@@ -61,7 +62,7 @@ class GenealogyBusinessTest {
         assertNotNull(result);
         assertEquals(goatId, result.getGoatRegistration());
         
-        verify(goatGenealogyQueryPort).findByIdAndFarmIdWithFamilyGraph(goatId, farmId);
+        verify(goatGenealogyQueryPort).findGenealogyByRegistrationNumberAndFarmId(goatId, farmId);
         verify(genealogyMapper).toResponseVO(mockGoat);
     }
 
@@ -69,12 +70,12 @@ class GenealogyBusinessTest {
     @DisplayName("Should throw ResourceNotFoundException when goat does not exist")
     void shouldThrowResourceNotFoundException_WhenGoatDoesNotExist() {
         // Arrange
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph(goatId, farmId)).thenReturn(Optional.empty());
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId(goatId, farmId)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> genealogyBusiness.findGenealogy(farmId, goatId));
         
-        verify(goatGenealogyQueryPort).findByIdAndFarmIdWithFamilyGraph(goatId, farmId);
+        verify(goatGenealogyQueryPort).findGenealogyByRegistrationNumberAndFarmId(goatId, farmId);
         verifyNoInteractions(genealogyMapper);
     }
 }

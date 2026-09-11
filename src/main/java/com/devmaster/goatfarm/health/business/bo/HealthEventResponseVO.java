@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public record HealthEventResponseVO(
     Long id,
     Long farmId,
+    Long goatTechnicalId,
     String goatId,
     HealthEventType type,
     HealthEventStatus status,

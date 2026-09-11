@@ -1,131 +1,119 @@
 package com.devmaster.goatfarm.events.business.eventservice;
 
+import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
+import com.devmaster.goatfarm.events.application.ports.out.EventPage;
+import com.devmaster.goatfarm.events.application.ports.out.EventPageQuery;
 import com.devmaster.goatfarm.events.application.ports.out.EventPersistencePort;
 import com.devmaster.goatfarm.events.application.ports.out.EventPublisher;
-import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
+import com.devmaster.goatfarm.events.business.bo.EventPublication;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
-import com.devmaster.goatfarm.events.business.bo.EventPublication;
+import com.devmaster.goatfarm.events.domain.OperationalEvent;
 import com.devmaster.goatfarm.events.enums.EventType;
-import com.devmaster.goatfarm.events.business.mapper.EventBusinessMapper;
-import com.devmaster.goatfarm.events.persistence.entity.Event;
-import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Locale;
 
+/**
+ * Farm-scoped event use cases. The legacy v1 route explicitly carries an RG;
+ * the event relationship itself is always the immutable GoatId.
+ */
 @Service
 @Transactional
 public class EventBusiness implements EventManagementUseCase {
 
     private final EventPersistencePort eventPersistencePort;
-    private final LegacyGoatPersistencePort goatPersistencePort;
+    private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final OwnershipService ownershipService;
-    private final EventBusinessMapper eventMapper;
     private final EventPublisher eventPublisher;
 
-    public EventBusiness(EventPersistencePort eventPersistencePort,
-                         LegacyGoatPersistencePort goatPersistencePort,
-                         OwnershipService ownershipService,
-                         EventBusinessMapper eventMapper,
-                         EventPublisher eventPublisher) {
+    public EventBusiness(
+            EventPersistencePort eventPersistencePort,
+            GoatReferenceQueryPort goatReferenceQueryPort,
+            OwnershipService ownershipService,
+            EventPublisher eventPublisher
+    ) {
         this.eventPersistencePort = eventPersistencePort;
-        this.goatPersistencePort = goatPersistencePort;
+        this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.ownershipService = ownershipService;
-        this.eventMapper = eventMapper;
         this.eventPublisher = eventPublisher;
     }
+
     @Override
-    public EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber) {
-        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatRegistrationNumber));
+    public EventResponseVO createEvent(Long farmId, String registrationNumber, EventRequestVO request) {
+        GoatReference goat = requireGoat(farmId, registrationNumber);
+        ownershipService.verifyFarmManagement(farmId);
+        requireRequestMatchesPath(request, registrationNumber);
 
-        verifyFarmManagement(goat);
-
-        Event event = eventMapper.toEntity(requestVO);
-        event.setGoat(goat);
-        event = eventPersistencePort.save(event);
-        // Publicar evento de forma assíncrona
-        eventPublisher.publishEvent(toPublication(event));
-        return eventMapper.toResponseVO(event);
+        OperationalEvent saved = eventPersistencePort.save(OperationalEvent.create(
+                goat, request.eventType(), request.date(), request.description(), request.location(),
+                request.veterinarian(), request.outcome()));
+        eventPublisher.publishEvent(toPublication(saved));
+        return toResponse(saved);
     }
 
     @Override
-    public EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber) {
-        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(goatRegistrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatRegistrationNumber));
+    public EventResponseVO updateEvent(Long farmId, String registrationNumber, Long eventId, EventRequestVO request) {
+        GoatReference goat = requireGoat(farmId, registrationNumber);
+        ownershipService.verifyFarmOwnership(farmId);
+        requireRequestMatchesPath(request, registrationNumber);
 
-        Event event = eventPersistencePort.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
-
-        if (!Optional.ofNullable(event.getGoat())
-                .map(GoatEntity::getRegistrationNumber)
-                .orElse("").equals(goatRegistrationNumber)) {
-            throw new ResourceNotFoundException("Este evento não pertence à cabra de registro: " + goatRegistrationNumber);
-        }
-
-        verifyFarmOwnership(goat);
-
-        eventMapper.updateEntity(event, requestVO);
-        Event updatedEvent = eventPersistencePort.save(event);
-        return eventMapper.toResponseVO(updatedEvent);
-    }
-
-    @Transactional(readOnly = true)
-    public EventResponseVO findEventById(Long eventId) {
-        Event event = eventPersistencePort.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + eventId));
-        verifyFarmManagement(event.getGoat());
-        return eventMapper.toResponseVO(event);
+        OperationalEvent existing = findEvent(eventId, goat, farmId);
+        OperationalEvent updated = eventPersistencePort.save(existing.revise(
+                request.eventType(), request.date(), request.description(), request.location(),
+                request.veterinarian(), request.outcome()));
+        return toResponse(updated);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EventResponseVO> findEventsByGoat(String goatNumRegistration) {
-        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(goatNumRegistration)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + goatNumRegistration));
-
-        verifyFarmManagement(goat);
-
-        List<Event> events = eventPersistencePort.findByGoatRegistrationNumber(goatNumRegistration);
-        if (events.isEmpty()) {
-            throw new ResourceNotFoundException("Nenhum evento encontrado para a cabra com número de registro: " + goatNumRegistration);
-        }
-        return events.stream().map(eventMapper::toResponseVO).toList();
+    public EventResponseVO findEventById(Long farmId, String registrationNumber, Long eventId) {
+        GoatReference goat = requireGoat(farmId, registrationNumber);
+        ownershipService.verifyFarmManagement(farmId);
+        return toResponse(findEvent(eventId, goat, farmId));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<EventResponseVO> findEventsWithFilters(String registrationNumber,
-                                                      EventType eventType,
-                                                      LocalDate startDate,
-                                                      LocalDate endDate,
-                                                      Pageable pageable) {
-        GoatEntity goat = goatPersistencePort.findByRegistrationNumber(registrationNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada: " + registrationNumber));
-
-        verifyFarmManagement(goat);
-
-        Page<Event> events = eventPersistencePort.findWithFilters(registrationNumber, eventType, startDate, endDate, pageable);
-        return events.map(eventMapper::toResponseVO);
+    public List<EventResponseVO> findEventsByGoat(Long farmId, String registrationNumber) {
+        return findEventsWithFilters(farmId, registrationNumber, null, null, null,
+                new EventPageQuery(0, Integer.MAX_VALUE, "date,DESC")).content();
     }
 
     @Override
-    public void deleteEvent(Long id) {
-        Event event = eventPersistencePort.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado: " + id));
-        verifyFarmOwnership(event.getGoat());
-        eventPersistencePort.deleteById(id);
+    @Transactional(readOnly = true)
+    public EventPage<EventResponseVO> findEventsWithFilters(
+            Long farmId,
+            String registrationNumber,
+            EventType eventType,
+            LocalDate startDate,
+            LocalDate endDate,
+            EventPageQuery pageQuery
+    ) {
+        GoatReference goat = requireGoat(farmId, registrationNumber);
+        ownershipService.verifyFarmManagement(farmId);
+        EventPage<OperationalEvent> events = eventPersistencePort.findByGoatIdWithFilters(
+                goat.id(), farmId, eventType, startDate, endDate, pageQuery);
+        return new EventPage<>(events.content().stream().map(this::toResponse).toList(),
+                events.totalElements(), events.page(), events.size());
+    }
+
+    @Override
+    public void deleteEvent(Long farmId, String registrationNumber, Long eventId) {
+        GoatReference goat = requireGoat(farmId, registrationNumber);
+        ownershipService.verifyFarmOwnership(farmId);
+        findEvent(eventId, goat, farmId);
+        eventPersistencePort.deleteById(eventId);
     }
 
     @Override
@@ -133,33 +121,61 @@ public class EventBusiness implements EventManagementUseCase {
         eventPersistencePort.deleteEventsFromOtherUsers(adminId);
     }
 
-    private void verifyFarmOwnership(GoatEntity goat) {
-        ownershipService.verifyGoatOwnership(goat.getFarm().getId(), goat.getRegistrationNumber());
+    private GoatReference requireGoat(Long farmId, String registrationNumber) {
+        return goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registrationNumber, farmId)
+                .orElseGet(() -> {
+                    if (goatReferenceQueryPort.findReferenceByRegistrationNumber(registrationNumber).isPresent()) {
+                        throw new AccessDeniedException("Cabra não pertence à fazenda informada.");
+                    }
+                    throw new ResourceNotFoundException("Cabra não encontrada para a fazenda informada.");
+                });
     }
 
-    private void verifyFarmManagement(GoatEntity goat) {
-        Long farmId = goat.getFarm().getId();
-        if (!ownershipService.canManageFarm(farmId)) {
-            throw new AccessDeniedException("Usuário não pode operar esta fazenda.");
+    private OperationalEvent findEvent(Long eventId, GoatReference goat, Long farmId) {
+        return eventPersistencePort.findByIdAndGoatIdAndFarmId(eventId, goat.id(), farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado para a cabra informada."));
+    }
+
+    private void requireRequestMatchesPath(EventRequestVO request, String registrationNumber) {
+        if (request == null || !normalize(registrationNumber).equals(normalize(request.goatId()))) {
+            throw new InvalidArgumentException("goatId", "O animal informado no corpo deve coincidir com o animal da URL.");
         }
     }
 
-    private EventPublication toPublication(Event event) {
-        GoatEntity goat = event.getGoat();
-        Long farmId = goat == null || goat.getFarm() == null ? null : goat.getFarm().getId();
+    private EventResponseVO toResponse(OperationalEvent event) {
+        return new EventResponseVO(
+                event.id(),
+                event.goatId().value(),
+                event.goatRegistrationNumber(),
+                event.goatName(),
+                event.eventType(),
+                event.date(),
+                event.description(),
+                event.location(),
+                event.veterinarian(),
+                event.outcome()
+        );
+    }
+
+    private EventPublication toPublication(OperationalEvent event) {
         return new EventPublication(
-                event.getId(),
-                goat == null ? null : goat.getRegistrationNumber(),
-                goat == null ? null : goat.getName(),
-                event.getEventType(),
-                event.getDate(),
-                event.getDescription(),
-                event.getLocation(),
-                event.getVeterinarian(),
-                event.getOutcome(),
-                farmId,
+                event.id(),
+                event.goatId().value(),
+                event.goatRegistrationNumber(),
+                event.goatName(),
+                event.eventType(),
+                event.date(),
+                event.description(),
+                event.location(),
+                event.veterinarian(),
+                event.outcome(),
+                event.farmId(),
                 OffsetDateTime.now().toString(),
                 "system"
         );
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
     }
 }

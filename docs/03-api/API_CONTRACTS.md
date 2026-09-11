@@ -1,5 +1,5 @@
 # API_CONTRACTS
-Última atualização: 2026-09-09
+Última atualização: 2026-09-10
 Escopo: padrões transversais de rotas, autenticação, paginação, idempotência e erros da API.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Módulo Authority](../02-modules/AUTHORITY_ACCESS_MODULE.md), [Módulo Goat/Farm](../02-modules/GOAT_FARM_MODULE.md), [Módulo Reproduction](../02-modules/REPRODUCTION_MODULE.md), [Módulo Lactação](../02-modules/LACTATION_MODULE.md), [Módulo Milk Production](../02-modules/MILK_PRODUCTION_MODULE.md), [Módulo Health](../02-modules/HEALTH_VETERINARY_MODULE.md), [Módulo Inventory](../02-modules/INVENTORY_MODULE.md), [Módulo Commercial](../02-modules/COMMERCIAL_MODULE.md), [Módulo Articles](../02-modules/ARTICLE_BLOG_MODULE.md), [Guia de Migração de Versionamento](./API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -7,6 +7,15 @@ O catálogo de rotas abaixo é uma superfície resumida; os documentos dos módu
 
 ## Visão geral
 Este documento define contratos comuns para todos os controllers oficiais do backend.
+
+### Identidade do animal durante a transição
+
+Responses de Goat e dos módulos dependentes podem retornar `technicalId` ou
+`goatTechnicalId` junto de `registrationNumber`/`goatId`. O primeiro é o
+GoatId estrutural imutável; o segundo valor continua sendo o RG de negócio e
+snapshot compatível com as rotas v1 atuais. O campo técnico é aditivo e não
+altera o significado das URLs existentes. Rotas estruturais explícitas por
+GoatId e a remoção do alias RG serão publicadas somente em uma versão futura.
 
 ## Regras / Contratos
 ### Base de rotas
@@ -162,7 +171,8 @@ Paginação atual:
 - Os endpoints `pregnancy-diagnosis` e `births-due` retornam envelope agregado
   com `totalPending` e `alerts`; `page >= 0`, `size` entre 1 e 100, padrões 0/20.
 - Em `births-due`, cada item contém `pregnancyId`, `goatId`,
-  `expectedDueDate` e `daysOverdue`. São retornadas gestações ativas da fazenda
+  `expectedDueDate` e `daysOverdue`; `goatTechnicalId` é retornado de forma
+  aditiva quando disponível. São retornadas gestações ativas da fazenda
   com previsão na referência ou anterior, ordenadas por previsão e ID crescentes.
 - Os controllers usam `canManageFarm`, incluindo operador vinculado; a criação
   da cria reutiliza a mesma autorização operacional no caso de uso Goat.

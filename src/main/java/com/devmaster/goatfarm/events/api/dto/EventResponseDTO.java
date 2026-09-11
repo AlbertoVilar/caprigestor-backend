@@ -11,6 +11,9 @@ public record EventResponseDTO(
         @Schema(description = "ID do evento", example = "3")
         Long id,
 
+        @Schema(description = "Identificador técnico imutável da cabra", example = "42")
+        Long goatTechnicalId,
+
         @Schema(description = "Número de registro da cabra", example = "2114517012")
         String goatId,
 

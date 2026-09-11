@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.goat.persistence.adapter;
 
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
@@ -37,7 +40,8 @@ import java.util.Optional;
  * views for modules that have not yet migrated from JPA/RG references.</p>
  */
 @Component
-public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPersistencePort, GoatGenealogyQueryPort, GoatValidationQueryPort {
+public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPersistencePort, GoatGenealogyQueryPort,
+        GoatReferenceQueryPort, GoatValidationQueryPort {
 
     private final GoatRepository goatRepository;
     private final GoatPersistenceMapper mapper;
@@ -124,6 +128,25 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     @Override
     public Optional<Goat> findByRegistrationNumberAndFarmId(String registrationNumber, Long farmId) {
         return goatRepository.findByIdAndFarmId(registrationNumber, farmId).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<GoatReference> findReferenceByRegistrationNumber(String registrationNumber) {
+        return goatRepository.findByRegistrationNumber(registrationNumber).map(this::toReference);
+    }
+
+    @Override
+    public Optional<GoatReference> findReferenceByRegistrationNumberAndFarmId(
+            String registrationNumber,
+            Long farmId
+    ) {
+        return goatRepository.findByIdAndFarmId(registrationNumber, farmId).map(this::toReference);
+    }
+
+    @Override
+    public Optional<GoatReference> findReferenceByTechnicalIdAndFarmId(GoatId goatId, Long farmId) {
+        return goatId == null ? Optional.empty()
+                : goatRepository.findByTechnicalIdAndFarmId(goatId.value(), farmId).map(this::toReference);
     }
 
     @Override
@@ -224,8 +247,12 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     }
 
     @Override
-    public Optional<GoatEntity> findByIdAndFarmIdWithFamilyGraph(String id, Long farmId) {
-        return goatRepository.findByIdAndFarmIdWithFamilyGraph(id, farmId);
+    public Optional<GoatGenealogySnapshot> findGenealogyByRegistrationNumberAndFarmId(
+            String registrationNumber,
+            Long farmId
+    ) {
+        return goatRepository.findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph(registrationNumber, farmId)
+                .map(goat -> toGenealogySnapshot(goat, 3));
     }
 
     @Override
@@ -278,5 +305,54 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
                 ? org.springframework.data.domain.Sort.Direction.DESC : org.springframework.data.domain.Sort.Direction.ASC;
         return org.springframework.data.domain.PageRequest.of(query.page(), query.size(),
                 org.springframework.data.domain.Sort.by(direction, parts[0]));
+    }
+
+    private GoatGenealogySnapshot toGenealogySnapshot(GoatEntity goat, int remainingGenerations) {
+        return new GoatGenealogySnapshot(
+                GoatId.of(goat.getTechnicalId()),
+                goat.getRegistrationNumber(),
+                goat.getName(),
+                goat.getBreed(),
+                goat.getColor(),
+                goat.getStatus(),
+                goat.getGender(),
+                goat.getCategory(),
+                goat.getTod(),
+                goat.getToe(),
+                goat.getBirthDate(),
+                goat.getUser() == null ? null : goat.getUser().getName(),
+                goat.getFarm() == null || goat.getFarm().getUser() == null ? null : goat.getFarm().getUser().getName(),
+                remainingGenerations > 0 ? toGenealogyParent(goat.getTechnicalFather(), goat.getFather(),
+                        goat.getExternalFatherRegistrationNumber(), remainingGenerations) : null,
+                remainingGenerations > 0 ? toGenealogyParent(goat.getTechnicalMother(), goat.getMother(),
+                        goat.getExternalMotherRegistrationNumber(), remainingGenerations) : null
+        );
+    }
+
+    private GoatGenealogySnapshot.ParentReference toGenealogyParent(
+            GoatEntity technicalParent,
+            GoatEntity legacyParent,
+            String externalRegistrationNumber,
+            int remainingGenerations
+    ) {
+        GoatEntity localParent = technicalParent != null ? technicalParent : legacyParent;
+        if (localParent != null) {
+            return GoatGenealogySnapshot.ParentReference.local(
+                    toGenealogySnapshot(localParent, remainingGenerations - 1)
+            );
+        }
+        if (externalRegistrationNumber != null && !externalRegistrationNumber.isBlank()) {
+            return GoatGenealogySnapshot.ParentReference.external(externalRegistrationNumber);
+        }
+        return null;
+    }
+
+    private GoatReference toReference(GoatEntity goat) {
+        return new GoatReference(
+                GoatId.of(goat.getTechnicalId()),
+                goat.getFarm() == null ? null : goat.getFarm().getId(),
+                goat.getRegistrationNumber(),
+                goat.getName()
+        );
     }
 }

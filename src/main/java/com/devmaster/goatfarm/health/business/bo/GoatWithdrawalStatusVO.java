@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 @Builder
 public record GoatWithdrawalStatusVO(
+        Long goatTechnicalId,
         String goatId,
         LocalDate referenceDate,
         boolean hasActiveMilkWithdrawal,

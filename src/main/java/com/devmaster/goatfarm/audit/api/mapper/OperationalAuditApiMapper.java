@@ -10,6 +10,7 @@ public class OperationalAuditApiMapper {
     public OperationalAuditEntryDTO toDTO(OperationalAuditEntryVO vo) {
         return new OperationalAuditEntryDTO(
                 vo.id(),
+                vo.goatTechnicalId(),
                 vo.goatRegistrationNumber(),
                 vo.actionType().name(),
                 vo.actionLabel(),

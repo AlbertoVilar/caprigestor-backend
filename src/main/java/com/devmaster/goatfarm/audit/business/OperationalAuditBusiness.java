@@ -11,6 +11,9 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,17 +30,32 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final OwnershipService ownershipService;
     private final EntityFinder entityFinder;
+    private final GoatReferenceQueryPort goatReferenceQueryPort;
 
+    @Autowired
+    public OperationalAuditBusiness(
+            OperationalAuditPersistencePort operationalAuditPersistencePort,
+            GoatFarmPersistencePort goatFarmPersistencePort,
+            OwnershipService ownershipService,
+            EntityFinder entityFinder,
+            GoatReferenceQueryPort goatReferenceQueryPort
+    ) {
+        this.operationalAuditPersistencePort = operationalAuditPersistencePort;
+        this.goatFarmPersistencePort = goatFarmPersistencePort;
+        this.ownershipService = ownershipService;
+        this.entityFinder = entityFinder;
+        this.goatReferenceQueryPort = goatReferenceQueryPort;
+    }
+
+    /** Compatibility constructor for isolated unit tests and legacy callers. */
     public OperationalAuditBusiness(
             OperationalAuditPersistencePort operationalAuditPersistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
             OwnershipService ownershipService,
             EntityFinder entityFinder
     ) {
-        this.operationalAuditPersistencePort = operationalAuditPersistencePort;
-        this.goatFarmPersistencePort = goatFarmPersistencePort;
-        this.ownershipService = ownershipService;
-        this.entityFinder = entityFinder;
+        this(operationalAuditPersistencePort, goatFarmPersistencePort, ownershipService,
+                entityFinder, null);
     }
 
     @Override
@@ -59,6 +77,7 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
 
         operationalAuditPersistencePort.save(OperationalAuditEntry.builder()
                 .farm(farm)
+                .goatTechnicalId(resolveTechnicalId(recordVO))
                 .goatRegistrationNumber(normalizeOptionalText(recordVO.goatRegistrationNumber()))
                 .actionType(recordVO.actionType())
                 .targetId(normalizeOptionalText(recordVO.targetId()))
@@ -78,7 +97,11 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
 
         List<OperationalAuditEntry> entries = normalizedGoatId == null
                 ? operationalAuditPersistencePort.findByFarmId(farmId, normalizedLimit)
-                : operationalAuditPersistencePort.findByFarmIdAndGoatRegistrationNumber(farmId, normalizedGoatId, normalizedLimit);
+                : (goatReferenceQueryPort == null ? java.util.Optional.<GoatReference>empty()
+                    : goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(normalizedGoatId, farmId))
+                    .map(GoatReference::id)
+                    .map(id -> operationalAuditPersistencePort.findByFarmIdAndGoatTechnicalId(farmId, id.value(), normalizedLimit))
+                    .orElseGet(() -> operationalAuditPersistencePort.findByFarmIdAndGoatRegistrationNumber(farmId, normalizedGoatId, normalizedLimit));
 
         return entries.stream()
                 .map(this::toVO)
@@ -118,6 +141,7 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
     private OperationalAuditEntryVO toVO(OperationalAuditEntry entry) {
         return new OperationalAuditEntryVO(
                 entry.getId(),
+                entry.getGoatTechnicalId(),
                 entry.getGoatRegistrationNumber(),
                 entry.getActionType(),
                 entry.getActionType().getLabel(),
@@ -128,5 +152,22 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
                 entry.getActorEmail(),
                 entry.getCreatedAt()
         );
+    }
+
+    private Long resolveTechnicalId(OperationalAuditRecordVO record) {
+        if (record.goatTechnicalId() != null) {
+            return record.goatTechnicalId();
+        }
+        if (record.goatRegistrationNumber() == null) {
+            return null;
+        }
+        if (goatReferenceQueryPort == null) {
+            return null;
+        }
+        return goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(
+                record.goatRegistrationNumber(), record.farmId())
+                .map(GoatReference::id)
+                .map(id -> id.value())
+                .orElse(null);
     }
 }

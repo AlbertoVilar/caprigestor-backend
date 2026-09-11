@@ -14,6 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class WeaningResponseDTO {
     private String goatId;
+    private Long goatTechnicalId;
     private LocalDate weaningDate;
     private GoatStatus previousStatus;
     private GoatStatus currentStatus;

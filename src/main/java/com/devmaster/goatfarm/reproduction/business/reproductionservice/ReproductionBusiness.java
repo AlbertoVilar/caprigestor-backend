@@ -534,6 +534,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
 
         return WeaningResponseVO.builder()
                 .goatId(savedKid.getRegistrationNumber())
+                .goatTechnicalId(savedKid.getTechnicalId())
                 .weaningDate(vo.getWeaningDate())
                 .previousStatus(previousStatus)
                 .currentStatus(savedKid.getStatus())
@@ -718,6 +719,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         long overdueDays = Math.max(0L, ChronoUnit.DAYS.between(eligibleDate, referenceDate));
 
         return PregnancyDiagnosisAlertVO.builder()
+                .goatTechnicalId(projection.getGoatTechnicalId())
                 .goatId(projection.getGoatId())
                 .eligibleDate(eligibleDate)
                 .daysOverdue((int) overdueDays)
@@ -733,6 +735,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return PregnancyDueAlertVO.builder()
                 .pregnancyId(pregnancy.getId())
                 .goatId(pregnancy.getGoatId())
+                .goatTechnicalId(pregnancy.getGoatTechnicalId())
                 .expectedDueDate(expectedDueDate)
                 .daysOverdue((int) overdueDays)
                 .build();

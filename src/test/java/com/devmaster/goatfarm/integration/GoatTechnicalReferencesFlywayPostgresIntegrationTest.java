@@ -37,8 +37,14 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(hasConstraint(connection, "uk_lactation_farm_goat_technical_id", "UNIQUE")).isTrue();
             assertNullable(connection, "cabras", "pai_goat_id");
             assertNullable(connection, "cabras", "mae_goat_id");
-            assertNullable(connection, "pregnancy", "goat_technical_id");
-            assertNullable(connection, "milk_production", "goat_technical_id");
+            assertNotNullable(connection, "eventos", "goat_technical_id");
+            assertNotNullable(connection, "pregnancy", "goat_technical_id");
+            assertNotNullable(connection, "reproductive_event", "goat_technical_id");
+            assertNotNullable(connection, "health_events", "goat_technical_id");
+            assertNotNullable(connection, "lactation", "goat_technical_id");
+            assertNotNullable(connection, "milk_production", "goat_technical_id");
+            assertNotNullable(connection, "animal_sale", "goat_technical_id");
+            assertNullable(connection, "operational_audit_entry", "goat_technical_id");
         }
     }
 
@@ -92,27 +98,18 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
     }
 
     @Test
-    void oldStyleWritesRemainValidWhileTechnicalShadowIsNull() throws SQLException {
+    void oldStyleWritesAreRejectedAfterTechnicalWave() throws SQLException {
         flyway().migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
             insertGoat(connection, "G-OLD", "Legacy Goat", "FEMEA", 101);
-            execute(connection, "insert into eventos (id, goat_registration_number, tipo_evento, data, descricao) values (101, 'G-OLD', 'TEST', date '2026-01-01', 'legacy')");
-            execute(connection, "insert into pregnancy (id, farm_id, goat_id, status, created_at, updated_at) values (101, 101, 'G-OLD', 'ACTIVE', now(), now())");
-            execute(connection, "insert into reproductive_event (id, farm_id, goat_id, event_type, event_date, created_at, updated_at) values (101, 101, 'G-OLD', 'COVERAGE', date '2026-01-01', now(), now())");
-            execute(connection, "insert into health_events (id, farm_id, goat_id, type, status, title, scheduled_date) values (101, 101, 'G-OLD', 'VACCINE', 'SCHEDULED', 'Legacy', date '2026-01-01')");
-            execute(connection, "insert into lactation (id, farm_id, goat_id, status, start_date) values (101, 101, 'G-OLD', 'ACTIVE', date '2026-01-01')");
-            execute(connection, "insert into milk_production (id, farm_id, goat_id, lactation_id, date, shift, volume_liters) values (101, 101, 'G-OLD', 101, date '2026-01-01', 'MORNING', 1)");
-            execute(connection, "insert into operational_audit_entry (id, farm_id, goat_registration_number, action_type, actor_user_id, actor_name, actor_email, description) values (101, 101, 'G-OLD', 'TEST', 1, 'Legacy', 'legacy@example.test', 'legacy')");
-
-            assertThat(queryLong(connection, "select count(*) from eventos where id = 101 and goat_technical_id is null")).isEqualTo(1L);
-            assertThat(queryLong(connection, "select count(*) from pregnancy where id = 101 and goat_technical_id is null")).isEqualTo(1L);
-            assertThat(queryLong(connection, "select count(*) from reproductive_event where id = 101 and goat_technical_id is null")).isEqualTo(1L);
-            assertThat(queryLong(connection, "select count(*) from health_events where id = 101 and goat_technical_id is null")).isEqualTo(1L);
-            assertThat(queryLong(connection, "select count(*) from lactation where id = 101 and goat_technical_id is null")).isEqualTo(1L);
-            assertThat(queryLong(connection, "select count(*) from milk_production where id = 101 and goat_technical_id is null")).isEqualTo(1L);
-            assertThat(queryLong(connection, "select count(*) from operational_audit_entry where id = 101 and goat_technical_id is null")).isEqualTo(1L);
+            assertThatThrownBy(() -> execute(connection, "insert into eventos (id, goat_registration_number, tipo_evento, data, descricao) values (101, 'G-OLD', 'TEST', date '2026-01-01', 'legacy')"))
+                    .isInstanceOf(SQLException.class);
+            assertThatThrownBy(() -> execute(connection, "insert into pregnancy (id, farm_id, goat_id, status, created_at, updated_at) values (101, 101, 'G-OLD', 'ACTIVE', now(), now())"))
+                    .isInstanceOf(SQLException.class);
+            assertThatThrownBy(() -> execute(connection, "insert into operational_audit_entry (id, farm_id, goat_registration_number, action_type, actor_user_id, actor_name, actor_email, description) values (101, 101, 'G-OLD', 'TEST', 1, 'Legacy', 'legacy@example.test', 'legacy')"))
+                    .isInstanceOf(SQLException.class);
         }
     }
 
@@ -199,6 +196,18 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             try (ResultSet resultSet = statement.executeQuery()) {
                 assertThat(resultSet.next()).isTrue();
                 assertThat(resultSet.getString(1)).isEqualTo("YES");
+            }
+        }
+    }
+
+    private void assertNotNullable(Connection connection, String table, String column) throws SQLException {
+        String sql = "select is_nullable from information_schema.columns where table_schema = 'public' and table_name = ? and column_name = ?";
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, table);
+            statement.setString(2, column);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getString(1)).isEqualTo("NO");
             }
         }
     }

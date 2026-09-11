@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 public record AnimalSaleResponseDTO(
         Long id,
+        Long goatTechnicalId,
         String goatRegistrationNumber,
         String goatName,
         Long customerId,

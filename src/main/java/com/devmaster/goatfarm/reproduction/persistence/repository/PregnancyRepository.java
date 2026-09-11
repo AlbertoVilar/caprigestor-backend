@@ -16,11 +16,14 @@ import java.util.Optional;
 @Repository
 public interface PregnancyRepository extends JpaRepository<Pregnancy, Long> {
     List<Pregnancy> findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, String goatId, PregnancyStatus status);
+    List<Pregnancy> findByFarmIdAndGoatTechnicalIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, Long goatTechnicalId, PregnancyStatus status);
     Optional<Pregnancy> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<Pregnancy> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
     Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long id);
     Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     boolean existsByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     Page<Pregnancy> findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
+    Page<Pregnancy> findAllByFarmIdAndGoatTechnicalIdOrderByBreedingDateDescIdDesc(Long farmId, Long goatTechnicalId, Pageable pageable);
     Page<Pregnancy> findByFarmIdAndStatusAndExpectedDueDateIsNotNullAndExpectedDueDateLessThanEqualOrderByExpectedDueDateAscIdAsc(
             Long farmId,
             PregnancyStatus status,
@@ -39,5 +42,18 @@ public interface PregnancyRepository extends JpaRepository<Pregnancy, Long> {
     Optional<LocalDate> findLatestBirthCloseDate(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId
+    );
+
+    @Query("""
+            select max(p.closedAt)
+            from Pregnancy p
+            where p.farmId = :farmId
+              and p.goatTechnicalId = :goatTechnicalId
+              and p.closeReason = com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason.BIRTH
+              and p.closedAt is not null
+            """)
+    Optional<LocalDate> findLatestBirthCloseDateByTechnicalId(
+            @Param("farmId") Long farmId,
+            @Param("goatTechnicalId") Long goatTechnicalId
     );
 }
