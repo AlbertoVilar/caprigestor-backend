@@ -64,13 +64,13 @@ public class GoatBusiness implements GoatManagementUseCase {
     @Override
     public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmManagement(farmId);
-        String registration = normalize(requestVO.getRegistrationNumber());
-        if (registration == null) throw new InvalidArgumentException("registrationNumber", "Número de registro é obrigatório");
+        RegistrationIdentity identity = identityForCreation(requestVO);
+        String registration = identity.registrationNumber();
         if (goatPort.existsByRegistrationNumber(registration)) throw new DuplicateEntityException("Número de registro já existe.");
         entityFinder.findOrThrow(() -> goatFarmPort.findById(farmId), "Fazenda não encontrada.");
         GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), registration,
                 requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
-        Goat goat = Goat.register(RegistrationIdentity.of(registration, requestVO.getTod(), requestVO.getToe()),
+        Goat goat = Goat.register(identity,
                 requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(), requestVO.getBirthDate(),
                 requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother(), farmId,
                 ownershipService.getCurrentUser().getId());
@@ -227,5 +227,22 @@ public class GoatBusiness implements GoatManagementUseCase {
         return switch (type) { case VENDA -> GoatStatus.VENDIDO; case MORTE -> GoatStatus.FALECIDO; case DESCARTE, DOACAO, TRANSFERENCIA -> GoatStatus.INATIVO; };
     }
     private String normalize(String value) { return value == null ? null : value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT); }
+
+    private RegistrationIdentity identityForCreation(GoatRequestVO requestVO) {
+        final RegistrationIdentity derived;
+        try {
+            derived = RegistrationIdentity.fromTodAndToe(requestVO.getTod(), requestVO.getToe());
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidArgumentException("tod", "TOD e TOE são obrigatórios e devem formar o número de registro.");
+        }
+
+        String submittedRegistration = normalize(requestVO.getRegistrationNumber());
+        if (!derived.registrationNumber().equals(submittedRegistration)) {
+            throw new BusinessRuleException("registrationNumber",
+                    "O número de registro deve ser exatamente a composição de TOD + TOE; ele não será corrigido silenciosamente.");
+        }
+        return derived;
+    }
+
     private String normalizeNotes(String value) { if (value == null) return null; String normalized = value.trim(); return normalized.isEmpty() ? null : normalized; }
 }

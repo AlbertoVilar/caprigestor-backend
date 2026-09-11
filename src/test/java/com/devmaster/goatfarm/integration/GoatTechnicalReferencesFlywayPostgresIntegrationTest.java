@@ -38,7 +38,10 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(hasConstraint(connection, "uk_cabras_farm_id", "UNIQUE")).isTrue();
             assertThat(hasConstraint(connection, "uk_lactation_farm_goat_technical_id", "UNIQUE")).isTrue();
             assertThat(hasConstraint(connection, "fk_goat_registration_history_goat", "FOREIGN KEY")).isTrue();
-            assertThat(hasConstraint(connection, "fk_goat_registration_history_farm_goat", "FOREIGN KEY")).isTrue();
+            // farm_id is the historical context at rectification time. It is
+            // intentionally independent from the goat's current farm so a
+            // later transfer does not invalidate the history row.
+            assertThat(hasConstraint(connection, "fk_goat_registration_history_farm_goat", "FOREIGN KEY")).isFalse();
             assertThat(queryLong(connection, "select count(*) from information_schema.tables where table_schema = 'public' and table_name = 'goat_registration_history'")).isEqualTo(1L);
             assertNullable(connection, "cabras", "pai_goat_id");
             assertNullable(connection, "cabras", "mae_goat_id");
@@ -149,6 +152,63 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
         }
     }
 
+    @Test
+    void registrationRectificationPreservesTechnicalDependentsAndHistoricalSnapshots() throws SQLException {
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoatWithIdentity(connection, "164326001", "Goat A", "FEMEA", 101, "16432", "6001");
+            long goatId = queryLong(connection, "select id from cabras where num_registro = '164326001'");
+
+            execute(connection, "insert into cabras (num_registro, nome, sexo, data_nascimento, status, usuario_id, capril_id, pai_num_registro, pai_goat_id) " +
+                    "values ('CHILD-001', 'Child', 'FEMEA', date '2024-01-01', 'ATIVO', 1, 101, '164326001', " + goatId + ")");
+            execute(connection, "insert into eventos (id, goat_registration_number, goat_technical_id, tipo_evento, data, descricao) " +
+                    "values (901, '164326001', " + goatId + ", 'PESAGEM', date '2026-01-01', 'snapshot')");
+            execute(connection, "insert into pregnancy (id, farm_id, goat_id, goat_technical_id, status, created_at, updated_at) " +
+                    "values (902, 101, '164326001', " + goatId + ", 'ACTIVE', now(), now())");
+            execute(connection, "insert into reproductive_event (id, farm_id, goat_id, goat_technical_id, event_type, event_date, created_at, updated_at) " +
+                    "values (903, 101, '164326001', " + goatId + ", 'COVERAGE', date '2026-01-01', now(), now())");
+            execute(connection, "insert into health_events (id, farm_id, goat_id, goat_technical_id, type, status, title, scheduled_date) " +
+                    "values (904, 101, '164326001', " + goatId + ", 'VACCINE', 'SCHEDULED', 'Health', date '2026-01-01')");
+            execute(connection, "insert into lactation (id, farm_id, goat_id, goat_technical_id, status, start_date) " +
+                    "values (905, 101, '164326001', " + goatId + ", 'ACTIVE', date '2026-01-01')");
+            execute(connection, "insert into milk_production (id, farm_id, goat_id, goat_technical_id, lactation_id, date, shift, volume_liters) " +
+                    "values (906, 101, '164326001', " + goatId + ", 905, date '2026-01-01', 'MORNING', 1)");
+            execute(connection, "insert into commercial_customer (id, farm_id, name) values (907, 101, 'Customer')");
+            execute(connection, "insert into animal_sale (id, farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) " +
+                    "values (908, 101, 907, '164326001', " + goatId + ", 'Goat A', date '2026-01-01', 1, date '2026-01-01', 'PENDING')");
+            execute(connection, "insert into operational_audit_entry (id, farm_id, goat_registration_number, goat_technical_id, action_type, actor_user_id, actor_name, actor_email, description) " +
+                    "values (909, 101, '164326001', " + goatId + ", 'TEST', 1, 'Test User', 'test@example.com', 'snapshot')");
+
+            // Mirrors the atomic application rectification: the technical key
+            // is untouched while the current identity and audit history change.
+            execute(connection, "update cabras set num_registro = '164326007', tod = '16432', toe = '6007' where id = " + goatId);
+            execute(connection, "insert into goat_registration_history (goat_id, farm_id, old_registration_number, old_tod, old_toe, new_registration_number, new_tod, new_toe, source, evidence_reference, reason, actor_user_id) " +
+                    "values (" + goatId + ", 101, '164326001', '16432', '6001', '164326007', '16432', '6007', 'OFFICIAL_DOCUMENT', 'DOC-001', 'Correction', 1)");
+
+            assertThat(queryLong(connection, "select id from cabras where num_registro = '164326007'")).isEqualTo(goatId);
+            assertThat(queryLong(connection, "select count(*) from cabras where num_registro = '164326001'")).isZero();
+            assertThat(queryString(connection, "select old_registration_number || '->' || new_registration_number from goat_registration_history where goat_id = " + goatId))
+                    .isEqualTo("164326001->164326007");
+
+            assertTechnicalReference(connection, "eventos", "goat_technical_id", 901, goatId);
+            assertTechnicalReference(connection, "pregnancy", "goat_technical_id", 902, goatId);
+            assertTechnicalReference(connection, "reproductive_event", "goat_technical_id", 903, goatId);
+            assertTechnicalReference(connection, "health_events", "goat_technical_id", 904, goatId);
+            assertTechnicalReference(connection, "lactation", "goat_technical_id", 905, goatId);
+            assertTechnicalReference(connection, "milk_production", "goat_technical_id", 906, goatId);
+            assertTechnicalReference(connection, "animal_sale", "goat_technical_id", 908, goatId);
+            assertTechnicalReference(connection, "operational_audit_entry", "goat_technical_id", 909, goatId);
+
+            assertThat(queryString(connection, "select goat_registration_number from eventos where id = 901")).isEqualTo("164326001");
+            assertThat(queryString(connection, "select goat_id from pregnancy where id = 902")).isEqualTo("164326001");
+            assertThat(queryString(connection, "select goat_registration_number from animal_sale where id = 908")).isEqualTo("164326001");
+            assertThat(queryString(connection, "select goat_registration_number from operational_audit_entry where id = 909")).isEqualTo("164326001");
+            assertThat(queryLong(connection, "select count(*) from cabras child join cabras parent on parent.id = child.pai_goat_id where child.num_registro = 'CHILD-001' and child.pai_num_registro = '164326001' and parent.num_registro = '164326007'")).isEqualTo(1L);
+        }
+    }
+
     private void seedRepresentativeData(Connection connection) throws SQLException {
         seedUsersAndFarms(connection);
         insertGoat(connection, "G-FATHER", "Father", "MACHO", 102);
@@ -174,6 +234,17 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
 
     private void insertGoat(Connection connection, String registrationNumber, String name, String gender, int farmId) throws SQLException {
         execute(connection, "insert into cabras (num_registro, nome, sexo, data_nascimento, status, usuario_id, capril_id) values ('%s', '%s', '%s', date '2020-01-01', 'ATIVO', 1, %d)".formatted(registrationNumber, name, gender, farmId));
+    }
+
+    private void insertGoatWithIdentity(Connection connection, String registrationNumber, String name, String gender,
+                                        int farmId, String tod, String toe) throws SQLException {
+        execute(connection, "insert into cabras (num_registro, nome, sexo, data_nascimento, status, usuario_id, capril_id, tod, toe) " +
+                "values ('%s', '%s', '%s', date '2020-01-01', 'ATIVO', 1, %d, '%s', '%s')"
+                .formatted(registrationNumber, name, gender, farmId, tod, toe));
+    }
+
+    private void assertTechnicalReference(Connection connection, String table, String column, long rowId, long expectedGoatId) throws SQLException {
+        assertThat(queryLong(connection, "select " + column + " from " + table + " where id = " + rowId)).isEqualTo(expectedGoatId);
     }
 
     private Flyway flyway() {

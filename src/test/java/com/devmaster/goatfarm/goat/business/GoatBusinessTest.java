@@ -76,11 +76,40 @@ class GoatBusinessTest {
     }
 
     @Test
+    void rejectsContradictoryRegistrationInsteadOfSilentlyCorrectingIt() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        request.setRegistrationNumber("1643299999");
+
+        assertThatThrownBy(() -> business.createGoat(1L, request))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("composição de TOD + TOE");
+        verify(goatPort, never()).existsByRegistrationNumber(anyString());
+        verify(goatPort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    void derivesRegistrationFromTodAndToeOnCreation() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        GoatFarm farm = new GoatFarm(); farm.setId(1L);
+        User user = new User(); user.setId(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
+        when(ownershipService.getCurrentUser()).thenReturn(user);
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        request.setRegistrationNumber(" 16432 22002 ");
+        GoatResponseVO result = business.createGoat(1L, request);
+
+        assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
+        verify(goatPort).existsByRegistrationNumber("1643222002");
+    }
+
+    @Test
     void updatesByRegistrationNumberWithoutReinterpretingANumericRgAsTechnicalId() {
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
         request.setRegistrationNumber("77");
-        request.setTod(null); request.setToe(null);
-        goat = Goat.rehydrate(new GoatId(99), RegistrationIdentity.of("77", null, null),
+        request.setTod("7"); request.setToe("7");
+        goat = Goat.rehydrate(new GoatId(99), RegistrationIdentity.of("77", "7", "7"),
                 request.getName(), request.getGender(), request.getBreed(), request.getColor(), request.getBirthDate(), request.getStatus(),
                 null, null, null, request.getCategory(), null, null, 1L, 1L, "Capril", "Alberto");
         when(goatPort.findByRegistrationNumberAndFarmId("77", 1L)).thenReturn(Optional.of(goat));

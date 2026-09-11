@@ -110,6 +110,8 @@ class GoatControllerTest {
         goatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         goatRequestDTO.setColor("Branca");
         goatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        goatRequestDTO.setTod("0");
+        goatRequestDTO.setToe("01");
     }
 
     @Test
@@ -266,6 +268,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2021, 3, 10));
         newGoatRequestDTO.setColor("Marrom");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("02");
 
         GoatResponseVO createdGoatResponseVO = new GoatResponseVO();
         createdGoatResponseVO.setRegistrationNumber("002");
@@ -306,6 +310,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         newGoatRequestDTO.setColor("Branca");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("04");
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/goatfarms/2/goats")
@@ -330,6 +336,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         newGoatRequestDTO.setColor("Branca");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("05");
 
         GoatResponseVO createdGoatResponseVO = new GoatResponseVO();
         createdGoatResponseVO.setRegistrationNumber("005");
@@ -365,6 +373,8 @@ class GoatControllerTest {
         updateGoatRequestDTO.setBirthDate(LocalDate.of(2020, 5, 15));
         updateGoatRequestDTO.setColor("Branca");
         updateGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        updateGoatRequestDTO.setTod("0");
+        updateGoatRequestDTO.setToe("01");
 
         com.devmaster.goatfarm.goat.business.bo.GoatResponseVO updatedGoatResponseVO = new com.devmaster.goatfarm.goat.business.bo.GoatResponseVO();
         updatedGoatResponseVO.setRegistrationNumber("001");
@@ -587,6 +597,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         newGoatRequestDTO.setColor("Branca");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("03");
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/goatfarms/1/goats")

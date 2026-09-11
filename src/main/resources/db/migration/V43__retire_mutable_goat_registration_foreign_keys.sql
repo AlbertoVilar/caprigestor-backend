@@ -48,8 +48,6 @@ CREATE TABLE goat_registration_history (
         FOREIGN KEY (goat_id) REFERENCES cabras(id) ON DELETE RESTRICT,
     CONSTRAINT fk_goat_registration_history_farm
         FOREIGN KEY (farm_id) REFERENCES capril(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_goat_registration_history_farm_goat
-        FOREIGN KEY (farm_id, goat_id) REFERENCES cabras (capril_id, id) ON DELETE RESTRICT,
     CONSTRAINT fk_goat_registration_history_actor
         FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT,
     CONSTRAINT ck_goat_registration_history_source
