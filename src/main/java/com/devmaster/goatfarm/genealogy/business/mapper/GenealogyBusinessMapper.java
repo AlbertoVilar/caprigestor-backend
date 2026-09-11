@@ -1,52 +1,88 @@
 package com.devmaster.goatfarm.genealogy.business.mapper;
 
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface GenealogyBusinessMapper {
+/** Maps the application-owned technical genealogy read model to the API VO. */
+@Component
+public class GenealogyBusinessMapper {
 
-    @Mapping(target = "goatName", source = "name")
-    @Mapping(target = "goatRegistration", source = "registrationNumber")
-    @Mapping(target = "breed", expression = "java(goat.getBreed() != null ? goat.getBreed().toString() : null)")
-    @Mapping(target = "color", source = "color")
-    @Mapping(target = "status", expression = "java(goat.getStatus() != null ? goat.getStatus().toString() : null)")
-    @Mapping(target = "gender", expression = "java(goat.getGender() != null ? goat.getGender().toString() : null)")
-    @Mapping(target = "category", expression = "java(goat.getCategory() != null ? goat.getCategory().toString() : null)")
-    @Mapping(target = "tod", source = "tod")
-    @Mapping(target = "toe", source = "toe")
-    @Mapping(target = "birthDate", expression = "java(goat.getBirthDate() != null ? goat.getBirthDate().toString() : null)")
-    @Mapping(target = "breeder", source = "user.name")
-    @Mapping(target = "farmOwner", source = "farm.user.name")
-    @Mapping(target = "fatherName", expression = "java(goat.getFather() != null ? goat.getFather().getName() : null)")
-    @Mapping(target = "fatherRegistration", expression = "java(goat.getFather() != null ? goat.getFather().getRegistrationNumber() : goat.getExternalFatherRegistrationNumber())")
-    @Mapping(target = "paternalGrandfatherName", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null ? goat.getFather().getFather().getName() : null)")
-    @Mapping(target = "paternalGrandfatherRegistration", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null ? goat.getFather().getFather().getRegistrationNumber() : null)")
-    @Mapping(target = "paternalGreatGrandfather1Name", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null && goat.getFather().getFather().getFather() != null ? goat.getFather().getFather().getFather().getName() : null)")
-    @Mapping(target = "paternalGreatGrandfather1Registration", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null && goat.getFather().getFather().getFather() != null ? goat.getFather().getFather().getFather().getRegistrationNumber() : null)")
-    @Mapping(target = "paternalGreatGrandmother1Name", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null && goat.getFather().getFather().getMother() != null ? goat.getFather().getFather().getMother().getName() : null)")
-    @Mapping(target = "paternalGreatGrandmother1Registration", expression = "java(goat.getFather() != null && goat.getFather().getFather() != null && goat.getFather().getFather().getMother() != null ? goat.getFather().getFather().getMother().getRegistrationNumber() : null)")
-    @Mapping(target = "paternalGrandmotherName", expression = "java(goat.getFather() != null && goat.getFather().getMother() != null ? goat.getFather().getMother().getName() : null)")
-    @Mapping(target = "paternalGrandmotherRegistration", expression = "java(goat.getFather() != null && goat.getFather().getMother() != null ? goat.getFather().getMother().getRegistrationNumber() : null)")
-    @Mapping(target = "paternalGreatGrandfather2Name", expression = "java(goat.getFather() != null && goat.getFather().getMother() != null && goat.getFather().getMother().getFather() != null ? goat.getFather().getMother().getFather().getName() : null)")
-    @Mapping(target = "paternalGreatGrandfather2Registration", expression = "java(goat.getFather() != null && goat.getFather().getMother() != null && goat.getFather().getMother().getFather() != null ? goat.getFather().getMother().getFather().getRegistrationNumber() : null)")
-    @Mapping(target = "paternalGreatGrandmother2Name", expression = "java(goat.getFather() != null && goat.getFather().getMother() != null && goat.getFather().getMother().getMother() != null ? goat.getFather().getMother().getMother().getName() : null)")
-    @Mapping(target = "paternalGreatGrandmother2Registration", expression = "java(goat.getFather() != null && goat.getFather().getMother() != null && goat.getFather().getMother().getMother() != null ? goat.getFather().getMother().getMother().getRegistrationNumber() : null)")
-    @Mapping(target = "motherName", expression = "java(goat.getMother() != null ? goat.getMother().getName() : null)")
-    @Mapping(target = "motherRegistration", expression = "java(goat.getMother() != null ? goat.getMother().getRegistrationNumber() : goat.getExternalMotherRegistrationNumber())")
-    @Mapping(target = "maternalGrandfatherName", expression = "java(goat.getMother() != null && goat.getMother().getFather() != null ? goat.getMother().getFather().getName() : null)")
-    @Mapping(target = "maternalGrandfatherRegistration", expression = "java(goat.getMother() != null && goat.getMother().getFather() != null ? goat.getMother().getFather().getRegistrationNumber() : null)")
-    @Mapping(target = "maternalGreatGrandfather1Name", expression = "java(goat.getMother() != null && goat.getMother().getFather() != null && goat.getMother().getFather().getFather() != null ? goat.getMother().getFather().getFather().getName() : null)")
-    @Mapping(target = "maternalGreatGrandfather1Registration", expression = "java(goat.getMother() != null && goat.getMother().getFather() != null && goat.getMother().getFather().getFather() != null ? goat.getMother().getFather().getFather().getRegistrationNumber() : null)")
-    @Mapping(target = "maternalGreatGrandmother1Name", expression = "java(goat.getMother() != null && goat.getMother().getFather() != null && goat.getMother().getFather().getMother() != null ? goat.getMother().getFather().getMother().getName() : null)")
-    @Mapping(target = "maternalGreatGrandmother1Registration", expression = "java(goat.getMother() != null && goat.getMother().getFather() != null && goat.getMother().getFather().getMother() != null ? goat.getMother().getFather().getMother().getRegistrationNumber() : null)")
-    @Mapping(target = "maternalGrandmotherName", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null ? goat.getMother().getMother().getName() : null)")
-    @Mapping(target = "maternalGrandmotherRegistration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null ? goat.getMother().getMother().getRegistrationNumber() : null)")
-    @Mapping(target = "maternalGreatGrandfather2Name", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getFather() != null ? goat.getMother().getMother().getFather().getName() : null)")
-    @Mapping(target = "maternalGreatGrandfather2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getFather() != null ? goat.getMother().getMother().getFather().getRegistrationNumber() : null)")
-    @Mapping(target = "maternalGreatGrandmother2Name", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getName() : null)")
-    @Mapping(target = "maternalGreatGrandmother2Registration", expression = "java(goat.getMother() != null && goat.getMother().getMother() != null && goat.getMother().getMother().getMother() != null ? goat.getMother().getMother().getMother().getRegistrationNumber() : null)")
-    GenealogyResponseVO toResponseVO(Goat goat);
+    public GenealogyResponseVO toResponseVO(GoatGenealogySnapshot goat) {
+        GoatGenealogySnapshot paternalGrandfather = fatherOf(fatherOf(goat));
+        GoatGenealogySnapshot paternalGrandmother = motherOf(fatherOf(goat));
+        GoatGenealogySnapshot maternalGrandfather = fatherOf(motherOf(goat));
+        GoatGenealogySnapshot maternalGrandmother = motherOf(motherOf(goat));
+
+        return GenealogyResponseVO.builder()
+                .goatName(goat.name())
+                .goatRegistration(goat.registrationNumber())
+                .breeder(goat.breederName())
+                .farmOwner(goat.farmOwnerName())
+                .breed(goat.breed() == null ? null : goat.breed().toString())
+                .color(goat.color())
+                .status(goat.status() == null ? null : goat.status().toString())
+                .gender(goat.gender() == null ? null : goat.gender().toString())
+                .category(goat.category() == null ? null : goat.category().toString())
+                .tod(goat.tod())
+                .toe(goat.toe())
+                .birthDate(goat.birthDate() == null ? null : goat.birthDate().toString())
+                .fatherName(nameOf(fatherOf(goat)))
+                .fatherRegistration(registrationOf(fatherOf(goat), externalFatherOf(goat)))
+                .motherName(nameOf(motherOf(goat)))
+                .motherRegistration(registrationOf(motherOf(goat), externalMotherOf(goat)))
+                .paternalGrandfatherName(nameOf(paternalGrandfather))
+                .paternalGrandfatherRegistration(registrationOf(paternalGrandfather, null))
+                .paternalGrandmotherName(nameOf(paternalGrandmother))
+                .paternalGrandmotherRegistration(registrationOf(paternalGrandmother, null))
+                .maternalGrandfatherName(nameOf(maternalGrandfather))
+                .maternalGrandfatherRegistration(registrationOf(maternalGrandfather, null))
+                .maternalGrandmotherName(nameOf(maternalGrandmother))
+                .maternalGrandmotherRegistration(registrationOf(maternalGrandmother, null))
+                .paternalGreatGrandfather1Name(nameOf(fatherOf(paternalGrandfather)))
+                .paternalGreatGrandfather1Registration(registrationOf(fatherOf(paternalGrandfather), null))
+                .paternalGreatGrandmother1Name(nameOf(motherOf(paternalGrandfather)))
+                .paternalGreatGrandmother1Registration(registrationOf(motherOf(paternalGrandfather), null))
+                .paternalGreatGrandfather2Name(nameOf(fatherOf(paternalGrandmother)))
+                .paternalGreatGrandfather2Registration(registrationOf(fatherOf(paternalGrandmother), null))
+                .paternalGreatGrandmother2Name(nameOf(motherOf(paternalGrandmother)))
+                .paternalGreatGrandmother2Registration(registrationOf(motherOf(paternalGrandmother), null))
+                .maternalGreatGrandfather1Name(nameOf(fatherOf(maternalGrandfather)))
+                .maternalGreatGrandfather1Registration(registrationOf(fatherOf(maternalGrandfather), null))
+                .maternalGreatGrandmother1Name(nameOf(motherOf(maternalGrandfather)))
+                .maternalGreatGrandmother1Registration(registrationOf(motherOf(maternalGrandfather), null))
+                .maternalGreatGrandfather2Name(nameOf(fatherOf(maternalGrandmother)))
+                .maternalGreatGrandfather2Registration(registrationOf(fatherOf(maternalGrandmother), null))
+                .maternalGreatGrandmother2Name(nameOf(motherOf(maternalGrandmother)))
+                .maternalGreatGrandmother2Registration(registrationOf(motherOf(maternalGrandmother), null))
+                .build();
+    }
+
+    private GoatGenealogySnapshot fatherOf(GoatGenealogySnapshot goat) {
+        return localGoat(goat == null ? null : goat.father());
+    }
+
+    private GoatGenealogySnapshot motherOf(GoatGenealogySnapshot goat) {
+        return localGoat(goat == null ? null : goat.mother());
+    }
+
+    private GoatGenealogySnapshot localGoat(GoatGenealogySnapshot.ParentReference reference) {
+        return reference == null ? null : reference.localGoat();
+    }
+
+    private String externalFatherOf(GoatGenealogySnapshot goat) {
+        return goat == null || goat.father() == null ? null : goat.father().externalRegistrationNumber();
+    }
+
+    private String externalMotherOf(GoatGenealogySnapshot goat) {
+        return goat == null || goat.mother() == null ? null : goat.mother().externalRegistrationNumber();
+    }
+
+    private String nameOf(GoatGenealogySnapshot goat) {
+        return goat == null ? null : goat.name();
+    }
+
+    private String registrationOf(GoatGenealogySnapshot goat, String externalRegistrationNumber) {
+        return goat == null ? externalRegistrationNumber : goat.registrationNumber();
+    }
 }

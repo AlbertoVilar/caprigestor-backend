@@ -9,6 +9,7 @@ import java.time.LocalDate;
 @Builder
 public record FarmHealthAlertItemVO(
         Long id,
+        Long goatTechnicalId,
         String goatId,
         HealthEventType type,
         HealthEventStatus status,

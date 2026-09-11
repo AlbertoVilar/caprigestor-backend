@@ -13,6 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class LactationDryOffAlertItemDTO {
     private Long lactationId;
+    private Long goatTechnicalId;
     private String goatId;
     private LocalDate startDatePregnancy;
     private LocalDate breedingDate;

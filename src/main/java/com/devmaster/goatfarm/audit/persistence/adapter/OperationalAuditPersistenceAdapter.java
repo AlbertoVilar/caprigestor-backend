@@ -35,4 +35,10 @@ public class OperationalAuditPersistenceAdapter implements OperationalAuditPersi
                 PageRequest.of(0, limit)
         );
     }
+
+    @Override
+    public List<OperationalAuditEntry> findByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, int limit) {
+        return operationalAuditEntryRepository.findByFarm_IdAndGoatTechnicalIdOrderByCreatedAtDescIdDesc(
+                farmId, goatTechnicalId, PageRequest.of(0, limit));
+    }
 }

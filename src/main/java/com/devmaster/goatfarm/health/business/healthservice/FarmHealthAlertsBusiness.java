@@ -68,14 +68,14 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
 
         List<WithdrawalAlertItemVO> milkWithdrawalTop = activeWithdrawalStatuses.stream()
                 .filter(GoatWithdrawalStatusVO::hasActiveMilkWithdrawal)
-                .map(status -> toWithdrawalAlertItem(status.goatId(), status.milkWithdrawal(), today))
+                .map(status -> toWithdrawalAlertItem(status.goatTechnicalId(), status.goatId(), status.milkWithdrawal(), today))
                 .sorted(java.util.Comparator.comparing(WithdrawalAlertItemVO::withdrawalEndDate))
                 .limit(5)
                 .toList();
 
         List<WithdrawalAlertItemVO> meatWithdrawalTop = activeWithdrawalStatuses.stream()
                 .filter(GoatWithdrawalStatusVO::hasActiveMeatWithdrawal)
-                .map(status -> toWithdrawalAlertItem(status.goatId(), status.meatWithdrawal(), today))
+                .map(status -> toWithdrawalAlertItem(status.goatTechnicalId(), status.goatId(), status.meatWithdrawal(), today))
                 .sorted(java.util.Comparator.comparing(WithdrawalAlertItemVO::withdrawalEndDate))
                 .limit(5)
                 .toList();
@@ -104,6 +104,7 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
     private FarmHealthAlertItemVO toAlertItem(HealthEventResponseVO vo) {
         return FarmHealthAlertItemVO.builder()
                 .id(vo.id())
+                .goatTechnicalId(vo.goatTechnicalId())
                 .goatId(vo.goatId())
                 .type(vo.type())
                 .status(vo.status())
@@ -114,12 +115,14 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
     }
 
     private WithdrawalAlertItemVO toWithdrawalAlertItem(
+            Long goatTechnicalId,
             String goatId,
             com.devmaster.goatfarm.health.business.bo.HealthWithdrawalOriginVO origin,
             LocalDate referenceDate
     ) {
         return WithdrawalAlertItemVO.builder()
                 .eventId(origin.eventId())
+                .goatTechnicalId(goatTechnicalId)
                 .goatId(goatId)
                 .title(origin.title())
                 .productName(origin.productName())

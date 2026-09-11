@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
@@ -62,7 +62,7 @@ class GoatOperationalAuthorizationIntegrationTest {
     private User unlinkedOperator;
     private GoatFarm managedFarm;
     private GoatFarm otherFarm;
-    private Goat mother;
+    private GoatEntity mother;
 
     @BeforeEach
     void setUp() {
@@ -173,12 +173,12 @@ class GoatOperationalAuthorizationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(birthPayload("1615302001", "Cria do parto")))
                 .andExpect(status().isCreated());
-        assertThat(goatRepository.findByIdAndFarmId("1615302001", managedFarm.getId())).isPresent();
+        assertThat(goatRepository.findByRegistrationNumberAndFarmId("1615302001", managedFarm.getId())).isPresent();
         assertThat(pregnancyRepository.findById(pregnancy.getId())).get()
                 .extracting(Pregnancy::getStatus)
                 .isEqualTo(PregnancyStatus.CLOSED);
 
-        Goat secondMother = createActiveFemaleGoat(managedFarm, "1615300002", "Segunda matriz");
+        GoatEntity secondMother = createActiveFemaleGoat(managedFarm, "1615300002", "Segunda matriz");
         Pregnancy secondPregnancy = createActivePregnancy(secondMother);
         mockMvc.perform(post(birthPath(managedFarm, secondMother, secondPregnancy))
                         .header("Authorization", bearer(unlinkedToken))
@@ -189,7 +189,7 @@ class GoatOperationalAuthorizationIntegrationTest {
 
     @Test
     void failedKidCreationRollsBackBirthClosure() throws Exception {
-        Goat rollbackMother = createActiveFemaleGoat(managedFarm, "1615300003", "Matriz para rollback");
+        GoatEntity rollbackMother = createActiveFemaleGoat(managedFarm, "1615300003", "Matriz para rollback");
         Pregnancy pregnancy = createActivePregnancy(rollbackMother);
         createActiveFemaleGoat(managedFarm, "1615302999", "Registro já existente");
         String token = loginAndGetToken(linkedOperator.getEmail());
@@ -224,8 +224,8 @@ class GoatOperationalAuthorizationIntegrationTest {
         return goatFarmRepository.save(farm);
     }
 
-    private Goat createActiveFemaleGoat(GoatFarm farm, String registrationNumber, String name) {
-        Goat goat = new Goat();
+    private GoatEntity createActiveFemaleGoat(GoatFarm farm, String registrationNumber, String name) {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(registrationNumber);
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
@@ -236,7 +236,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         return goatRepository.save(goat);
     }
 
-    private Pregnancy createActivePregnancy(Goat targetMother) {
+    private Pregnancy createActivePregnancy(GoatEntity targetMother) {
         return pregnancyRepository.save(Pregnancy.builder()
                 .farmId(managedFarm.getId())
                 .goatId(targetMother.getRegistrationNumber())
@@ -259,7 +259,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         return "/api/v1/goatfarms/" + farm.getId() + "/goats";
     }
 
-    private String birthPath(GoatFarm farm, Goat targetMother, Pregnancy pregnancy) {
+    private String birthPath(GoatFarm farm, GoatEntity targetMother, Pregnancy pregnancy) {
         return goatsPath(farm) + "/" + targetMother.getRegistrationNumber()
                 + "/reproduction/pregnancies/" + pregnancy.getId() + "/births";
     }

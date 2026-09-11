@@ -1,10 +1,14 @@
 # Módulo Milk Production
-Última atualização: 2026-02-28
+Última atualização: 2026-09-10
 Escopo: registro diário de ordenhas por cabra e consulta paginada de produção.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
 ## Visão geral
 Este módulo gerencia produções de leite por cabra, com operações de criação, consulta, atualização parcial e cancelamento lógico.
+
+As respostas de produção e alertas podem retornar `goatTechnicalId`; `goatId`
+continua sendo snapshot registral para compatibilidade. A integridade técnica
+é derivada da lactação pela migration V41.
 
 ## Regras / Contratos
 - Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.

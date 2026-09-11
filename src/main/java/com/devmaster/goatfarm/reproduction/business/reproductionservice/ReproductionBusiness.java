@@ -13,13 +13,15 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
+import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthKidRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthKidResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
@@ -74,6 +76,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     private final PregnancyPersistencePort pregnancyPersistencePort;
     private final ReproductiveEventPersistencePort reproductiveEventPersistencePort;
     private final GoatPersistencePort goatPersistencePort;
+    private final GoatReferenceResolver goatReferenceResolver;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final GoatManagementUseCase goatManagementUseCase;
     private final GoatGenderValidator goatGenderValidator;
@@ -83,6 +86,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     public ReproductionBusiness(PregnancyPersistencePort pregnancyPersistencePort,
                                 ReproductiveEventPersistencePort reproductiveEventPersistencePort,
                                 GoatPersistencePort goatPersistencePort,
+                                GoatReferenceResolver goatReferenceResolver,
                                 GoatFarmPersistencePort goatFarmPersistencePort,
                                 GoatManagementUseCase goatManagementUseCase,
                                 GoatGenderValidator goatGenderValidator,
@@ -91,6 +95,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         this.pregnancyPersistencePort = pregnancyPersistencePort;
         this.reproductiveEventPersistencePort = reproductiveEventPersistencePort;
         this.goatPersistencePort = goatPersistencePort;
+        this.goatReferenceResolver = goatReferenceResolver;
         this.goatFarmPersistencePort = goatFarmPersistencePort;
         this.goatManagementUseCase = goatManagementUseCase;
         this.goatGenderValidator = goatGenderValidator;
@@ -413,8 +418,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional
     public BirthResponseVO registerBirth(Long farmId, String goatId, Long pregnancyId, BirthRequestVO vo) {
         goatGenderValidator.requireFemaleAndActive(farmId, goatId);
-        Goat mother = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
+        Goat mother = requireGoat(farmId, goatId);
 
         if (pregnancyId == null || pregnancyId <= 0) {
             throw new InvalidArgumentException("pregnancyId", "Identificador de gestacao invalido");
@@ -496,8 +500,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
     @Transactional
     public WeaningResponseVO registerWeaning(Long farmId, String goatId, WeaningRequestVO vo) {
         goatGenderValidator.requireActive(farmId, goatId);
-        Goat kid = goatPersistencePort.findByIdAndFarmId(goatId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
+        Goat kid = requireGoat(farmId, goatId);
 
         if (vo.getWeaningDate() == null) {
             throw new InvalidArgumentException("weaningDate", "Data de desmame e obrigatoria");
@@ -505,10 +508,10 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         if (vo.getWeaningDate().isAfter(LocalDate.now(clock))) {
             throw new InvalidArgumentException("weaningDate", "Data de desmame nao pode ser futura");
         }
-        if (kid.getBirthDate() != null && vo.getWeaningDate().isBefore(kid.getBirthDate())) {
+        if (kid.birthDate() != null && vo.getWeaningDate().isBefore(kid.birthDate())) {
             throw new InvalidArgumentException("weaningDate", "Data de desmame nao pode ser anterior a data de nascimento");
         }
-        if (kid.getMother() == null) {
+        if (kid.mother() == null) {
             throw new BusinessRuleException("goatId", "Desmame so pode ser registrado para animal vinculado a uma matriz");
         }
 
@@ -518,8 +521,8 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             throw new BusinessRuleException("weaningDate", "Ja existe desmame registrado para este animal");
         }
 
-        GoatStatus previousStatus = kid.getStatus();
-        kid.setStatus(GoatStatus.ATIVO);
+        GoatStatus previousStatus = kid.status();
+        kid.activateAfterWeaning();
         Goat savedKid = goatPersistencePort.save(kid);
 
         ReproductiveEvent weaningEvent = ReproductiveEvent.builder()
@@ -533,10 +536,11 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         ReproductiveEvent savedWeaningEvent = reproductiveEventPersistencePort.save(weaningEvent);
 
         return WeaningResponseVO.builder()
-                .goatId(savedKid.getRegistrationNumber())
+                .goatId(savedKid.registrationNumber())
+                .goatTechnicalId(savedKid.id() == null ? null : savedKid.id().value())
                 .weaningDate(vo.getWeaningDate())
                 .previousStatus(previousStatus)
-                .currentStatus(savedKid.getStatus())
+                .currentStatus(savedKid.status())
                 .event(reproductionBusinessMapper.toReproductiveEventResponseVO(savedWeaningEvent))
                 .build();
     }
@@ -718,6 +722,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         long overdueDays = Math.max(0L, ChronoUnit.DAYS.between(eligibleDate, referenceDate));
 
         return PregnancyDiagnosisAlertVO.builder()
+                .goatTechnicalId(projection.getGoatTechnicalId())
                 .goatId(projection.getGoatId())
                 .eligibleDate(eligibleDate)
                 .daysOverdue((int) overdueDays)
@@ -733,9 +738,17 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return PregnancyDueAlertVO.builder()
                 .pregnancyId(pregnancy.getId())
                 .goatId(pregnancy.getGoatId())
+                .goatTechnicalId(pregnancy.getGoatTechnicalId())
                 .expectedDueDate(expectedDueDate)
                 .daysOverdue((int) overdueDays)
                 .build();
+    }
+
+    private Goat requireGoat(Long farmId, String routeToken) {
+        GoatReference reference = goatReferenceResolver.resolve(routeToken, farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
+        return goatPersistencePort.findByIdAndFarmId(reference.id(), farmId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
     }
 
     private GoatRequestVO buildKidRequestVO(Long farmId,
@@ -790,7 +803,7 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
             );
         }
 
-        GoatBreed kidBreed = kid.getBreed() != null ? kid.getBreed() : mother.getBreed();
+        GoatBreed kidBreed = kid.getBreed() != null ? kid.getBreed() : mother.breed();
         if (kidBreed == null) {
             throw new InvalidArgumentException("kids.breed", "Raca da cria e obrigatoria quando a matriz nao possui raca cadastrada");
         }
@@ -884,5 +897,3 @@ public class ReproductionBusiness implements ReproductionCommandUseCase, Reprodu
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
-
-

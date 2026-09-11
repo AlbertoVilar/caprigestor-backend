@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 public record EventResponseVO(
         Long eventId,
+        Long goatTechnicalId,
         String goatId,
         String goatName,
         EventType eventType,

@@ -1,6 +1,6 @@
 # Portal de Documentacao CapriGestor Backend
 
-Ultima atualizacao: 2026-09-09
+Ultima atualizacao: 2026-09-10
 Escopo: porta unica de navegacao para a documentacao oficial versionada do backend.
 Links relacionados: [README](../README.md), [Status atual](./00-overview/PROJECT_STATUS.md), [Arquitetura](./01-architecture/ARCHITECTURE.md)
 
@@ -54,6 +54,7 @@ auxiliar e nao e necessario para um clone limpo.
 - [ADR-002 - Inventory ledger](./01-architecture/ADR/ADR-002-inventory-ledger-balance-and-lots.md)
 - [ADR-003 - Purchase cost](./01-architecture/ADR/ADR-003-inventory-purchase-cost-breakdown.md)
 - [ADR-004 - Goat identity model](./01-architecture/ADR/ADR-004-goat-identity-model.md)
+- [GoatId — onda de consumidores dependentes](./01-architecture/GOAT_IDENTITY_DEPENDENT_MODULES_WAVE.md)
 
 ## Modules
 

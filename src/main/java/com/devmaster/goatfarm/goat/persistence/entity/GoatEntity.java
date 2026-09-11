@@ -10,6 +10,8 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,9 +22,14 @@ import java.time.LocalDate;
 @Setter
 @Entity
 @Table(name = "cabras")
-public class Goat {
+public class GoatEntity {
 
+        /** Immutable technical identity promoted to the JPA identity by V42. */
         @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name = "id", nullable = false, updatable = false)
+        private Long technicalId;
+
         @Column(name = "num_registro", unique = true, nullable = false, length = 20)
         private String registrationNumber;
 
@@ -69,11 +76,33 @@ public class Goat {
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "pai_num_registro", referencedColumnName = "num_registro")
-        private Goat father;
+        private GoatEntity father;
 
         @ManyToOne(fetch = FetchType.LAZY)
         @JoinColumn(name = "mae_num_registro", referencedColumnName = "num_registro")
-        private Goat mother;
+        private GoatEntity mother;
+
+        @Column(name = "pai_goat_id")
+        private Long fatherTechnicalId;
+
+        @Column(name = "mae_goat_id")
+        private Long motherTechnicalId;
+
+        /**
+         * Technical genealogy relation introduced by V40. The scalar id remains
+         * the writable mapping during the dual-reference transition; this
+         * association is the read model used by new genealogy consumers.
+         */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pai_goat_id", referencedColumnName = "id", insertable = false, updatable = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private GoatEntity technicalFather;
+
+        /** See {@link #technicalFather}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mae_goat_id", referencedColumnName = "id", insertable = false, updatable = false)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private GoatEntity technicalMother;
 
         @Column(name = "pai_rg_externo", length = 20)
         private String externalFatherRegistrationNumber;
@@ -90,8 +119,21 @@ public class Goat {
         @JoinColumn(name = "capril_id")
         private GoatFarm farm;
 
-        public Goat() {
+        public GoatEntity() {
     }
+
+        public Long getTechnicalId() { return technicalId; }
+    public void setTechnicalId(Long technicalId) { this.technicalId = technicalId; }
+
+    public Long getFatherTechnicalId() { return fatherTechnicalId; }
+    public void setFatherTechnicalId(Long fatherTechnicalId) { this.fatherTechnicalId = fatherTechnicalId; }
+
+    public Long getMotherTechnicalId() { return motherTechnicalId; }
+    public void setMotherTechnicalId(Long motherTechnicalId) { this.motherTechnicalId = motherTechnicalId; }
+
+    public GoatEntity getTechnicalFather() { return technicalFather; }
+
+    public GoatEntity getTechnicalMother() { return technicalMother; }
 
         public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
@@ -132,11 +174,11 @@ public class Goat {
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
     
-    public Goat getFather() { return father; }
-    public void setFather(Goat father) { this.father = father; }
+    public GoatEntity getFather() { return father; }
+    public void setFather(GoatEntity father) { this.father = father; }
     
-    public Goat getMother() { return mother; }
-    public void setMother(Goat mother) { this.mother = mother; }
+    public GoatEntity getMother() { return mother; }
+    public void setMother(GoatEntity mother) { this.mother = mother; }
 
     public String getExternalFatherRegistrationNumber() { return externalFatherRegistrationNumber; }
     public void setExternalFatherRegistrationNumber(String externalFatherRegistrationNumber) { this.externalFatherRegistrationNumber = externalFatherRegistrationNumber; }
@@ -152,11 +194,9 @@ public class Goat {
 
     @Override
     public String toString() {
-        return "Goat{" +
+        return "GoatEntity{" +
                 "registrationNumber='" + registrationNumber + '\'' +
                 ", name='" + name + '\'' +
                 '}';
     }
-
 }
-

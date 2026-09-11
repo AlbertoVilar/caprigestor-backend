@@ -16,6 +16,7 @@ import java.time.LocalDate;
 public class PregnancyResponseVO {
     private Long id;
     private Long farmId;
+    private Long goatTechnicalId;
     private String goatId;
     private PregnancyStatus status;
     private LocalDate breedingDate;

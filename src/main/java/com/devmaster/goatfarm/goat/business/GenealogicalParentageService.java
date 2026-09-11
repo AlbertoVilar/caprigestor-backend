@@ -6,10 +6,12 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,23 +25,24 @@ import java.util.Optional;
  * registration references, so genealogical trees can continue to be projected on demand.
  */
 @Service
-public class GenealogicalParentageService {
+public class GenealogicalParentageService implements GoatParentagePort {
 
-    private final GoatPersistencePort goatPersistencePort;
+    private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final GenealogyAbccQueryPort genealogyAbccQueryPort;
     private final GoatGenderValidator goatGenderValidator;
 
     public GenealogicalParentageService(
-            GoatPersistencePort goatPersistencePort,
+            GoatReferenceQueryPort goatReferenceQueryPort,
             GenealogyAbccQueryPort genealogyAbccQueryPort,
             GoatGenderValidator goatGenderValidator
     ) {
-        this.goatPersistencePort = goatPersistencePort;
+        this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.genealogyAbccQueryPort = genealogyAbccQueryPort;
         this.goatGenderValidator = goatGenderValidator;
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED, readOnly = true)
+    @Override
     public ResolvedParentage resolve(
             Category category,
             String childRegistrationNumber,
@@ -50,28 +53,23 @@ public class GenealogicalParentageService {
             throw new BusinessRuleException("category", "Categoria genealógica é obrigatória.");
         }
 
-        ParentReference father = resolveParent(
+        Goat.ParentReference father = resolveParent(
                 category,
                 childRegistrationNumber,
                 fatherRegistrationNumber,
                 ParentRole.FATHER
         );
-        ParentReference mother = resolveParent(
+        Goat.ParentReference mother = resolveParent(
                 category,
                 childRegistrationNumber,
                 motherRegistrationNumber,
                 ParentRole.MOTHER
         );
 
-        return new ResolvedParentage(
-                father.localGoat(),
-                mother.localGoat(),
-                father.externalRegistrationNumber(),
-                mother.externalRegistrationNumber()
-        );
+        return new ResolvedParentage(father, mother);
     }
 
-    private ParentReference resolveParent(
+    private Goat.ParentReference resolveParent(
             Category category,
             String childRegistrationNumber,
             String registrationNumber,
@@ -80,7 +78,7 @@ public class GenealogicalParentageService {
         String registration = normalizeRegistration(registrationNumber);
         if (registration == null) {
             requireParentForRegisteredCategories(category, role);
-            return ParentReference.empty();
+            return null;
         }
 
         String childRegistration = normalizeRegistration(childRegistrationNumber);
@@ -88,10 +86,11 @@ public class GenealogicalParentageService {
             throw new InvalidArgumentException(role.fieldName(), "O " + role.label() + " não pode ser o próprio animal.");
         }
 
-        Optional<Goat> localParent = goatPersistencePort.findByRegistrationNumber(registration);
+        Optional<GoatReference> localParent = goatReferenceQueryPort.findReferenceByRegistrationNumber(registration);
         if (localParent.isPresent()) {
-            validateGender(localParent.get().getGender(), role);
-            return ParentReference.local(localParent.get());
+            validateGender(localParent.get().gender(), role);
+            return Goat.ParentReference.local(localParent.get().id(),
+                    localParent.get().registrationNumber(), localParent.get().name());
         }
 
         Optional<GenealogyAbccSnapshotVO> abccParent;
@@ -106,14 +105,14 @@ public class GenealogicalParentageService {
 
         if (abccParent.isEmpty()) {
             requireParentForRegisteredCategories(category, role);
-            return ParentReference.external(registration);
+            return Goat.ParentReference.external(registration);
         }
 
         GenealogyAbccSnapshotVO snapshot = abccParent.get();
         String returnedRegistration = normalizeRegistration(snapshot.getAnimalRegistrationNumber());
         if (!registration.equals(returnedRegistration) || snapshot.getAnimalGender() == null) {
             if (category == Category.PA) {
-                return ParentReference.external(registration);
+                return Goat.ParentReference.external(registration);
             }
             throw new ExternalServiceUnavailableException(
                     "A ABCC retornou uma resposta incompleta para o genitor informado.",
@@ -122,7 +121,7 @@ public class GenealogicalParentageService {
         }
 
         validateGender(snapshot.getAnimalGender(), role);
-        return ParentReference.external(registration);
+        return Goat.ParentReference.external(registration);
     }
 
     private void requireParentForRegisteredCategories(Category category, ParentRole role) {
@@ -151,28 +150,6 @@ public class GenealogicalParentageService {
         }
         String normalized = value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
         return normalized.isEmpty() ? null : normalized;
-    }
-
-    public record ResolvedParentage(
-            Goat father,
-            Goat mother,
-            String externalFatherRegistrationNumber,
-            String externalMotherRegistrationNumber
-    ) {
-    }
-
-    private record ParentReference(Goat localGoat, String externalRegistrationNumber) {
-        private static ParentReference empty() {
-            return new ParentReference(null, null);
-        }
-
-        private static ParentReference local(Goat goat) {
-            return new ParentReference(goat, null);
-        }
-
-        private static ParentReference external(String registrationNumber) {
-            return new ParentReference(null, registrationNumber);
-        }
     }
 
     private enum ParentRole {

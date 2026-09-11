@@ -18,6 +18,7 @@ import java.util.Optional;
 public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> {
 
     Optional<HealthEvent> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<HealthEvent> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
 
     @Query("""
         select e
@@ -32,6 +33,25 @@ public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> 
     Page<HealthEvent> searchByGoat(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            @Param("type") HealthEventType type,
+            @Param("status") HealthEventStatus status,
+            Pageable pageable
+    );
+
+    @Query("""
+        select e from HealthEvent e
+        where e.farmId = :farmId
+          and e.goatTechnicalId = :goatTechnicalId
+          and (:from is null or e.scheduledDate >= :from)
+          and (:to is null or e.scheduledDate <= :to)
+          and (:type is null or e.type = :type)
+          and (:status is null or e.status = :status)
+        """)
+    Page<HealthEvent> searchByGoatTechnicalId(
+            @Param("farmId") Long farmId,
+            @Param("goatTechnicalId") Long goatTechnicalId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             @Param("type") HealthEventType type,
@@ -72,6 +92,21 @@ public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> 
     List<HealthEvent> findPerformedWithWithdrawalByFarmIdAndGoatId(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId
+    );
+
+    @Query("""
+        select e from HealthEvent e
+        where e.farmId = :farmId
+          and e.goatTechnicalId = :goatTechnicalId
+          and e.status = com.devmaster.goatfarm.health.domain.enums.HealthEventStatus.REALIZADO
+          and e.performedAt is not null
+          and ((e.withdrawalMilkDays is not null and e.withdrawalMilkDays > 0)
+            or (e.withdrawalMeatDays is not null and e.withdrawalMeatDays > 0))
+        order by e.performedAt desc, e.id desc
+        """)
+    List<HealthEvent> findPerformedWithWithdrawalByFarmIdAndGoatTechnicalId(
+            @Param("farmId") Long farmId,
+            @Param("goatTechnicalId") Long goatTechnicalId
     );
 
     @Query("""

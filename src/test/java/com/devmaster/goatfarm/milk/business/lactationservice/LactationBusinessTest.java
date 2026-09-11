@@ -4,7 +4,7 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
@@ -601,5 +601,3 @@ class LactationBusinessTest {
                 .build();
     }
 }
-
-

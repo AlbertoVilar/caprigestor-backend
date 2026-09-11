@@ -44,6 +44,11 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   - `EventPublisher` recebe `EventPublication`, um contrato de aplicação imutável, e não a entidade `events.persistence.entity.Event`.
   - `JwtService` emite tokens a partir de `AuthenticatedPrincipal`; o mapeamento de usuário persistente fica restrito ao caso de uso de autenticação.
   - RabbitMQ é opcional e fail-closed: somente é criado quando `caprigestor.messaging.enabled=true`; sem a propriedade, o publisher NoOp é usado.
+  - A fronteira do Goat é protegida por `GoatPersistenceBoundaryArchUnitTest`:
+    camadas de aplicação, negócio, API, domínio e configuração não dependem de
+    entidades/repositórios/projeções JPA do Goat. A resolução de referências
+    fica em `GoatReferenceResolver`, mantendo tokens técnicos explícitos e RG
+    como lookup registral.
 
 Essas regras não afirmam que todo o domínio já esteja livre de JPA. Módulos
 legados ainda manipulam entidades em alguns casos de uso; a W4 isolou os
@@ -66,6 +71,7 @@ validação crítica e publicação de eventos.
 | `HexagonalArchitectureGuardTest` | Impedir import indevido de `business` para `api` | [src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java) |
 | `MilkReproductionBoundaryArchUnitTest` | Garantir fronteira entre `milk` e `reproduction` | [src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java) |
 | `OwnershipSecurityBoundaryArchUnitTest` | Impedir dependências de entidades JPA nos contratos críticos de segurança, validação e eventos | [src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java) |
+| `GoatPersistenceBoundaryArchUnitTest` | Impedir o retorno da costura legada e o vazamento de tipos de persistência do Goat para o core | [src/test/java/com/devmaster/goatfarm/architecture/GoatPersistenceBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/GoatPersistenceBoundaryArchUnitTest.java) |
 
 ## Referencias internas
 - Modulos mapeados: `address`, `article`, `authority`, `events`, `farm`, `genealogy`, `goat`, `health`, `milk`, `phone`, `reproduction`.

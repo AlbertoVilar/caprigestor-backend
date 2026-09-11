@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PregnancyDiagnosisAlertItemDTO {
+    private Long goatTechnicalId;
     private String goatId;
     private LocalDate eligibleDate;
     private int daysOverdue;

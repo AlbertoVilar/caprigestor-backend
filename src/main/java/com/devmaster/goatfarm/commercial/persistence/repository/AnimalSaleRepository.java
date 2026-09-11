@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
 
     boolean existsByGoatRegistrationNumber(String goatRegistrationNumber);
+    boolean existsByFarm_IdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
 
     Optional<AnimalSale> findByIdAndFarm_Id(Long id, Long farmId);
 

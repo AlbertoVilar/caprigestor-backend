@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.api.dto.BreedingRequestDTO;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyConfirmRequestDTO;
@@ -86,7 +86,7 @@ class ReproductionBreedingLockIntegrationTest {
 
     private User ownerUser;
     private GoatFarm ownerFarm;
-    private Goat ownerGoat;
+    private GoatEntity ownerGoat;
 
     @BeforeEach
     void setUp() {
@@ -122,7 +122,7 @@ class ReproductionBreedingLockIntegrationTest {
         ownerFarm.setUser(ownerUser);
         ownerFarm = goatFarmRepository.save(ownerFarm);
 
-        ownerGoat = new Goat();
+        ownerGoat = new GoatEntity();
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setName("Mimosinha");
         ownerGoat.setGender(Gender.FEMEA);
@@ -204,4 +204,3 @@ class ReproductionBreedingLockIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 }
-

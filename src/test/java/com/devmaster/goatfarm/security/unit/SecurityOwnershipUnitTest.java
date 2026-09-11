@@ -7,7 +7,7 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ class SecurityOwnershipUnitTest {
     @Mock
     private UserPersistencePort userPort;
     @Mock
-    private GoatPersistencePort goatPort;
+    private GoatReferenceResolver goatReferenceResolver;
     @Mock
     private FarmAccessQueryPort farmAccessQueryPort;
 

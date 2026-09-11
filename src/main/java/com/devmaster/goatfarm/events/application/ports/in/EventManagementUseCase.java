@@ -1,75 +1,36 @@
 package com.devmaster.goatfarm.events.application.ports.in;
 
+import com.devmaster.goatfarm.events.application.ports.out.EventPage;
+import com.devmaster.goatfarm.events.application.ports.out.EventPageQuery;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
 import com.devmaster.goatfarm.events.enums.EventType;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Porta de entrada para casos de uso de gerenciamento de eventos
- * Define as operações de negócio disponíveis para eventos
- */
+/** Inbound application contract for farm-scoped operational events. */
 public interface EventManagementUseCase {
 
-    /**
-     * Cria um novo evento para uma cabra
-     * @param requestVO Dados do evento
-     * @param goatRegistrationNumber Número de registro da cabra
-     * @return EventResponseVO com os dados do evento criado
-     */
-    EventResponseVO createEvent(EventRequestVO requestVO, String goatRegistrationNumber);
+    EventResponseVO createEvent(Long farmId, String registrationNumber, EventRequestVO request);
 
-    /**
-     * Atualiza um evento existente
-     * @param id ID do evento
-     * @param requestVO Novos dados do evento
-     * @param goatRegistrationNumber Número de registro da cabra
-     * @return EventResponseVO com os dados atualizados
-     */
-    EventResponseVO updateEvent(Long id, EventRequestVO requestVO, String goatRegistrationNumber);
+    EventResponseVO updateEvent(Long farmId, String registrationNumber, Long eventId, EventRequestVO request);
 
-    /**
-     * Busca eventos por cabra
-     * @param goatNumRegistration Número de registro da cabra
-     * @return Lista de eventos da cabra
-     */
-    List<EventResponseVO> findEventsByGoat(String goatNumRegistration);
+    EventResponseVO findEventById(Long farmId, String registrationNumber, Long eventId);
 
-    /**
-     * Busca eventos com filtros e paginação
-     * @param registrationNumber Número de registro da cabra
-     * @param eventType Tipo do evento (opcional)
-     * @param startDate Data inicial (opcional)
-     * @param endDate Data final (opcional)
-     * @param pageable Configuração de paginação
-     * @return Página de eventos filtrados
-     */
-    Page<EventResponseVO> findEventsWithFilters(String registrationNumber,
-                                               EventType eventType,
-                                               LocalDate startDate,
-                                               LocalDate endDate,
-                                               Pageable pageable);
+    List<EventResponseVO> findEventsByGoat(Long farmId, String registrationNumber);
 
-    /**
-     * Remove um evento por ID
-     * @param id ID do evento
-     */
-    void deleteEvent(Long id);
+    EventPage<EventResponseVO> findEventsWithFilters(
+            Long farmId,
+            String registrationNumber,
+            EventType eventType,
+            LocalDate startDate,
+            LocalDate endDate,
+            EventPageQuery pageQuery
+    );
 
-    /**
-     * Remove eventos de outros usuários (operação administrativa)
-     * @param adminId ID do administrador
-     */
+    void deleteEvent(Long farmId, String registrationNumber, Long eventId);
+
+    /** Administrative maintenance operation, invoked only by the authority workflow. */
     void deleteEventsFromOtherUsers(Long adminId);
-
-    /**
-     * Busca um evento pelo ID
-     * @param id ID do evento
-     * @return Dados do evento
-     */
-    EventResponseVO findEventById(Long id);
 }

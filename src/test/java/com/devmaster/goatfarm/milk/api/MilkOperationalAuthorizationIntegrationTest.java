@@ -10,7 +10,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
@@ -81,8 +81,8 @@ class MilkOperationalAuthorizationIntegrationTest {
     private User linkedOperator;
     private User unlinkedOperator;
     private GoatFarm farm;
-    private Goat goat;
-    private Goat goatWithoutLactation;
+    private GoatEntity goat;
+    private GoatEntity goatWithoutLactation;
     private Lactation activeLactation;
     private MilkProduction production;
 
@@ -109,8 +109,8 @@ class MilkOperationalAuthorizationIntegrationTest {
         farmOperator.setUser(linkedOperator);
         farmOperatorRepository.save(farmOperator);
 
-        goat = createActiveFemaleGoat("MILK-001", "Lactating Goat");
-        goatWithoutLactation = createActiveFemaleGoat("MILK-002", "Fresh Goat");
+        goat = createActiveFemaleGoat("MILK-001", "Lactating GoatEntity");
+        goatWithoutLactation = createActiveFemaleGoat("MILK-002", "Fresh GoatEntity");
 
         activeLactation = new Lactation();
         activeLactation.setFarmId(farm.getId());
@@ -233,8 +233,8 @@ class MilkOperationalAuthorizationIntegrationTest {
         return userRepository.save(user);
     }
 
-    private Goat createActiveFemaleGoat(String registrationNumber, String name) {
-        Goat goat = new Goat();
+    private GoatEntity createActiveFemaleGoat(String registrationNumber, String name) {
+        GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(registrationNumber);
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
@@ -253,11 +253,11 @@ class MilkOperationalAuthorizationIntegrationTest {
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("accessToken").asText();
     }
 
-    private String lactationPath(Goat targetGoat) {
+    private String lactationPath(GoatEntity targetGoat) {
         return "/api/v1/goatfarms/" + farm.getId() + "/goats/" + targetGoat.getRegistrationNumber() + "/lactations";
     }
 
-    private String milkProductionPath(Goat targetGoat) {
+    private String milkProductionPath(GoatEntity targetGoat) {
         return "/api/v1/goatfarms/" + farm.getId() + "/goats/" + targetGoat.getRegistrationNumber() + "/milk-productions";
     }
 

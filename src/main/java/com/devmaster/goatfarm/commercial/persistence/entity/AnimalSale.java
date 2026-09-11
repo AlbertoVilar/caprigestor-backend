@@ -40,6 +40,10 @@ public class AnimalSale {
     @Column(name = "goat_registration_number", nullable = false, length = 20)
     private String goatRegistrationNumber;
 
+    /** Stable structural identity; RG/name are retained as sale-time snapshots. */
+    @Column(name = "goat_technical_id")
+    private Long goatTechnicalId;
+
     @Column(name = "goat_name", nullable = false, length = 100)
     private String goatName;
 

@@ -1,80 +1,92 @@
 package com.devmaster.goatfarm.events.persistence;
 
+import com.devmaster.goatfarm.events.application.ports.out.EventPageQuery;
+import com.devmaster.goatfarm.events.domain.OperationalEvent;
 import com.devmaster.goatfarm.events.enums.EventType;
+import com.devmaster.goatfarm.events.persistence.adapter.EventPersistenceAdapter;
 import com.devmaster.goatfarm.events.persistence.entity.Event;
 import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
-import com.devmaster.goatfarm.events.persistence.adapter.EventPersistenceAdapter;
+import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
+import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class EventDaoUnitTest {
+class EventDaoUnitTest {
 
     @Mock
     private EventRepository eventRepository;
-
-    @InjectMocks
-    private EventPersistenceAdapter eventPersistenceAdapter;
+    @Mock
+    private GoatRepository goatRepository;
 
     @Test
-    void whenSaveEvent_thenEventIsSaved() {
-        Goat goat = new Goat();
+    void deleteUsesEventIdentityOnlyAfterScopedLookup() {
+        EventPersistenceAdapter adapter = new EventPersistenceAdapter(eventRepository, goatRepository);
+        GoatFarm farm = new GoatFarm();
+        farm.setId(7L);
+        GoatEntity goat = new GoatEntity();
+        goat.setTechnicalId(42L);
         goat.setRegistrationNumber("R-123");
-
+        goat.setName("Matriz");
+        goat.setFarm(farm);
         Event event = new Event();
+        event.setId(10L);
         event.setGoat(goat);
-        event.setEventType(EventType.VACINACAO);
-        event.setDate(LocalDate.now());
-        event.setDescription("Test Event");
+        event.setEventType(EventType.PESAGEM);
+        event.setDate(LocalDate.of(2026, 1, 2));
+        event.setDescription("Weight");
+        when(eventRepository.findByIdAndGoatTechnicalIdAndFarmId(10L, 42L, 7L))
+                .thenReturn(Optional.of(event));
 
-        Event persisted = new Event();
-        persisted.setGoat(goat);
-        persisted.setEventType(EventType.VACINACAO);
-        persisted.setDate(event.getDate());
-        persisted.setDescription(event.getDescription());
-        persisted.setId(1L);
+        assertThat(adapter.findByIdAndGoatIdAndFarmId(10L, new GoatId(42L), 7L)).isPresent();
+        adapter.deleteById(10L);
 
-        when(eventRepository.save(event)).thenReturn(persisted);
-
-        Event savedEvent = eventPersistenceAdapter.save(event);
-
-        assertThat(savedEvent).isNotNull();
-        assertThat(savedEvent.getId()).isEqualTo(1L);
-        assertThat(savedEvent.getDescription()).isEqualTo("Test Event");
-        assertThat(savedEvent.getGoat()).isNotNull();
-        assertThat(savedEvent.getEventType()).isEqualTo(EventType.VACINACAO);
-
-        verify(eventRepository).save(event);
+        verify(eventRepository).deleteById(10L);
     }
 
     @Test
-    void whenFindByGoat_thenAdapterDelegatesToRepository() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("R-123");
+    void savePreservesTheRegistrationSnapshotWhenGoatNameChanges() {
+        EventPersistenceAdapter adapter = new EventPersistenceAdapter(eventRepository, goatRepository);
+        GoatFarm farm = new GoatFarm();
+        farm.setId(7L);
+        GoatEntity goat = new GoatEntity();
+        goat.setTechnicalId(42L);
+        goat.setRegistrationNumber("R-123-CORRIGIDO");
+        goat.setName("Nome atual");
+        goat.setFarm(farm);
+        OperationalEvent event = new OperationalEvent(1L, new GoatId(42L), 7L,
+                "R-123-ANTIGO", "Nome antigo", EventType.OUTRO, LocalDate.of(2026, 1, 3),
+                "History", "Farm", "Vet", "Done");
+        Event persisted = new Event();
+        persisted.setId(1L);
+        persisted.setGoat(goat);
+        persisted.setGoatRegistrationNumber("R-123-ANTIGO");
+        persisted.setEventType(EventType.OUTRO);
+        persisted.setDate(event.date());
+        persisted.setDescription(event.description());
+        persisted.setLocation(event.location());
+        persisted.setVeterinarian(event.veterinarian());
+        persisted.setOutcome(event.outcome());
+        when(goatRepository.findByTechnicalId(42L)).thenReturn(Optional.of(goat));
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(persisted));
+        when(eventRepository.save(persisted)).thenReturn(persisted);
 
-        Event e1 = new Event();
-        e1.setId(10L);
-        e1.setGoat(goat);
-        e1.setEventType(EventType.VACINACAO);
-        e1.setDate(LocalDate.now());
+        OperationalEvent saved = adapter.save(event);
 
-        when(eventRepository.findEventsByGoatRegistrationNumber("R-123")).thenReturn(List.of(e1));
-
-        List<Event> events = eventPersistenceAdapter.findByGoatRegistrationNumber("R-123");
-
-        assertThat(events).hasSize(1);
-        assertThat(events.get(0).getId()).isEqualTo(10L);
-        verify(eventRepository).findEventsByGoatRegistrationNumber("R-123");
+        assertThat(saved.goatId()).isEqualTo(new GoatId(42L));
+        // A normal event update never rewrites the historical RG snapshot.
+        assertThat(saved.goatRegistrationNumber()).isEqualTo("R-123-ANTIGO");
     }
 }

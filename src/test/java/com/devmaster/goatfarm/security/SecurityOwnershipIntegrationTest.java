@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
@@ -105,8 +105,8 @@ public class SecurityOwnershipIntegrationTest {
     private User otherUser;
     private User operatorUser;
     private GoatFarm ownerFarm;
-    private Goat ownerGoat;
-    private Goat anotherGoat;
+    private GoatEntity ownerGoat;
+    private GoatEntity anotherGoat;
     private Phone ownerPhone;
     private Address ownerAddress;
     private Lactation ownerLactation;
@@ -178,8 +178,8 @@ public class SecurityOwnershipIntegrationTest {
         ownerPhone.setGoatFarm(ownerFarm);
         ownerPhone = phoneRepository.save(ownerPhone);
 
-        ownerGoat = new Goat();
-        ownerGoat.setName("Goat 1");
+        ownerGoat = new GoatEntity();
+        ownerGoat.setName("GoatEntity 1");
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setFarm(ownerFarm);
         ownerGoat.setGender(Gender.FEMEA);
@@ -187,8 +187,8 @@ public class SecurityOwnershipIntegrationTest {
         ownerGoat.setStatus(GoatStatus.ATIVO);
         goatRepository.save(ownerGoat);
 
-        anotherGoat = new Goat();
-        anotherGoat.setName("Goat 2");
+        anotherGoat = new GoatEntity();
+        anotherGoat.setName("GoatEntity 2");
         anotherGoat.setRegistrationNumber("GOAT-002");
         anotherGoat.setFarm(ownerFarm);
         anotherGoat.setGender(Gender.FEMEA);
@@ -764,4 +764,3 @@ public class SecurityOwnershipIntegrationTest {
         org.junit.jupiter.api.Assertions.assertEquals(1L, phoneRepository.countByGoatFarmId(ownerFarm.getId()));
     }
 }
-

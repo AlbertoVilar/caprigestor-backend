@@ -17,6 +17,7 @@ import java.time.LocalDate;
 public class ReproductiveEventResponseDTO {
     private Long id;
     private Long farmId;
+    private Long goatTechnicalId;
     private String goatId;
     private Long pregnancyId;
     private ReproductiveEventType eventType;

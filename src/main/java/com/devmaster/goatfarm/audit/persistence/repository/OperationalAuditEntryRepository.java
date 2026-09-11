@@ -15,4 +15,10 @@ public interface OperationalAuditEntryRepository extends JpaRepository<Operation
             String goatRegistrationNumber,
             Pageable pageable
     );
+
+    List<OperationalAuditEntry> findByFarm_IdAndGoatTechnicalIdOrderByCreatedAtDescIdDesc(
+            Long farmId,
+            Long goatTechnicalId,
+            Pageable pageable
+    );
 }

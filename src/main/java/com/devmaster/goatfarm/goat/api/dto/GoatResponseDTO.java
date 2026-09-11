@@ -20,6 +20,7 @@ import java.time.LocalDate;
 @Builder
 public class GoatResponseDTO {
 
+    private Long technicalId;
     private String registrationNumber;
     private String name;
     private Gender gender;

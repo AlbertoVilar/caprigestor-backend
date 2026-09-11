@@ -8,6 +8,8 @@ import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleReposi
 import com.devmaster.goatfarm.commercial.persistence.repository.CustomerRepository;
 import com.devmaster.goatfarm.commercial.persistence.repository.MilkSaleRepository;
 import org.springframework.stereotype.Component;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,15 +20,18 @@ public class CommercialPersistenceAdapter implements CommercialPersistencePort {
     private final CustomerRepository customerRepository;
     private final AnimalSaleRepository animalSaleRepository;
     private final MilkSaleRepository milkSaleRepository;
+    private final GoatReferenceQueryPort goatReferenceQueryPort;
 
     public CommercialPersistenceAdapter(
             CustomerRepository customerRepository,
             AnimalSaleRepository animalSaleRepository,
-            MilkSaleRepository milkSaleRepository
+            MilkSaleRepository milkSaleRepository,
+            GoatReferenceQueryPort goatReferenceQueryPort
     ) {
         this.customerRepository = customerRepository;
         this.animalSaleRepository = animalSaleRepository;
         this.milkSaleRepository = milkSaleRepository;
+        this.goatReferenceQueryPort = goatReferenceQueryPort;
     }
 
     @Override
@@ -51,12 +56,24 @@ public class CommercialPersistenceAdapter implements CommercialPersistencePort {
 
     @Override
     public AnimalSale saveAnimalSale(AnimalSale animalSale) {
+        if (animalSale.getGoatTechnicalId() == null && animalSale.getFarm() != null) {
+            goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(
+                    animalSale.getGoatRegistrationNumber(), animalSale.getFarm().getId())
+                    .map(GoatReference::id)
+                    .map(id -> id.value())
+                    .ifPresent(animalSale::setGoatTechnicalId);
+        }
         return animalSaleRepository.save(animalSale);
     }
 
     @Override
     public boolean existsAnimalSaleByGoatRegistrationNumber(String goatRegistrationNumber) {
         return animalSaleRepository.existsByGoatRegistrationNumber(goatRegistrationNumber);
+    }
+
+    @Override
+    public boolean existsAnimalSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId) {
+        return goatTechnicalId != null && animalSaleRepository.existsByFarm_IdAndGoatTechnicalId(farmId, goatTechnicalId);
     }
 
     @Override

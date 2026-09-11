@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
@@ -67,7 +67,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     private final GoatFarmPersistencePort goatFarmPort;
     private final GoatAbccPublicQueryPort abccPublicQueryPort;
     private final GoatManagementUseCase goatManagementUseCase;
-    private final GoatPersistencePort goatPersistencePort;
+    private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final EntityFinder entityFinder;
 
     public GoatAbccImportBusiness(
@@ -75,14 +75,14 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             GoatFarmPersistencePort goatFarmPort,
             GoatAbccPublicQueryPort abccPublicQueryPort,
             GoatManagementUseCase goatManagementUseCase,
-            GoatPersistencePort goatPersistencePort,
+            GoatReferenceQueryPort goatReferenceQueryPort,
             EntityFinder entityFinder
     ) {
         this.ownershipService = ownershipService;
         this.goatFarmPort = goatFarmPort;
         this.abccPublicQueryPort = abccPublicQueryPort;
         this.goatManagementUseCase = goatManagementUseCase;
-        this.goatPersistencePort = goatPersistencePort;
+        this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.entityFinder = entityFinder;
     }
 
@@ -333,7 +333,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 GoatRequestVO goatRequestVO = buildGoatRequestFromPreview(previewVO);
                 String registrationNumber = goatRequestVO.getRegistrationNumber();
 
-                if (goatPersistencePort.findByIdAndFarmId(registrationNumber, farmId).isPresent()) {
+                if (goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registrationNumber, farmId).isPresent()) {
                     skippedDuplicate++;
                     results.add(GoatAbccBatchConfirmItemResultVO.builder()
                             .externalId(externalId)

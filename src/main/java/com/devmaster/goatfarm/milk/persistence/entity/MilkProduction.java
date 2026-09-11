@@ -29,6 +29,10 @@ public class MilkProduction {
     @Column(name = "goat_id", nullable = false, length = 50)
     private String goatId;
 
+    /** Stable structural identity. goat_id remains the historical/public RG snapshot. */
+    @Column(name = "goat_technical_id")
+    private Long goatTechnicalId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lactation_id", nullable = false)
     private Lactation lactation;

@@ -5,7 +5,8 @@ import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQuery
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.persistence.entity.Goat;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,46 +34,36 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldReturnFoundAndComplementMissingNodesFromAbcc() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("1643218012");
-        goat.setName("XEQUE");
+        GoatGenealogySnapshot mother = goat(21L, "2114517012", "NAIDE", null, null);
+        GoatGenealogySnapshot goat = goat(11L, "1643218012", "XEQUE", null,
+                GoatGenealogySnapshot.ParentReference.local(mother));
 
-        Goat mother = new Goat();
-        mother.setRegistrationNumber("2114517012");
-        mother.setName("NAIDE");
-        goat.setMother(mother);
-
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("1643218012", 1L))
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("1643218012", 1L))
                 .thenReturn(Optional.of(goat));
-
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012"))
-                .thenReturn(Optional.of(
-                        GenealogyAbccSnapshotVO.builder()
-                                .animalRegistrationNumber("1643218012")
-                                .animalName("XEQUE V DO CAPRIL VILAR")
-                                .fatherRegistrationNumber("1635717065")
-                                .fatherName("C.V.C SIGNOS PETROLEO")
-                                .maternalGrandfatherRegistrationNumber("123")
-                                .maternalGrandfatherName("AVÔ MAT")
-                                .build()
-                ));
+                .thenReturn(Optional.of(GenealogyAbccSnapshotVO.builder()
+                        .animalRegistrationNumber("1643218012")
+                        .animalName("XEQUE V DO CAPRIL VILAR")
+                        .fatherRegistrationNumber("1635717065")
+                        .fatherName("C.V.C SIGNOS PETROLEO")
+                        .maternalGrandfatherRegistrationNumber("123")
+                        .maternalGrandfatherName("AVÔ MAT")
+                        .build()));
 
         var response = business.findComplementaryGenealogy(1L, "1643218012");
 
         assertThat(response.getIntegration().getStatus()).isEqualTo("FOUND");
         assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
         assertThat(response.getMae().getSource()).isEqualTo(GenealogyNodeSource.LOCAL);
+        assertThat(response.getMae().getLocalTechnicalGoatId()).isEqualTo(21L);
         assertThat(response.getAvoMaterno().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
         assertThat(response.getAvoPaterno().getSource()).isEqualTo(GenealogyNodeSource.AUSENTE);
     }
 
     @Test
     void shouldReturnInsufficientDataWhenLocalRegistrationIsMissing() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("  ");
-        goat.setName("SEM REGISTRO");
-
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("g1", 1L))
+        GoatGenealogySnapshot goat = goat(1L, "  ", "SEM REGISTRO", null, null);
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("g1", 1L))
                 .thenReturn(Optional.of(goat));
 
         var response = business.findComplementaryGenealogy(1L, "g1");
@@ -83,11 +74,8 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldReturnNotFoundWhenAbccDoesNotFindRegistration() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("1643218012");
-        goat.setName("XEQUE");
-
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("1643218012", 1L))
+        GoatGenealogySnapshot goat = goat(1L, "1643218012", "XEQUE", null, null);
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("1643218012", 1L))
                 .thenReturn(Optional.of(goat));
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012"))
                 .thenReturn(Optional.empty());
@@ -99,11 +87,9 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldExposeAnUnknownExternalFatherAsDeclaredInsteadOfAbccValidated() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("KID-001");
-        goat.setExternalFatherRegistrationNumber("1635719026A");
-
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("KID-001", 1L))
+        GoatGenealogySnapshot goat = goat(1L, "KID-001", "Cria",
+                GoatGenealogySnapshot.ParentReference.external("1635719026A"), null);
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("KID-001", 1L))
                 .thenReturn(Optional.of(goat));
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("KID-001"))
                 .thenReturn(Optional.empty());
@@ -118,11 +104,9 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldExposeAnAbccValidatedExternalFatherWithoutCreatingALocalGoat() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("KID-001");
-        goat.setExternalFatherRegistrationNumber("1635719026A");
-
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("KID-001", 1L))
+        GoatGenealogySnapshot goat = goat(1L, "KID-001", "Cria",
+                GoatGenealogySnapshot.ParentReference.external("1635719026A"), null);
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("KID-001", 1L))
                 .thenReturn(Optional.of(goat));
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("KID-001"))
                 .thenReturn(Optional.empty());
@@ -138,15 +122,13 @@ class GenealogyComplementaryBusinessTest {
         assertThat(response.getPai().getRegistrationNumber()).isEqualTo("1635719026A");
         assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
         assertThat(response.getPai().getLocalGoatId()).isNull();
+        assertThat(response.getPai().getLocalTechnicalGoatId()).isNull();
     }
 
     @Test
     void shouldReturnUnavailableWhenAbccPortFails() {
-        Goat goat = new Goat();
-        goat.setRegistrationNumber("1643218012");
-        goat.setName("XEQUE");
-
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("1643218012", 1L))
+        GoatGenealogySnapshot goat = goat(1L, "1643218012", "XEQUE", null, null);
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("1643218012", 1L))
                 .thenReturn(Optional.of(goat));
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012"))
                 .thenThrow(new RuntimeException("ABCC down"));
@@ -159,11 +141,21 @@ class GenealogyComplementaryBusinessTest {
 
     @Test
     void shouldThrowWhenGoatIsNotFound() {
-        when(goatGenealogyQueryPort.findByIdAndFarmIdWithFamilyGraph("999", 1L))
+        when(goatGenealogyQueryPort.findGenealogyByRegistrationNumberAndFarmId("999", 1L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> business.findComplementaryGenealogy(1L, "999"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
-}
 
+    private GoatGenealogySnapshot goat(
+            Long technicalId,
+            String registrationNumber,
+            String name,
+            GoatGenealogySnapshot.ParentReference father,
+            GoatGenealogySnapshot.ParentReference mother
+    ) {
+        return new GoatGenealogySnapshot(new GoatId(technicalId), registrationNumber, name,
+                null, null, null, null, null, null, null, null, null, null, father, mother);
+    }
+}
