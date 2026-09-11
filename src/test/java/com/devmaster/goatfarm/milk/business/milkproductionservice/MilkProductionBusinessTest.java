@@ -14,7 +14,7 @@ import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,8 +85,9 @@ class MilkProductionBusinessTest {
         MilkProduction entity = validEntity();
         MilkProductionResponseVO responseVO = validResponseVO();
         // Se tem lactação ativa
-        Lactation lactation = new Lactation(); 
-        lactation.setId(10L);
+        Lactation lactation = Lactation.rehydrate(10L, farmId, goatId, null,
+                com.devmaster.goatfarm.milk.enums.LactationStatus.ACTIVE,
+                request.getDate().minusDays(10), null, null, null, 90, 60, null, null);
 
         when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
                 eq(farmId), eq(goatId), eq(request.getDate()), eq(request.getShift())))
@@ -196,8 +197,9 @@ class MilkProductionBusinessTest {
         String goatId = "1643218012";
         MilkProductionRequestVO request = validCreateVO();
         MilkProduction entity = validEntity();
-        Lactation lactation = new Lactation();
-        lactation.setId(10L);
+        Lactation lactation = Lactation.rehydrate(10L, farmId, goatId, null,
+                com.devmaster.goatfarm.milk.enums.LactationStatus.ACTIVE,
+                request.getDate().minusDays(10), null, null, null, 90, 60, null, null);
         MilkProduction savedEntity = validEntity();
         savedEntity.setRecordedDuringMilkWithdrawal(true);
         savedEntity.setMilkWithdrawalEventId(88L);

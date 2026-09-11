@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.milk.persistence.repository;
 
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,25 +12,25 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.Optional;
 
-public interface LactationRepository extends JpaRepository<Lactation, Long> {
+public interface LactationRepository extends JpaRepository<LactationEntity, Long> {
 
-    Optional<Lactation> findByFarmIdAndGoatIdAndStatus(
+    Optional<LactationEntity> findByFarmIdAndGoatIdAndStatus(
             Long farmId,
             String goatId,
             LactationStatus status
     );
 
-    Optional<Lactation> findByFarmIdAndGoatTechnicalIdAndStatus(
+    Optional<LactationEntity> findByFarmIdAndGoatTechnicalIdAndStatus(
             Long farmId,
             Long goatTechnicalId,
             LactationStatus status
     );
 
-    Optional<Lactation> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
-    Optional<Lactation> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
+    Optional<LactationEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<LactationEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
 
-    Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
-    Page<Lactation> findAllByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, Pageable pageable);
+    Page<LactationEntity> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+    Page<LactationEntity> findAllByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, Pageable pageable);
 
     @Query(
             value = """

@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.milk.business.lactationservice;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionSummaryQueryPort;
 import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
@@ -23,9 +23,8 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
-import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
+import com.devmaster.goatfarm.milk.application.model.LactationDryOffAlertSnapshot;
+import com.devmaster.goatfarm.milk.domain.Lactation;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -42,18 +41,18 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     private static final int DEFAULT_DRY_OFF_BEFORE_DUE_DAYS = 90;
 
     private final LactationPersistencePort lactationPersistencePort;
-    private final MilkProductionPersistencePort milkProductionPersistencePort;
+    private final MilkProductionSummaryQueryPort milkProductionSummaryQueryPort;
     private final PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort;
     private final GoatGenderValidator goatGenderValidator;
     private final LactationBusinessMapper lactationMapper;
 
     public LactationBusiness(LactationPersistencePort lactationPersistencePort,
-                             MilkProductionPersistencePort milkProductionPersistencePort,
+                             MilkProductionSummaryQueryPort milkProductionSummaryQueryPort,
                              PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort,
                              GoatGenderValidator goatGenderValidator,
                              LactationBusinessMapper lactationMapper) {
         this.lactationPersistencePort = lactationPersistencePort;
-        this.milkProductionPersistencePort = milkProductionPersistencePort;
+        this.milkProductionSummaryQueryPort = milkProductionSummaryQueryPort;
         this.pregnancySnapshotQueryPort = pregnancySnapshotQueryPort;
         this.goatGenderValidator = goatGenderValidator;
         this.lactationMapper = lactationMapper;
@@ -86,14 +85,9 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
             throw new BusinessRuleException("Nao e permitido abrir nova lactacao enquanto houver prenhez ativa apos secagem confirmada.");
         }
 
-        Lactation entity = new Lactation();
-        entity.setFarmId(farmId);
-        entity.setGoatId(goatId);
-        entity.setStartDate(vo.getStartDate());
-        entity.setStatus(LactationStatus.ACTIVE);
-        entity.setEndDate(null);
+        Lactation lactation = Lactation.open(farmId, goatId, vo.getStartDate());
 
-        Lactation saved = lactationPersistencePort.save(entity);
+        Lactation saved = lactationPersistencePort.save(lactation);
         return lactationMapper.toResponseVO(saved);
     }
 
@@ -115,9 +109,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
             throw new BusinessRuleException("Data de fim da lactação não pode ser anterior à data de início.");
         }
 
-        lactation.setStatus(LactationStatus.DRY);
-        lactation.setEndDate(vo.getEndDate());
-        lactation.setDryStartDate(vo.getEndDate()); // Assumindo dryStartDate = endDate da lactação
+        lactation.dry(vo.getEndDate());
 
         Lactation saved = lactationPersistencePort.save(lactation);
         return lactationMapper.toResponseVO(saved);
@@ -151,9 +143,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
             throw new BusinessRuleException("Nao e permitido retomar lactacao apos parto. Inicie uma nova lactacao para o novo ciclo.");
         }
 
-        lactation.setStatus(LactationStatus.ACTIVE);
-        lactation.setEndDate(null);
-        lactation.setDryStartDate(null);
+        lactation.resume();
 
         Lactation saved = lactationPersistencePort.save(lactation);
         return lactationMapper.toResponseVO(saved);
@@ -210,7 +200,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         LocalDate startDate = lactation.getStartDate();
         LocalDate endDate = lactation.getEndDate() != null ? lactation.getEndDate() : today;
 
-        List<MilkProduction> productions = milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+        List<MilkProductionSummaryQueryPort.MilkProductionSnapshot> productions = milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
                 farmId,
                 goatId,
                 startDate,
@@ -218,12 +208,12 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         );
 
         BigDecimal totalLiters = productions.stream()
-                .map(MilkProduction::getVolumeLiters)
+                .map(MilkProductionSummaryQueryPort.MilkProductionSnapshot::volumeLiters)
                 .filter(value -> value != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         long daysMeasured = productions.stream()
-                .map(MilkProduction::getDate)
+                .map(MilkProductionSummaryQueryPort.MilkProductionSnapshot::date)
                 .distinct()
                 .count();
 
@@ -235,11 +225,11 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                 : BigDecimal.ZERO;
 
         Map<LocalDate, BigDecimal> totalsByDate = new HashMap<>();
-        for (MilkProduction production : productions) {
-            if (production.getDate() == null || production.getVolumeLiters() == null) {
+        for (MilkProductionSummaryQueryPort.MilkProductionSnapshot production : productions) {
+            if (production.date() == null || production.volumeLiters() == null) {
                 continue;
             }
-            totalsByDate.merge(production.getDate(), production.getVolumeLiters(), BigDecimal::add);
+            totalsByDate.merge(production.date(), production.volumeLiters(), BigDecimal::add);
         }
 
         BigDecimal peakLiters = BigDecimal.ZERO;
@@ -328,29 +318,29 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                 .build();
     }
 
-    private LactationDryOffAlertVO toDryOffAlertVO(LactationDryOffAlertProjection alert, LocalDate referenceDate) {
-        LocalDate gestationStartDate = alert.getStartDatePregnancy();
+    private LactationDryOffAlertVO toDryOffAlertVO(LactationDryOffAlertSnapshot alert, LocalDate referenceDate) {
+        LocalDate gestationStartDate = alert.startDatePregnancy();
         if (gestationStartDate == null) {
             throw new IllegalStateException("startDatePregnancy deve estar preenchida para alerta de secagem");
         }
-        LocalDate dryOffDate = alert.getDryOffDate();
+        LocalDate dryOffDate = alert.dryOffDate();
         if (dryOffDate == null) {
             throw new IllegalStateException("dryOffDate deve estar preenchida para alerta de secagem");
         }
-        int dryAtPregnancyDays = alert.getDryAtPregnancyDays() != null
-                ? alert.getDryAtPregnancyDays()
+        int dryAtPregnancyDays = alert.dryAtPregnancyDays() != null
+                ? alert.dryAtPregnancyDays()
                 : DEFAULT_DRY_OFF_BEFORE_DUE_DAYS;
         int gestationDays = (int) Math.max(0L, ChronoUnit.DAYS.between(gestationStartDate, referenceDate));
         int daysOverdue = Math.max(0, gestationDays - dryAtPregnancyDays);
         boolean dryOffRecommendation = gestationDays >= dryAtPregnancyDays;
 
         return LactationDryOffAlertVO.builder()
-                .lactationId(alert.getLactationId())
-                .goatTechnicalId(alert.getGoatTechnicalId())
-                .goatId(alert.getGoatId())
+                .lactationId(alert.lactationId())
+                .goatTechnicalId(alert.goatTechnicalId())
+                .goatId(alert.goatId())
                 .startDatePregnancy(gestationStartDate)
-                .breedingDate(alert.getBreedingDate())
-                .confirmDate(alert.getConfirmDate())
+                .breedingDate(alert.breedingDate())
+                .confirmDate(alert.confirmDate())
                 .dryOffDate(dryOffDate)
                 .dryAtPregnancyDays(dryAtPregnancyDays)
                 .gestationDays(gestationDays)

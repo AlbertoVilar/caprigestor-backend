@@ -38,6 +38,13 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   - Consulta no modulo `milk` via `PregnancySnapshotQueryPort`.
 - Fronteira de contexto:
   - `milk` nao importa classes internas de `reproduction` em `api`, `business` e `persistence.entity`.
+- Fronteira de domínio de lactação (DEV-A7):
+  - `milk.domain.Lactation` é um agregado framework-free, responsável pelas
+    transições intrínsecas `ACTIVE`/`DRY`.
+  - `LactationEntity` e `LactationPersistenceMapper` confinam JPA ao adapter;
+    `LactationPersistencePort` publica apenas o agregado e snapshots de leitura.
+  - `LactationBusiness` consulta produção por `MilkProductionSummaryQueryPort`,
+    sem importar entidades ou projeções de persistência.
 - Fronteiras críticas reforçadas na W4:
   - `OwnershipService` consulta o responsável da fazenda por `FarmOwnerQueryPort` e recebe um `AuthenticatedPrincipal`, sem importar repositórios Spring Data.
   - `GoatGenderValidator` consulta apenas `GoatValidationQueryPort.GoatValidationSnapshot`; entidades JPA não atravessam o contrato de validação.
@@ -79,6 +86,7 @@ validação crítica e publicação de eventos.
 | `MilkReproductionBoundaryArchUnitTest` | Garantir fronteira entre `milk` e `reproduction` | [src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java) |
 | `OwnershipSecurityBoundaryArchUnitTest` | Impedir dependências de entidades JPA nos contratos críticos de segurança, validação e eventos | [src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java) |
 | `GoatPersistenceBoundaryArchUnitTest` | Impedir o retorno da costura legada e o vazamento de tipos de persistência do Goat para o core | [src/test/java/com/devmaster/goatfarm/architecture/GoatPersistenceBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/GoatPersistenceBoundaryArchUnitTest.java) |
+| `LactationDomainBoundaryArchUnitTest` | Impedir vazamento de JPA/Spring/API do agregado e de persistência para o caso de uso | [src/test/java/com/devmaster/goatfarm/architecture/LactationDomainBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/LactationDomainBoundaryArchUnitTest.java) |
 
 ## Referencias internas
 - Modulos mapeados: `address`, `article`, `authority`, `events`, `farm`, `genealogy`, `goat`, `health`, `milk`, `phone`, `reproduction`.

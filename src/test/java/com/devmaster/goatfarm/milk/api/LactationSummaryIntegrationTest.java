@@ -13,7 +13,7 @@ import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
@@ -73,7 +73,7 @@ class LactationSummaryIntegrationTest {
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
-    private Lactation lactation;
+    private LactationEntity lactation;
 
     @BeforeEach
     void setUp() {
@@ -108,7 +108,7 @@ class LactationSummaryIntegrationTest {
         ownerGoat.setStatus(GoatStatus.ATIVO);
         ownerGoat = goatRepository.save(ownerGoat);
 
-        lactation = new Lactation();
+        lactation = new LactationEntity();
         lactation.setFarmId(ownerFarm.getId());
         lactation.setGoatId(ownerGoat.getRegistrationNumber());
         lactation.setStartDate(LocalDate.now().minusDays(5));
@@ -210,7 +210,7 @@ class LactationSummaryIntegrationTest {
         maleGoat.setStatus(GoatStatus.ATIVO);
         maleGoat = goatRepository.save(maleGoat);
 
-        Lactation maleLactation = new Lactation();
+        LactationEntity maleLactation = new LactationEntity();
         maleLactation.setFarmId(ownerFarm.getId());
         maleLactation.setGoatId(maleGoat.getRegistrationNumber());
         maleLactation.setStartDate(LocalDate.now().minusDays(5));

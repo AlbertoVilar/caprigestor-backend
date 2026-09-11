@@ -11,7 +11,7 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -218,7 +218,7 @@ class MilkFarmDryOffAlertsIntegrationTest {
         goat.setStatus(GoatStatus.ATIVO);
         goat = goatRepository.save(goat);
 
-        Lactation lactation = new Lactation();
+        LactationEntity lactation = new LactationEntity();
         lactation.setFarmId(ownerFarm.getId());
         lactation.setGoatId(goatId);
         lactation.setStatus(LactationStatus.ACTIVE);

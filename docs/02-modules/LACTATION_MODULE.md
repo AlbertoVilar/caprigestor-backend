@@ -1,5 +1,5 @@
 ﻿# Modulo Lactacao
-Ultima atualizacao: 2026-09-10
+Ultima atualizacao: 2026-09-11
 Escopo: abertura, secagem, retomada, consulta de lactacoes e alertas de secagem por fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Milk Production](./MILK_PRODUCTION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -9,6 +9,25 @@ O modulo de lactacao pertence ao contexto `milk` e controla o ciclo produtivo da
 As respostas de lactação retornam `goatTechnicalId` de forma aditiva. O campo
 `goatId` permanece o RG compatível da rota; as referências persistidas usam
 `lactation.goat_technical_id`.
+
+### Fronteira de domínio (DEV-A7)
+
+O agregado `com.devmaster.goatfarm.milk.domain.Lactation` é framework-free e
+controla apenas as transições intrínsecas `ACTIVE` <-> `DRY`. Regras que
+dependem de outros agregados (cabra fêmea/ativa, unicidade, prenhez e política
+de datas) permanecem na camada de aplicação.
+
+`LactationEntity` é a representação JPA da tabela `lactation` e não atravessa
+os casos de uso. `LactationPersistenceMapper` converte entre a entidade e o
+agregado; `LactationPersistencePort` expõe o agregado e o snapshot de alertas.
+O nome de entidade JPA `Lactation` foi preservado para compatibilidade com
+consultas JPQL existentes, sem alteração de schema ou migrations.
+
+O resumo de produção é consumido por um contrato de aplicação
+(`MilkProductionSummaryQueryPort`), mantendo a entidade JPA
+`MilkProduction` confinada ao adaptador. A paginação `Page`/`Pageable` e a
+consulta nativa de alertas de secagem continuam compatibilidades deliberadas e
+estão registradas como dívida DEV-A9.
 
 ## Regras operacionais atuais
 - `ACTIVE`: lactacao em producao, apta a receber registros de leite.

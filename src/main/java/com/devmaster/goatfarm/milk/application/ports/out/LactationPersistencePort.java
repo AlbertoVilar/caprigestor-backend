@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.milk.application.ports.out;
 
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
-import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
+import com.devmaster.goatfarm.milk.application.model.LactationDryOffAlertSnapshot;
+import com.devmaster.goatfarm.milk.domain.Lactation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -18,5 +18,5 @@ public interface LactationPersistencePort {
 
     Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
 
-    Page<LactationDryOffAlertProjection> findDryOffAlerts(Long farmId, LocalDate referenceDate, int defaultDryDays, Pageable pageable);
+    Page<LactationDryOffAlertSnapshot> findDryOffAlerts(Long farmId, LocalDate referenceDate, int defaultDryDays, Pageable pageable);
 }
