@@ -17,10 +17,12 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
@@ -616,12 +618,45 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort, Genea
         if (!base.startsWith("http")) {
             base = BASE_URL + base;
         }
-        return base
-                + "&curpage=" + page
-                + "&offset=" + offset
-                + "&_lvid=lvListaGenealogia"
-                + "&paging=true"
-                + "&runat=client";
+
+        var components = UriComponentsBuilder.fromUriString(base).build();
+        var builder = UriComponentsBuilder.fromUriString(base).replaceQuery(null);
+        appendDecodedQueryParameters(builder, components.getQuery());
+
+        return builder
+                .queryParam("curpage", page)
+                .queryParam("offset", offset)
+                .queryParam("_lvid", "lvListaGenealogia")
+                .queryParam("paging", true)
+                .queryParam("runat", "client")
+                .encode()
+                .build()
+                .toUriString();
+    }
+
+    private void appendDecodedQueryParameters(UriComponentsBuilder builder, String query) {
+        if (query == null || query.isBlank()) {
+            return;
+        }
+
+        for (String parameter : query.split("&", -1)) {
+            int separator = parameter.indexOf('=');
+            String rawName = separator < 0 ? parameter : parameter.substring(0, separator);
+            String rawValue = separator < 0 ? null : parameter.substring(separator + 1);
+            String name = decodeQueryComponent(rawName);
+            if (name.isBlank()) {
+                continue;
+            }
+            if (rawValue == null) {
+                builder.queryParam(name);
+            } else {
+                builder.queryParam(name, decodeQueryComponent(rawValue));
+            }
+        }
+    }
+
+    private String decodeQueryComponent(String value) {
+        return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
 
     private String extractViewstate(String html) {
