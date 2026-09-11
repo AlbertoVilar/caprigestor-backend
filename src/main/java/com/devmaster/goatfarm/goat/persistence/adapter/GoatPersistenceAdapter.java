@@ -21,7 +21,7 @@ import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.goat.persistence.mapper.GoatPersistenceMapper;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
-import com.devmaster.goatfarm.goat.domain.GoatRouteIdentifier;
+import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;

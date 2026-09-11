@@ -1,13 +1,17 @@
-package com.devmaster.goatfarm.goat.domain;
+package com.devmaster.goatfarm.goat.application.routing;
+
+import com.devmaster.goatfarm.goat.domain.GoatId;
 
 import java.util.Optional;
 
 /**
- * Explicit route token for structural GoatId lookups.
+ * Parses the explicit technical identifier vocabulary used by internal API
+ * routes.
  *
- * <p>Legacy v1 paths still carry the RG directly.  When a client has a
- * technical identity it must use {@code technical-{id}} so a numeric RG can
- * never be mistaken for a GoatId.</p>
+ * <p>Route-token parsing belongs to the application/API boundary rather than
+ * to the domain model. Legacy v1 paths still carry the RG directly. When a
+ * client has a technical identity it must use {@code technical-{id}} so a
+ * numeric RG can never be mistaken for a GoatId.</p>
  */
 public final class GoatRouteIdentifier {
 

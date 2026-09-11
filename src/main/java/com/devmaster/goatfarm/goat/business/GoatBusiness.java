@@ -23,7 +23,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
-import com.devmaster.goatfarm.goat.domain.GoatRouteIdentifier;
+import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
