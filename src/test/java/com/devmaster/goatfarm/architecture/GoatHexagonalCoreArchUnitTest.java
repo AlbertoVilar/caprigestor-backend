@@ -36,4 +36,14 @@ class GoatHexagonalCoreArchUnitTest {
                 .should().dependOnClassesThat().resideInAnyPackage("org.springframework.data..")
                 .check(classes);
     }
+
+    @Test
+    void goatApplicationAndBusinessMustNotDependOnUserPersistenceEntity() {
+        noClasses().that().resideInAnyPackage("..goat.application..", "..goat.business..")
+                .should().dependOnClassesThat().haveFullyQualifiedName(
+                        "com.devmaster.goatfarm.authority.persistence.entity.User")
+                .check(new ClassFileImporter()
+                        .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+                        .importPackages("com.devmaster.goatfarm"));
+    }
 }

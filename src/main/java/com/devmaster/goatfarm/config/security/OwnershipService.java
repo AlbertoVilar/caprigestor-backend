@@ -77,6 +77,22 @@ public class OwnershipService {
         }
     }
 
+    /**
+     * Returns the authenticated caller as a persistence-free application
+     * identity. Application services should use this boundary instead of
+     * loading the JPA {@link User} entity.
+     */
+    public AuthenticatedPrincipal getCurrentPrincipal() {
+        return getAuthenticatedPrincipal();
+    }
+
+    /**
+     * @deprecated use {@link #getCurrentPrincipal()} outside the farm
+     * persistence workflow. This compatibility method remains temporarily for
+     * {@code GoatFarmBusiness}, which needs the managed JPA association while
+     * creating a farm.
+     */
+    @Deprecated
     public User getCurrentUser() {
         return getAuthenticatedEntity();
     }

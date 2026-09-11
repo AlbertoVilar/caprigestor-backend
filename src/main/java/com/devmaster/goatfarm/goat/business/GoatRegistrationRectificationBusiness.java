@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.goat.business;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -74,7 +74,7 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
 
         goat.rectifyRegistration(corrected);
         Goat saved = goatPersistencePort.save(goat);
-        User actor = ownershipService.getCurrentUser();
+        AuthenticatedPrincipal actor = ownershipService.getCurrentPrincipal();
         LocalDateTime changedAt = LocalDateTime.now();
 
         GoatRegistrationHistory history = historyPersistencePort.save(new GoatRegistrationHistory(
@@ -86,7 +86,7 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
                 request.source(),
                 normalizeRequired(request.evidenceReference(), "evidenceReference", "A referência da evidência é obrigatória."),
                 normalizeRequired(request.reason(), "reason", "O motivo da retificação é obrigatório."),
-                actor.getId(),
+                actor.id(),
                 changedAt
         ));
 
