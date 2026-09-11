@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.goat.api;
 
+import com.devmaster.goatfarm.audit.persistence.repository.OperationalAuditEntryRepository;
 import com.devmaster.goatfarm.authority.persistence.entity.FarmOperator;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -12,6 +13,7 @@ import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
+import com.devmaster.goatfarm.goat.persistence.repository.GoatRegistrationHistoryRepository;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
@@ -52,12 +54,15 @@ class GoatOperationalAuthorizationIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private GoatFarmRepository goatFarmRepository;
     @Autowired private GoatRepository goatRepository;
+    @Autowired private GoatRegistrationHistoryRepository goatRegistrationHistoryRepository;
+    @Autowired private OperationalAuditEntryRepository operationalAuditEntryRepository;
     @Autowired private FarmOperatorRepository farmOperatorRepository;
     @Autowired private PregnancyRepository pregnancyRepository;
     @Autowired private ReproductiveEventRepository reproductiveEventRepository;
 
     private User admin;
     private User owner;
+    private User otherOwner;
     private User linkedOperator;
     private User unlinkedOperator;
     private GoatFarm managedFarm;
@@ -76,7 +81,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         owner = createUser("owner-goat@example.com", "20202020202", ownerRole);
         linkedOperator = createUser("linked-operator-goat@example.com", "30303030303", operatorRole);
         unlinkedOperator = createUser("unlinked-operator-goat@example.com", "40404040404", operatorRole);
-        User otherOwner = createUser("other-owner-goat@example.com", "50505050505", ownerRole);
+        otherOwner = createUser("other-owner-goat@example.com", "50505050505", ownerRole);
 
         managedFarm = createFarm("Managed goat farm", "16153", owner);
         otherFarm = createFarm("Other goat farm", "27164", otherOwner);
@@ -155,10 +160,103 @@ class GoatOperationalAuthorizationIntegrationTest {
     @Test
     void animalGenealogyAndOffspringReadsRemainPublic() throws Exception {
         String path = goatsPath(managedFarm) + "/" + mother.getRegistrationNumber();
+        String technicalPath = goatsPath(managedFarm) + "/technical-" + mother.getTechnicalId();
 
+        mockMvc.perform(get(goatsPath(managedFarm))).andExpect(status().isOk());
+        mockMvc.perform(get(goatsPath(managedFarm) + "/search").param("name", "Matriz"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(goatsPath(managedFarm) + "/summary")).andExpect(status().isOk());
         mockMvc.perform(get(path)).andExpect(status().isOk());
+        mockMvc.perform(get(technicalPath)).andExpect(status().isOk());
         mockMvc.perform(get(path + "/genealogies")).andExpect(status().isOk());
         mockMvc.perform(get(path + "/offspring")).andExpect(status().isOk());
+
+        String operatorToken = loginAndGetToken(linkedOperator.getEmail());
+        mockMvc.perform(get(technicalPath).header("Authorization", bearer(operatorToken)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void registrationRectificationIsOwnerOnlyAndIdentifierNeutral() throws Exception {
+        String technicalPath = goatsPath(managedFarm) + "/technical-" + mother.getTechnicalId();
+        String originalRgPath = goatsPath(managedFarm) + "/" + mother.getRegistrationNumber();
+        String adminToken = loginAndGetToken(admin.getEmail());
+        String ownerToken = loginAndGetToken(owner.getEmail());
+        String otherOwnerToken = loginAndGetToken(otherOwner.getEmail());
+        String operatorToken = loginAndGetToken(linkedOperator.getEmail());
+
+        mockMvc.perform(patch(technicalPath + "/registration")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rectificationPayload("00099")))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(patch(technicalPath + "/registration")
+                        .header("Authorization", bearer(operatorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rectificationPayload("00099")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(patch(originalRgPath + "/registration")
+                        .header("Authorization", bearer(otherOwnerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rectificationPayload("00099")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch(technicalPath + "/registration")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rectificationPayload("00099")))
+                .andExpect(status().isOk());
+
+        String correctedRgPath = goatsPath(managedFarm) + "/1615300099";
+        mockMvc.perform(get(technicalPath + "/registration-history")
+                        .header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(correctedRgPath + "/registration-history")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(correctedRgPath + "/registration-history")
+                        .header("Authorization", bearer(operatorToken)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(correctedRgPath + "/registration-history"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(patch(correctedRgPath + "/registration")
+                        .header("Authorization", bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rectificationPayload("00098")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void ownerOnlyMutationsAllowAdminAndOwnerButDenyOtherFarmOwner() throws Exception {
+        GoatEntity exitCandidate = createActiveFemaleGoat(managedFarm, "1615300002", "Saída administrativa");
+        GoatEntity deleteCandidate = createActiveFemaleGoat(managedFarm, "1615300003", "Exclusão administrativa");
+        String adminToken = loginAndGetToken(admin.getEmail());
+        String ownerToken = loginAndGetToken(owner.getEmail());
+        String otherOwnerToken = loginAndGetToken(otherOwner.getEmail());
+
+        mockMvc.perform(put(goatsPath(managedFarm) + "/technical-" + mother.getTechnicalId())
+                        .header("Authorization", bearer(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(goatPayload(mother.getRegistrationNumber(), "Matriz atualizada")))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch(goatsPath(managedFarm) + "/technical-" + exitCandidate.getTechnicalId() + "/exit")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"exitType\":\"VENDA\",\"exitDate\":\"" + LocalDate.now() + "\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete(goatsPath(managedFarm) + "/technical-" + deleteCandidate.getTechnicalId())
+                        .header("Authorization", bearer(ownerToken)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(put(goatsPath(managedFarm) + "/" + mother.getRegistrationNumber())
+                        .header("Authorization", bearer(otherOwnerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(goatPayload(mother.getRegistrationNumber(), "Tentativa cruzada")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put(goatsPath(managedFarm) + "/" + mother.getRegistrationNumber())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(goatPayload(mother.getRegistrationNumber(), "Tentativa anônima")))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -227,6 +325,8 @@ class GoatOperationalAuthorizationIntegrationTest {
     private GoatEntity createActiveFemaleGoat(GoatFarm farm, String registrationNumber, String name) {
         GoatEntity goat = new GoatEntity();
         goat.setRegistrationNumber(registrationNumber);
+        goat.setTod(registrationNumber.substring(0, 5));
+        goat.setToe(registrationNumber.substring(5));
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
         goat.setBreed(GoatBreed.SAANEN);
@@ -279,6 +379,12 @@ class GoatOperationalAuthorizationIntegrationTest {
                 + "\"gender\":\"FEMEA\",\"breed\":\"SAANEN\",\"color\":\"Branca\",\"category\":\"PA\"}]}";
     }
 
+    private String rectificationPayload(String toe) {
+        return "{\"tod\":\"16153\",\"toe\":\"" + toe + "\","
+                + "\"source\":\"OFFICIAL_DOCUMENT\",\"evidenceReference\":\"SEC-A1\","
+                + "\"reason\":\"Authorization contract\"}";
+    }
+
     private String bearer(String token) {
         return "Bearer " + token;
     }
@@ -287,6 +393,8 @@ class GoatOperationalAuthorizationIntegrationTest {
         pregnancyRepository.deleteAll();
         reproductiveEventRepository.deleteAll();
         farmOperatorRepository.deleteAll();
+        operationalAuditEntryRepository.deleteAll();
+        goatRegistrationHistoryRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
         userRepository.deleteAll();
