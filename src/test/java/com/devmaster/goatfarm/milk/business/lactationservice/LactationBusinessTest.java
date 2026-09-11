@@ -7,7 +7,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
@@ -56,7 +56,7 @@ class LactationBusinessTest {
     private MilkProductionPersistencePort milkProductionPersistencePort;
 
     @Mock
-    private PregnancySnapshotQueryPort pregnancySnapshotQueryPort;
+    private PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort;
 
     @Mock
     private GoatGenderValidator goatGenderValidator;

@@ -1,21 +1,27 @@
-package com.devmaster.goatfarm.milk.persistence.adapter;
+package com.devmaster.goatfarm.reproduction.persistence.adapter;
 
-import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Reproduction-owned read adapter for the pregnancy snapshot contract.
+ *
+ * <p>Only this adapter knows the pregnancy table and the legacy registration
+ * fallback. Consumers receive the framework-free {@link PregnancySnapshot}.</p>
+ */
 @Component
-public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryPort {
+public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryUseCase {
 
     private static final String SQL_FIND_LATEST_BY_FARM_AND_GOAT_TECHNICAL_ID = """
             SELECT p.status,
@@ -74,13 +80,15 @@ public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryPort
     }
 
     @Override
-    public Optional<PregnancySnapshot> findLatestByFarmIdAndGoatId(Long farmId, String goatId, LocalDate referenceDate) {
+    public Optional<PregnancySnapshot> findLatestByFarmIdAndGoatId(Long farmId,
+                                                                    String goatId,
+                                                                    LocalDate referenceDate) {
         LocalDate asOfReferenceDate = referenceDate != null ? referenceDate : LocalDate.now();
 
         Optional<Long> technicalId = goatReferenceQueryPort
                 .flatMap(port -> port.findReferenceByRegistrationNumberAndFarmId(goatId, farmId))
-                    .map(GoatReference::id)
-                    .map(id -> id.value());
+                .map(GoatReference::id)
+                .map(id -> id.value());
 
         String sql = technicalId.isPresent()
                 ? SQL_FIND_LATEST_BY_FARM_AND_GOAT_TECHNICAL_ID
