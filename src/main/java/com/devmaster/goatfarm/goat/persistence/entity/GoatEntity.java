@@ -74,13 +74,16 @@ public class GoatEntity {
         @Column(name = "categoria", length = 10)
         private Category category;
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "pai_num_registro", referencedColumnName = "num_registro")
-        private GoatEntity father;
+        /**
+         * Legacy parent RG snapshots retained for compatibility/history. They
+         * are not JPA associations: current local genealogy is linked through
+         * pai_goat_id/mae_goat_id so parent RG rectification is safe.
+         */
+        @Column(name = "pai_num_registro", length = 20)
+        private String fatherRegistrationNumberSnapshot;
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "mae_num_registro", referencedColumnName = "num_registro")
-        private GoatEntity mother;
+        @Column(name = "mae_num_registro", length = 20)
+        private String motherRegistrationNumberSnapshot;
 
         @Column(name = "pai_goat_id")
         private Long fatherTechnicalId;
@@ -174,11 +177,11 @@ public class GoatEntity {
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
     
-    public GoatEntity getFather() { return father; }
-    public void setFather(GoatEntity father) { this.father = father; }
-    
-    public GoatEntity getMother() { return mother; }
-    public void setMother(GoatEntity mother) { this.mother = mother; }
+    public String getFatherRegistrationNumberSnapshot() { return fatherRegistrationNumberSnapshot; }
+    public void setFatherRegistrationNumberSnapshot(String value) { this.fatherRegistrationNumberSnapshot = value; }
+
+    public String getMotherRegistrationNumberSnapshot() { return motherRegistrationNumberSnapshot; }
+    public void setMotherRegistrationNumberSnapshot(String value) { this.motherRegistrationNumberSnapshot = value; }
 
     public String getExternalFatherRegistrationNumber() { return externalFatherRegistrationNumber; }
     public void setExternalFatherRegistrationNumber(String externalFatherRegistrationNumber) { this.externalFatherRegistrationNumber = externalFatherRegistrationNumber; }

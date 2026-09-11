@@ -8,7 +8,11 @@ import com.devmaster.goatfarm.goat.api.dto.GoatHerdSummaryDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatExitRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatExitResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationHistoryResponseDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestDTO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,11 +35,54 @@ import java.util.List;
 public class GoatController {
 
     private final GoatManagementUseCase goatUseCase;
+    private final GoatRegistrationRectificationUseCase registrationRectificationUseCase;
     private final GoatMapper goatMapper;
 
-    public GoatController(GoatManagementUseCase goatUseCase, GoatMapper goatMapper) {
+    public GoatController(GoatManagementUseCase goatUseCase,
+                          GoatRegistrationRectificationUseCase registrationRectificationUseCase,
+                          GoatMapper goatMapper) {
         this.goatUseCase = goatUseCase;
+        this.registrationRectificationUseCase = registrationRectificationUseCase;
         this.goatMapper = goatMapper;
+    }
+
+    @FarmOwnerOnly
+    @PatchMapping("/{goatId}/registration")
+    @Operation(summary = "Retifica explicitamente a identidade registral de uma cabra")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Identidade retificada com histórico registrado."),
+            @ApiResponse(responseCode = "403", description = "Somente ADMIN ou proprietário da fazenda pode retificar."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada."),
+            @ApiResponse(responseCode = "409", description = "Número de registro já utilizado por outro animal."),
+            @ApiResponse(responseCode = "422", description = "Dados ou regra da retificação inválidos.")
+    })
+    public ResponseEntity<GoatRegistrationRectificationResponseDTO> rectifyRegistration(
+            @PathVariable("farmId") Long farmId,
+            @PathVariable("goatId") String goatId,
+            @Valid @RequestBody GoatRegistrationRectificationRequestDTO requestDTO) {
+        return ResponseEntity.ok(goatMapper.toRegistrationRectificationResponseDTO(
+                registrationRectificationUseCase.rectify(
+                        farmId,
+                        goatId,
+                        goatMapper.toRegistrationRectificationRequestVO(requestDTO)
+                )
+        ));
+    }
+
+    @FarmOwnerOnly
+    @GetMapping("/{goatId}/registration-history")
+    @Operation(summary = "Consulta o histórico de retificações da identidade registral")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Histórico retornado com sucesso."),
+            @ApiResponse(responseCode = "403", description = "Somente ADMIN ou proprietário da fazenda pode consultar."),
+            @ApiResponse(responseCode = "404", description = "Cabra não encontrada.")
+    })
+    public ResponseEntity<List<GoatRegistrationHistoryResponseDTO>> registrationHistory(
+            @PathVariable("farmId") Long farmId,
+            @PathVariable("goatId") String goatId) {
+        return ResponseEntity.ok(registrationRectificationUseCase.history(farmId, goatId).stream()
+                .map(goatMapper::toRegistrationHistoryResponseDTO)
+                .toList());
     }
 
     @CanManageFarm

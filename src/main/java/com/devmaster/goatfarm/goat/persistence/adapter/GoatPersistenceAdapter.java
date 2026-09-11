@@ -67,10 +67,9 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
         if (existing == null) {
             GoatFarm farm = goat.farmId() == null ? null : reference(GoatFarm.class, goat.farmId());
             User user = goat.userId() == null ? null : reference(User.class, goat.userId());
-            existing = mapper.toNewEntity(goat, farm, user,
-                    localParent(goat.father()), localParent(goat.mother()));
+            existing = mapper.toNewEntity(goat, farm, user);
         } else {
-            mapper.toEntity(goat, existing, localParent(goat.father()), localParent(goat.mother()));
+            mapper.toEntity(goat, existing);
         }
         GoatEntity saved = goatRepository.save(existing);
         if (saved.getTechnicalId() == null && entityManager != null) {
@@ -85,13 +84,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
             return null;
         }
         return entityManager.getReference(type, id);
-    }
-
-    private GoatEntity localParent(Goat.ParentReference parent) {
-        if (parent == null || !parent.isLocal() || parent.registrationNumber() == null) {
-            return null;
-        }
-        return goatRepository.findByRegistrationNumber(parent.registrationNumber()).orElse(null);
     }
 
     @Override
@@ -239,20 +231,19 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
                 goat.getBirthDate(),
                 goat.getUser() == null ? null : goat.getUser().getName(),
                 goat.getFarm() == null || goat.getFarm().getUser() == null ? null : goat.getFarm().getUser().getName(),
-                remainingGenerations > 0 ? toGenealogyParent(goat.getTechnicalFather(), goat.getFather(),
+                remainingGenerations > 0 ? toGenealogyParent(goat.getTechnicalFather(),
                         goat.getExternalFatherRegistrationNumber(), remainingGenerations) : null,
-                remainingGenerations > 0 ? toGenealogyParent(goat.getTechnicalMother(), goat.getMother(),
+                remainingGenerations > 0 ? toGenealogyParent(goat.getTechnicalMother(),
                         goat.getExternalMotherRegistrationNumber(), remainingGenerations) : null
         );
     }
 
     private GoatGenealogySnapshot.ParentReference toGenealogyParent(
             GoatEntity technicalParent,
-            GoatEntity legacyParent,
             String externalRegistrationNumber,
             int remainingGenerations
     ) {
-        GoatEntity localParent = technicalParent != null ? technicalParent : legacyParent;
+        GoatEntity localParent = technicalParent;
         if (localParent != null) {
             return GoatGenealogySnapshot.ParentReference.local(
                     toGenealogySnapshot(localParent, remainingGenerations - 1)

@@ -12,16 +12,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class GoatPersistenceMapper {
 
-    public GoatEntity toNewEntity(Goat goat, GoatFarm farm, User user,
-                                  GoatEntity father, GoatEntity mother) {
+    public GoatEntity toNewEntity(Goat goat, GoatFarm farm, User user) {
         GoatEntity entity = new GoatEntity();
         entity.setFarm(farm);
         entity.setUser(user);
-        return toEntity(goat, entity, father, mother);
+        return toEntity(goat, entity);
     }
 
-    public GoatEntity toEntity(Goat goat, GoatEntity entity,
-                               GoatEntity father, GoatEntity mother) {
+    public GoatEntity toEntity(Goat goat, GoatEntity entity) {
         entity.setRegistrationNumber(goat.registrationNumber());
         entity.setName(goat.name());
         entity.setGender(goat.gender());
@@ -35,8 +33,8 @@ public class GoatPersistenceMapper {
         entity.setTod(goat.tod());
         entity.setToe(goat.toe());
         entity.setCategory(goat.category());
-        entity.setFather(father);
-        entity.setMother(mother);
+        entity.setFatherRegistrationNumberSnapshot(localParentRegistration(goat.father()));
+        entity.setMotherRegistrationNumberSnapshot(localParentRegistration(goat.mother()));
         entity.setFatherTechnicalId(goat.father() != null && goat.father().id() != null
                 ? goat.father().id().value() : null);
         entity.setMotherTechnicalId(goat.mother() != null && goat.mother().id() != null
@@ -52,9 +50,9 @@ public class GoatPersistenceMapper {
                 RegistrationIdentity.of(entity.getRegistrationNumber(), entity.getTod(), entity.getToe()),
                 entity.getName(), entity.getGender(), entity.getBreed(), entity.getColor(),
                 entity.getBirthDate(), entity.getStatus(), entity.getExitType(), entity.getExitDate(),
-                entity.getExitNotes(), entity.getCategory(), toParent(entity.getTechnicalFather(), entity.getFather(),
+                entity.getExitNotes(), entity.getCategory(), toParent(entity.getTechnicalFather(),
                         entity.getFatherTechnicalId(), entity.getExternalFatherRegistrationNumber()),
-                toParent(entity.getTechnicalMother(), entity.getMother(), entity.getMotherTechnicalId(), entity.getExternalMotherRegistrationNumber()),
+                toParent(entity.getTechnicalMother(), entity.getMotherTechnicalId(), entity.getExternalMotherRegistrationNumber()),
                 entity.getFarm() == null ? null : entity.getFarm().getId(),
                 entity.getUser() == null ? null : entity.getUser().getId(),
                 entity.getFarm() == null ? null : entity.getFarm().getName(),
@@ -64,11 +62,10 @@ public class GoatPersistenceMapper {
 
     private Goat.ParentReference toParent(
             GoatEntity technicalLocal,
-            GoatEntity legacyLocal,
             Long technicalId,
             String externalRegistration
     ) {
-        GoatEntity local = technicalLocal != null ? technicalLocal : legacyLocal;
+        GoatEntity local = technicalLocal;
         if (local != null) {
             return Goat.ParentReference.local(
                     GoatId.of(local.getTechnicalId() != null ? local.getTechnicalId() : technicalId),
@@ -88,5 +85,9 @@ public class GoatPersistenceMapper {
             return null;
         }
         return parent.registrationNumber();
+    }
+
+    private String localParentRegistration(Goat.ParentReference parent) {
+        return parent != null && parent.isLocal() ? parent.registrationNumber() : null;
     }
 }

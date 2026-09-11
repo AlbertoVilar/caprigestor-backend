@@ -41,7 +41,12 @@ public class GoatRequestDTO {
     @NotNull(message = "O status não pode estar em branco.")
     private GoatStatus status;
 
-        private String tod;
+    @NotBlank(message = "O TOD não pode estar em branco.")
+    @Size(max = 15, message = "O TOD deve ter no máximo {max} caracteres.")
+    private String tod;
+
+    @NotBlank(message = "O TOE não pode estar em branco.")
+    @Size(max = 15, message = "O TOE deve ter no máximo {max} caracteres.")
     private String toe;
     private Category category;
 

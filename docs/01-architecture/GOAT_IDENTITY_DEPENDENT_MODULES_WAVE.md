@@ -1,6 +1,6 @@
 # GoatId — onda de consumidores dependentes
 
-**Status:** IMPLEMENTADA EM CAMADAS / TRANSIÇÃO CONTROLADA / C1 EM REVIEW
+**Status:** IMPLEMENTADA EM CAMADAS / TRANSIÇÃO CONTROLADA / ID5-A EM REVIEW
 **Escopo:** eventos, genealogia, reprodução, saúde, lactação/leite, comercial,
 auditoria e contratos do frontend.
 
@@ -68,8 +68,16 @@ estrutural sem editar V39 ou V40. Em uma instalação limpa, ela:
 1. troca a PK de `cabras.num_registro` para `cabras.id`;
 2. mantém `num_registro` com unicidade própria para lookup, ABCC e contratos
    de compatibilidade;
-3. recria as FKs simples legadas contra a chave única registral, sem reverter
-   a integridade técnica de V40/V41.
+3. mantém a unicidade de `num_registro` para lookup e contratos, sem alterar
+   as FKs técnicas promovidas.
+
+`V43__retire_mutable_goat_registration_foreign_keys.sql` conclui a retirada
+dos vínculos estruturais de RG:
+
+1. remove FKs que apontavam para `cabras.num_registro` nos consumidores;
+2. preserva colunas RG apenas como identidade de negócio ou snapshots;
+3. cria `goat_registration_history` com FKs para GoatId e fazenda, origem,
+   evidência, motivo, ator e timestamps.
 
 As migrations publicadas V1–V40 não foram alteradas ou condensadas. A política
 de reset da base descartável de desenvolvimento continua separada: nenhuma
@@ -97,12 +105,16 @@ O JPA de `GoatEntity` usa `id` como `@Id` técnico e o repository é tipado com
 cliente interno possui o id estrutural, usa o token inequívoco
 `technical-<id>`. Assim, a API não precisa adivinhar se um valor numérico é RG
 ou GoatId. Catálogo público e ABCC continuam usando RG. A retirada dos aliases
-de RG, as rotas versionadas por GoatId e a retificação registral pertencem às
-próximas ondas.
+de RG e as rotas versionadas por GoatId pertencem às próximas ondas. A ID5-A
+já disponibiliza retificação registral administrativa em
+`PATCH .../goats/{goatId}/registration`, preservando o mesmo GoatId e sem
+reescrever snapshots históricos. O histórico pode ser consultado em
+`GET .../registration-history`; a operação exige `ADMIN`/`FARM_OWNER`, e a
+consulta ABCC permanece opcional.
 
 ## Evidência de validação
 
-- instalação Testcontainers PostgreSQL V1→V42 validada;
+- instalação Testcontainers PostgreSQL V1→V43 validada;
 - integridade cross-farm validada com inserções válidas e rejeitadas;
 - testes de reprodução, lactação, saúde, comercial e segurança executados;
 - frontend: typecheck, suíte unitária, build de produção e lint executados.
@@ -115,5 +127,5 @@ próximas ondas.
 2. introduzir rotas versionadas por GoatId e aliases de RG mensuráveis;
 3. expandir o uso de `technical-<id>` para cache, contexto e navegação interna
    do frontend;
-4. criar histórico registral/retificação mantendo o mesmo GoatId;
+4. introduzir rotas versionadas por GoatId e aliases de RG mensuráveis;
 5. somente depois tornar RG estruturalmente removível e retirar fallbacks.

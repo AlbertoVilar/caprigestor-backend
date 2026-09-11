@@ -9,7 +9,12 @@ import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationRectificationResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationHistoryResponseVO;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestDTO;
+import com.devmaster.goatfarm.goat.enums.RegistrationRectificationSource;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.config.security.OwnershipService;
@@ -58,6 +63,9 @@ class GoatControllerTest {
     private GoatManagementUseCase goatUseCase;
 
     @MockBean
+    private GoatRegistrationRectificationUseCase registrationRectificationUseCase;
+
+    @MockBean
     private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
 
     @MockBean
@@ -102,6 +110,8 @@ class GoatControllerTest {
         goatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         goatRequestDTO.setColor("Branca");
         goatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        goatRequestDTO.setTod("0");
+        goatRequestDTO.setToe("01");
     }
 
     @Test
@@ -258,6 +268,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2021, 3, 10));
         newGoatRequestDTO.setColor("Marrom");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("02");
 
         GoatResponseVO createdGoatResponseVO = new GoatResponseVO();
         createdGoatResponseVO.setRegistrationNumber("002");
@@ -298,6 +310,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         newGoatRequestDTO.setColor("Branca");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("04");
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/goatfarms/2/goats")
@@ -322,6 +336,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         newGoatRequestDTO.setColor("Branca");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("05");
 
         GoatResponseVO createdGoatResponseVO = new GoatResponseVO();
         createdGoatResponseVO.setRegistrationNumber("005");
@@ -357,6 +373,8 @@ class GoatControllerTest {
         updateGoatRequestDTO.setBirthDate(LocalDate.of(2020, 5, 15));
         updateGoatRequestDTO.setColor("Branca");
         updateGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        updateGoatRequestDTO.setTod("0");
+        updateGoatRequestDTO.setToe("01");
 
         com.devmaster.goatfarm.goat.business.bo.GoatResponseVO updatedGoatResponseVO = new com.devmaster.goatfarm.goat.business.bo.GoatResponseVO();
         updatedGoatResponseVO.setRegistrationNumber("001");
@@ -382,6 +400,80 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
         verify(goatUseCase).updateGoat(eq(1L), eq("001"), any(GoatRequestVO.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "FARM_OWNER")
+    void shouldRectifyGoatRegistrationThroughDedicatedEndpoint() throws Exception {
+        GoatRegistrationRectificationRequestDTO requestDTO = new GoatRegistrationRectificationRequestDTO();
+        requestDTO.setTod("16432");
+        requestDTO.setToe("18012");
+        requestDTO.setSource(RegistrationRectificationSource.ABCC);
+        requestDTO.setEvidenceReference("ABCC-2026-001");
+        requestDTO.setReason("Correção conferida na ABCC");
+
+        GoatRegistrationRectificationResponseVO responseVO = new GoatRegistrationRectificationResponseVO(
+                7L, "1643217001", "16432", "17001", "1643218012", "16432", "18012",
+                RegistrationRectificationSource.ABCC, LocalDate.of(2026, 1, 1).atStartOfDay());
+        when(registrationRectificationUseCase.rectify(eq(1L), eq("technical-7"), any()))
+                .thenReturn(responseVO);
+
+        mockMvc.perform(patch("/api/v1/goatfarms/1/goats/technical-7/registration")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.technicalGoatId").value(7))
+                .andExpect(jsonPath("$.currentRegistrationNumber").value("1643218012"))
+                .andExpect(jsonPath("$.source").value("ABCC"));
+
+        verify(registrationRectificationUseCase).rectify(eq(1L), eq("technical-7"), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERATOR")
+    void operatorCannotRectifyGoatRegistration() throws Exception {
+        GoatRegistrationRectificationRequestDTO requestDTO = new GoatRegistrationRectificationRequestDTO();
+        requestDTO.setTod("16432");
+        requestDTO.setToe("18012");
+        requestDTO.setSource(RegistrationRectificationSource.ABCC);
+        requestDTO.setEvidenceReference("ABCC-2026-001");
+        requestDTO.setReason("Correção conferida na ABCC");
+
+        mockMvc.perform(patch("/api/v1/goatfarms/1/goats/technical-7/registration")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDTO)))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(registrationRectificationUseCase);
+    }
+
+    @Test
+    @WithMockUser(roles = "FARM_OWNER")
+    void farmOwnerCanReadGoatRegistrationHistory() throws Exception {
+        GoatRegistrationHistoryResponseVO history = new GoatRegistrationHistoryResponseVO(
+                12L, 7L, 1L, "1643217001", "16432", "17001",
+                "1643218012", "16432", "18012", RegistrationRectificationSource.ABCC,
+                "ABCC-2026-001", "Correção conferida", 4L,
+                LocalDate.of(2026, 1, 1).atStartOfDay());
+        when(registrationRectificationUseCase.history(1L, "technical-7")).thenReturn(List.of(history));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/technical-7/registration-history"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].technicalGoatId").value(7))
+                .andExpect(jsonPath("$[0].newRegistrationNumber").value("1643218012"));
+
+        verify(registrationRectificationUseCase).history(1L, "technical-7");
+    }
+
+    @Test
+    @WithMockUser(roles = "OPERATOR")
+    void operatorCannotReadGoatRegistrationHistory() throws Exception {
+        mockMvc.perform(get("/api/v1/goatfarms/1/goats/technical-7/registration-history"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(registrationRectificationUseCase);
     }
 
     @Test
@@ -505,6 +597,8 @@ class GoatControllerTest {
         newGoatRequestDTO.setBirthDate(LocalDate.of(2020, 1, 15));
         newGoatRequestDTO.setColor("Branca");
         newGoatRequestDTO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
+        newGoatRequestDTO.setTod("0");
+        newGoatRequestDTO.setToe("03");
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/goatfarms/1/goats")

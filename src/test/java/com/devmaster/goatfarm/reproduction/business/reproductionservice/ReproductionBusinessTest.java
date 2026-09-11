@@ -1559,7 +1559,10 @@ class ReproductionBusinessTest {
     private Goat motherGoat(String tod) {
         return Goat.rehydrate(
                 new GoatId(10L),
-                RegistrationIdentity.of(GOAT_ID, tod, "18012"),
+                // This fixture intentionally models a legacy record whose
+                // TOD differs from the birth farm; without TOE it cannot be
+                // validated as a complete RG/TOD/TOE triple.
+                RegistrationIdentity.of(GOAT_ID, tod, null),
                 "Matriz", Gender.FEMEA, GoatBreed.SAANEN, "Branca", LocalDate.of(2024, 1, 1),
                 com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO,
                 null, null, null, Category.PA, null, null,
