@@ -91,6 +91,8 @@ class GoatPersistenceAdapterTest {
         when(repository.findOffspringByParentRegistration(1L, "RG-10")).thenReturn(List.of(entity));
 
         assertThat(adapter.findById((String) null)).isEmpty();
+        assertThat(adapter.findById("technical-10")).contains(entity);
+        assertThat(adapter.findByIdAndFarmId("technical-10", 1L)).contains(entity);
         assertThat(adapter.findById(new GoatId(10L))).contains(domain);
         assertThat(adapter.findByIdAndFarmId(new GoatId(10L), 1L)).contains(domain);
         assertThat(adapter.findDomainByRegistrationNumber("RG-10")).contains(domain);

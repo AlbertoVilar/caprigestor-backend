@@ -94,6 +94,17 @@ class GoatBusinessTest {
     }
 
     @Test
+    void resolvesExplicitTechnicalRouteTokenWithoutRegistrationCollision() {
+        when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
+
+        GoatResponseVO result = business.findGoatById(1L, "technical-77");
+
+        assertThat(result.getTechnicalId()).isEqualTo(77L);
+        verify(goatPort).findByIdAndFarmId(new GoatId(77L), 1L);
+        verify(goatPort, never()).findByRegistrationNumberAndFarmId(anyString(), anyLong());
+    }
+
+    @Test
     void rejectsExitForInactiveGoat() {
         Goat inactive = Goat.rehydrate(new GoatId(77), goat.registrationIdentity(), goat.name(), goat.gender(), goat.breed(), goat.color(),
                 goat.birthDate(), GoatStatus.INATIVO, null, null, null, goat.category(), null, null, 1L, 1L, "Capril", "Alberto");

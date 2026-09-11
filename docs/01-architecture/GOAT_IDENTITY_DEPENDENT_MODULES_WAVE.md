@@ -84,9 +84,12 @@ onde V41 exige a coluna técnica. O fallback deve ser removido somente depois
 que todas as rotas e fixtures estiverem na API estrutural.
 
 O JPA de `GoatEntity` usa `id` como `@Id` técnico e o repository é tipado com
-`Long`. As rotas v1 ainda recebem RG por compatibilidade explícita; elas não
-inferem GoatId pelo formato numérico. A retirada dos aliases de RG, as rotas
-versionadas por GoatId e a retificação registral pertencem às próximas ondas.
+`Long`. As rotas v1 ainda recebem RG por compatibilidade explícita; quando um
+cliente interno possui o id estrutural, usa o token inequívoco
+`technical-<id>`. Assim, a API não precisa adivinhar se um valor numérico é RG
+ou GoatId. Catálogo público e ABCC continuam usando RG. A retirada dos aliases
+de RG, as rotas versionadas por GoatId e a retificação registral pertencem às
+próximas ondas.
 
 ## Evidência de validação
 
@@ -101,7 +104,7 @@ versionadas por GoatId e a retificação registral pertencem às próximas ondas
 
 1. migrar os ports legados e casos de uso restantes para `GoatId` sem JPA;
 2. introduzir rotas versionadas por GoatId e aliases de RG mensuráveis;
-3. atualizar cache, contexto e navegação do frontend para usar GoatId
-   internamente;
+3. expandir o uso de `technical-<id>` para cache, contexto e navegação interna
+   do frontend;
 4. criar histórico registral/retificação mantendo o mesmo GoatId;
 5. somente depois tornar RG estruturalmente removível e retirar fallbacks.

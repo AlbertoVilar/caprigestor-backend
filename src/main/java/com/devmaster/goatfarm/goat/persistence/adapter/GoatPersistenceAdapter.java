@@ -21,6 +21,7 @@ import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.goat.persistence.mapper.GoatPersistenceMapper;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goat.domain.GoatRouteIdentifier;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -102,7 +103,10 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
 
     @Override
     public Optional<GoatEntity> findById(String registrationNumber) {
-        return registrationNumber == null ? Optional.empty() : goatRepository.findByRegistrationNumber(registrationNumber);
+        if (registrationNumber == null) return Optional.empty();
+        return GoatRouteIdentifier.technicalId(registrationNumber)
+                .flatMap(id -> goatRepository.findByTechnicalId(id.value()))
+                .or(() -> goatRepository.findByRegistrationNumber(registrationNumber));
     }
 
     @Override
@@ -127,12 +131,12 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
 
     @Override
     public Optional<Goat> findByRegistrationNumberAndFarmId(String registrationNumber, Long farmId) {
-        return goatRepository.findByIdAndFarmId(registrationNumber, farmId).map(mapper::toDomain);
+        return findLegacyToken(registrationNumber, farmId).map(mapper::toDomain);
     }
 
     @Override
     public Optional<GoatReference> findReferenceByRegistrationNumber(String registrationNumber) {
-        return goatRepository.findByRegistrationNumber(registrationNumber).map(this::toReference);
+        return findById(registrationNumber).map(this::toReference);
     }
 
     @Override
@@ -140,7 +144,7 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
             String registrationNumber,
             Long farmId
     ) {
-        return goatRepository.findByIdAndFarmId(registrationNumber, farmId).map(this::toReference);
+        return findLegacyToken(registrationNumber, farmId).map(this::toReference);
     }
 
     @Override
@@ -233,12 +237,12 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
 
     @Override
     public Optional<GoatEntity> findByIdAndFarmId(String id, Long farmId) {
-        return goatRepository.findByIdAndFarmId(id, farmId);
+        return findLegacyToken(id, farmId);
     }
 
     @Override
     public Optional<GoatValidationSnapshot> findForValidation(String registrationNumber, Long farmId) {
-        return goatRepository.findByIdAndFarmId(registrationNumber, farmId)
+        return findLegacyToken(registrationNumber, farmId)
                 .map(goat -> new GoatValidationSnapshot(
                         goat.getRegistrationNumber(),
                         goat.getGender(),
@@ -251,7 +255,9 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
             String registrationNumber,
             Long farmId
     ) {
-        return goatRepository.findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph(registrationNumber, farmId)
+        return findLegacyToken(registrationNumber, farmId)
+                .flatMap(goat -> goatRepository.findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph(
+                        goat.getRegistrationNumber(), farmId))
                 .map(goat -> toGenealogySnapshot(goat, 3));
     }
 
@@ -354,5 +360,12 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
                 goat.getRegistrationNumber(),
                 goat.getName()
         );
+    }
+
+    private Optional<GoatEntity> findLegacyToken(String token, Long farmId) {
+        if (token == null || farmId == null) return Optional.empty();
+        return GoatRouteIdentifier.technicalId(token)
+                .flatMap(id -> goatRepository.findByTechnicalIdAndFarmId(id.value(), farmId))
+                .or(() -> goatRepository.findByIdAndFarmId(token, farmId));
     }
 }

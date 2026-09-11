@@ -23,6 +23,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
+import com.devmaster.goatfarm.goat.domain.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
@@ -164,16 +165,17 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 
     private Goat findOrThrow(Long farmId, String token) {
-        // The public /goats/{goatId} route is still an RG route. A numeric RG
-        // must never be guessed as a technical GoatId: both values can be
-        // numeric and a guess could address a different animal in the farm.
-        // Technical identifiers will be accepted only by an explicit route or
-        // request field introduced in the API transition wave.
+        // Explicit technical tokens are unambiguous even when an RG happens
+        // to contain only digits. The numeric fallback remains only for old
+        // clients that used the transitional route before this vocabulary was
+        // published; registration lookup is still attempted first there.
+        var explicitTechnicalId = GoatRouteIdentifier.technicalId(token);
+        if (explicitTechnicalId.isPresent()) {
+            return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId)
+                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        }
+
         Goat found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
-        // Transitional compatibility for callers that already used the
-        // numeric technical id on this legacy route.  Registration lookup is
-        // always attempted first, so a numeric RG remains authoritative; a
-        // future version will expose a dedicated /technical/{id} route.
         if (found == null && token != null && token.matches("\\d+")) {
             try {
                 found = goatPort.findByIdAndFarmId(new com.devmaster.goatfarm.goat.domain.GoatId(Long.parseLong(token)), farmId).orElse(null);
