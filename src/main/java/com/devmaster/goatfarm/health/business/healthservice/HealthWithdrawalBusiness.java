@@ -1,7 +1,8 @@
 package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
-import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
@@ -22,29 +23,29 @@ import java.util.stream.Collectors;
 public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
 
     private final HealthEventPersistencePort healthEventPersistencePort;
-    private final LegacyGoatPersistencePort goatPersistencePort;
+    private final GoatReferenceResolver goatReferenceResolver;
     private final EntityFinder entityFinder;
 
     public HealthWithdrawalBusiness(
             HealthEventPersistencePort healthEventPersistencePort,
-            LegacyGoatPersistencePort goatPersistencePort,
+            GoatReferenceResolver goatReferenceResolver,
             EntityFinder entityFinder
     ) {
         this.healthEventPersistencePort = healthEventPersistencePort;
-        this.goatPersistencePort = goatPersistencePort;
+        this.goatReferenceResolver = goatReferenceResolver;
         this.entityFinder = entityFinder;
     }
 
     @Override
     public GoatWithdrawalStatusVO getGoatWithdrawalStatus(Long farmId, String goatId, LocalDate referenceDate) {
-        var goat = entityFinder.findOrThrow(
-                () -> goatPersistencePort.findByIdAndFarmId(goatId, farmId),
+        GoatReference goat = entityFinder.findOrThrow(
+                () -> goatReferenceResolver.resolve(goatId, farmId),
                 "Cabra nao encontrada no capril informado. goatId=" + goatId + ", farmId=" + farmId
         );
 
         return buildStatus(
                 goatId,
-                goat.getTechnicalId(),
+                goat.id().value(),
                 healthEventPersistencePort.findPerformedWithWithdrawalByFarmIdAndGoatId(farmId, goatId),
                 safeReferenceDate(referenceDate)
         );

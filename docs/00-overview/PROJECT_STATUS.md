@@ -18,6 +18,10 @@ rotas RG permanecem compatíveis durante a transição. A integridade técnica �
 fechada pelas migrations V41 e V42; as rotas estruturais versionadas e a
 retirada dos aliases RG continuam documentadas em
 [GOAT_IDENTITY_DEPENDENT_MODULES_WAVE](../01-architecture/GOAT_IDENTITY_DEPENDENT_MODULES_WAVE.md).
+Na revisão ID4-C1, os consumidores de produção também deixaram de depender do
+`LegacyGoatPersistencePort`; a resolução de tokens passou a ser explícita e
+centralizada em `GoatReferenceResolver`, com guarda ArchUnit para evitar o
+retorno de entidades e repositórios JPA ao core.
 
 Baseline desta atualizacao:
 
@@ -73,7 +77,8 @@ Baseline desta atualizacao:
   único e corrigível como dado de negócio. As rotas v1 ainda são aliases
   registrais explícitos e não inferem GoatId pelo formato da URL.
 - Fallbacks por RG permanecem apenas para compatibilidade de fixtures e rotas
-  legadas. A futura API estrutural deverá declarar GoatId explicitamente.
+  legadas. A futura API estrutural deverá declarar GoatId explicitamente; tokens
+  numéricos isolados não são inferidos como GoatId.
 - A base de desenvolvimento continua descartável, mas não foi resetada; o
   reset pré-HML será uma operação separada, após a migração coerente.
 

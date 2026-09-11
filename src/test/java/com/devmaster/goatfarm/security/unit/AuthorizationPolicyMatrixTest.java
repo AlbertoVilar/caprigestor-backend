@@ -7,7 +7,8 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -42,14 +43,15 @@ class AuthorizationPolicyMatrixTest {
 
         UserPersistencePort userPort = Mockito.mock(UserPersistencePort.class);
         GoatFarmPersistencePort farmPort = Mockito.mock(GoatFarmPersistencePort.class);
-        LegacyGoatPersistencePort goatPort = Mockito.mock(LegacyGoatPersistencePort.class);
+        GoatReferenceResolver goatReferenceResolver = new GoatReferenceResolver(
+                Mockito.mock(GoatReferenceQueryPort.class));
         FarmAccessQueryPort accessPort = Mockito.mock(FarmAccessQueryPort.class);
         when(userPort.findByEmail("matrix@example.com")).thenReturn(Optional.of(current));
         when(farmPort.findById(10L)).thenReturn(Optional.of(farm));
         when(accessPort.existsOperatorLink(10L, 1L)).thenReturn(linkedOperator);
         authenticate("matrix@example.com");
 
-        boolean result = new OwnershipService(farmPort, userPort, goatPort, accessPort).canManageFarm(10L);
+        boolean result = new OwnershipService(farmPort, userPort, goatReferenceResolver, accessPort).canManageFarm(10L);
 
         assertThat(result).as(scenario).isEqualTo(expected);
         SecurityContextHolder.clearContext();

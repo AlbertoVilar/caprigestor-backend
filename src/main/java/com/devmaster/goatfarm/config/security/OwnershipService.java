@@ -6,7 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import org.slf4j.Logger;
@@ -20,24 +20,25 @@ public class OwnershipService {
 
     private final GoatFarmPersistencePort goatFarmPort;
     private final UserPersistencePort userPort;
-    private final LegacyGoatPersistencePort goatPort;
+    private final GoatReferenceResolver goatReferenceResolver;
     private final FarmAccessQueryPort farmAccessQueryPort;
     private final FarmOwnerQueryPort farmOwnerQueryPort;
 
     @org.springframework.beans.factory.annotation.Autowired
     public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort,
-                            LegacyGoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort,
+                            GoatReferenceResolver goatReferenceResolver, FarmAccessQueryPort farmAccessQueryPort,
                             FarmOwnerQueryPort farmOwnerQueryPort) {
         this.goatFarmPort = goatFarmPort;
         this.userPort = userPort;
-        this.goatPort = goatPort;
+        this.goatReferenceResolver = goatReferenceResolver;
         this.farmAccessQueryPort = farmAccessQueryPort;
         this.farmOwnerQueryPort = farmOwnerQueryPort;
     }
 
     /** Compatibility constructor for isolated unit tests and legacy callers. */
-    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort, LegacyGoatPersistencePort goatPort, FarmAccessQueryPort farmAccessQueryPort) {
-        this(goatFarmPort, userPort, goatPort, farmAccessQueryPort, null);
+    public OwnershipService(GoatFarmPersistencePort goatFarmPort, UserPersistencePort userPort,
+                             GoatReferenceResolver goatReferenceResolver, FarmAccessQueryPort farmAccessQueryPort) {
+        this(goatFarmPort, userPort, goatReferenceResolver, farmAccessQueryPort, null);
     }
 
     public void verifyFarmOwnership(Long farmId) {
@@ -70,8 +71,8 @@ public class OwnershipService {
         // Primeiro, verifica se o usuário é dono da fazenda (admin tem bypass)
         verifyFarmOwnership(farmId);
         // Depois, garante que a cabra pertence à fazenda informada
-        var goatOpt = goatPort.findByIdAndFarmId(goatId, farmId);
-        if (goatOpt.isEmpty()) {
+        var goatReference = goatReferenceResolver.resolve(goatId, farmId);
+        if (goatReference.isEmpty()) {
             throw new AccessDeniedException("Cabra não pertence à fazenda informada.");
         }
     }

@@ -1,6 +1,6 @@
 # GoatId — onda de consumidores dependentes
 
-**Status:** IMPLEMENTADA EM CAMADAS / TRANSIÇÃO CONTROLADA  
+**Status:** IMPLEMENTADA EM CAMADAS / TRANSIÇÃO CONTROLADA / C1 EM REVIEW
 **Escopo:** eventos, genealogia, reprodução, saúde, lactação/leite, comercial,
 auditoria e contratos do frontend.
 
@@ -82,6 +82,15 @@ fixtures legadas criadas diretamente pelos testes antes da aplicação do fluxo
 de dual-write; esse fallback não enfraquece a instalação PostgreSQL final,
 onde V41 exige a coluna técnica. O fallback deve ser removido somente depois
 que todas as rotas e fixtures estiverem na API estrutural.
+
+Na intervenção ID4-C1, a costura de persistência legada foi retirada do código
+de produção: `LegacyGoatPersistencePort` e o adapter de parentagem legado não
+existem mais. Reprodução, saúde, importação ABCC, ownership e parentagem
+genealógica usam portas de domínio/referência; `GoatReferenceResolver`
+centraliza a regra de rota (`technical-<id>` explícito e demais tokens como RG,
+sem inferência numérica). Um teste ArchUnit impede que camadas de aplicação,
+negócio, API, domínio ou configuração voltem a importar `GoatEntity`,
+`GoatRepository` ou projeções de persistência.
 
 O JPA de `GoatEntity` usa `id` como `@Id` técnico e o repository é tipado com
 `Long`. As rotas v1 ainda recebem RG por compatibilidade explícita; quando um

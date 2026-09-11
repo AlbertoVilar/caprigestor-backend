@@ -173,7 +173,7 @@ class GoatOperationalAuthorizationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(birthPayload("1615302001", "Cria do parto")))
                 .andExpect(status().isCreated());
-        assertThat(goatRepository.findByIdAndFarmId("1615302001", managedFarm.getId())).isPresent();
+        assertThat(goatRepository.findByRegistrationNumberAndFarmId("1615302001", managedFarm.getId())).isPresent();
         assertThat(pregnancyRepository.findById(pregnancy.getId())).get()
                 .extracting(Pregnancy::getStatus)
                 .isEqualTo(PregnancyStatus.CLOSED);

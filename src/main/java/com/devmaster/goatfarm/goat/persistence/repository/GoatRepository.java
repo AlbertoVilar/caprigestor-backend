@@ -7,10 +7,8 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,8 +19,11 @@ public interface GoatRepository extends JpaRepository<GoatEntity, Long> {
 
     boolean existsByRegistrationNumber(String registrationNumber);
 
-    @Query("SELECT g FROM GoatEntity g WHERE g.registrationNumber = :id AND g.farm.id = :farmId")
-    Optional<GoatEntity> findByIdAndFarmId(@Param("id") String id, @Param("farmId") Long farmId);
+    @Query("SELECT g FROM GoatEntity g WHERE g.registrationNumber = :registrationNumber AND g.farm.id = :farmId")
+    Optional<GoatEntity> findByRegistrationNumberAndFarmId(
+            @Param("registrationNumber") String registrationNumber,
+            @Param("farmId") Long farmId
+    );
 
     @Query("SELECT g FROM GoatEntity g WHERE g.technicalId = :technicalId")
     Optional<GoatEntity> findByTechnicalId(@Param("technicalId") Long technicalId);
@@ -52,25 +53,8 @@ public interface GoatRepository extends JpaRepository<GoatEntity, Long> {
     @Query("SELECT g FROM GoatEntity g WHERE g.farm.id = :farmId AND LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')) AND g.breed = :breed")
     Page<GoatEntity> findByNameAndFarmIdAndBreed(@Param("farmId") Long farmId, @Param("name") String name, @Param("breed") GoatBreed breed, Pageable pageable);
 
-    @Query("""
-            SELECT g
-            FROM GoatEntity g
-            WHERE g.farm.id = :farmId
-              AND (
-                  g.mother.registrationNumber = :parentRegistrationNumber
-                  OR g.father.registrationNumber = :parentRegistrationNumber
-              )
-            ORDER BY CASE WHEN g.birthDate IS NULL THEN 1 ELSE 0 END, g.birthDate DESC, g.registrationNumber ASC
-            """)
-    List<GoatEntity> findOffspringByParentRegistration(@Param("farmId") Long farmId, @Param("parentRegistrationNumber") String parentRegistrationNumber);
-
     @Query("SELECT g FROM GoatEntity g WHERE g.farm.id = :farmId AND (g.fatherTechnicalId = :parentId OR g.motherTechnicalId = :parentId) ORDER BY g.birthDate DESC, g.registrationNumber ASC")
     List<GoatEntity> findOffspringByParentTechnicalId(@Param("farmId") Long farmId, @Param("parentId") Long parentId);
-
-    @Modifying
-    @Transactional
-    @Query(nativeQuery = true, value = "DELETE FROM cabras WHERE capril_id IN (SELECT c.id FROM capril c WHERE c.user_id != :adminId)")
-    void deleteGoatsFromOtherUsers(@Param("adminId") Long adminId);
 
     // Carregamento completo pelo grafo técnico de genealogia (pai/mãe, avós e bisavós).
     // A rota v1 continua usando RG como lookup explícito; os joins internos não o usam como FK.

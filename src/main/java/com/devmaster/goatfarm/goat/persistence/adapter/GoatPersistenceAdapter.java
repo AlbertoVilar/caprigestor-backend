@@ -9,14 +9,12 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBreedCount;
-import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
-import com.devmaster.goatfarm.goat.persistence.repository.GoatBreedCountProjection;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.goat.persistence.mapper.GoatPersistenceMapper;
 import com.devmaster.goatfarm.goat.domain.Goat;
@@ -36,12 +34,12 @@ import java.util.Optional;
 /**
  * Persistence adapter for the Goat aggregate.
  *
- * <p>The domain-facing {@link GoatPersistencePort} is the primary contract;
- * {@link LegacyGoatPersistencePort} and the genealogy port remain compatibility
- * views for modules that have not yet migrated from JPA/RG references.</p>
+ * <p>The domain-facing {@link GoatPersistencePort} and narrow read ports are
+ * the only application contracts exposed by this adapter. JPA entities and
+ * repository projections remain private to the persistence boundary.</p>
  */
 @Component
-public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPersistencePort, GoatGenealogyQueryPort,
+public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyQueryPort,
         GoatReferenceQueryPort, GoatValidationQueryPort {
 
     private final GoatRepository goatRepository;
@@ -59,11 +57,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     /** Compatibility constructor for lightweight legacy unit tests. */
     public GoatPersistenceAdapter(GoatRepository goatRepository) {
         this(goatRepository, new GoatPersistenceMapper());
-    }
-
-    @Override
-    public GoatEntity save(GoatEntity goat) {
-        return goatRepository.save(goat);
     }
 
     @Override
@@ -102,19 +95,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     }
 
     @Override
-    public Optional<GoatEntity> findById(String registrationNumber) {
-        if (registrationNumber == null) return Optional.empty();
-        return GoatRouteIdentifier.technicalId(registrationNumber)
-                .flatMap(id -> goatRepository.findByTechnicalId(id.value()))
-                .or(() -> goatRepository.findByRegistrationNumber(registrationNumber));
-    }
-
-    @Override
-    public Optional<GoatEntity> findByRegistrationNumber(String registrationNumber) {
-        return registrationNumber == null ? Optional.empty() : goatRepository.findByRegistrationNumber(registrationNumber);
-    }
-
-    @Override
     public Optional<Goat> findById(GoatId id) {
         return id == null ? Optional.empty() : goatRepository.findByTechnicalId(id.value()).map(mapper::toDomain);
     }
@@ -136,7 +116,9 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
 
     @Override
     public Optional<GoatReference> findReferenceByRegistrationNumber(String registrationNumber) {
-        return findById(registrationNumber).map(this::toReference);
+        return registrationNumber == null
+                ? Optional.empty()
+                : goatRepository.findByRegistrationNumber(registrationNumber).map(this::toReference);
     }
 
     @Override
@@ -154,49 +136,8 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     }
 
     @Override
-    public List<GoatEntity> findByGoatFarmId(Long goatFarmId) {
-        // Preferir consulta direta ao repositório para evitar filtragem em memória
-        return goatRepository.findAllByFarmId(goatFarmId, org.springframework.data.domain.Pageable.unpaged()).getContent();
-    }
-
-    @Override
-    public long countByFarmId(Long goatFarmId) {
-        return goatRepository.countByFarmId(goatFarmId);
-    }
-
-    @Override
-    public long countByFarmIdAndGender(Long goatFarmId, Gender gender) {
-        return goatRepository.countByFarmIdAndGender(goatFarmId, gender);
-    }
-
-    @Override
-    public long countByFarmIdAndStatus(Long goatFarmId, GoatStatus status) {
-        return goatRepository.countByFarmIdAndStatus(goatFarmId, status);
-    }
-
-    @Override
-    public long countByFarmIdWithoutBreed(Long goatFarmId) {
-        return goatRepository.countByFarmIdWithoutBreed(goatFarmId);
-    }
-
-    @Override
-    public List<GoatBreedCountProjection> countBreedsByFarmId(Long goatFarmId) {
-        return goatRepository.countBreedsByFarmId(goatFarmId);
-    }
-
-    @Override
-    public Page<GoatEntity> findAllByFarmId(Long goatFarmId, Pageable pageable) {
-        return goatRepository.findAllByFarmId(goatFarmId, pageable);
-    }
-
-    @Override
     public GoatPage<Goat> findAllByFarmId(Long farmId, GoatPageQuery query) {
         return toDomainPage(goatRepository.findAllByFarmId(farmId, toPageable(query)));
-    }
-
-    @Override
-    public Page<GoatEntity> findAllByFarmIdAndBreed(Long goatFarmId, GoatBreed breed, Pageable pageable) {
-        return goatRepository.findAllByFarmIdAndBreed(goatFarmId, breed, pageable);
     }
 
     @Override
@@ -205,18 +146,8 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     }
 
     @Override
-    public Page<GoatEntity> findByNameAndFarmId(Long goatFarmId, String name, Pageable pageable) {
-        return goatRepository.findByNameAndFarmId(goatFarmId, name, pageable);
-    }
-
-    @Override
     public GoatPage<Goat> findByNameAndFarmId(Long farmId, String name, GoatPageQuery query) {
         return toDomainPage(goatRepository.findByNameAndFarmId(farmId, name, toPageable(query)));
-    }
-
-    @Override
-    public Page<GoatEntity> findByNameAndFarmIdAndBreed(Long goatFarmId, String name, GoatBreed breed, Pageable pageable) {
-        return goatRepository.findByNameAndFarmIdAndBreed(goatFarmId, name, breed, pageable);
     }
 
     @Override
@@ -225,19 +156,9 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     }
 
     @Override
-    public List<GoatEntity> findOffspringByParentRegistration(Long goatFarmId, String parentRegistrationNumber) {
-        return goatRepository.findOffspringByParentRegistration(goatFarmId, parentRegistrationNumber);
-    }
-
-    @Override
     public List<Goat> findOffspringByParentId(Long farmId, GoatId parentId) {
         return parentId == null ? List.of() : goatRepository.findOffspringByParentTechnicalId(farmId, parentId.value())
                 .stream().map(mapper::toDomain).toList();
-    }
-
-    @Override
-    public Optional<GoatEntity> findByIdAndFarmId(String id, Long farmId) {
-        return findLegacyToken(id, farmId);
     }
 
     @Override
@@ -262,11 +183,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     }
 
     @Override
-    public void deleteById(String registrationNumber) {
-        goatRepository.findByRegistrationNumber(registrationNumber).ifPresent(goatRepository::delete);
-    }
-
-    @Override
     public void deleteById(GoatId id) {
         goatRepository.findByTechnicalId(id.value()).ifPresent(goatRepository::delete);
     }
@@ -274,11 +190,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
     @Override
     public boolean existsByRegistrationNumber(String registrationNumber) {
         return goatRepository.existsByRegistrationNumber(registrationNumber);
-    }
-
-    @Override
-    public void deleteGoatsFromOtherUsers(Long adminId) {
-        goatRepository.deleteGoatsFromOtherUsers(adminId);
     }
 
     @Override
@@ -358,7 +269,8 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
                 GoatId.of(goat.getTechnicalId()),
                 goat.getFarm() == null ? null : goat.getFarm().getId(),
                 goat.getRegistrationNumber(),
-                goat.getName()
+                goat.getName(),
+                goat.getGender()
         );
     }
 
@@ -366,6 +278,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, LegacyGoatPe
         if (token == null || farmId == null) return Optional.empty();
         return GoatRouteIdentifier.technicalId(token)
                 .flatMap(id -> goatRepository.findByTechnicalIdAndFarmId(id.value(), farmId))
-                .or(() -> goatRepository.findByIdAndFarmId(token, farmId));
+                .or(() -> goatRepository.findByRegistrationNumberAndFarmId(token, farmId));
     }
 }

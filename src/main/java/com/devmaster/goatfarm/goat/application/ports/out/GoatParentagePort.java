@@ -10,5 +10,17 @@ public interface GoatParentagePort {
                                String fatherRegistrationNumber, String motherRegistrationNumber);
 
     record ResolvedParentage(Goat.ParentReference father, Goat.ParentReference mother) {
+
+        public String externalFatherRegistrationNumber() {
+            return externalRegistration(father);
+        }
+
+        public String externalMotherRegistrationNumber() {
+            return externalRegistration(mother);
+        }
+
+        private static String externalRegistration(Goat.ParentReference reference) {
+            return reference != null && !reference.isLocal() ? reference.registrationNumber() : null;
+        }
     }
 }

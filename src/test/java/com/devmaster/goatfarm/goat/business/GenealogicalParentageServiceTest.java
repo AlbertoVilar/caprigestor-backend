@@ -3,14 +3,14 @@ package com.devmaster.goatfarm.goat.business;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
-import com.devmaster.goatfarm.goat.application.ports.out.LegacyGoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.Category;
 import com.devmaster.goatfarm.goat.enums.Gender;
-import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 class GenealogicalParentageServiceTest {
 
     @Mock
-    private LegacyGoatPersistencePort goatPersistencePort;
+    private GoatReferenceQueryPort goatReferenceQueryPort;
 
     @Mock
     private GoatValidationQueryPort goatValidationQueryPort;
@@ -43,11 +43,11 @@ class GenealogicalParentageServiceTest {
     @BeforeEach
     void setUp() {
         service = new GenealogicalParentageService(
-                goatPersistencePort,
+                goatReferenceQueryPort,
                 genealogyAbccQueryPort,
                 new GoatGenderValidator(goatValidationQueryPort)
         );
-        org.mockito.Mockito.lenient().when(goatPersistencePort.findByRegistrationNumber(anyString())).thenReturn(Optional.empty());
+        org.mockito.Mockito.lenient().when(goatReferenceQueryPort.findReferenceByRegistrationNumber(anyString())).thenReturn(Optional.empty());
         org.mockito.Mockito.lenient().when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber(anyString())).thenReturn(Optional.empty());
     }
 
@@ -60,7 +60,7 @@ class GenealogicalParentageServiceTest {
                 null
         );
 
-        assertThat(result.father()).isNull();
+        assertThat(result.father().isLocal()).isFalse();
         assertThat(result.externalFatherRegistrationNumber()).isEqualTo("1635719026A");
         assertThat(result.mother()).isNull();
         assertThat(result.externalMotherRegistrationNumber()).isNull();
@@ -76,28 +76,26 @@ class GenealogicalParentageServiceTest {
 
     @Test
     void acceptsLocalParentsIncludingAFatherFromAnotherFarmWithoutChangingOwnership() {
-        GoatEntity father = goat("FATHER-001", Gender.MACHO);
-        GoatFarm otherFarm = new GoatFarm();
-        otherFarm.setId(99L);
-        father.setFarm(otherFarm);
-        GoatEntity mother = goat("MOTHER-001", Gender.FEMEA);
-        when(goatPersistencePort.findByRegistrationNumber("FATHER-001")).thenReturn(Optional.of(father));
-        when(goatPersistencePort.findByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
+        GoatReference father = goat("FATHER-001", Gender.MACHO, 11L, 99L);
+        GoatReference mother = goat("MOTHER-001", Gender.FEMEA, 12L, 10L);
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("FATHER-001")).thenReturn(Optional.of(father));
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
 
         GenealogicalParentageService.ResolvedParentage result = service.resolve(
                 Category.PO, "KID-001", "FATHER-001", "MOTHER-001"
         );
 
-        assertThat(result.father()).isSameAs(father);
-        assertThat(result.mother()).isSameAs(mother);
-        assertThat(father.getFarm().getId()).isEqualTo(99L);
+        assertThat(result.father().id()).isEqualTo(new GoatId(11L));
+        assertThat(result.father().registrationNumber()).isEqualTo("FATHER-001");
+        assertThat(result.mother().id()).isEqualTo(new GoatId(12L));
+        assertThat(father.farmId()).isEqualTo(99L);
         assertThat(result.externalFatherRegistrationNumber()).isNull();
     }
 
     @Test
     void rejectsALocalFemaleDeclaredAsFather() {
-        when(goatPersistencePort.findByRegistrationNumber("FEMALE-001"))
-                .thenReturn(Optional.of(goat("FEMALE-001", Gender.FEMEA)));
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("FEMALE-001"))
+                .thenReturn(Optional.of(goat("FEMALE-001", Gender.FEMEA, 13L, 10L)));
 
         assertThatThrownBy(() -> service.resolve(Category.PA, "KID-001", "FEMALE-001", null))
                 .isInstanceOf(BusinessRuleException.class)
@@ -116,8 +114,8 @@ class GenealogicalParentageServiceTest {
 
     @Test
     void acceptsAnAbccFatherAndPreservesTheAlphabeticRegistrationSuffix() {
-        GoatEntity mother = goat("MOTHER-001", Gender.FEMEA);
-        when(goatPersistencePort.findByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
+        GoatReference mother = goat("MOTHER-001", Gender.FEMEA, 12L, 10L);
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("MOTHER-001")).thenReturn(Optional.of(mother));
         when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635719026A"))
                 .thenReturn(Optional.of(snapshot("1635719026A", Gender.MACHO)));
 
@@ -125,9 +123,9 @@ class GenealogicalParentageServiceTest {
                 Category.PO, "KID-001", "1635719026a", "MOTHER-001"
         );
 
-        assertThat(result.father()).isNull();
+        assertThat(result.father().isLocal()).isFalse();
         assertThat(result.externalFatherRegistrationNumber()).isEqualTo("1635719026A");
-        assertThat(result.mother()).isSameAs(mother);
+        assertThat(result.mother().id()).isEqualTo(new GoatId(12L));
     }
 
     @Test
@@ -147,11 +145,8 @@ class GenealogicalParentageServiceTest {
                 .hasMessage("A consulta à ABCC está temporariamente indisponível.");
     }
 
-    private GoatEntity goat(String registrationNumber, Gender gender) {
-        GoatEntity goat = new GoatEntity();
-        goat.setRegistrationNumber(registrationNumber);
-        goat.setGender(gender);
-        return goat;
+    private GoatReference goat(String registrationNumber, Gender gender, Long id, Long farmId) {
+        return new GoatReference(new GoatId(id), farmId, registrationNumber, registrationNumber, gender);
     }
 
     private GenealogyAbccSnapshotVO snapshot(String registrationNumber, Gender gender) {

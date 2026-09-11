@@ -11,8 +11,7 @@ import java.util.Optional;
  * Persistence boundary owned by the Goat application core.
  *
  * <p>No Spring Data, JPA entity or infrastructure projection crosses this
- * interface. Transitional legacy modules use {@link LegacyGoatPersistencePort}
- * until their own migration waves are complete.</p>
+ * interface.</p>
  */
 public interface GoatPersistencePort {
 

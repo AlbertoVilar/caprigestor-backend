@@ -153,10 +153,10 @@ class GoatAbccAuthorizationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(confirmPayload("confirm-anonymous", "1615303006")))
                 .andExpect(status().isUnauthorized());
 
-        assertThat(goatRepository.findByIdAndFarmId("1615303001", managedFarm.getId())).isPresent();
-        assertThat(goatRepository.findByIdAndFarmId("1615303002", managedFarm.getId())).isPresent();
-        assertThat(goatRepository.findByIdAndFarmId("1615303003", managedFarm.getId())).isEmpty();
-        assertThat(goatRepository.findByIdAndFarmId("1615303004", managedFarm.getId())).isEmpty();
+        assertThat(goatRepository.findByRegistrationNumberAndFarmId("1615303001", managedFarm.getId())).isPresent();
+        assertThat(goatRepository.findByRegistrationNumberAndFarmId("1615303002", managedFarm.getId())).isPresent();
+        assertThat(goatRepository.findByRegistrationNumberAndFarmId("1615303003", managedFarm.getId())).isEmpty();
+        assertThat(goatRepository.findByRegistrationNumberAndFarmId("1615303004", managedFarm.getId())).isEmpty();
     }
 
     @Test
