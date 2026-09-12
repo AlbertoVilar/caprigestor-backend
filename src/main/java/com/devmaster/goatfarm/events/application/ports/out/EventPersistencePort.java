@@ -30,5 +30,4 @@ public interface EventPersistencePort {
 
     void deleteById(Long id);
 
-    void deleteEventsFromOtherUsers(Long adminId);
 }

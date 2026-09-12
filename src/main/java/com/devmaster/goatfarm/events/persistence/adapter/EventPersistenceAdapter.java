@@ -88,11 +88,6 @@ public class EventPersistenceAdapter implements EventPersistencePort {
         eventRepository.deleteById(id);
     }
 
-    @Override
-    public void deleteEventsFromOtherUsers(Long adminId) {
-        eventRepository.deleteEventsFromOtherUsers(adminId);
-    }
-
     private OperationalEvent toDomain(Event entity) {
         GoatEntity goat = entity.getGoat();
         if (goat == null || goat.getTechnicalId() == null) {

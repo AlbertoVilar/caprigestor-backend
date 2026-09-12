@@ -87,8 +87,4 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort, Farm
         repository.deleteById(id);
     }
 
-    @Override
-    public void deleteGoatFarmsFromOtherUsers(Long adminId) {
-        repository.deleteGoatFarmsFromOtherUsers(adminId);
-    }
 }

@@ -117,11 +117,6 @@ public class EventBusiness implements EventManagementUseCase {
         eventPersistencePort.deleteById(eventId);
     }
 
-    @Override
-    public void deleteEventsFromOtherUsers(Long adminId) {
-        eventPersistencePort.deleteEventsFromOtherUsers(adminId);
-    }
-
     private GoatReference requireGoat(Long farmId, String registrationNumber) {
         return goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registrationNumber, farmId)
                 .orElseGet(() -> {

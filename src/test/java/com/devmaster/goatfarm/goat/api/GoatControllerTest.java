@@ -64,9 +64,6 @@ class GoatControllerTest {
     private GoatRegistrationRectificationUseCase registrationRectificationUseCase;
 
     @MockBean
-    private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
-
-    @MockBean
     private OwnershipService ownershipService;
 
     private GoatResponseDTO goatResponseDTO;

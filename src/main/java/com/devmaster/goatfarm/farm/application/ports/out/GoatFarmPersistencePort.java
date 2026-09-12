@@ -25,5 +25,4 @@ public interface GoatFarmPersistencePort {
 
     GoatFarm save(GoatFarm goatFarm);
     void deleteById(Long id);
-    void deleteGoatFarmsFromOtherUsers(Long adminId);
 }

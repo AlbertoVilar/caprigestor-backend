@@ -41,8 +41,4 @@ public class AddressPersistenceAdapter implements AddressPersistencePort {
         return addressRepository.searchExactAddress(street, neighborhood, city, state, zipCode);
     }
 
-    @Override
-    public void deleteAddressesFromOtherUsers(Long adminId) {
-        addressRepository.deleteAddressesFromOtherUsers(adminId);
-    }
 }

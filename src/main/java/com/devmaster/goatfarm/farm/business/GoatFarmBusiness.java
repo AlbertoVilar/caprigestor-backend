@@ -94,11 +94,6 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     }
 
     @Transactional
-    public void deleteGoatFarmsFromOtherUsers(Long adminId) {
-        goatFarmPort.deleteGoatFarmsFromOtherUsers(adminId);
-    }
-
-    @Transactional
     public GoatFarmFullResponseVO createGoatFarm(GoatFarmFullRequestVO fullRequestVO) {
         User currentUser = currentPrincipalQuery.findCurrent()
                 .flatMap(principal -> userBusiness.findUserByEmail(principal.email()))

@@ -23,5 +23,4 @@ public interface AddressPersistencePort {
                                          String state,
                                          String zipCode);
 
-    void deleteAddressesFromOtherUsers(Long adminId);
 }

@@ -175,16 +175,6 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         return authorityBusinessMapper.toResponseVO(saved);
     }
 
-    @Transactional
-    public void deleteRolesFromOtherUsers(Long adminId) {
-        userPort.deleteRolesFromOtherUsers(adminId);
-    }
-
-    @Transactional
-    public void deleteOtherUsers(Long adminId) {
-        userPort.deleteOtherUsers(adminId);
-    }
-
     private void validateUserData(UserRequestVO vo, boolean isCreation) {
         if (isCreation) {
             if (vo.getName() == null || vo.getName().trim().isEmpty()) {

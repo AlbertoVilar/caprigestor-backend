@@ -23,6 +23,9 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
   `business`) de depender diretamente de
   `org.springframework.data.jpa.repository.JpaRepository`. A baseline desse
   guard é zero.
+- A superfície HTTP não pode reintroduzir endpoints globais de limpeza ou
+  recriação administrativa. Qualquer reset de DEV deve permanecer em tooling
+  explícito, fora do fluxo REST, com credenciais externas.
 - `codeql.yml` analisa Java em pull requests, pushes protegidos e semanalmente.
 - `dependency_review.yml` verifica dependências com Trivy e bloqueia
   vulnerabilidades altas/críticas corrigíveis.

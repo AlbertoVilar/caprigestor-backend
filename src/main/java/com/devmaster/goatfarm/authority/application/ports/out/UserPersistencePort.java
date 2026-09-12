@@ -13,6 +13,4 @@ public interface UserPersistencePort {
     Optional<User> findById(Long userId);
     User save(User user);
     void updatePassword(Long userId, String encryptedPassword);
-    void deleteRolesFromOtherUsers(Long adminId);
-    void deleteOtherUsers(Long adminId);
 }
