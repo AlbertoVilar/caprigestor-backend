@@ -19,7 +19,7 @@ class ReproductionPersistenceBoundaryArchUnitTest {
         noClasses().that().resideInAnyPackage("..reproduction.domain..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "..reproduction.persistence..", "..reproduction.api..", "org.springframework..",
-                        "jakarta.persistence..", "javax.persistence..").check(PRODUCTION_CLASSES);
+                        "jakarta.persistence..", "javax.persistence..", "org.hibernate..").check(PRODUCTION_CLASSES);
     }
 
     @Test
