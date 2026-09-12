@@ -112,11 +112,19 @@ do módulo Milk sobre tabelas de reprodução.
 ## Dívida arquitetural conhecida
 
 Nem todo o core já está livre de tecnologia de persistência. O baseline de
-`ApplicationPortPersistenceBoundaryArchUnitTest` contém os 14 pares explícitos
-que a DEV-A11-R já identificou e classificou como violações legadas de ports de
-aplicação para entidades JPA. É dívida de migração conhecida, a ser removida
-progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem aprovação
-arquitetural.
+`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 11 pares
+explícitos que a DEV-A11-R identificou e classificou como violações legadas de
+ports de aplicação para entidades JPA. É dívida de migração conhecida, a ser
+removida progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem
+aprovação arquitetural.
+
+A boundary DEV-A11-I2 de Authority/Security está concluída. O core Authority
+tem zero dependências de infraestrutura concreta de Spring Security e zero
+dependências de entidades JPA de Authority; os contratos de conta, papel,
+refresh e recuperação usam modelos da aplicação. A antiga I2-D/I2-E não deve
+ser recriada como waves independentes. A ponte `FarmUserPersistencePort` para
+`User` é dívida cross-module/persistence transitória de I3. A atomicidade
+concorrente do consumo de token de recuperação é hardening de segurança separado.
 
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
 de autenticação em módulos específicos. Guards globais de zero tolerância para
@@ -158,7 +166,7 @@ uma nova implementação de GoatId.
 |---|---|
 | `HexagonalArchitectureGuardTest` | Impede import indevido de `business` para `api`. |
 | `GlobalHexagonalBoundaryArchUnitTest` | Protege domain, controllers, confinamento de `SecurityContextHolder` e ausência de `JpaRepository` no core. |
-| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado de 14 ports para entities. |
+| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 11 ports para entities. |
 | `OwnershipSecurityBoundaryArchUnitTest` | Protege ports críticos de segurança, ownership, validação e eventos. |
 | `AuthorityPasswordBoundaryArchUnitTest` | Impede `PasswordEncoder` no core Authority. |
 | `AuthorityAuthenticationBoundaryArchUnitTest` | Impede APIs concretas de autenticação/JWT no core Authority. |
