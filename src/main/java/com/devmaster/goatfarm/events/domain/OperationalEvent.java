@@ -1,7 +1,6 @@
 package com.devmaster.goatfarm.events.domain;
 
 import com.devmaster.goatfarm.events.enums.EventType;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 
 import java.time.LocalDate;
@@ -24,7 +23,7 @@ public record OperationalEvent(
         String outcome
 ) {
     public static OperationalEvent create(
-            GoatReference goat,
+            GoatEventReference goat,
             EventType eventType,
             LocalDate date,
             String description,
