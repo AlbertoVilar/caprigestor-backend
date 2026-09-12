@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.authority.application.ports.out.PasswordResetMailP
 import com.devmaster.goatfarm.authority.application.ports.out.PasswordResetTokenPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.PasswordHashingPort;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetConfirmVO;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetRequestVO;
 import com.devmaster.goatfarm.authority.persistence.entity.PasswordResetToken;
@@ -16,7 +17,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -46,7 +46,7 @@ class PasswordResetBusinessTest {
     private RefreshSessionPersistencePort refreshSessionPersistencePort;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private PasswordHashingPort passwordHashingPort;
 
     private PasswordResetBusiness passwordResetBusiness;
     private Clock clock;
@@ -60,7 +60,7 @@ class PasswordResetBusinessTest {
                 passwordResetTokenPersistencePort,
                 passwordResetMailPort,
                 refreshSessionPersistencePort,
-                passwordEncoder,
+                passwordHashingPort,
                 30,
                 60,
                 clock
@@ -142,7 +142,7 @@ class PasswordResetBusinessTest {
                 .build();
 
         when(passwordResetTokenPersistencePort.findByTokenHash(anyString())).thenReturn(Optional.of(token));
-        when(passwordEncoder.encode("NovaSenha123")).thenReturn("encoded-new");
+        when(passwordHashingPort.hash("NovaSenha123")).thenReturn("encoded-new");
         when(passwordResetTokenPersistencePort.save(any(PasswordResetToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = passwordResetBusiness.confirmPasswordReset(PasswordResetConfirmVO.builder()

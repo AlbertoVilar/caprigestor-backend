@@ -67,6 +67,10 @@ Serviços de negócio não injetam `OwnershipService` concreto nem entidades `Us
 para decisões de acesso. `JwtService` recebe `AuthenticatedPrincipal`, mantendo
 o mapeamento persistente no caso de uso de autenticação.
 
+No Authority, hashing de senha é uma saída da aplicação (`PasswordHashingPort`).
+`PasswordHashingAdapter`, em `config.security`, delega ao `PasswordEncoder`
+configurado sem expor Spring Security ao business/application.
+
 ### Goat e eventos
 
 `GoatGenderValidator` usa `GoatValidationQueryPort.GoatValidationSnapshot`, e

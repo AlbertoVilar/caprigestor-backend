@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.PasswordHashingPort;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
@@ -14,7 +15,6 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,17 +27,17 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     private final UserPersistencePort userPort;
     private final RolePersistencePort rolePort;
     private final AuthorityBusinessMapper authorityBusinessMapper;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHashingPort passwordHashingPort;
     private final RefreshSessionPersistencePort refreshSessionPersistencePort;
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, AuthorityBusinessMapper authorityBusinessMapper,
-                        PasswordEncoder passwordEncoder, RefreshSessionPersistencePort refreshSessionPersistencePort,
+                        PasswordHashingPort passwordHashingPort, RefreshSessionPersistencePort refreshSessionPersistencePort,
                         CurrentPrincipalQueryUseCase currentPrincipalQuery) {
         this.userPort = userPort;
         this.rolePort = rolePort;
         this.authorityBusinessMapper = authorityBusinessMapper;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHashingPort = passwordHashingPort;
         this.refreshSessionPersistencePort = refreshSessionPersistencePort;
         this.currentPrincipalQuery = currentPrincipalQuery;
     }
@@ -54,7 +54,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
             throw new DuplicateEntityException("Já existe um usuário cadastrado com o CPF: " + vo.getCpf());
         }
 
-        String encryptedPassword = passwordEncoder.encode(vo.getPassword());
+        String encryptedPassword = passwordHashingPort.hash(vo.getPassword());
         Set<Role> resolvedRoles = resolveUserRoles(vo);
 
         User user = authorityBusinessMapper.toEntity(vo);
@@ -91,7 +91,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
 
         String encryptedPassword = null;
         if (vo.getPassword() != null && !vo.getPassword().trim().isEmpty()) {
-            encryptedPassword = passwordEncoder.encode(vo.getPassword());
+            encryptedPassword = passwordHashingPort.hash(vo.getPassword());
         }
 
         Set<Role> resolvedRoles = null;
@@ -148,7 +148,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
 
         requireAdmin("Apenas administradores podem atualizar senhas pela API administrativa.");
 
-        String encrypted = passwordEncoder.encode(newPassword);
+        String encrypted = passwordHashingPort.hash(newPassword);
         userPort.updatePassword(userId, encrypted);
         refreshSessionPersistencePort.revokeAllForUser(userId, Instant.now(), "password_changed_by_admin");
     }
@@ -233,7 +233,7 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
                     User user = authorityBusinessMapper.toEntity(vo);
                     Set<Role> roles = resolveUserRoles(vo);
                     roles.forEach(user::addRole);
-                    user.setPassword(passwordEncoder.encode(vo.getPassword()));
+                    user.setPassword(passwordHashingPort.hash(vo.getPassword()));
                     return userPort.save(user);
                 });
     }

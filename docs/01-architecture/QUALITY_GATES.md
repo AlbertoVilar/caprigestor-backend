@@ -23,6 +23,9 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
   `business`) de depender diretamente de
   `org.springframework.data.jpa.repository.JpaRepository`. A baseline desse
   guard é zero.
+- `AuthorityPasswordBoundaryArchUnitTest` mantém zero dependências de
+  `PasswordEncoder` nos pacotes `authority.application` e `authority.business`;
+  o encoder permanece permitido em configuração, adapters e bootstrap.
 - A superfície HTTP não pode reintroduzir endpoints globais de limpeza ou
   recriação administrativa. Qualquer reset de DEV deve permanecer em tooling
   explícito, fora do fluxo REST, com credenciais externas.

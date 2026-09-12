@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.PasswordHashingPort;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
@@ -21,7 +22,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +49,7 @@ class UserBusinessTest {
     private AuthorityBusinessMapper authorityBusinessMapper;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private PasswordHashingPort passwordHashingPort;
 
     @Mock
     private RefreshSessionPersistencePort refreshSessionPersistencePort;
@@ -105,7 +105,7 @@ class UserBusinessTest {
         when(userPort.findByEmail("joao@email.com")).thenReturn(Optional.empty());
         when(userPort.findByCpf("12345678900")).thenReturn(Optional.empty());
         when(rolePort.findByAuthority("ROLE_OPERATOR")).thenReturn(Optional.of(operatorRole));
-        when(passwordEncoder.encode("senha123")).thenReturn("$2a$10$hashedPassword");
+        when(passwordHashingPort.hash("senha123")).thenReturn("$2a$10$hashedPassword");
 
         when(authorityBusinessMapper.toEntity(any(UserRequestVO.class))).thenReturn(userEntity);
         when(userPort.save(any(User.class))).thenReturn(userEntity);
@@ -120,7 +120,7 @@ class UserBusinessTest {
 
         verify(userPort, times(1)).findByEmail("joao@email.com");
         verify(userPort, times(1)).findByCpf("12345678900");
-        verify(passwordEncoder, times(1)).encode("senha123");
+        verify(passwordHashingPort, times(1)).hash("senha123");
         verify(rolePort, times(1)).findByAuthority("ROLE_OPERATOR");
         verify(userPort, times(1)).save(any(User.class));
         verify(authorityBusinessMapper, times(1)).toResponseVO(any(User.class));
@@ -141,7 +141,7 @@ class UserBusinessTest {
 
         assertThrows(UnauthorizedException.class, () -> userBusiness.updatePassword(2L, "novaSenha123"));
 
-        verify(passwordEncoder, never()).encode(any());
+        verify(passwordHashingPort, never()).hash(any());
         verify(userPort, never()).updatePassword(any(), any());
     }
 
@@ -152,7 +152,7 @@ class UserBusinessTest {
 
         assertThrows(UnauthorizedException.class, () -> userBusiness.updatePassword(1L, "novaSenha123"));
 
-        verify(passwordEncoder, never()).encode(any());
+        verify(passwordHashingPort, never()).hash(any());
         verify(userPort, never()).updatePassword(any(), any());
     }
 
@@ -161,11 +161,11 @@ class UserBusinessTest {
     void adminCanUpdatePasswordAfterAuthorization() {
         Role adminRole = role("ROLE_ADMIN");
         authenticateAs(userEntity, adminRole);
-        when(passwordEncoder.encode("novaSenha123")).thenReturn("senha-codificada");
+        when(passwordHashingPort.hash("novaSenha123")).thenReturn("senha-codificada");
 
         userBusiness.updatePassword(2L, "novaSenha123");
 
-        verify(passwordEncoder).encode("novaSenha123");
+        verify(passwordHashingPort).hash("novaSenha123");
         verify(userPort).updatePassword(2L, "senha-codificada");
         verify(refreshSessionPersistencePort).revokeAllForUser(eq(2L), any(Instant.class), eq("password_changed_by_admin"));
     }
@@ -208,7 +208,7 @@ class UserBusinessTest {
 
         verify(userPort, never()).findById(any());
         verify(rolePort, never()).findByAuthority(any());
-        verify(passwordEncoder, never()).encode(any());
+        verify(passwordHashingPort, never()).hash(any());
         verify(userPort, never()).save(any());
     }
 

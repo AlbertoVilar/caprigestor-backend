@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.authority.application.ports.out.PasswordResetMailP
 import com.devmaster.goatfarm.authority.application.ports.out.PasswordResetTokenPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.out.PasswordHashingPort;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetConfirmVO;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetResponseVO;
@@ -15,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +44,7 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
     private final PasswordResetTokenPersistencePort passwordResetTokenPersistencePort;
     private final PasswordResetMailPort passwordResetMailPort;
     private final RefreshSessionPersistencePort refreshSessionPersistencePort;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHashingPort passwordHashingPort;
     private final long ttlMinutes;
     private final long cooldownSeconds;
     private final Clock clock;
@@ -54,10 +54,10 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
                                  PasswordResetTokenPersistencePort passwordResetTokenPersistencePort,
                                  PasswordResetMailPort passwordResetMailPort,
                                  RefreshSessionPersistencePort refreshSessionPersistencePort,
-                                 PasswordEncoder passwordEncoder,
+                                 PasswordHashingPort passwordHashingPort,
                                  @Value("${caprigestor.auth.password-reset.ttl-minutes:30}") long ttlMinutes,
                                  @Value("${caprigestor.auth.password-reset.cooldown-seconds:60}") long cooldownSeconds) {
-        this(userPersistencePort, passwordResetTokenPersistencePort, passwordResetMailPort, refreshSessionPersistencePort, passwordEncoder,
+        this(userPersistencePort, passwordResetTokenPersistencePort, passwordResetMailPort, refreshSessionPersistencePort, passwordHashingPort,
                 ttlMinutes, cooldownSeconds, Clock.systemUTC());
     }
 
@@ -65,7 +65,7 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
                           PasswordResetTokenPersistencePort passwordResetTokenPersistencePort,
                           PasswordResetMailPort passwordResetMailPort,
                           RefreshSessionPersistencePort refreshSessionPersistencePort,
-                          PasswordEncoder passwordEncoder,
+                          PasswordHashingPort passwordHashingPort,
                           long ttlMinutes,
                           long cooldownSeconds,
                           Clock clock) {
@@ -73,7 +73,7 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
         this.passwordResetTokenPersistencePort = passwordResetTokenPersistencePort;
         this.passwordResetMailPort = passwordResetMailPort;
         this.refreshSessionPersistencePort = refreshSessionPersistencePort;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHashingPort = passwordHashingPort;
         this.ttlMinutes = ttlMinutes;
         this.cooldownSeconds = cooldownSeconds;
         this.clock = clock;
@@ -143,7 +143,7 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
             throw new InvalidArgumentException("token", "Token de redefinicao expirado.");
         }
 
-        userPersistencePort.updatePassword(token.getUser().getId(), passwordEncoder.encode(newPassword));
+        userPersistencePort.updatePassword(token.getUser().getId(), passwordHashingPort.hash(newPassword));
         refreshSessionPersistencePort.revokeAllForUser(token.getUser().getId(), now, "password_reset");
         token.setUsedAt(now);
         passwordResetTokenPersistencePort.save(token);
