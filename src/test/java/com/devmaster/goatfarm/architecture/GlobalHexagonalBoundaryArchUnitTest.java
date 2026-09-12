@@ -19,7 +19,7 @@ class GlobalHexagonalBoundaryArchUnitTest {
             .importPackages("com.devmaster.goatfarm");
 
     @Test
-    void domainMustRemainIndependentFromOuterLayersAndApplicationPorts() {
+    void domainMustRemainIndependentFromOuterLayersAndApplicationLayer() {
         noClasses()
                 .that().resideInAnyPackage("..domain..")
                 .should().dependOnClassesThat().resideInAnyPackage(
@@ -30,8 +30,8 @@ class GlobalHexagonalBoundaryArchUnitTest {
                         "..api..",
                         "..persistence..",
                         "..config..",
-                        "..application.ports..")
-                .because("domain models must not depend on framework, adapter, or application-port details")
+                        "..application..")
+                .because("domain models must not depend on framework, adapter, or application-layer details")
                 .check(IMPORTED_CLASSES);
     }
 
