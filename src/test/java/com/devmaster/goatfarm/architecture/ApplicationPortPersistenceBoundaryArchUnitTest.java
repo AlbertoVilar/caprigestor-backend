@@ -36,13 +36,7 @@ class ApplicationPortPersistenceBoundaryArchUnitTest {
                     + " -> com.devmaster.goatfarm.article.persistence.entity.Article",
             "com.devmaster.goatfarm.audit.application.ports.out.OperationalAuditPersistencePort"
                     + " -> com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry",
-            "com.devmaster.goatfarm.authority.application.ports.out.PasswordResetTokenPersistencePort"
-                    + " -> com.devmaster.goatfarm.authority.persistence.entity.PasswordResetToken",
-            "com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort"
-                    + " -> com.devmaster.goatfarm.authority.persistence.entity.RefreshSession",
-            "com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort"
-                    + " -> com.devmaster.goatfarm.authority.persistence.entity.Role",
-            "com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort"
+            "com.devmaster.goatfarm.farm.application.ports.out.FarmUserPersistencePort"
                     + " -> com.devmaster.goatfarm.authority.persistence.entity.User",
             "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
                     + " -> com.devmaster.goatfarm.commercial.persistence.entity.AnimalSale",

@@ -1,8 +1,12 @@
 package com.devmaster.goatfarm.authority.persistence.adapter;
 
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.business.bo.RefreshSessionRecord;
 import com.devmaster.goatfarm.authority.persistence.entity.RefreshSession;
+import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.persistence.mapper.AuthorityPersistenceMapper;
 import com.devmaster.goatfarm.authority.persistence.repository.RefreshSessionRepository;
+import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -13,19 +17,26 @@ import java.util.UUID;
 public class RefreshSessionPersistenceAdapter implements RefreshSessionPersistencePort {
 
     private final RefreshSessionRepository repository;
+    private final UserRepository userRepository;
+    private final AuthorityPersistenceMapper mapper;
 
-    public RefreshSessionPersistenceAdapter(RefreshSessionRepository repository) {
+    public RefreshSessionPersistenceAdapter(RefreshSessionRepository repository, UserRepository userRepository,
+                                            AuthorityPersistenceMapper mapper) {
         this.repository = repository;
+        this.userRepository = userRepository;
+        this.mapper = mapper;
     }
 
     @Override
-    public Optional<RefreshSession> findByTokenHashForUpdate(String tokenHash) {
-        return repository.findByTokenHashForUpdate(tokenHash);
+    public Optional<RefreshSessionRecord> findByTokenHashForUpdate(String tokenHash) {
+        return repository.findByTokenHashForUpdate(tokenHash).map(mapper::toRefreshSession);
     }
 
     @Override
-    public RefreshSession save(RefreshSession refreshSession) {
-        return repository.save(refreshSession);
+    public RefreshSessionRecord save(RefreshSessionRecord refreshSession) {
+        User user = userRepository.findById(refreshSession.getUser().id())
+                .orElseThrow(() -> new IllegalStateException("Usuário da sessão não encontrado"));
+        return mapper.toRefreshSession(repository.save(mapper.toEntity(refreshSession, user)));
     }
 
     @Override

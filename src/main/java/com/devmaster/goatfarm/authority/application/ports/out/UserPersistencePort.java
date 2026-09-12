@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.authority.application.ports.out;
 
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
 
 import java.util.Optional;
 
@@ -8,9 +8,9 @@ import java.util.Optional;
  * Porta de saída para persistência de usuários.
  */
 public interface UserPersistencePort {
-    Optional<User> findByEmail(String email);
-    Optional<User> findByCpf(String cpf);
-    Optional<User> findById(Long userId);
-    User save(User user);
+    Optional<AuthorityAccount> findByEmail(String email);
+    Optional<AuthorityAccount> findByCpf(String cpf);
+    Optional<AuthorityAccount> findById(Long userId);
+    AuthorityAccount save(AuthorityAccount user);
     void updatePassword(Long userId, String encryptedPassword);
 }

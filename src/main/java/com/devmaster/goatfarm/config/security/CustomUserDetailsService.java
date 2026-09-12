@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.config.security;
 
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,9 +20,12 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userPort.findByEmail(username)
+        AuthorityAccount user = userPort.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario nao encontrado: " + username));
-        return user;
+        return org.springframework.security.core.userdetails.User.withUsername(user.email())
+                .password(user.encodedPassword())
+                .authorities(user.roles().toArray(String[]::new))
+                .build();
     }
 }
 

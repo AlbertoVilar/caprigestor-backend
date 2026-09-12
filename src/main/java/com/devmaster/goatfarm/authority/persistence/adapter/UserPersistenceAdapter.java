@@ -1,38 +1,50 @@
 package com.devmaster.goatfarm.authority.persistence.adapter;
 
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
+import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
+import com.devmaster.goatfarm.authority.persistence.mapper.AuthorityPersistenceMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class UserPersistenceAdapter implements UserPersistencePort {
     private final UserRepository repository;
+    private final RoleRepository roleRepository;
+    private final AuthorityPersistenceMapper mapper;
 
-    public UserPersistenceAdapter(UserRepository repository) {
+    public UserPersistenceAdapter(UserRepository repository, RoleRepository roleRepository,
+                                  AuthorityPersistenceMapper mapper) {
         this.repository = repository;
+        this.roleRepository = roleRepository;
+        this.mapper = mapper;
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return repository.findByEmail(email);
+    public Optional<AuthorityAccount> findByEmail(String email) {
+        return repository.findByEmail(email).map(mapper::toAccount);
     }
 
     @Override
-    public Optional<User> findByCpf(String cpf) {
-        return repository.findByCpf(cpf);
+    public Optional<AuthorityAccount> findByCpf(String cpf) {
+        return repository.findByCpf(cpf).map(mapper::toAccount);
     }
 
     @Override
-    public Optional<User> findById(Long userId) {
-        return repository.findById(userId);
+    public Optional<AuthorityAccount> findById(Long userId) {
+        return repository.findById(userId).map(mapper::toAccount);
     }
 
     @Override
-    public User save(User user) {
-        return repository.save(user);
+    public AuthorityAccount save(AuthorityAccount account) {
+        User entity = mapper.toEntity(account);
+        account.roles().stream().map(roleRepository::findByAuthority)
+                .flatMap(Optional::stream).forEach(entity::addRole);
+        return mapper.toAccount(repository.save(entity));
     }
 
     @Override

@@ -8,11 +8,11 @@ import com.devmaster.goatfarm.authority.business.bo.LoginRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.LoginResponseVO;
 import com.devmaster.goatfarm.authority.business.bo.RefreshTokenRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
 import com.devmaster.goatfarm.authority.business.bo.IssuedRefreshToken;
 import com.devmaster.goatfarm.authority.business.bo.RefreshTokenClaims;
+import com.devmaster.goatfarm.authority.business.bo.RefreshSessionRecord;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.authority.persistence.entity.RefreshSession;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import org.slf4j.Logger;
@@ -72,12 +72,12 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             logger.warn("event=login_failed reason=bad_credentials");
             throw exception;
         }
-        User user = userPort.findById(principal.id())
+        AuthorityAccount user = userPort.findById(principal.id())
                 .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + principal.email()));
         String accessToken = authTokenPort.issueAccessToken(principal);
         IssuedRefreshToken refreshToken = authTokenPort.issueRefreshToken(principal, null);
         persistRefreshSession(user, refreshToken);
-        logger.info("event=login_succeeded userId={}", user.getId());
+        logger.info("event=login_succeeded userId={}", user.id());
 
         return authorityBusinessMapper.toLoginResponseVO(user, accessToken, refreshToken.token(), authTokenPort.accessTokenDurationSeconds());
     }
@@ -87,7 +87,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         logger.info("event=token_refresh_attempt");
 
         String rawToken = refreshRequest.getRefreshToken();
-        RefreshSession currentSession;
+        RefreshSessionRecord currentSession;
         String email;
         try {
             RefreshTokenClaims claims = authTokenPort.decodeRefreshToken(rawToken);
@@ -115,8 +115,8 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             throw new UnauthorizedException("Token inválido ou expirado");
         }
 
-        User user = currentSession.getUser();
-        if (!email.equals(user.getEmail())) {
+        AuthorityAccount user = currentSession.getUser();
+        if (!email.equals(user.email())) {
             refreshSessionPort.revokeFamily(currentSession.getFamilyId(), now, "refresh_subject_mismatch");
             throw new UnauthorizedException("Token inválido ou expirado");
         }
@@ -124,7 +124,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         AuthenticatedPrincipal principal = toPrincipal(user);
         String newAccessToken = authTokenPort.issueAccessToken(principal);
         IssuedRefreshToken newRefreshToken = authTokenPort.issueRefreshToken(principal, currentSession.getFamilyId());
-        RefreshSession replacement = persistRefreshSession(user, newRefreshToken);
+        RefreshSessionRecord replacement = persistRefreshSession(user, newRefreshToken);
         refreshSessionPort.setReplacement(currentSession.getId(), replacement.getId());
 
         return authorityBusinessMapper.toLoginResponseVO(user, newAccessToken, newRefreshToken.token(), authTokenPort.accessTokenDurationSeconds());
@@ -143,11 +143,11 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
             if (!"refresh".equals(claims.type())) {
                 throw new UnauthorizedException("Token inválido ou expirado");
             }
-            RefreshSession session = refreshSessionPort.findByTokenHashForUpdate(hashToken(refreshRequest.getRefreshToken()))
+            RefreshSessionRecord session = refreshSessionPort.findByTokenHashForUpdate(hashToken(refreshRequest.getRefreshToken()))
                     .orElseThrow(() -> new UnauthorizedException("Token inválido ou expirado"));
             Instant now = Instant.now(clock);
             refreshSessionPort.revokeFamily(session.getFamilyId(), now, "logout");
-            logger.info("event=logout_succeeded userId={}", session.getUser().getId());
+            logger.info("event=logout_succeeded userId={}", session.getUser().id());
         } catch (UnauthorizedException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -156,22 +156,16 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
     }
 
-    private RefreshSession persistRefreshSession(User user, IssuedRefreshToken issuedToken) {
-        return refreshSessionPort.save(RefreshSession.builder()
-                .user(user)
-                .tokenHash(hashToken(issuedToken.token()))
-                .tokenId(issuedToken.tokenId())
-                .familyId(issuedToken.familyId())
-                .issuedAt(issuedToken.issuedAt())
-                .expiresAt(issuedToken.expiresAt())
-                .build());
+    private RefreshSessionRecord persistRefreshSession(AuthorityAccount user, IssuedRefreshToken issuedToken) {
+        return refreshSessionPort.save(new RefreshSessionRecord(null, user, hashToken(issuedToken.token()),
+                issuedToken.tokenId(), issuedToken.familyId(), issuedToken.issuedAt(), issuedToken.expiresAt(), null, null));
     }
 
-    private void validateSessionClaims(RefreshSession session, String tokenId, String familyId, String userId) {
+    private void validateSessionClaims(RefreshSessionRecord session, String tokenId, String familyId, String userId) {
         try {
             if (!session.getTokenId().equals(UUID.fromString(tokenId))
                     || !session.getFamilyId().equals(UUID.fromString(familyId))
-                    || !session.getUser().getId().equals(Long.valueOf(userId))) {
+                    || !session.getUser().id().equals(Long.valueOf(userId))) {
                 throw new UnauthorizedException("Token inválido ou expirado");
             }
         } catch (IllegalArgumentException exception) {
@@ -179,7 +173,7 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
     }
 
-    private boolean isSessionInactive(RefreshSession session, Instant now) {
+    private boolean isSessionInactive(RefreshSessionRecord session, Instant now) {
         return session.getConsumedAt() != null || session.getRevokedAt() != null
                 || session.getExpiresAt() == null || !session.getExpiresAt().isAfter(now);
     }
@@ -192,12 +186,12 @@ public class AuthBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
     }
 
-    private AuthenticatedPrincipal toPrincipal(User user) {
+    private AuthenticatedPrincipal toPrincipal(AuthorityAccount user) {
         return new AuthenticatedPrincipal(
-                user.getId(),
-                user.getEmail(),
-                user.getName(),
-                user.getRoles().stream().map(role -> role.getAuthority()).collect(java.util.stream.Collectors.toSet())
+                user.id(),
+                user.email(),
+                user.name(),
+                user.roles()
         );
     }
 }

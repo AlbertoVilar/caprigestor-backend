@@ -9,8 +9,8 @@ import com.devmaster.goatfarm.authority.application.ports.out.PasswordHashingPor
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetConfirmVO;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetResponseVO;
-import com.devmaster.goatfarm.authority.persistence.entity.PasswordResetToken;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
+import com.devmaster.goatfarm.authority.business.bo.PasswordResetTokenRecord;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,33 +82,29 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
     @Override
     public PasswordResetResponseVO requestPasswordReset(PasswordResetRequestVO requestVO) {
         String normalizedEmail = normalizeEmail(requestVO == null ? null : requestVO.getEmail());
-        User user = userPersistencePort.findByEmail(normalizedEmail).orElse(null);
+        AuthorityAccount user = userPersistencePort.findByEmail(normalizedEmail).orElse(null);
         if (user == null) {
             return neutralResponse();
         }
 
         Instant now = now();
-        if (isCooldownActive(user.getId(), now)) {
-            logger.info("Cooldown de recuperacao de senha ativo para userId={}", user.getId());
+        if (isCooldownActive(user.id(), now)) {
+            logger.info("Cooldown de recuperacao de senha ativo para userId={}", user.id());
             return neutralResponse();
         }
 
-        passwordResetTokenPersistencePort.revokeActiveTokens(user.getId(), now, now);
+        passwordResetTokenPersistencePort.revokeActiveTokens(user.id(), now, now);
 
         String rawToken = generateRawToken();
-        PasswordResetToken token = PasswordResetToken.builder()
-                .user(user)
-                .tokenHash(hashToken(rawToken))
-                .createdAt(now)
-                .expiresAt(now.plus(Duration.ofMinutes(ttlMinutes)))
-                .build();
+        PasswordResetTokenRecord token = new PasswordResetTokenRecord(null, user.id(), user.email(), hashToken(rawToken),
+                now.plus(Duration.ofMinutes(ttlMinutes)), null, null, now);
 
-        PasswordResetToken persisted = passwordResetTokenPersistencePort.save(token);
+        PasswordResetTokenRecord persisted = passwordResetTokenPersistencePort.save(token);
 
         try {
             passwordResetMailPort.sendPasswordResetMail(normalizedEmail, rawToken, Duration.ofMinutes(ttlMinutes));
         } catch (RuntimeException ex) {
-            logger.warn("Falha ao enviar email de recuperacao para userId={}: {}", user.getId(), ex.getMessage());
+            logger.warn("Falha ao enviar email de recuperacao para userId={}: {}", user.id(), ex.getMessage());
             persisted.setRevokedAt(now());
             passwordResetTokenPersistencePort.save(persisted);
         }
@@ -129,7 +125,7 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
             throw new InvalidArgumentException("confirmPassword", "Confirmacao de senha nao confere.");
         }
 
-        PasswordResetToken token = passwordResetTokenPersistencePort.findByTokenHash(hashToken(rawToken))
+        PasswordResetTokenRecord token = passwordResetTokenPersistencePort.findByTokenHash(hashToken(rawToken))
                 .orElseThrow(() -> new InvalidArgumentException("token", "Token de redefinicao invalido."));
 
         Instant now = now();
@@ -143,11 +139,11 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
             throw new InvalidArgumentException("token", "Token de redefinicao expirado.");
         }
 
-        userPersistencePort.updatePassword(token.getUser().getId(), passwordHashingPort.hash(newPassword));
-        refreshSessionPersistencePort.revokeAllForUser(token.getUser().getId(), now, "password_reset");
+        userPersistencePort.updatePassword(token.getUserId(), passwordHashingPort.hash(newPassword));
+        refreshSessionPersistencePort.revokeAllForUser(token.getUserId(), now, "password_reset");
         token.setUsedAt(now);
         passwordResetTokenPersistencePort.save(token);
-        passwordResetTokenPersistencePort.revokeActiveTokens(token.getUser().getId(), now, now);
+        passwordResetTokenPersistencePort.revokeActiveTokens(token.getUserId(), now, now);
 
         return PasswordResetResponseVO.builder()
                 .message(SUCCESS_MESSAGE)
@@ -156,7 +152,7 @@ public class PasswordResetBusiness implements PasswordResetManagementUseCase {
 
     private boolean isCooldownActive(Long userId, Instant now) {
         return passwordResetTokenPersistencePort.findLatestByUserId(userId)
-                .map(PasswordResetToken::getCreatedAt)
+                .map(PasswordResetTokenRecord::getCreatedAt)
                 .filter(createdAt -> createdAt.plusSeconds(cooldownSeconds).isAfter(now))
                 .isPresent();
     }

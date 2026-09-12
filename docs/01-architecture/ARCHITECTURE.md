@@ -78,6 +78,16 @@ autenticar credenciais e `AuthTokenPort` para emitir e ler metadados de tokens.
 tipo `Jwt`. O caso de uso não depende dessas APIs Spring/JWT e mantém a política
 existente de login, refresh, rotação, replay, logout e claims.
 
+`AuthorityAccount`, `AuthorityRole`, `RefreshSessionRecord` e
+`PasswordResetTokenRecord` são os modelos de aplicação usados pelo core de
+acesso. `AuthorityPersistenceMapper` e os adapters traduzem esses modelos para
+as entidades JPA `User`, `Role`, `RefreshSession` e `PasswordResetToken`.
+
+O cadastro atômico de fazenda ainda mantém a associação JPA histórica com
+`User`; essa dependência foi isolada em `FarmUserPersistencePort` e
+`FarmUserPersistenceAdapter`, fora do pacote Authority. É uma ponte transitória
+e não deve ser ampliada para novos casos de uso.
+
 ### Goat e eventos
 
 `GoatGenderValidator` usa `GoatValidationQueryPort.GoatValidationSnapshot`, e
