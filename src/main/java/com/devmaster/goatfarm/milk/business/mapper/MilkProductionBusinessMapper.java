@@ -2,31 +2,28 @@ package com.devmaster.goatfarm.milk.business.mapper;
 
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import com.devmaster.goatfarm.milk.domain.MilkProduction;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring")
-public interface MilkProductionBusinessMapper {
+@Component
+public class MilkProductionBusinessMapper {
+    public MilkProduction toEntity(MilkProductionRequestVO vo) {
+        return MilkProduction.record(null, null, null, vo.getDate(), vo.getShift(), vo.getVolumeLiters(), vo.getNotes());
+    }
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "farmId", ignore = true)
-    @Mapping(target = "goatId", ignore = true)
-    @Mapping(target = "lactation", ignore = true)
-    @Mapping(target = "status", ignore = true)
-    @Mapping(target = "canceledAt", ignore = true)
-    @Mapping(target = "canceledReason", ignore = true)
-    @Mapping(target = "recordedDuringMilkWithdrawal", ignore = true)
-    @Mapping(target = "milkWithdrawalEventId", ignore = true)
-    @Mapping(target = "milkWithdrawalEndDate", ignore = true)
-    @Mapping(target = "milkWithdrawalSource", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
-    MilkProduction toEntity(MilkProductionRequestVO vo);
+    public MilkProductionResponseVO toResponseVO(MilkProduction p) {
+        if (p == null) return null;
+        return MilkProductionResponseVO.builder().id(p.getId()).date(p.getDate()).shift(p.getShift())
+                .volumeLiters(p.getVolumeLiters()).notes(p.getNotes()).status(p.getStatus())
+                .recordedDuringMilkWithdrawal(p.isRecordedDuringMilkWithdrawal())
+                .milkWithdrawalEventId(p.getMilkWithdrawalEventId()).milkWithdrawalEndDate(p.getMilkWithdrawalEndDate())
+                .milkWithdrawalSource(p.getMilkWithdrawalSource()).canceledAt(p.getCanceledAt())
+                .canceledReason(p.getCanceledReason()).build();
+    }
 
-    MilkProductionResponseVO toResponseVO(MilkProduction entity);
-
-    List<MilkProductionResponseVO> toResponseVOList(List<MilkProduction> entities);
+    public List<MilkProductionResponseVO> toResponseVOList(List<MilkProduction> entities) {
+        return entities == null ? List.of() : entities.stream().map(this::toResponseVO).toList();
+    }
 }

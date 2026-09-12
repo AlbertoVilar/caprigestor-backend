@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.milk.application.ports.out;
 
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

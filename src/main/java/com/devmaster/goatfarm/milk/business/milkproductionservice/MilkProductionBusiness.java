@@ -18,8 +18,7 @@ import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
 import com.devmaster.goatfarm.milk.domain.Lactation;
-import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -86,9 +85,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         MilkProduction milkProduction = milkProductionMapper.toEntity(requestVO);
         milkProduction.setFarmId(farmId);
         milkProduction.setGoatId(goatId);
-        LactationEntity lactationReference = new LactationEntity();
-        lactationReference.setId(lactation.getId());
-        milkProduction.setLactation(lactationReference);
+        milkProduction.setLactationId(lactation.getId());
         milkProduction.setStatus(MilkProductionStatus.ACTIVE);
         milkProduction.setCanceledAt(null);
         milkProduction.setCanceledReason(null);
@@ -110,14 +107,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         if (milkProduction.getStatus() == MilkProductionStatus.CANCELED) {
             throw new BusinessRuleException("status", "Registro cancelado não pode ser alterado.");
         }
-
-
-        if (request.getVolumeLiters() != null) {
-            milkProduction.setVolumeLiters(request.getVolumeLiters());
-        }
-        if (request.getNotes() != null) {
-            milkProduction.setNotes(request.getNotes());
-        }
+        milkProduction.updateDetails(request.getVolumeLiters(), request.getNotes());
 
         MilkProduction saved = milkProductionPersistencePort.save(milkProduction);
         return milkProductionMapper.toResponseVO(saved);
@@ -147,9 +137,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             return;
         }
 
-        milkProduction.setStatus(MilkProductionStatus.CANCELED);
-        milkProduction.setCanceledAt(LocalDateTime.now());
-        milkProduction.setCanceledReason(null);
+        milkProduction.cancel(LocalDateTime.now(), null);
         milkProductionPersistencePort.save(milkProduction);
 
     }
@@ -216,20 +204,15 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
 
     private void applyMilkWithdrawalSnapshot(MilkProduction milkProduction, GoatWithdrawalStatusVO status) {
         if (status == null || !status.hasActiveMilkWithdrawal() || status.milkWithdrawal() == null) {
-            milkProduction.setRecordedDuringMilkWithdrawal(false);
-            milkProduction.setMilkWithdrawalEventId(null);
-            milkProduction.setMilkWithdrawalEndDate(null);
-            milkProduction.setMilkWithdrawalSource(null);
+            milkProduction.applyWithdrawalSnapshot(null, null, null);
             return;
         }
 
         String productName = status.milkWithdrawal().productName() != null && !status.milkWithdrawal().productName().isBlank()
                 ? status.milkWithdrawal().productName()
                 : status.milkWithdrawal().title();
-        milkProduction.setRecordedDuringMilkWithdrawal(true);
-        milkProduction.setMilkWithdrawalEventId(status.milkWithdrawal().eventId());
-        milkProduction.setMilkWithdrawalEndDate(status.milkWithdrawal().withdrawalEndDate());
-        milkProduction.setMilkWithdrawalSource(productName);
+        milkProduction.applyWithdrawalSnapshot(status.milkWithdrawal().eventId(),
+                status.milkWithdrawal().withdrawalEndDate(), productName);
     }
 
 }

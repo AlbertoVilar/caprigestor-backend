@@ -15,7 +15,7 @@ import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -131,16 +131,16 @@ class MilkProductionCancellationIntegrationTest {
     }
 
     @Test
-    void shouldCancelMilkProductionAndHideFromDefaultList() throws Exception {
+    void shouldCancelMilkProductionEntityAndHideFromDefaultList() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        MilkProduction production = saveMilkProduction(LocalDate.now().minusDays(1), MilkingShift.MORNING);
+        MilkProductionEntity production = saveMilkProductionEntity(LocalDate.now().minusDays(1), MilkingShift.MORNING);
 
         mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
 
-        MilkProduction canceled = milkProductionRepository.findById(production.getId()).orElseThrow();
+        MilkProductionEntity canceled = milkProductionRepository.findById(production.getId()).orElseThrow();
         assertThat(canceled.getStatus()).isEqualTo(MilkProductionStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isNotNull();
 
@@ -191,7 +191,7 @@ class MilkProductionCancellationIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate date = LocalDate.now().minusDays(1);
 
-        saveMilkProduction(date, MilkingShift.MORNING);
+        saveMilkProductionEntity(date, MilkingShift.MORNING);
 
         MilkProductionRequestDTO request = MilkProductionRequestDTO.builder()
                 .date(date)
@@ -213,7 +213,7 @@ class MilkProductionCancellationIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate date = LocalDate.now().minusDays(1);
 
-        MilkProduction production = saveMilkProduction(date, MilkingShift.MORNING);
+        MilkProductionEntity production = saveMilkProductionEntity(date, MilkingShift.MORNING);
 
         mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
@@ -236,8 +236,8 @@ class MilkProductionCancellationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 
-    private MilkProduction saveMilkProduction(LocalDate date, MilkingShift shift) {
-        MilkProduction production = new MilkProduction();
+    private MilkProductionEntity saveMilkProductionEntity(LocalDate date, MilkingShift shift) {
+        MilkProductionEntity production = new MilkProductionEntity();
         production.setFarmId(ownerFarm.getId());
         production.setGoatId(ownerGoat.getRegistrationNumber());
         production.setLactation(activeLactation);

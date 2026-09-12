@@ -1,13 +1,11 @@
 package com.devmaster.goatfarm.milk.persistence.adapter;
 
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.milk.application.model.LactationDryOffAlertSnapshot;
 import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
-import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
 import com.devmaster.goatfarm.milk.persistence.mapper.LactationPersistenceMapper;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import org.springframework.data.domain.Page;
@@ -17,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 
 @Component
 public class LactationPersistenceAdapter implements LactationPersistencePort {
@@ -86,9 +85,9 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     }
 
     @Override
-    public Page<LactationDryOffAlertSnapshot> findDryOffAlerts(Long farmId, LocalDate referenceDate, int defaultDryDays, Pageable pageable) {
-        return lactationRepository.findDryOffAlerts(farmId, referenceDate, defaultDryDays, pageable)
-                .map(this::toDryOffSnapshot);
+    public List<Lactation> findAllActiveByFarmId(Long farmId) {
+        return lactationRepository.findAllByFarmIdAndStatus(farmId, LactationStatus.ACTIVE)
+                .stream().map(lactationMapper::toDomain).toList();
     }
 
     private Optional<Long> technicalId(Long farmId, String registrationNumber) {
@@ -106,11 +105,4 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
         }
     }
 
-    private LactationDryOffAlertSnapshot toDryOffSnapshot(LactationDryOffAlertProjection projection) {
-        return new LactationDryOffAlertSnapshot(
-                projection.getLactationId(), projection.getGoatTechnicalId(), projection.getGoatId(),
-                projection.getDryAtPregnancyDays(), projection.getStartDatePregnancy(),
-                projection.getBreedingDate(), projection.getConfirmDate(), projection.getDryOffDate()
-        );
-    }
 }

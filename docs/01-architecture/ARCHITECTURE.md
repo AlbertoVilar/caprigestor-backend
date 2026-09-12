@@ -42,6 +42,13 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   - `milk.domain.Lactation` é um agregado framework-free, responsável pelas
     transições intrínsecas `ACTIVE`/`DRY`.
   - `LactationEntity` e `LactationPersistenceMapper` confinam JPA ao adapter;
+  - `MilkProduction` e `FarmMilkProduction` possuem modelos de domínio
+    independentes de framework; os nomes JPA `MilkProduction` e
+    `FarmMilkProduction` foram preservados apenas para compatibilidade de
+    consultas/tabelas;
+  - consultas farm-wide de gravidez pertencem a Reproduction por meio de
+    `PregnancyDryOffQueryUseCase`; o contexto Milk não executa SQL sobre
+    `pregnancy`;
     `LactationPersistencePort` publica apenas o agregado e snapshots de leitura.
   - `LactationBusiness` consulta produção por `MilkProductionSummaryQueryPort`,
     sem importar entidades ou projeções de persistência.

@@ -24,10 +24,11 @@ O nome de entidade JPA `Lactation` foi preservado para compatibilidade com
 consultas JPQL existentes, sem alteração de schema ou migrations.
 
 O resumo de produção é consumido por um contrato de aplicação
-(`MilkProductionSummaryQueryPort`), mantendo a entidade JPA
-`MilkProduction` confinada ao adaptador. A paginação `Page`/`Pageable` e a
-consulta nativa de alertas de secagem continuam compatibilidades deliberadas e
-estão registradas como dívida DEV-A9.
+(`MilkProductionSummaryQueryPort`), mantendo as entidades JPA de produção
+confinadas aos adaptadores. A paginação `Page`/`Pageable` continua uma
+compatibilidade deliberada. Alertas de secagem agora combinam lactações
+ativas do contexto Milk com o contrato batch `PregnancyDryOffQueryUseCase`,
+proprietário de Reproduction; Milk não consulta mais a tabela `pregnancy`.
 
 ## Regras operacionais atuais
 - `ACTIVE`: lactacao em producao, apta a receber registros de leite.
