@@ -57,8 +57,4 @@ public class PhonePersistenceAdapter implements PhonePersistencePort {
         return phoneRepository.findAllById(ids);
     }
 
-    @Override
-    public void deletePhonesFromOtherUsers(Long adminId) {
-        phoneRepository.deletePhonesFromOtherUsers(adminId);
-    }
 }

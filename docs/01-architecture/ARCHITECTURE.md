@@ -48,6 +48,9 @@ proteger um boundary ou trouxer ganho demonstrável de manutenção; uso de
 - `CurrentPrincipalQueryUseCase` entrega o principal ao core.
   `SpringSecurityCurrentPrincipalAdapter` é o único adapter que lê
   `SecurityContextHolder`; JWT não é fonte de autorização viva.
+- A API HTTP não expõe operações globais de limpeza/recriação de banco. Reset de
+  DEV é uma operação de tooling explicitamente invocada; bootstrap administrativo
+  usa configuração externa e permanece separado de destruição de dados.
 - `AuthorizationPolicyGuardTest` percorre controllers farm-scoped e impede rota
   nova sem política explícita. Também verifica `farmId` quando a policy o usa.
 - O shared kernel de gravidez entre `milk` e `reproduction` usa

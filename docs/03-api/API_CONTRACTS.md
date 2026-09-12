@@ -43,6 +43,9 @@ GoatId e a remoção do alias RG serão publicadas somente em uma versão futura
 - Respostas de segurança:
   - `401` via `CustomAuthenticationEntryPoint`
   - `403` via `CustomAccessDeniedHandler` ou `AccessDeniedException`
+- Não existem endpoints REST para limpeza global do banco ou recriação de admin.
+  Rebuild/reset de DEV é operacional e externo à API; bootstrap administrativo,
+  quando habilitado, usa configuração externa e não executa limpeza de dados.
 
 ### Autenticação e sessão
 

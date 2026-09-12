@@ -5,10 +5,8 @@ import com.devmaster.goatfarm.events.persistence.entity.Event;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -47,8 +45,4 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             @Param("farmId") Long farmId
     );
 
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM Event e WHERE e.goat IN (SELECT g FROM GoatEntity g WHERE g.farm.user.id <> :adminId)")
-    void deleteEventsFromOtherUsers(@Param("adminId") Long adminId);
 }

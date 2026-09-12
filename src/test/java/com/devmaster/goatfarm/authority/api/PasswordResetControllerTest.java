@@ -3,7 +3,6 @@ package com.devmaster.goatfarm.authority.api;
 import com.devmaster.goatfarm.authority.api.controller.PasswordResetController;
 import com.devmaster.goatfarm.authority.api.dto.PasswordResetResponseDTO;
 import com.devmaster.goatfarm.authority.application.ports.in.PasswordResetManagementUseCase;
-import com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness;
 import com.devmaster.goatfarm.authority.business.bo.PasswordResetResponseVO;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,9 +44,6 @@ class PasswordResetControllerTest {
 
     @MockBean
     private PasswordResetManagementUseCase passwordResetManagementUseCase;
-
-    @MockBean
-    private AdminMaintenanceBusiness adminMaintenanceBusiness;
 
     @Test
     void contextLoads() {

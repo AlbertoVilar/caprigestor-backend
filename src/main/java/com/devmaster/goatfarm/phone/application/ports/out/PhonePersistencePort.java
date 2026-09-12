@@ -26,5 +26,4 @@ public interface PhonePersistencePort {
 
     List<Phone> findAllByIds(List<Long> ids);
 
-    void deletePhonesFromOtherUsers(Long adminId);
 }

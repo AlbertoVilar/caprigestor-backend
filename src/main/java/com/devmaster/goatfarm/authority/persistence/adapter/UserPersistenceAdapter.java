@@ -43,13 +43,4 @@ public class UserPersistenceAdapter implements UserPersistencePort {
         });
     }
 
-    @Override
-    public void deleteRolesFromOtherUsers(Long adminId) {
-        repository.deleteRolesFromOtherUsers(adminId);
-    }
-
-    @Override
-    public void deleteOtherUsers(Long adminId) {
-        repository.deleteOtherUsers(adminId);
-    }
 }

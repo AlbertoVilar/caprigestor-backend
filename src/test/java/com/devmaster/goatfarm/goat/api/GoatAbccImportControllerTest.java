@@ -57,9 +57,6 @@ class GoatAbccImportControllerTest {
     private GoatAbccImportUseCase goatAbccImportUseCase;
 
     @MockBean
-    private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
-
-    @MockBean
     private OwnershipService ownershipService;
 
     @BeforeEach

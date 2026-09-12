@@ -48,9 +48,6 @@ class GoatFarmControllerTest {
     private GoatFarmManagementUseCase farmUseCase;
 
     @MockBean
-    private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
-
-    @MockBean
     private OwnershipService ownershipService;
 
     private GoatFarmFullResponseVO farmResponse;

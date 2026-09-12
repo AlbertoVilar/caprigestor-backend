@@ -10,7 +10,7 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 
 ## Baseline atual
 
-- A baseline integrada de `develop` é `f46c375` (merge da PR #262).
+- A baseline integrada de `develop` é `48440e8` (merge da PR #263).
 - A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
 - O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
   autenticação JWT e autorização farm-scoped.
@@ -68,14 +68,13 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 
 ## Wave ativa e trabalho adiado
 
-- Ativa: **harness de arquitetura e governança** — procedures versionadas,
-  documentação ativa coerente e um guard zero-baseline para `JpaRepository` no
-  core.
-- Próximo gate, após a estabilização/merge do harness: **DEV-A11-I2-P0 — Admin Maintenance
-  Security Containment**. Os endpoints administrativos destrutivos e credencial
-  hard-coded precisam de decisão de uso/isolamento antes de evoluir Authority.
-- Adiado: remoção de dívida A11-I2/I3, mudanças de contrato/API, mudanças de
-  schema, reset DEV, HML e `main`.
+- DEV-A11-I2-P0 está implementada nesta branch dedicada, aguardando revisão
+  arquitetural antes de qualquer merge. As duas rotas HTTP de limpeza global
+  foram removidas, assim como a credencial hard-coded e a orquestração sem
+  consumidores; o bootstrap administrativo continua externo e desabilitado por
+  padrão.
+- Adiado: remoção de dívida A11-I2/I3, mudanças adicionais de contrato/API,
+  mudanças de schema, reset DEV, HML e `main`.
 
 ## Compatibilidade e operações
 
