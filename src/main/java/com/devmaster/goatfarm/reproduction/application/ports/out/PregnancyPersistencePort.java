@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.application.ports.out;
 
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

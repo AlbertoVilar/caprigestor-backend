@@ -7,8 +7,8 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.model.FarmRegistrationSnapshot;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
@@ -40,8 +40,8 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -88,7 +88,7 @@ class ReproductionUseCasesBehaviorTest {
     private GoatReferenceResolver goatReferenceResolver;
 
     @Mock
-    private GoatFarmPersistencePort goatFarmPersistencePort;
+    private FarmRegistrationQueryUseCase farmRegistrationQueryUseCase;
 
     @Mock
     private GoatManagementUseCase goatManagementUseCase;
@@ -118,8 +118,8 @@ class ReproductionUseCasesBehaviorTest {
                 .requireActive(any(Long.class), any(String.class));
         org.mockito.Mockito.lenient().doNothing().when(goatGenderValidator)
                 .requireFemaleAndActive(any(Long.class), any(String.class));
-        org.mockito.Mockito.lenient().when(goatFarmPersistencePort.findById(FARM_ID))
-                .thenReturn(Optional.of(birthFarmEntity()));
+        org.mockito.Mockito.lenient().when(farmRegistrationQueryUseCase.findRegistrationById(FARM_ID))
+                .thenReturn(Optional.of(new FarmRegistrationSnapshot(FARM_ID, FARM_TOD)));
         org.mockito.Mockito.lenient().when(goatReferenceResolver.resolve(GOAT_ID, FARM_ID))
                 .thenReturn(Optional.of(new com.devmaster.goatfarm.goat.application.ports.out.GoatReference(
                         new GoatId(10L), FARM_ID, GOAT_ID, "Matriz", Gender.FEMEA)));
@@ -535,7 +535,7 @@ class ReproductionUseCasesBehaviorTest {
                 .build();
 
         ReproductiveEvent coverageEvent = coverageEventEntity();
-        coverageEvent.setEventDate(checkDate.minusDays(59));
+        coverageEvent = rehydrateEventWithDate(coverageEvent, checkDate.minusDays(59));
 
         when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
@@ -611,7 +611,7 @@ class ReproductionUseCasesBehaviorTest {
                 .build();
 
         ReproductiveEvent coverageEvent = coverageEventEntity();
-        coverageEvent.setEventDate(checkDate.minusDays(59));
+        coverageEvent = rehydrateEventWithDate(coverageEvent, checkDate.minusDays(59));
 
         when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
@@ -638,7 +638,7 @@ class ReproductionUseCasesBehaviorTest {
                 .build();
 
         ReproductiveEvent coverageEvent = coverageEventEntity();
-        coverageEvent.setEventDate(checkDate.minusDays(60));
+        coverageEvent = rehydrateEventWithDate(coverageEvent, checkDate.minusDays(60));
 
         when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(
                 FARM_ID, GOAT_ID, requestVO.getCheckDate()))
@@ -985,13 +985,11 @@ class ReproductionUseCasesBehaviorTest {
                 .thenReturn(birthKidResponse(createdKid.getRegistrationNumber()));
 
         Pregnancy savedPregnancy = closedPregnancyEntity();
-        savedPregnancy.setId(pregnancyId);
-        savedPregnancy.setClosedAt(requestVO.getBirthDate());
-        savedPregnancy.setCloseReason(PregnancyCloseReason.BIRTH);
+        savedPregnancy = rehydratePregnancy(savedPregnancy, pregnancyId, requestVO.getBirthDate(), PregnancyCloseReason.BIRTH);
         when(pregnancyPersistencePort.save(any(Pregnancy.class))).thenReturn(savedPregnancy);
 
         ReproductiveEvent savedCloseEvent = closeEventEntity(pregnancyId);
-        savedCloseEvent.setEventDate(requestVO.getBirthDate());
+        savedCloseEvent = rehydrateEventWithDate(savedCloseEvent, requestVO.getBirthDate());
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(savedCloseEvent);
         when(reproductionBusinessMapper.toPregnancyResponseVO(savedPregnancy)).thenReturn(pregnancyResponseVO());
         when(reproductionBusinessMapper.toReproductiveEventResponseVO(savedCloseEvent)).thenReturn(reproductiveEventResponseVO());
@@ -1167,9 +1165,8 @@ class ReproductionUseCasesBehaviorTest {
 
     @Test
     void registerBirth_shouldRejectMalformedBirthFarmTod() {
-        GoatFarm farmWithMalformedTod = birthFarmEntity();
-        farmWithMalformedTod.setTod("16A32");
-        when(goatFarmPersistencePort.findById(FARM_ID)).thenReturn(Optional.of(farmWithMalformedTod));
+        when(farmRegistrationQueryUseCase.findRegistrationById(FARM_ID))
+                .thenReturn(Optional.of(new FarmRegistrationSnapshot(FARM_ID, "16A32")));
 
         assertThatThrownBy(() -> reproductionBusiness.registerBirth(
                 FARM_ID,
@@ -1324,7 +1321,7 @@ class ReproductionUseCasesBehaviorTest {
     void getDiagnosisRecommendation_shouldReturnEligiblePending_whenEligibleWithoutCheck() {
         LocalDate referenceDate = LocalDate.of(2026, 2, 1);
         ReproductiveEvent coverageEvent = coverageEventEntity();
-        coverageEvent.setEventDate(referenceDate.minusDays(70));
+        coverageEvent = rehydrateEventWithDate(coverageEvent, referenceDate.minusDays(70));
 
         when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
                 .thenReturn(Optional.of(coverageEvent));
@@ -1349,11 +1346,10 @@ class ReproductionUseCasesBehaviorTest {
     void getDiagnosisRecommendation_shouldReturnResolved_whenValidPositiveCheckExists() {
         LocalDate referenceDate = LocalDate.of(2026, 2, 1);
         ReproductiveEvent coverageEvent = coverageEventEntity();
-        coverageEvent.setEventDate(referenceDate.minusDays(80));
+        coverageEvent = rehydrateEventWithDate(coverageEvent, referenceDate.minusDays(80));
 
         ReproductiveEvent checkEvent = checkEventEntity();
-        checkEvent.setEventDate(referenceDate.minusDays(5));
-        checkEvent.setCheckResult(PregnancyCheckResult.POSITIVE);
+        checkEvent = ReproductiveEvent.rehydrate(checkEvent.getId(), checkEvent.getFarmId(), checkEvent.getGoatId(), checkEvent.getGoatTechnicalId(), checkEvent.getEventType(), referenceDate.minusDays(5), checkEvent.getBreedingType(), checkEvent.getBreederRef(), checkEvent.getNotes(), checkEvent.getPregnancyId(), checkEvent.getRelatedEventId(), checkEvent.getCorrectedEventDate(), checkEvent.getCheckScheduledDate(), PregnancyCheckResult.POSITIVE, checkEvent.getCreatedAt(), checkEvent.getUpdatedAt());
 
         when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
                 .thenReturn(Optional.of(coverageEvent));
@@ -1374,7 +1370,7 @@ class ReproductionUseCasesBehaviorTest {
     void getDiagnosisRecommendation_shouldWarnWhenActivePregnancyWithoutValidCheck() {
         LocalDate referenceDate = LocalDate.of(2026, 2, 1);
         ReproductiveEvent coverageEvent = coverageEventEntity();
-        coverageEvent.setEventDate(referenceDate.minusDays(70));
+        coverageEvent = rehydrateEventWithDate(coverageEvent, referenceDate.minusDays(70));
 
         when(reproductiveEventPersistencePort.findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(FARM_ID, GOAT_ID, referenceDate))
                 .thenReturn(Optional.of(coverageEvent));
@@ -1505,6 +1501,14 @@ class ReproductionUseCasesBehaviorTest {
                 .build();
     }
 
+    private Pregnancy rehydratePregnancy(Pregnancy source, Long id, LocalDate closedAt, PregnancyCloseReason closeReason) {
+        return Pregnancy.rehydrate(id, source.getFarmId(), source.getGoatId(), source.getGoatTechnicalId(), source.getStatus(), source.getBreedingDate(), source.getConfirmDate(), source.getExpectedDueDate(), closedAt, closeReason, source.getNotes(), source.getCoverageEventId(), source.getCreatedAt(), source.getUpdatedAt());
+    }
+
+    private ReproductiveEvent rehydrateEventWithDate(ReproductiveEvent source, LocalDate date) {
+        return ReproductiveEvent.rehydrate(source.getId(), source.getFarmId(), source.getGoatId(), source.getGoatTechnicalId(), source.getEventType(), date, source.getBreedingType(), source.getBreederRef(), source.getNotes(), source.getPregnancyId(), source.getRelatedEventId(), source.getCorrectedEventDate(), source.getCheckScheduledDate(), source.getCheckResult(), source.getCreatedAt(), source.getUpdatedAt());
+    }
+
     private Pregnancy activePregnancyEntity() {
         return Pregnancy.builder()
                 .id(10L)
@@ -1569,13 +1573,6 @@ class ReproductionUseCasesBehaviorTest {
                 null, null, null, Category.PA, null, null,
                 FARM_ID, 2L, "Capril", "Alberto"
         );
-    }
-
-    private GoatFarm birthFarmEntity() {
-        GoatFarm farm = new GoatFarm();
-        farm.setId(FARM_ID);
-        farm.setTod(FARM_TOD);
-        return farm;
     }
 
     private GoatResponseVO createdKidResponse(String registrationNumber) {

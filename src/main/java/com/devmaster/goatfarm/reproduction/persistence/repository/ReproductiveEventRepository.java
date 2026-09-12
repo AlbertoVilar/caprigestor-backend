@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.persistence.repository;
 
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
 import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,22 +15,22 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ReproductiveEventRepository extends JpaRepository<ReproductiveEvent, Long> {
+public interface ReproductiveEventRepository extends JpaRepository<ReproductiveEventEntity, Long> {
 
-    Page<ReproductiveEvent> findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
-    Page<ReproductiveEvent> findAllByFarmIdAndGoatTechnicalIdOrderByEventDateDescIdDesc(Long farmId, Long goatTechnicalId, Pageable pageable);
+    Page<ReproductiveEventEntity> findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
+    Page<ReproductiveEventEntity> findAllByFarmIdAndGoatTechnicalIdOrderByEventDateDescIdDesc(Long farmId, Long goatTechnicalId, Pageable pageable);
 
-    Optional<ReproductiveEvent> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
-    Optional<ReproductiveEvent> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
+    Optional<ReproductiveEventEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<ReproductiveEventEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
+    Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
             Long farmId,
             String goatId,
             ReproductiveEventType eventType,
             LocalDate eventDate
     );
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
+    Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
             Long farmId,
             Long goatTechnicalId,
             ReproductiveEventType eventType,
@@ -50,7 +50,7 @@ public interface ReproductiveEventRepository extends JpaRepository<ReproductiveE
               and coalesce(corr.correctedEventDate, c.eventDate) <= :eventDate
             order by coalesce(corr.correctedEventDate, c.eventDate) desc, c.id desc
             """)
-    List<ReproductiveEvent> findLatestEffectiveCoverageOnOrBefore(
+    List<ReproductiveEventEntity> findLatestEffectiveCoverageOnOrBefore(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId,
             @Param("eventDate") LocalDate eventDate,
@@ -70,34 +70,34 @@ public interface ReproductiveEventRepository extends JpaRepository<ReproductiveE
               and coalesce(corr.correctedEventDate, c.eventDate) <= :eventDate
             order by coalesce(corr.correctedEventDate, c.eventDate) desc, c.id desc
             """)
-    List<ReproductiveEvent> findLatestEffectiveCoverageOnOrBeforeByTechnicalId(
+    List<ReproductiveEventEntity> findLatestEffectiveCoverageOnOrBeforeByTechnicalId(
             @Param("farmId") Long farmId,
             @Param("goatTechnicalId") Long goatTechnicalId,
             @Param("eventDate") LocalDate eventDate,
             Pageable pageable
     );
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
+    Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
             Long farmId,
             String goatId,
             ReproductiveEventType eventType,
             Long relatedEventId
     );
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
+    Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
             Long farmId,
             Long goatTechnicalId,
             ReproductiveEventType eventType,
             Long relatedEventId
     );
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatIdAndEventTypeOrderByEventDateDescIdDesc(
+    Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatIdAndEventTypeOrderByEventDateDescIdDesc(
             Long farmId,
             String goatId,
             ReproductiveEventType eventType
     );
 
-    Optional<ReproductiveEvent> findTopByFarmIdAndGoatTechnicalIdAndEventTypeOrderByEventDateDescIdDesc(
+    Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatTechnicalIdAndEventTypeOrderByEventDateDescIdDesc(
             Long farmId,
             Long goatTechnicalId,
             ReproductiveEventType eventType

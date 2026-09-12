@@ -20,8 +20,8 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -152,7 +152,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate coverageDate = LocalDate.now().minusDays(70);
 
-        ReproductiveEvent coverage = saveCoverageEvent(coverageDate);
+        ReproductiveEventEntity coverage = saveCoverageEvent(coverageDate);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
@@ -171,7 +171,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         LocalDate latestCoverageDate = LocalDate.of(2026, 3, 11);
 
         saveCoverageEvent(firstCoverageDate);
-        ReproductiveEvent latestCoverage = saveCoverageEvent(latestCoverageDate);
+        ReproductiveEventEntity latestCoverage = saveCoverageEvent(latestCoverageDate);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies/diagnosis-recommendation",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
@@ -190,7 +190,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate coverageDate = LocalDate.now().minusDays(10);
 
-        ReproductiveEvent coverage = saveCoverageEvent(coverageDate);
+        ReproductiveEventEntity coverage = saveCoverageEvent(coverageDate);
 
         CoverageCorrectionRequestDTO request = CoverageCorrectionRequestDTO.builder()
                 .correctedDate(coverageDate.minusDays(2))
@@ -312,8 +312,8 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate eventDate = LocalDate.now().minusDays(15);
 
-        ReproductiveEvent first = saveCoverageEvent(eventDate);
-        ReproductiveEvent second = saveCoverageEvent(eventDate);
+        ReproductiveEventEntity first = saveCoverageEvent(eventDate);
+        ReproductiveEventEntity second = saveCoverageEvent(eventDate);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
@@ -328,7 +328,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate breedingDate = LocalDate.now().minusDays(90);
 
-        Pregnancy active = Pregnancy.builder()
+        PregnancyEntity active = PregnancyEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .status(PregnancyStatus.ACTIVE)
@@ -338,7 +338,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .build();
         active = pregnancyRepository.save(active);
 
-        Pregnancy closed = Pregnancy.builder()
+        PregnancyEntity closed = PregnancyEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .status(PregnancyStatus.CLOSED)
@@ -358,8 +358,8 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
                 .andExpect(jsonPath("$.content[1].id").value(active.getId()));
     }
 
-    private ReproductiveEvent saveCoverageEvent(LocalDate coverageDate) {
-        ReproductiveEvent coverage = ReproductiveEvent.builder()
+    private ReproductiveEventEntity saveCoverageEvent(LocalDate coverageDate) {
+        ReproductiveEventEntity coverage = ReproductiveEventEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .eventType(ReproductiveEventType.COVERAGE)

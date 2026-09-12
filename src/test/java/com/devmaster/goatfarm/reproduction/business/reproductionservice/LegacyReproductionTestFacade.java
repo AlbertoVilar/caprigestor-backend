@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
@@ -24,7 +24,7 @@ class LegacyReproductionTestFacade implements ReproductionQueryUseCase {
     private final ReproductionQueryBusiness query;
 
     LegacyReproductionTestFacade(PregnancyPersistencePort pregnancyPort, ReproductiveEventPersistencePort eventPort,
-                         GoatPersistencePort goatPort, GoatReferenceResolver resolver, GoatFarmPersistencePort farmPort,
+                         GoatPersistencePort goatPort, GoatReferenceResolver resolver, FarmRegistrationQueryUseCase farmPort,
                          GoatManagementUseCase goatManagement, GoatGenderValidator validator, ReproductionBusinessMapper mapper,
                          Clock clock) {
         EffectiveCoverageDateResolver dateResolver = new EffectiveCoverageDateResolver(eventPort);

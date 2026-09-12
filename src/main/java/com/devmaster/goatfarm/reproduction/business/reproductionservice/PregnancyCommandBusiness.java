@@ -14,8 +14,8 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,8 +97,8 @@ public class PregnancyCommandBusiness implements PregnancyCommandUseCase {
         ReproductiveEvent savedCheck = eventPersistencePort.save(check);
         Optional<Pregnancy> active = pregnancyPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
         if (active.isPresent()) {
-            Pregnancy pregnancy = active.get(); pregnancy.setStatus(PregnancyStatus.CLOSED); pregnancy.setClosedAt(vo.getCheckDate()); pregnancy.setCloseReason(PregnancyCloseReason.FALSE_POSITIVE);
-            if (vo.getNotes() != null && !vo.getNotes().isBlank()) pregnancy.setNotes(vo.getNotes());
+            Pregnancy pregnancy = active.get(); pregnancy.close(PregnancyCloseReason.FALSE_POSITIVE, vo.getCheckDate());
+            if (vo.getNotes() != null && !vo.getNotes().isBlank()) pregnancy.updateNotes(vo.getNotes());
             Pregnancy saved = pregnancyPersistencePort.save(pregnancy);
             eventPersistencePort.save(ReproductiveEvent.builder().farmId(farmId).goatId(goatId).pregnancyId(saved.getId())
                     .eventType(ReproductiveEventType.PREGNANCY_CLOSE).eventDate(vo.getCheckDate()).notes(vo.getNotes()).build());
@@ -118,7 +118,7 @@ public class PregnancyCommandBusiness implements PregnancyCommandUseCase {
         if (vo.getCloseReason() == null) throw new InvalidArgumentException("closeReason", "Motivo de encerramento é obrigatório");
         if (vo.getCloseReason() == PregnancyCloseReason.BIRTH) throw new BusinessRuleException("closeReason", CLOSE_REASON_BIRTH_FORBIDDEN_MESSAGE);
         if (pregnancy.getBreedingDate() != null && vo.getCloseDate().isBefore(pregnancy.getBreedingDate())) throw new InvalidArgumentException("closeDate", "Data de encerramento não pode ser anterior à data de cobertura");
-        pregnancy.setStatus(PregnancyStatus.CLOSED); pregnancy.setClosedAt(vo.getCloseDate()); pregnancy.setCloseReason(vo.getCloseReason());
+        pregnancy.close(vo.getCloseReason(), vo.getCloseDate());
         Pregnancy saved = pregnancyPersistencePort.save(pregnancy);
         eventPersistencePort.save(ReproductiveEvent.builder().farmId(farmId).goatId(goatId).pregnancyId(pregnancy.getId())
                 .eventType(ReproductiveEventType.PREGNANCY_CLOSE).eventDate(vo.getCloseDate()).notes(vo.getNotes()).build());

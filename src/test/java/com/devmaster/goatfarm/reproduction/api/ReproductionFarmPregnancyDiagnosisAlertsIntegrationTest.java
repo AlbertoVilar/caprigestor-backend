@@ -15,10 +15,10 @@ import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -241,7 +241,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
         GoatEntity goat = saveGoat(goatId);
         goat.setFarm(farm);
         goatRepository.save(goat);
-        pregnancyRepository.save(Pregnancy.builder()
+        pregnancyRepository.save(PregnancyEntity.builder()
                 .farmId(farm.getId()).goatId(goatId).status(status).expectedDueDate(dueDate).build());
     }
 
@@ -257,7 +257,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
     }
 
     private void saveCoverage(String goatId, LocalDate coverageDate) {
-        ReproductiveEvent coverage = ReproductiveEvent.builder()
+        ReproductiveEventEntity coverage = ReproductiveEventEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(goatId)
                 .eventType(ReproductiveEventType.COVERAGE)
@@ -268,7 +268,7 @@ class ReproductionFarmPregnancyDiagnosisAlertsIntegrationTest {
     }
 
     private void saveCheck(String goatId, LocalDate checkDate, PregnancyCheckResult result) {
-        ReproductiveEvent check = ReproductiveEvent.builder()
+        ReproductiveEventEntity check = ReproductiveEventEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(goatId)
                 .eventType(ReproductiveEventType.PREGNANCY_CHECK)

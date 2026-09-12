@@ -6,12 +6,12 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.model.PregnancyDiagnosisAlertSnapshot;
 import com.devmaster.goatfarm.reproduction.business.bo.*;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.enums.*;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
-import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,7 +57,7 @@ public class ReproductionQueryBusiness implements ReproductionQueryUseCase {
     private DiagnosisRecommendationCheckVO toCheckVO(ReproductiveEvent c) { return DiagnosisRecommendationCheckVO.builder().id(c.getId()).checkDate(c.getEventDate()).checkResult(c.getCheckResult()).notes(c.getNotes()).build(); }
     private boolean isValidCheck(ReproductiveEvent c, LocalDate effective, LocalDate eligible) { if (c == null || c.getEventDate() == null || c.getCheckResult() == null || c.getCheckResult() == PregnancyCheckResult.PENDING) return false; return (effective == null || !c.getEventDate().isBefore(effective)) && (eligible == null || !c.getEventDate().isBefore(eligible)); }
     private boolean isValidPositiveCheck(ReproductiveEvent c, LocalDate effective, LocalDate eligible) { if (c == null || c.getEventDate() == null || c.getCheckResult() != PregnancyCheckResult.POSITIVE) return false; return (effective == null || !c.getEventDate().isBefore(effective)) && (eligible == null || !c.getEventDate().isBefore(eligible)); }
-    private PregnancyDiagnosisAlertVO toPregnancyDiagnosisAlertVO(PregnancyDiagnosisAlertProjection p, LocalDate reference) { LocalDate eligible = p.getEligibleDate() != null ? p.getEligibleDate() : p.getLastCoverageDate().plusDays(ReproductionRules.MIN_CONFIRMATION_DAYS); long overdue = Math.max(0L, ChronoUnit.DAYS.between(eligible, reference)); return PregnancyDiagnosisAlertVO.builder().goatTechnicalId(p.getGoatTechnicalId()).goatId(p.getGoatId()).eligibleDate(eligible).daysOverdue((int) overdue).lastCoverageDate(p.getLastCoverageDate()).lastCheckDate(p.getLastCheckDate()).build(); }
+    private PregnancyDiagnosisAlertVO toPregnancyDiagnosisAlertVO(PregnancyDiagnosisAlertSnapshot p, LocalDate reference) { LocalDate eligible = p.eligibleDate() != null ? p.eligibleDate() : p.lastCoverageDate().plusDays(ReproductionRules.MIN_CONFIRMATION_DAYS); long overdue = Math.max(0L, ChronoUnit.DAYS.between(eligible, reference)); return PregnancyDiagnosisAlertVO.builder().goatTechnicalId(p.goatTechnicalId()).goatId(p.goatId()).eligibleDate(eligible).daysOverdue((int) overdue).lastCoverageDate(p.lastCoverageDate()).lastCheckDate(p.lastCheckDate()).build(); }
     private PregnancyDueAlertVO toPregnancyDueAlertVO(Pregnancy p, LocalDate reference) { long overdue = Math.max(0L, ChronoUnit.DAYS.between(p.getExpectedDueDate(), reference)); return PregnancyDueAlertVO.builder().pregnancyId(p.getId()).goatId(p.getGoatId()).goatTechnicalId(p.getGoatTechnicalId()).expectedDueDate(p.getExpectedDueDate()).daysOverdue((int) overdue).build(); }
     private Pageable normalizeAlertsPageable(Pageable p) { return p == null ? PageRequest.of(0, ReproductionRules.DEFAULT_ALERT_PAGE_SIZE) : PageRequest.of(p.getPageNumber(), p.getPageSize()); }
     private Pageable withStableSort(Pageable p, Sort defaultSort) { if (p == null) return PageRequest.of(0, 20, defaultSort.and(Sort.by(Sort.Order.desc("id")))); Sort sort = p.getSort().isUnsorted() ? defaultSort : p.getSort(); if (sort.getOrderFor("id") == null) sort = sort.and(Sort.by(Sort.Order.desc("id"))); return PageRequest.of(p.getPageNumber(), p.getPageSize(), sort); }

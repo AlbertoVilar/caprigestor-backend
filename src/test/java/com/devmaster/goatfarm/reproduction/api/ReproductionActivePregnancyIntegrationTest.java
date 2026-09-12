@@ -16,8 +16,8 @@ import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -148,7 +148,7 @@ class ReproductionActivePregnancyIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
 
         // 1. Create initial coverage (breeding)
-        ReproductiveEvent coverage = ReproductiveEvent.builder()
+        ReproductiveEventEntity coverage = ReproductiveEventEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .eventType(ReproductiveEventType.COVERAGE)
@@ -158,7 +158,7 @@ class ReproductionActivePregnancyIntegrationTest {
         reproductiveEventRepository.save(coverage);
 
         // 2. Create an EXISTING Active Pregnancy
-        Pregnancy activePregnancy = Pregnancy.builder()
+        PregnancyEntity activePregnancy = PregnancyEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .status(PregnancyStatus.ACTIVE)
