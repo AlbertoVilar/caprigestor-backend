@@ -1,44 +1,124 @@
-# Instruções permanentes — backend CAPRIGESTOR
+# CapriGestor Backend — agent guide
 
-## Fontes oficiais de contexto
+## Architectural north star
 
-Antes de iniciar uma tarefa, consulte primeiro as fontes versionadas do
-repositorio. A hierarquia e:
+The permanent objective is a pragmatic hexagonal architecture with a
+progressively isolated business core. Preserve observable behavior, REST
+contracts, security, and integrity before pursuing academic purity. Use DDD,
+SOLID, and Clean Code to clarify real boundaries; do not create abstractions
+without a demonstrated boundary or maintainability benefit.
 
-1. codigo, migrations, testes, configuracao e CI (verdade tecnica);
-2. `docs/00-overview/PROJECT_STATUS.md` (estado funcional humano);
-3. `docs/00-overview/BUSINESS_DOMAIN.md` (dominio global);
-4. `docs/01-architecture/ARCHITECTURE.md` (arquitetura atual);
-5. `docs/02-modules/**` (regras por contexto);
-6. `docs/03-api/**` (contratos HTTP);
-7. `docs/04-security/**` (seguranca operacional);
-8. `docs/INDEX.md` (portal e roteador).
+The core must progressively stop depending on JPA entities, `JpaRepository`,
+Spring Data pagination, HTTP, controllers, `SecurityContextHolder`,
+authentication details, persistence adapters, and concrete repositories.
+`@Service` and appropriate transaction boundaries are not violations by
+themselves.
 
-`docs/00-overview/CAPRIGESTOR_CURRENT_STATE.md` e um artefato local ignorado
-opcional. Ele pode ser usado como conveniencia de continuidade no ambiente que
-o possui, mas nao e fonte autoritativa e nao pode ser necessario para entender
-ou trabalhar em um clone limpo. Nao o versione, nao o adicione ao indice e nao
-crie copias concorrentes dele.
+## Source-of-truth hierarchy
 
-## Responsabilidades deste repositório
+Establish facts in this order:
 
-- Manter backend, domínio, contratos de API, banco de dados, migrations, segurança,
-  mensageria existente e deploy.
-- Respeitar a arquitetura hexagonal, o isolamento entre módulos e a propriedade dos
-  dados por fazenda (`farmId`).
-- Preservar contratos públicos e decisões registradas; não reabrir uma decisão
-  fechada sem solicitação explícita ou bloqueio técnico demonstrável.
-- Ao concluir uma tarefa que altere o produto, atualize a documentacao versionada
-  afetada com fatos verificaveis, incluindo modulos, banco, seguranca, deploy,
-  testes, riscos e proximo passo. O estado local ignorado nao e obrigatorio.
+1. tracked code, Flyway migrations, tests, configuration, and CI;
+2. recent Git/PR history when needed;
+3. `docs/00-overview/PROJECT_STATUS.md` — the only versioned human current state;
+4. `docs/01-architecture/ARCHITECTURE.md` and architecture guards;
+5. module, API, security, and operational documentation;
+6. historical ADRs, plans, and roadmaps.
 
-## Regras de continuidade
+Do not treat ignored files, local reports, or old roadmaps as authoritative
+state. Record divergence and follow the current repository.
 
-- Se o estado local estiver presente, trate-o como contexto auxiliar e confirme
-  qualquer fato contra codigo, migrations, testes, configuracoes, documentacao
-  versionada e historico Git. Registre somente fatos confirmados, sem suposicoes,
-  segredos, credenciais, tokens ou dados pessoais.
-- Antes de alterar código, identifique impacto em módulos, API, migrations, segurança,
-  testes e documentação. Ao fim, registre a validação realmente executada.
-- Não faça commit, push, merge, bypass de proteção ou mudança de infraestrutura sem
-  autorização explícita da pessoa usuária.
+## Local procedures
+
+Backend procedures live in `.agents/skills/` and are auto-discovered by Codex
+sessions started in this repository.
+
+- `$caprigestor-architecture`: boundaries, ports, adapters, and architecture.
+- `$caprigestor-safe-refactor`: structural change without behavioral regression.
+- `$caprigestor-audit`: read-only audit and code-documentation comparison.
+- `$caprigestor-documentation`: documentation classification and synchronization.
+
+Read the applicable procedure before architecture work, refactoring, auditing,
+or documentation maintenance. Procedures guide process; they do not extend task
+authorization.
+
+## Context routing
+
+- Current state and next wave: `docs/00-overview/PROJECT_STATUS.md`.
+- Target architecture and known debt: `docs/01-architecture/ARCHITECTURE.md`.
+- Active and planned gates: `docs/01-architecture/QUALITY_GATES.md`.
+- Business rules: `docs/00-overview/BUSINESS_DOMAIN.md` and module docs.
+- HTTP contract: `docs/03-api/API_CONTRACTS.md`.
+- Authorization and access: `docs/02-modules/AUTHORITY_ACCESS_MODULE.md`.
+- Module-specific rules: `docs/02-modules/` before changing a module.
+- Documentation navigation: `docs/INDEX.md`.
+
+## Safe-change protocol
+
+1. Establish branch, base, `git status`, scope, and affected consumers.
+2. Identify domain, API, security, database, and compatibility invariants.
+3. Make the smallest coherent change. Do not hide functional, contract, schema,
+   or migration changes inside a structural refactor.
+4. Keep dependencies leaving the core behind ports and concrete adapters outside
+   it. Do not bypass use cases or authorization policies.
+5. Review the diff and update active documentation that represents changed facts.
+
+Never rewrite published Flyway migrations. Do not remove compatibility, alter
+persistent data, reset a database, deploy, commit, push, merge, or open a PR
+without explicit authorization for that action.
+
+## Security and data
+
+- Every farm-scoped route must keep an explicit policy and `farmId` isolation.
+- Official roles: `ROLE_ADMIN`, `ROLE_FARM_OWNER`, `ROLE_OPERATOR`.
+- Authorization goes through `FarmAuthorizationUseCase`; the authenticated
+  principal goes through `CurrentPrincipalQueryUseCase`.
+- `SecurityContextHolder` stays in the current-principal adapter.
+- Never record secrets, tokens, credentials, or personal data in work logs or
+  documentation.
+
+## Goat identity and persistence
+
+Technical `GoatId` and structural migrations V39–V43 already exist. Remaining
+work is *Goat Identity Transition Closure*, not GoatId creation. RG is a
+business/ABCC identifier and compatibility layer; do not remove aliases or
+fallbacks without an explicit contract decision.
+
+The old ID4-B0/ID4 structural implementation plan is obsolete and already
+implemented. Do not schedule work to create GoatId, promote `cabras.id`, or
+repeat V39–V43. Only proven transition residues may be planned.
+
+The DEV database contains disposable data, but reset, schema change, and new
+Flyway migration remain explicit gates. They are never automatic refactor work.
+
+## Tests and quality
+
+Start with the smallest relevant test set and, when feasible, run the normal
+gate:
+
+```powershell
+.\mvnw.cmd -Dtest=GlobalHexagonalBoundaryArchUnitTest test
+.\mvnw.cmd -Dtest=HexagonalArchitectureGuardTest test
+.\mvnw.cmd -B clean verify
+```
+
+Do not remove, ignore, weaken, or rewrite tests merely to make them pass.
+Architecture baselines may only shrink; never expand an allowlist without
+explicit architectural approval.
+
+## Documentation and language
+
+Active documentation must reflect the current repository. Preserve ADRs, plans,
+and historical records; mark supersession when needed instead of rewriting the
+past. Do not create root Markdown files other than `README.md`.
+
+Write all agent-facing instructions and Conventional Commits in English. Product
+documentation may use Portuguese when it serves its intended audience.
+
+## Escalation and stop conditions
+
+Stop and report before schema/Flyway changes, REST contract changes,
+authorization semantics, Goat deletion semantics, persistent data operations,
+HML/production work, or `main` changes. For architectural ambiguity,
+Authority/security, schema, dangerous contracts, or difficult regressions,
+report `MODEL ESCALATION RECOMMENDED: <reason>`.
