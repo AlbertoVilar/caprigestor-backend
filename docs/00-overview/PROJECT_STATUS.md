@@ -10,7 +10,7 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 
 ## Baseline atual
 
-- A baseline integrada de `develop` é `d1e7b8a` (merge da PR #264).
+- A baseline integrada de `develop` é `e9a19b8` (merge das PRs #264 e #265).
 - A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
 - O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
   autenticação JWT e autorização farm-scoped.
@@ -68,9 +68,14 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 
 ## Wave ativa e trabalho adiado
 
-- DEV-A11-I2-A (Password Hashing Boundary) está em implementação nesta branch
-  dedicada. O core Authority passa a depender de `PasswordHashingPort`; o
+- DEV-A11-I2-A (Password Hashing Boundary) foi concluída e integrada na
+  `develop`. O core Authority depende de `PasswordHashingPort`; o
   `PasswordEncoder` do Spring permanece somente no adapter de infraestrutura.
+- DEV-A11-I2-B (Authentication and Token Boundaries) está em implementação nesta
+  branch dedicada. `AuthBusiness` depende de `CredentialAuthenticationPort` e
+  `AuthTokenPort`; as APIs concretas de autenticação e JWT permanecem confinadas
+  aos adapters de infraestrutura. Login, refresh, rotação, replay, logout,
+  claims e contratos HTTP são preservados.
 - DEV-A11-I2-P0 foi integrada na `develop`: as duas rotas HTTP de limpeza global
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por
