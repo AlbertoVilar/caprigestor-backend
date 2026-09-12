@@ -1,5 +1,5 @@
 ﻿# Arquitetura do Sistema GoatFarm
-Ultima atualizacao: 2026-09-11
+Ultima atualizacao: 2026-09-12
 Escopo: visao tecnica, modularizacao por dominio, shared kernel e gates de arquitetura.
 Links relacionados: [Portal](../INDEX.md), [ADR](./ADR), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulos](../02-modules), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
 
@@ -27,7 +27,8 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   `config.security.authorization`: `@CanManageFarm`, `@FarmOwnerOnly`,
   `@AdminOnly`, `@PublicEndpoint` e `@AuthenticatedFarmRead`. Elas são apenas
   meta-dados de entrada; `@CanManageFarm` e `@FarmOwnerOnly` continuam delegando
-  a decisão ao `OwnershipService` existente.
+  a decisão ao bean `OwnershipService` (`FarmAuthorizationUseCase`), mantido
+  por compatibilidade com SpEL.
 - `AuthorizationPolicyGuardTest` percorre os controllers farm-scoped em
   reflexão e impede endpoint novo sem política explícita. Também verifica a
   presença do parâmetro `farmId` nas policies que usam esse identificador.
@@ -53,7 +54,14 @@ A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adap
   - `LactationBusiness` consulta produção por `MilkProductionSummaryQueryPort`,
     sem importar entidades ou projeções de persistência.
 - Fronteiras críticas reforçadas na W4:
-  - `OwnershipService` consulta o responsável da fazenda por `FarmOwnerQueryPort` e recebe um `AuthenticatedPrincipal`, sem importar repositórios Spring Data.
+  - `OwnershipService` implementa apenas `FarmAuthorizationUseCase` e consulta
+    `CurrentPrincipalQueryUseCase`, `FarmAccessQueryPort` e `FarmOwnerQueryPort`.
+  - `SpringSecurityCurrentPrincipalAdapter` é o único adaptador de aplicação
+    que lê `SecurityContextHolder`; ele resolve o email autenticado por
+    `UserPrincipalQueryPort` e carrega roles persistidas (JWT não é fonte de
+    autorização viva).
+  - Serviços de negócio usam contratos de autorização/principal e não injetam
+    `OwnershipService` concreto nem entidades `User` para decisões de acesso.
   - `GoatGenderValidator` consulta apenas `GoatValidationQueryPort.GoatValidationSnapshot`; entidades JPA não atravessam o contrato de validação.
   - `EventPublisher` recebe `EventPublication`, um contrato de aplicação imutável, e não a entidade `events.persistence.entity.Event`.
   - `JwtService` emite tokens a partir de `AuthenticatedPrincipal`; o mapeamento de usuário persistente fica restrito ao caso de uso de autenticação.

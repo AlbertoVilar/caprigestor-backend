@@ -1,5 +1,5 @@
 ﻿# Módulo Authority / acesso / recuperação de senha
-Última atualização: 2026-09-08
+Última atualização: 2026-09-12
 Escopo: autenticação, refresh, cadastro inicial, administração de usuários e recuperação de senha do CapriGestor.
 Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Rotação JWT](../04-security/JWT_KEY_ROTATION_RUNBOOK.md), [Resposta a incidentes](../04-security/SECURITY_INCIDENT_RESPONSE.md)
 
@@ -15,6 +15,12 @@ Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONT
   e a decisão recebe `AuthenticatedPrincipal` (id, email, nome e authorities),
   evitando que a emissão de JWT e as verificações de ownership precisem
   carregar a entidade JPA `User`.
+- A fronteira do principal atual é `CurrentPrincipalQueryUseCase`: o adaptador
+  Spring Security traduz a autenticação em email e `UserPrincipalQueryPort`
+  retorna `AuthenticatedPrincipal` com roles atuais persistidas. O contexto de
+  segurança não é acessado por serviços de negócio.
+- `OwnershipService` permanece como bean `ownershipService` para as expressões
+  SpEL, mas expõe somente a política farm-scoped de `FarmAuthorizationUseCase`.
 - `GET /api/v1/auth/me` permanece disponível para o usuário autenticado consultar os próprios dados. Esta correção não cria uma API de edição do perfil próprio.
 - O endpoint legado de diagnóstico de papéis foi removido: não possuía consumidor funcional e expunha dados administrativos desnecessários.
 - O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.

@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -27,14 +29,17 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     private final AuthorityBusinessMapper authorityBusinessMapper;
     private final PasswordEncoder passwordEncoder;
     private final RefreshSessionPersistencePort refreshSessionPersistencePort;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     public UserBusiness(UserPersistencePort userPort, RolePersistencePort rolePort, AuthorityBusinessMapper authorityBusinessMapper,
-                        PasswordEncoder passwordEncoder, RefreshSessionPersistencePort refreshSessionPersistencePort) {
+                        PasswordEncoder passwordEncoder, RefreshSessionPersistencePort refreshSessionPersistencePort,
+                        CurrentPrincipalQueryUseCase currentPrincipalQuery) {
         this.userPort = userPort;
         this.rolePort = rolePort;
         this.authorityBusinessMapper = authorityBusinessMapper;
         this.passwordEncoder = passwordEncoder;
         this.refreshSessionPersistencePort = refreshSessionPersistencePort;
+        this.currentPrincipalQuery = currentPrincipalQuery;
     }
 
     @Transactional
@@ -115,7 +120,9 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
 
     @Transactional
     public UserResponseVO getMe() {
-        User current = getAuthenticatedEntity();
+        AuthenticatedPrincipal principal = currentPrincipalQuery.requireCurrent();
+        User current = userPort.findById(principal.id())
+                .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + principal.email()));
         return authorityBusinessMapper.toResponseVO(current);
     }
 
@@ -247,21 +254,8 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     }
 
     private void requireAdmin(String message) {
-        User current = getAuthenticatedEntity();
-        boolean isAdmin = current.getRoles().stream()
-                .anyMatch(role -> "ROLE_ADMIN".equals(role.getAuthority()));
-        if (!isAdmin) {
+        if (!currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN")) {
             throw new UnauthorizedException(message);
         }
-    }
-
-    private User getAuthenticatedEntity() {
-        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
-            String email = authentication.getName();
-            return userPort.findByEmail(email)
-                    .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + email));
-        }
-        throw new UnauthorizedException("Usuário não autenticado");
     }
 }

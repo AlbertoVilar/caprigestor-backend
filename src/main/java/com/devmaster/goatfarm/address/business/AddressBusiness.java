@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePo
 import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +22,10 @@ public class AddressBusiness implements AddressManagementUseCase {
 
     private final AddressPersistencePort addressPort;
     private final AddressBusinessMapper addressMapper;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
 
-    public AddressBusiness(AddressPersistencePort addressPort, AddressBusinessMapper addressMapper, OwnershipService ownershipService, EntityFinder entityFinder) {
+    public AddressBusiness(AddressPersistencePort addressPort, AddressBusinessMapper addressMapper, FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder) {
         this.addressPort = addressPort;
         this.addressMapper = addressMapper;
         this.ownershipService = ownershipService;

@@ -6,9 +6,11 @@ import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +38,8 @@ class OperationalAuditBusinessTest {
     @Mock
     private GoatFarmPersistencePort goatFarmPersistencePort;
     @Mock
-    private OwnershipService ownershipService;
+    private FarmAuthorizationUseCase ownershipService;
+    @Mock private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock
     private EntityFinder entityFinder;
 
@@ -48,7 +51,9 @@ class OperationalAuditBusinessTest {
                 operationalAuditPersistencePort,
                 goatFarmPersistencePort,
                 ownershipService,
-                entityFinder
+                entityFinder,
+                null,
+                currentPrincipalQuery
         );
 
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
@@ -68,7 +73,7 @@ class OperationalAuditBusinessTest {
                 7L, "operator@example.com", "Operador QA", Set.of());
 
         when(goatFarmPersistencePort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentPrincipal()).thenReturn(currentUser);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(currentUser);
         when(operationalAuditPersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         operationalAuditBusiness.record(new OperationalAuditRecordVO(

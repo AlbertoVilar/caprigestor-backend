@@ -23,7 +23,7 @@ import com.devmaster.goatfarm.commercial.persistence.entity.MilkSale;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
@@ -53,7 +53,7 @@ public class CommercialBusiness implements CommercialUseCase {
     private final CommercialPersistencePort commercialPersistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final GoatManagementUseCase goatManagementUseCase;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase operationalAuditUseCase;
 
@@ -61,7 +61,7 @@ public class CommercialBusiness implements CommercialUseCase {
             CommercialPersistencePort commercialPersistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
             GoatManagementUseCase goatManagementUseCase,
-            OwnershipService ownershipService,
+            FarmAuthorizationUseCase ownershipService,
             EntityFinder entityFinder,
             OperationalAuditUseCase operationalAuditUseCase
     ) {

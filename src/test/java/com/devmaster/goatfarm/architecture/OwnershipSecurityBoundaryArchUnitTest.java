@@ -34,4 +34,31 @@ class OwnershipSecurityBoundaryArchUnitTest {
                 .because("portas críticas devem transportar contratos de aplicação, não entidades JPA")
                 .check(IMPORTED_CLASSES);
     }
+
+    @Test
+    void ownershipServiceMustDependOnlyOnAuthorizationContracts() {
+        noClasses()
+                .that().haveFullyQualifiedName("com.devmaster.goatfarm.config.security.OwnershipService")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "..authority.persistence.entity..", "..goat.persistence..", "..farm.persistence.entity..",
+                        "..authority.application.ports.out.UserPersistencePort", "..farm.application.ports.out.GoatFarmPersistencePort",
+                        "..goat.application.routing..")
+                .check(IMPORTED_CLASSES);
+    }
+
+    @Test
+    void businessAndApplicationPackagesMustNotReadSecurityContextDirectly() {
+        noClasses()
+                .that().resideInAnyPackage("..authority.business..", "..goat.business..", "..farm.business..", "..audit.business..")
+                .should().dependOnClassesThat().haveFullyQualifiedName("org.springframework.security.core.context.SecurityContextHolder")
+                .check(IMPORTED_CLASSES);
+    }
+
+    @Test
+    void businessPackagesMustUseFarmAuthorizationPortInsteadOfConcreteService() {
+        noClasses()
+                .that().resideInAnyPackage("..business..")
+                .should().dependOnClassesThat().haveFullyQualifiedName("com.devmaster.goatfarm.config.security.OwnershipService")
+                .check(IMPORTED_CLASSES);
+    }
 }
