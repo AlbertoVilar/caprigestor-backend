@@ -31,6 +31,10 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
   `UsernamePasswordAuthenticationToken`, `JwtDecoder`, `JwtService` e `Jwt`
   nos pacotes `authority.application` e `authority.business`; esses tipos são
   permitidos somente nos adapters/configuração.
+- `AuthorityAccountPersistenceBoundaryArchUnitTest` mantém zero dependências
+  dos modelos JPA `User` e `Role` nos pacotes `authority.application` e
+  `authority.business`; os modelos de aplicação e o mapper são a fronteira
+  oficial.
 - A superfície HTTP não pode reintroduzir endpoints globais de limpeza ou
   recriação administrativa. Qualquer reset de DEV deve permanecer em tooling
   explícito, fora do fluxo REST, com credenciais externas.

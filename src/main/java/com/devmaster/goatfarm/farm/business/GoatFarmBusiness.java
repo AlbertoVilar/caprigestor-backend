@@ -14,6 +14,7 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.out.FarmUserPersistencePort;
 import com.devmaster.goatfarm.farm.business.mapper.FarmBusinessMapper;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
@@ -36,6 +37,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     private final GoatFarmPersistencePort goatFarmPort;
     private final AddressBusiness addressBusiness;
     private final UserBusiness userBusiness;
+    private final FarmUserPersistencePort farmUserPersistencePort;
     private final PhoneBusiness phoneBusiness;
     private final FarmBusinessMapper farmBusinessMapper;
     private final FarmAuthorizationUseCase ownershipService;
@@ -46,6 +48,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
             GoatFarmPersistencePort goatFarmPort,
             AddressBusiness addressBusiness,
             UserBusiness userBusiness,
+            FarmUserPersistencePort farmUserPersistencePort,
             PhoneBusiness phoneBusiness,
             FarmBusinessMapper farmBusinessMapper,
             FarmAuthorizationUseCase ownershipService,
@@ -55,6 +58,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         this.goatFarmPort = goatFarmPort;
         this.addressBusiness = addressBusiness;
         this.userBusiness = userBusiness;
+        this.farmUserPersistencePort = farmUserPersistencePort;
         this.phoneBusiness = phoneBusiness;
         this.farmBusinessMapper = farmBusinessMapper;
         this.ownershipService = ownershipService;
@@ -96,7 +100,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     @Transactional
     public GoatFarmFullResponseVO createGoatFarm(GoatFarmFullRequestVO fullRequestVO) {
         User currentUser = currentPrincipalQuery.findCurrent()
-                .flatMap(principal -> userBusiness.findUserByEmail(principal.email()))
+                .flatMap(principal -> farmUserPersistencePort.findByEmail(principal.email()))
                 .orElse(null);
 
         validateGoatFarmCreation(fullRequestVO, currentUser);
@@ -224,7 +228,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         }
 
         // Garante que não estamos vinculando a um usuário existente (Segurança/IDOR)
-        if (userBusiness.findUserByEmail(userVO.getEmail()).isPresent()) {
+        if (farmUserPersistencePort.findByEmail(userVO.getEmail()).isPresent()) {
             // Mensagem genérica para evitar enumeração de usuários
             throw new DuplicateEntityException("Não foi possível completar o cadastro com os dados informados.");
         }
@@ -233,7 +237,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         userVO.setRoles(java.util.List.of("ROLE_FARM_OWNER"));
         
         // Cria novo usuário
-        return userBusiness.findOrCreateUser(userVO);
+        return farmUserPersistencePort.findOrCreate(userVO);
     }
 
     private void validateGoatFarmCreation(GoatFarmFullRequestVO fullRequestVO, User currentUser) {

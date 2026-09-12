@@ -16,6 +16,10 @@ Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONT
   `SpringCredentialAuthenticationAdapter` e `JwtTokenAdapter` traduzem as APIs
   Spring Security/JWT e preservam os contratos atuais; o core não importa
   `AuthenticationManager`, `Authentication`, `JwtDecoder` ou `Jwt`.
+- O core de Authority usa `AuthorityAccount` e `AuthorityRole`, além de
+  representações próprias para sessões de refresh e tokens de recuperação.
+  `AuthorityPersistenceMapper` e os adapters concentram a conversão para as
+  entidades JPA, sem alterar schema ou contratos HTTP.
 - `POST /api/v1/auth/register` permanece público, não recebe papéis no contrato e cria o usuário somente com o papel padrão `ROLE_OPERATOR`. Campos desconhecidos, inclusive uma tentativa de enviar `roles`, são rejeitados.
 - A autorização por fazenda distingue propriedade e operação: ADMIN possui acesso global, FARM_OWNER precisa ser o responsável da fazenda e OPERATOR precisa de vínculo persistido em `FarmOperator`.
 - `OwnershipService` consulta o vínculo operacional por `FarmAccessQueryPort`; o adapter de persistência concentra o acesso ao repositório Spring Data.

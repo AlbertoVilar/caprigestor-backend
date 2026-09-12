@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.farm.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.out.FarmUserPersistencePort;
 import com.devmaster.goatfarm.address.business.AddressBusiness;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.persistence.entity.Address;
@@ -57,6 +58,8 @@ class GoatFarmBusinessTest {
     @Mock
     private UserBusiness userBusiness;
     @Mock
+    private FarmUserPersistencePort farmUserPersistencePort;
+    @Mock
     private AddressBusiness addressBusiness;
     @Mock
     private PhoneBusiness phoneBusiness;
@@ -78,6 +81,7 @@ class GoatFarmBusinessTest {
                 goatFarmPort,
                 addressBusiness,
                 userBusiness,
+                farmUserPersistencePort,
                 phoneBusiness,
                 farmBusinessMapper,
                 ownershipService,
@@ -121,7 +125,7 @@ class GoatFarmBusinessTest {
     @DisplayName("Should create farm successfully when user is authenticated")
     void createGoatFarm_success_authenticated() {
         when(currentPrincipalQuery.findCurrent()).thenReturn(Optional.of(new AuthenticatedPrincipal(1L, "test@example.com", "Test", java.util.Set.of("ROLE_FARM_OWNER"))));
-        when(userBusiness.findUserByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
+        when(farmUserPersistencePort.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
         when(goatFarmPort.existsByName(any())).thenReturn(false);
         when(goatFarmPort.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
@@ -150,8 +154,8 @@ class GoatFarmBusinessTest {
     @DisplayName("Should create farm successfully when anonymous (registration flow)")
     void createGoatFarm_success_anonymous() {
         when(currentPrincipalQuery.findCurrent()).thenReturn(Optional.empty());
-        when(userBusiness.findUserByEmail(userVO.getEmail())).thenReturn(java.util.Optional.empty());
-        when(userBusiness.findOrCreateUser(any())).thenReturn(mockUser);
+        when(farmUserPersistencePort.findByEmail(userVO.getEmail())).thenReturn(java.util.Optional.empty());
+        when(farmUserPersistencePort.findOrCreate(any())).thenReturn(mockUser);
         when(goatFarmPort.existsByName(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
         when(farmBusinessMapper.toEntity(any())).thenReturn(mockFarm);
@@ -166,7 +170,7 @@ class GoatFarmBusinessTest {
         
         // Verifica se a role foi definida corretamente
         ArgumentCaptor<UserRequestVO> userCaptor = ArgumentCaptor.forClass(UserRequestVO.class);
-        verify(userBusiness).findOrCreateUser(userCaptor.capture());
+        verify(farmUserPersistencePort).findOrCreate(userCaptor.capture());
         UserRequestVO capturedUser = userCaptor.getValue();
         assertNotNull(capturedUser.getRoles());
         assertTrue(capturedUser.getRoles().contains("ROLE_FARM_OWNER"));
@@ -185,7 +189,7 @@ class GoatFarmBusinessTest {
             goatFarmBusiness.createGoatFarm(fullRequestVO)
         );
         
-        verify(userBusiness, never()).findOrCreateUser(any());
+        verify(farmUserPersistencePort, never()).findOrCreate(any());
     }
 
     @Test
@@ -224,7 +228,7 @@ class GoatFarmBusinessTest {
     @DisplayName("Should fail when anonymous and user already exists")
     void createGoatFarm_fail_anonymous_existing_user() {
         when(currentPrincipalQuery.findCurrent()).thenReturn(Optional.empty());
-        when(userBusiness.findUserByEmail(userVO.getEmail())).thenReturn(java.util.Optional.of(mockUser));
+        when(farmUserPersistencePort.findByEmail(userVO.getEmail())).thenReturn(java.util.Optional.of(mockUser));
         when(goatFarmPort.existsByName(any())).thenReturn(false); // Validations pass first
 
         DuplicateEntityException exception = assertThrows(DuplicateEntityException.class, () -> 
@@ -233,7 +237,7 @@ class GoatFarmBusinessTest {
         
         assertEquals("Não foi possível completar o cadastro com os dados informados.", exception.getMessage());
         
-        verify(userBusiness, never()).findOrCreateUser(any());
+        verify(farmUserPersistencePort, never()).findOrCreate(any());
         verify(goatFarmPort, never()).save(any());
     }
 
@@ -303,7 +307,7 @@ class GoatFarmBusinessTest {
     @DisplayName("Should throw DuplicateEntityException on data integrity violation")
     void createGoatFarm_fail_database_error() {
         when(currentPrincipalQuery.findCurrent()).thenReturn(Optional.of(new AuthenticatedPrincipal(1L, "test@example.com", "Test", java.util.Set.of("ROLE_FARM_OWNER"))));
-        when(userBusiness.findUserByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
+        when(farmUserPersistencePort.findByEmail("test@example.com")).thenReturn(Optional.of(mockUser));
         when(goatFarmPort.existsByName(any())).thenReturn(false);
         when(goatFarmPort.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddressEntity(any())).thenReturn(mockAddress);
@@ -333,7 +337,7 @@ class GoatFarmBusinessTest {
 
         assertNotNull(result);
         verify(userBusiness).updateUser(eq(1L), any(UserRequestVO.class));
-        verify(userBusiness, never()).findOrCreateUser(any());
+        verify(farmUserPersistencePort, never()).findOrCreate(any());
         verify(phoneBusiness).replacePhones(eq(100L), eq(phoneVOs));
     }
 
@@ -348,7 +352,7 @@ class GoatFarmBusinessTest {
                 goatFarmBusiness.updateGoatFarm(100L, farmVO, userVO, addressVO, phoneVOs)
         );
 
-        verify(userBusiness, never()).findOrCreateUser(any());
+        verify(farmUserPersistencePort, never()).findOrCreate(any());
         verify(userBusiness, never()).updateUser(anyLong(), any());
     }
 }

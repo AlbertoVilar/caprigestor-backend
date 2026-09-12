@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.config.security;
 
-import com.devmaster.goatfarm.authority.persistence.entity.Role;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
+import com.devmaster.goatfarm.authority.application.ports.out.UserPrincipalQueryPort;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,18 +20,14 @@ class SpringCredentialAuthenticationAdapterTest {
     @Test
     void translatesAuthenticatedUserToApplicationPrincipal() {
         AuthenticationManager manager = mock(AuthenticationManager.class);
-        User user = new User();
-        user.setId(9L);
-        user.setEmail("owner@example.com");
-        user.setName("Owner");
-        Role role = new Role();
-        role.setAuthority("ROLE_FARM_OWNER");
-        user.addRole(role);
+        UserPrincipalQueryPort query = mock(UserPrincipalQueryPort.class);
+        when(query.findByEmail("owner@example.com")).thenReturn(java.util.Optional.of(
+                new AuthenticatedPrincipal(9L, "owner@example.com", "Owner", java.util.Set.of("ROLE_FARM_OWNER"))));
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(user);
+        when(authentication.getName()).thenReturn("owner@example.com");
         when(manager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(authentication);
 
-        var principal = new SpringCredentialAuthenticationAdapter(manager).authenticate("owner@example.com", "secret");
+        var principal = new SpringCredentialAuthenticationAdapter(manager, query).authenticate("owner@example.com", "secret");
 
         assertThat(principal.id()).isEqualTo(9L);
         assertThat(principal.email()).isEqualTo("owner@example.com");
@@ -41,10 +37,11 @@ class SpringCredentialAuthenticationAdapterTest {
     @Test
     void translatesBadCredentialsWithoutLeakingSpringException() {
         AuthenticationManager manager = mock(AuthenticationManager.class);
+        UserPrincipalQueryPort query = mock(UserPrincipalQueryPort.class);
         when(manager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("bad"));
 
         assertThrows(InvalidArgumentException.class,
-                () -> new SpringCredentialAuthenticationAdapter(manager).authenticate("owner@example.com", "wrong"));
+                () -> new SpringCredentialAuthenticationAdapter(manager, query).authenticate("owner@example.com", "wrong"));
     }
 }

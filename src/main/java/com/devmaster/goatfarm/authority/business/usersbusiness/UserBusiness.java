@@ -8,9 +8,9 @@ import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPers
 import com.devmaster.goatfarm.authority.application.ports.out.PasswordHashingPort;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityRole;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
-import com.devmaster.goatfarm.authority.persistence.entity.Role;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -55,13 +55,10 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
 
         String encryptedPassword = passwordHashingPort.hash(vo.getPassword());
-        Set<Role> resolvedRoles = resolveUserRoles(vo);
-
-        User user = authorityBusinessMapper.toEntity(vo);
-        user.setPassword(encryptedPassword);
-        user.getRoles().clear();
-        user.getRoles().addAll(resolvedRoles);
-        User saved = userPort.save(user);
+        Set<String> resolvedRoles = resolveUserRoles(vo);
+        AuthorityAccount account = authorityBusinessMapper.toAccount(vo);
+        account = new AuthorityAccount(account.id(), account.name(), account.email(), account.cpf(), encryptedPassword, resolvedRoles);
+        AuthorityAccount saved = userPort.save(account);
         return authorityBusinessMapper.toResponseVO(saved);
     }
 
@@ -74,16 +71,16 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
             requireAdmin("Apenas administradores podem alterar roles de usuários.");
         }
 
-        User existingUser = userPort.findById(userId)
+        AuthorityAccount existingUser = userPort.findById(userId)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
 
-        if (!existingUser.getEmail().equals(vo.getEmail().trim())) {
+        if (!existingUser.email().equals(vo.getEmail().trim())) {
             if (userPort.findByEmail(vo.getEmail().trim()).isPresent()) {
                 throw new DuplicateEntityException("Já existe outro usuário cadastrado com o email: " + vo.getEmail());
             }
         }
 
-        if (!existingUser.getCpf().equals(vo.getCpf().trim())) {
+        if (!existingUser.cpf().equals(vo.getCpf().trim())) {
             if (userPort.findByCpf(vo.getCpf().trim()).isPresent()) {
                 throw new DuplicateEntityException("Já existe outro usuário cadastrado com o CPF: " + vo.getCpf());
             }
@@ -94,34 +91,28 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
             encryptedPassword = passwordHashingPort.hash(vo.getPassword());
         }
 
-        Set<Role> resolvedRoles = null;
+        Set<String> resolvedRoles = null;
         if (rolesUpdateRequested) {
             resolvedRoles = resolveUserRoles(vo);
         }
 
-        existingUser.setName(vo.getName());
-        existingUser.setEmail(vo.getEmail());
-        existingUser.setCpf(vo.getCpf());
-
+        String password = existingUser.encodedPassword();
         if (encryptedPassword != null) {
-            existingUser.setPassword(encryptedPassword);
-            refreshSessionPersistencePort.revokeAllForUser(existingUser.getId(), Instant.now(), "password_changed");
+            password = encryptedPassword;
+            refreshSessionPersistencePort.revokeAllForUser(existingUser.id(), Instant.now(), "password_changed");
         }
-
+        Set<String> roles = resolvedRoles == null ? existingUser.roles() : resolvedRoles;
         if (resolvedRoles != null) {
-            existingUser.getRoles().clear();
-            existingUser.getRoles().addAll(resolvedRoles);
-            refreshSessionPersistencePort.revokeAllForUser(existingUser.getId(), Instant.now(), "roles_changed");
+            refreshSessionPersistencePort.revokeAllForUser(existingUser.id(), Instant.now(), "roles_changed");
         }
-
-        User updated = userPort.save(existingUser);
+        AuthorityAccount updated = userPort.save(new AuthorityAccount(existingUser.id(), vo.getName(), vo.getEmail(), vo.getCpf(), password, roles));
         return authorityBusinessMapper.toResponseVO(updated);
     }
 
     @Transactional
     public UserResponseVO getMe() {
         AuthenticatedPrincipal principal = currentPrincipalQuery.requireCurrent();
-        User current = userPort.findById(principal.id())
+        AuthorityAccount current = userPort.findById(principal.id())
                 .orElseThrow(() -> new UnauthorizedException("Usuário autenticado não encontrado: " + principal.email()));
         return authorityBusinessMapper.toResponseVO(current);
     }
@@ -161,17 +152,15 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
 
         requireAdmin("Apenas administradores podem alterar roles de usuários.");
 
-        java.util.Set<Role> resolved = roles.stream()
+        java.util.Set<String> resolved = roles.stream()
                 .map(roleName -> rolePort.findByAuthority(roleName)
-                        .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
+                        .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)).authority())
                 .collect(java.util.stream.Collectors.toSet());
 
-        User user = userPort.findById(userId)
+        AuthorityAccount user = userPort.findById(userId)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Usuário com ID " + userId + " não encontrado."));
-        user.getRoles().clear();
-        user.getRoles().addAll(resolved);
-        refreshSessionPersistencePort.revokeAllForUser(user.getId(), Instant.now(), "roles_changed");
-        User saved = userPort.save(user);
+        refreshSessionPersistencePort.revokeAllForUser(user.id(), Instant.now(), "roles_changed");
+        AuthorityAccount saved = userPort.save(new AuthorityAccount(user.id(), user.name(), user.email(), user.cpf(), user.encodedPassword(), resolved));
         return authorityBusinessMapper.toResponseVO(saved);
     }
 
@@ -212,34 +201,33 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
         }
     }
 
-    private Set<Role> resolveUserRoles(UserRequestVO vo) {
+    private Set<String> resolveUserRoles(UserRequestVO vo) {
         if (vo.getRoles() != null && !vo.getRoles().isEmpty()) {
             return vo.getRoles().stream()
                     .map(roleName -> rolePort.findByAuthority(roleName)
-                            .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)))
+                            .orElseThrow(() -> new RuntimeException("Role não encontrada: " + roleName)).authority())
                     .collect(Collectors.toSet());
         } else {
-            Role defaultRole = rolePort.findByAuthority("ROLE_OPERATOR")
+            AuthorityRole defaultRole = rolePort.findByAuthority("ROLE_OPERATOR")
                     .orElseThrow(() -> new RuntimeException("Role padrão ROLE_OPERATOR não encontrada no sistema"));
-            return Set.of(defaultRole);
+            return Set.of(defaultRole.authority());
         }
     }
 
     @Transactional
-    public User findOrCreateUser(UserRequestVO vo) {
+    public AuthorityAccount findOrCreateUser(UserRequestVO vo) {
         validateUserData(vo, true);
         return userPort.findByEmail(vo.getEmail())
                 .orElseGet(() -> {
-                    User user = authorityBusinessMapper.toEntity(vo);
-                    Set<Role> roles = resolveUserRoles(vo);
-                    roles.forEach(user::addRole);
-                    user.setPassword(passwordHashingPort.hash(vo.getPassword()));
-                    return userPort.save(user);
+                    AuthorityAccount account = authorityBusinessMapper.toAccount(vo);
+                    Set<String> roles = resolveUserRoles(vo);
+                    return userPort.save(new AuthorityAccount(account.id(), account.name(), account.email(), account.cpf(),
+                            passwordHashingPort.hash(vo.getPassword()), roles));
                 });
     }
 
     @Transactional(readOnly = true)
-    public java.util.Optional<User> findUserByEmail(String email) {
+    public java.util.Optional<AuthorityAccount> findUserByEmail(String email) {
         return userPort.findByEmail(email);
     }
 
