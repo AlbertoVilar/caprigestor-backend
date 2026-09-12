@@ -41,8 +41,15 @@ class OwnershipSecurityBoundaryArchUnitTest {
                 .that().haveFullyQualifiedName("com.devmaster.goatfarm.config.security.OwnershipService")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "..authority.persistence.entity..", "..goat.persistence..", "..farm.persistence.entity..",
-                        "..authority.application.ports.out.UserPersistencePort", "..farm.application.ports.out.GoatFarmPersistencePort",
                         "..goat.application.routing..")
+                .check(IMPORTED_CLASSES);
+
+        noClasses()
+                .that().haveFullyQualifiedName("com.devmaster.goatfarm.config.security.OwnershipService")
+                .should().dependOnClassesThat().haveFullyQualifiedName(
+                        "com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort")
+                .orShould().dependOnClassesThat().haveFullyQualifiedName(
+                        "com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort")
                 .check(IMPORTED_CLASSES);
     }
 

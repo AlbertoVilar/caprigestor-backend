@@ -103,6 +103,18 @@ class GoatBusinessTest {
         verify(goatPort).existsByRegistrationNumber("1643222002");
     }
 
+    @Test
+    void deleteRejectsGoatOutsideRequestedFarmWithOwnershipMessage() {
+        doNothing().when(ownershipService).verifyFarmOwnership(1L);
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> business.deleteGoat(1L, "1643222002"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessage("Cabra não pertence à fazenda informada.");
+        verify(ownershipService).verifyFarmOwnership(1L);
+        verify(goatPort, never()).deleteById(any());
+    }
+
     private AuthenticatedPrincipal principal(Long id) {
         return new AuthenticatedPrincipal(id, "test@example.com", "Test", Set.of());
     }

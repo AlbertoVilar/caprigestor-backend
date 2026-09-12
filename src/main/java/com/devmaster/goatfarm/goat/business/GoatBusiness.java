@@ -30,6 +30,7 @@ import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -127,7 +128,8 @@ public class GoatBusiness implements GoatManagementUseCase {
     @Override
     public void deleteGoat(Long farmId, String goatId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Goat goat = findOrThrow(farmId, goatId);
+        Goat goat = findInFarm(farmId, goatId)
+                .orElseThrow(() -> new AccessDeniedException("Cabra não pertence à fazenda informada."));
         goatPort.deleteById(goat.id());
     }
 
@@ -180,18 +182,20 @@ public class GoatBusiness implements GoatManagementUseCase {
     }
 
     private Goat findOrThrow(Long farmId, String token) {
+        return findInFarm(farmId, token)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+    }
+
+    private java.util.Optional<Goat> findInFarm(Long farmId, String token) {
         // Explicit technical tokens are unambiguous even when an RG happens
         // to contain only digits. Every other route token is an RG; a bare
         // numeric token must never be guessed to be a technical id.
         var explicitTechnicalId = GoatRouteIdentifier.technicalId(token);
         if (explicitTechnicalId.isPresent()) {
-            return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId)
-                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+            return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId);
         }
 
-        Goat found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
-        if (found == null) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda.");
-        return found;
+        return goatPort.findByRegistrationNumberAndFarmId(token, farmId);
     }
 
     private GoatResponseVO toResponse(Goat goat) {
