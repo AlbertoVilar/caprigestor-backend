@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /** Framework-free domain representation of one milk production record. */
-public class MilkProduction {
+public final class MilkProduction {
     private Long id;
     private Long farmId;
     private String goatId;
@@ -28,7 +28,7 @@ public class MilkProduction {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public MilkProduction() {
+    private MilkProduction() {
     }
 
     public static MilkProduction record(Long farmId, String goatId, Long lactationId,
@@ -105,22 +105,4 @@ public class MilkProduction {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
-    public void setId(Long value) { id = value; }
-    public void setFarmId(Long value) { farmId = value; }
-    public void setGoatId(String value) { goatId = value; }
-    public void setGoatTechnicalId(Long value) { goatTechnicalId = value; }
-    public void setLactationId(Long value) { lactationId = value; }
-    public void setDate(LocalDate value) { date = value; }
-    public void setShift(MilkingShift value) { shift = value; }
-    public void setVolumeLiters(BigDecimal value) { volumeLiters = value; }
-    public void setNotes(String value) { notes = value; }
-    public void setStatus(MilkProductionStatus value) { status = value; }
-    public void setCanceledAt(LocalDateTime value) { canceledAt = value; }
-    public void setCanceledReason(String value) { canceledReason = value; }
-    public void setRecordedDuringMilkWithdrawal(boolean value) { recordedDuringMilkWithdrawal = value; }
-    public void setMilkWithdrawalEventId(Long value) { milkWithdrawalEventId = value; }
-    public void setMilkWithdrawalEndDate(LocalDate value) { milkWithdrawalEndDate = value; }
-    public void setMilkWithdrawalSource(String value) { milkWithdrawalSource = value; }
-    public void setCreatedAt(LocalDateTime value) { createdAt = value; }
-    public void setUpdatedAt(LocalDateTime value) { updatedAt = value; }
 }

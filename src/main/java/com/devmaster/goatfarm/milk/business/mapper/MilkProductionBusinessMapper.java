@@ -1,6 +1,5 @@
 package com.devmaster.goatfarm.milk.business.mapper;
 
-import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import org.springframework.stereotype.Component;
@@ -9,10 +8,6 @@ import java.util.List;
 
 @Component
 public class MilkProductionBusinessMapper {
-    public MilkProduction toEntity(MilkProductionRequestVO vo) {
-        return MilkProduction.record(null, null, null, vo.getDate(), vo.getShift(), vo.getVolumeLiters(), vo.getNotes());
-    }
-
     public MilkProductionResponseVO toResponseVO(MilkProduction p) {
         if (p == null) return null;
         return MilkProductionResponseVO.builder().id(p.getId()).date(p.getDate()).shift(p.getShift())

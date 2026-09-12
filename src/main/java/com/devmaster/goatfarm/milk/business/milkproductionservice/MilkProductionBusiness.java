@@ -14,8 +14,8 @@ import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
-import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
 import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.milk.domain.MilkProduction;
@@ -82,13 +82,15 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         );
         Lactation lactation = getRequiredActiveLactation(farmId, goatId, requestVO.getDate());
 
-        MilkProduction milkProduction = milkProductionMapper.toEntity(requestVO);
-        milkProduction.setFarmId(farmId);
-        milkProduction.setGoatId(goatId);
-        milkProduction.setLactationId(lactation.getId());
-        milkProduction.setStatus(MilkProductionStatus.ACTIVE);
-        milkProduction.setCanceledAt(null);
-        milkProduction.setCanceledReason(null);
+        MilkProduction milkProduction = MilkProduction.record(
+                farmId,
+                goatId,
+                lactation.getId(),
+                requestVO.getDate(),
+                requestVO.getShift(),
+                requestVO.getVolumeLiters(),
+                requestVO.getNotes()
+        );
         applyMilkWithdrawalSnapshot(milkProduction, withdrawalStatus);
         MilkProduction saved = milkProductionPersistencePort.save(milkProduction);
         return milkProductionMapper.toResponseVO(saved);

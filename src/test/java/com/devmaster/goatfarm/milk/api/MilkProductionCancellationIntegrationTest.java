@@ -134,6 +134,7 @@ class MilkProductionCancellationIntegrationTest {
     void shouldCancelMilkProductionEntityAndHideFromDefaultList() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
         MilkProductionEntity production = saveMilkProductionEntity(LocalDate.now().minusDays(1), MilkingShift.MORNING);
+        var originalCreatedAt = milkProductionRepository.findById(production.getId()).orElseThrow().getCreatedAt();
 
         mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
@@ -143,6 +144,8 @@ class MilkProductionCancellationIntegrationTest {
         MilkProductionEntity canceled = milkProductionRepository.findById(production.getId()).orElseThrow();
         assertThat(canceled.getStatus()).isEqualTo(MilkProductionStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isNotNull();
+        assertThat(canceled.getCreatedAt()).isEqualTo(originalCreatedAt);
+        assertThat(canceled.getUpdatedAt()).isAfterOrEqualTo(originalCreatedAt);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
