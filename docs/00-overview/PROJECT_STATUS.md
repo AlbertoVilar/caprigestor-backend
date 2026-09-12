@@ -10,7 +10,7 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 
 ## Baseline atual
 
-- A baseline integrada de `develop` é `48440e8` (merge da PR #263).
+- A baseline integrada de `develop` é `d1e7b8a` (merge da PR #264).
 - A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
 - O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
   autenticação JWT e autorização farm-scoped.
@@ -68,8 +68,10 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 
 ## Wave ativa e trabalho adiado
 
-- DEV-A11-I2-P0 está implementada nesta branch dedicada, aguardando revisão
-  arquitetural antes de qualquer merge. As duas rotas HTTP de limpeza global
+- DEV-A11-I2-A (Password Hashing Boundary) está em implementação nesta branch
+  dedicada. O core Authority passa a depender de `PasswordHashingPort`; o
+  `PasswordEncoder` do Spring permanece somente no adapter de infraestrutura.
+- DEV-A11-I2-P0 foi integrada na `develop`: as duas rotas HTTP de limpeza global
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por
   padrão.

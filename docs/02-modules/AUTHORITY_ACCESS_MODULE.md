@@ -8,6 +8,9 @@ Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONT
 - Todos os endpoints em `/api/v1/users/**` são exclusivamente administrativos e exigem `ROLE_ADMIN`.
 - A restrição existe tanto na configuração HTTP quanto no `UserController`, como defesa em profundidade.
 - Alterações administrativas de senha e de papéis também validam a autoridade antes de codificar senha, consultar papéis ou modificar uma entidade persistente.
+- O business/application do módulo usa `PasswordHashingPort` para hashing; a
+  implementação BCrypt continua em `config.security.PasswordHashingAdapter`,
+  preservando o `PasswordEncoder` como detalhe de infraestrutura.
 - `POST /api/v1/auth/register` permanece público, não recebe papéis no contrato e cria o usuário somente com o papel padrão `ROLE_OPERATOR`. Campos desconhecidos, inclusive uma tentativa de enviar `roles`, são rejeitados.
 - A autorização por fazenda distingue propriedade e operação: ADMIN possui acesso global, FARM_OWNER precisa ser o responsável da fazenda e OPERATOR precisa de vínculo persistido em `FarmOperator`.
 - `OwnershipService` consulta o vínculo operacional por `FarmAccessQueryPort`; o adapter de persistência concentra o acesso ao repositório Spring Data.
