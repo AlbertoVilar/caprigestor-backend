@@ -56,4 +56,14 @@ class GlobalHexagonalBoundaryArchUnitTest {
                 .because("the current principal adapter is the only boundary allowed to touch SecurityContextHolder")
                 .check(IMPORTED_CLASSES);
     }
+
+    @Test
+    void coreMustNotDependOnSpringDataJpaRepositories() {
+        noClasses()
+                .that().resideInAnyPackage("..domain..", "..application..", "..business..")
+                .should().dependOnClassesThat().haveFullyQualifiedName(
+                        "org.springframework.data.jpa.repository.JpaRepository")
+                .because("the business core must keep Spring Data repository details in persistence adapters")
+                .check(IMPORTED_CLASSES);
+    }
 }

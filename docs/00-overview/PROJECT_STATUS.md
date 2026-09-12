@@ -1,98 +1,94 @@
 # Status do Projeto CapriGestor Backend
 
-Ultima atualizacao: 2026-09-11
-Escopo: estado funcional humano e versionado do backend no commit integrado de develop.
-Links relacionados: [Portal](../INDEX.md), [MVP](./MVP_READY.md), [Roadmap](./ROADMAP.md), [Contratos API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md)
+Última atualização: 2026-09-12
+Escopo: único estado humano versionado e conciso do backend. Código, migrations,
+testes, configuração e CI são a fonte técnica primária.
 
-## Resumo executivo
+Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
+[Quality Gates](../01-architecture/QUALITY_GATES.md),
+[Contratos API](../03-api/API_CONTRACTS.md).
 
-O backend esta funcional e organizado como um monolito modular com arquitetura
-hexagonal, PostgreSQL/Flyway, seguranca JWT farm-scoped e CI/CD com gates de
-qualidade. O estado tecnico deve ser conferido no codigo, nas migrations, nos
-testes, no `pom.xml`, nos workflows e nos manifestos Docker.
+## Baseline atual
 
-Nesta onda, `cabras.id` passou a ser propagado como GoatId técnico nos
-consumidores de eventos, genealogia, reprodução, saúde, lactação/leite,
-comercial e auditoria. O RG continua como identidade registral/snapshot e as
-rotas RG permanecem compatíveis durante a transição. A integridade técnica é
-fechada pelas migrations V41 e V42; as rotas estruturais versionadas e a
-retirada dos aliases RG continuam documentadas em
-[GOAT_IDENTITY_DEPENDENT_MODULES_WAVE](../01-architecture/GOAT_IDENTITY_DEPENDENT_MODULES_WAVE.md).
-Na revisão ID4-C1, os consumidores de produção também deixaram de depender do
-`LegacyGoatPersistencePort`; a resolução de tokens passou a ser explícita e
-centralizada em `GoatReferenceResolver`, com guarda ArchUnit para evitar o
-retorno de entidades e repositórios JPA ao core.
+- A baseline integrada de `develop` é `f46c375` (merge da PR #262).
+- A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
+- O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
+  autenticação JWT e autorização farm-scoped.
+- `CAPRIGESTOR_CURRENT_STATE.md`, se existir localmente, é cache não
+  autoritativo e candidato à remoção; não é necessário em clone limpo.
+- O estado de execução e a saúde do CI devem ser confirmados nos workflows e
+  no repositório no momento da tarefa; este documento não substitui essa prova.
 
-Na ID5-A (branch `feat/goat-registration-rectification`), o fluxo explícito
-de retificação registral foi implementado sem trocar o `GoatId`: somente
-`ADMIN` e `FARM_OWNER` podem corrigir TOD/TOE/RG pelo endpoint administrativo,
-com validação canônica, proteção contra duplicidade, auditoria operacional e
-histórico imutável em `goat_registration_history`. O `PUT` comum permanece
-restrito a alterações de perfil e rejeita mudança de identidade. Esta onda
-ainda aguarda revisão/integração em `develop`; não inclui frontend nem reset
-da base descartável de desenvolvimento.
+## Arquitetura atual
 
-Baseline desta atualizacao:
+O destino é arquitetura hexagonal pragmática: API/Web → casos de uso → domínio,
+com persistência, segurança e integrações atrás de ports/adapters. O core já
+possui boundaries mecânicos para domínio, controller, Goat, lactação, leite,
+reprodução e segurança, mas ainda há dívida legada em outros módulos.
 
-- branch: `refactor/goat-genealogy-events`;
-- commit: see the merge commit for PR #239;
-- `origin/main`: `b9aaa94c007e7865ec218816ce99e51b6a7864a5`;
-- a arvore de trabalho estava limpa na coleta deste status;
-- relatorios de teste existentes: 589 testes, 0 falhas, 0 erros e 1 ignorado.
+Autorização usa `FarmAuthorizationUseCase` e `CurrentPrincipalQueryUseCase`.
+`SecurityContextHolder` permanece confinado ao adapter de principal atual. As
+rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
+`@FarmOwnerOnly`, `@AdminOnly`, `@AuthenticatedFarmRead` ou `@PublicEndpoint`).
 
-## Modulos implementados
+## Waves concluídas relevantes
 
-| Modulo | Estado | Responsabilidade principal |
-|---|---|---|
-| Authority | Implementado | JWT, usuarios, papeis, refresh session, operadores e reset de senha |
-| Farm | Implementado | fazendas, ownership, permissoes, enderecos e telefones |
-| Goat / Genealogy | Implementado | animais, genealogia, saida controlada e integracao ABCC |
-| Events | Implementado | historico operacional por animal |
-| Reproduction | Implementado | coberturas, prenhez, diagnostico, parto, desmame e alertas |
-| Lactation / Milk | Implementado | lactacao, producao individual, producao consolidada e alertas |
-| Health | Implementado | eventos sanitarios, carencia, calendario e alertas |
-| Inventory | Implementado | itens, lotes, ledger, saldo e idempotencia |
-| Commercial | Implementado | clientes, vendas e financeiro operacional minimo |
-| Article | Implementado | artigos publicos e administracao editorial |
-| Audit | Implementado | trilha de auditoria operacional |
+- DEV-A11-R (Final Hexagonal Closure Audit) foi concluída em modo read-only. Os
+  14 pares legados de ports de aplicação para entidades JPA foram identificados
+  e classificados como dívida arquitetural conhecida, a ser removida
+  progressivamente em DEV-A11-I3.
+- A10 isolou limites de principal autenticado, autorização por fazenda,
+  validação crítica, publicação de eventos e emissão de JWT.
+- A11-I1 reforçou o guard global que impede o domínio de depender de
+  `application`.
+- GoatId técnico foi introduzido e propagado estruturalmente pelas migrations
+  V39–V43. FKs locais críticas usam identidade técnica; RG permanece
+  identificador registral/ABCC e snapshot de negócio.
+- V44 reforçou a regra de uma única lactação ativa por animal/fazenda.
+- A retificação registral preserva GoatId, é administrativa e mantém histórico
+  imutável; o `PUT` comum não altera identidade.
 
-## API e seguranca
+## Dívida arquitetural conhecida
 
-- As rotas de aplicacao usam exclusivamente `/api/v1`.
-- Consultas publicas sao deliberadas e limitadas a fazendas, animais,
-  genealogia e consultas ABCC documentadas.
-- `@CanManageFarm` permite ADMIN, proprietario da fazenda ou operador vinculado.
-- `@FarmOwnerOnly` permite ADMIN ou proprietario da fazenda.
-- `@AdminOnly` permite somente ADMIN.
-- `GET /api/v1/goatfarms/{farmId}/goats/summary` é uma consulta pública de
-  agregados e usa `@PublicEndpoint`; as mutações de animais continuam protegidas.
+- O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém os 14 pares
+  explícitos já classificados pela DEV-A11-R como violações legadas de ports de
+  aplicação ainda acoplados a entidades JPA. É dívida de migração conhecida,
+  não aceitação permanente: será removida progressivamente em DEV-A11-I3 e pode
+  diminuir, nunca crescer sem revisão.
+- Há dependências legadas do core a JPA entities, `Page`/`Pageable`/`Sort` e,
+  no contexto Authority, a APIs de autenticação. Guards globais para essas
+  dívidas permanecem planejados até a remoção incremental.
+- A transição de identidade ainda contém compatibilidades de API/token por RG e
+  `String goatId`. Esse trabalho chama-se **Goat Identity Transition Closure**;
+  não é a criação de GoatId.
+- O antigo plano estrutural **ID4-B0/ID4** é obsoleto e já foi implementado nas
+  migrations V39–V43 e no modelo técnico atual. Não há trabalho futuro para
+  criar GoatId, promover `cabras.id` ou repetir a migração estrutural; somente
+  resíduos comprovados de **Goat Identity Transition Closure** permanecem.
 
-## Banco, testes e entrega
+## Wave ativa e trabalho adiado
 
-- Flyway possui migrations V1 a V43; V38 reforca referencias compostas por
-  fazenda, V39 introduz GoatId, V40 cria sombras técnicas, V41 exige GoatId
-  nos consumidores dependentes, V42 promove a PK técnica e V43 retira as FKs
-  estruturais que ainda apontavam para RG, preservando RG como identificador
-  de negócio/snapshot e criando o histórico de retificações. Migrations
-  publicadas não foram editadas.
-- Desenvolvimento usa PostgreSQL; testes usam H2 e testes de integracao
-  PostgreSQL quando Docker esta disponivel.
-- O piso de cobertura efetivo do `pom.xml` e `0.7588` (75,88%).
-- CI inclui testes, CodeQL, secret scan, dependency review, SBOM e Trivy.
-- Compose local usa PostgreSQL 15; HML/producao devem registrar a versao
-  efetiva no runbook do ambiente.
+- Ativa: **harness de arquitetura e governança** — procedures versionadas,
+  documentação ativa coerente e um guard zero-baseline para `JpaRepository` no
+  core.
+- Próximo gate, após a estabilização/merge do harness: **DEV-A11-I2-P0 — Admin Maintenance
+  Security Containment**. Os endpoints administrativos destrutivos e credencial
+  hard-coded precisam de decisão de uso/isolamento antes de evoluir Authority.
+- Adiado: remoção de dívida A11-I2/I3, mudanças de contrato/API, mudanças de
+  schema, reset DEV, HML e `main`.
 
-## Limites atuais e proximos passos
+## Compatibilidade e operações
 
-- `GoatEntity` usa `id` como `@Id` JPA técnico; `num_registro` permanece RG
-  único e corrigível como dado de negócio. As rotas v1 ainda são aliases
-  registrais explícitos e não inferem GoatId pelo formato da URL.
-- Fallbacks por RG permanecem apenas para compatibilidade de fixtures e rotas
-  legadas. A futura API estrutural deverá declarar GoatId explicitamente; tokens
-  numéricos isolados não são inferidos como GoatId.
-- A base de desenvolvimento continua descartável, mas não foi resetada; o
-  reset pré-HML será uma operação separada, após a migração coerente.
+- A base DEV contém dados descartáveis para teste, mas reset continua operação
+  explícita e futura. Migrations publicadas não são reescritas.
+- RG é lookup registral e pode coexistir com GoatId técnico durante a transição;
+  aliases/fallbacks não devem ser removidos sem decisão documentada de contrato.
+- Antes de HML, o projeto exigirá instalação limpa PostgreSQL → Flyway
+  V1..latest → startup → bootstrap/smoke tests.
 
-Este documento representa onde o produto esta. O trabalho futuro deve ficar no
-[ROADMAP](./ROADMAP.md). Nao use este arquivo para registrar hashes efemeros de
-cada tarefa, detalhes de implementacao ou contexto exclusivo de um ambiente.
+## Onde continuar
+
+Use [ARCHITECTURE.md](../01-architecture/ARCHITECTURE.md) para target e dívida,
+[QUALITY_GATES.md](../01-architecture/QUALITY_GATES.md) para o que CI já impõe,
+e os documentos de módulo/API para mudanças funcionais. Roadmaps e planos
+históricos ajudam a entender decisões, mas não definem o estado atual.

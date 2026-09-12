@@ -1,125 +1,151 @@
-﻿# Arquitetura do Sistema GoatFarm
-Ultima atualizacao: 2026-09-12
-Escopo: visao tecnica, modularizacao por dominio, shared kernel e gates de arquitetura.
-Links relacionados: [Portal](../INDEX.md), [ADR](./ADR), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulos](../02-modules), [Dominio](../00-overview/BUSINESS_DOMAIN.md)
+# Arquitetura do Sistema CapriGestor
 
-## Visao geral
-O backend segue arquitetura hexagonal (Ports and Adapters) com separacao explicita entre API, casos de uso, regras de negocio e persistencia.
+Última atualização: 2026-09-12
+Escopo: referência arquitetural, modularização por domínio, shared kernel e gates.
+
+Links: [Portal](../INDEX.md), [ADRs](./ADR),
+[Contratos API](../03-api/API_CONTRACTS.md), [Módulos](../02-modules),
+[Domínio](../00-overview/BUSINESS_DOMAIN.md),
+[Status](../00-overview/PROJECT_STATUS.md).
+
+## Visão geral
+
+O backend é um monólito modular Java/Spring Boot que segue arquitetura
+hexagonal (Ports and Adapters) de forma pragmática. A direção conceitual é:
 
 ```mermaid
 graph TD
-    Controller[API Controller] --> InPort[Application Port In]
-    InPort --> Business[Business Service]
+    Controller[API / Web] --> InPort[Application Port In]
+    InPort --> Business[Application / Business]
+    Business --> Domain[Domain]
     Business --> OutPort[Application Port Out]
-    OutPort --> Adapter[Persistence Adapter]
+    OutPort --> Adapter[Adapter / Infrastructure]
 ```
 
-A estrutura prioriza isolamento de dominio, testabilidade e substituicao de adaptadores sem impacto no core.
+## Target architecture
 
-## Regras / Contratos
-- Camadas por modulo:
-  - `api/controller`, `api/dto`, `api/mapper`
-  - `application/ports/in`, `application/ports/out`
-  - `business/*service`, `business/bo`
-  - `persistence/adapter`, `persistence/entity`, `persistence/repository`, `persistence/projection`
-- Contrato farm-level: controllers de fazenda usam validacao de ownership (`@ownershipService.canManageFarm` ou regra equivalente).
-- A intenção da autorização é declarada por annotations semânticas em
-  `config.security.authorization`: `@CanManageFarm`, `@FarmOwnerOnly`,
-  `@AdminOnly`, `@PublicEndpoint` e `@AuthenticatedFarmRead`. Elas são apenas
-  meta-dados de entrada; `@CanManageFarm` e `@FarmOwnerOnly` continuam delegando
-  a decisão ao bean `OwnershipService` (`FarmAuthorizationUseCase`), mantido
-  por compatibilidade com SpEL.
-- `AuthorizationPolicyGuardTest` percorre os controllers farm-scoped em
-  reflexão e impede endpoint novo sem política explícita. Também verifica a
-  presença do parâmetro `farmId` nas policies que usam esse identificador.
-- As exceções não são escondidas: permissões de fazenda continuam com sua
-  expressão explícita de papéis e consultas públicas são marcadas no método.
-- Shared kernel entre `milk` e `reproduction`:
-  - Contrato: `com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot`
-  - Consulta no modulo `milk` via `PregnancySnapshotQueryPort`.
-- Fronteira de contexto:
-  - `milk` nao importa classes internas de `reproduction` em `api`, `business` e `persistence.entity`.
-- Fronteira de domínio de lactação (DEV-A7):
-  - `milk.domain.Lactation` é um agregado framework-free, responsável pelas
-    transições intrínsecas `ACTIVE`/`DRY`.
-  - `LactationEntity` e `LactationPersistenceMapper` confinam JPA ao adapter;
-  - `MilkProduction` e `FarmMilkProduction` possuem modelos de domínio
-    independentes de framework; os nomes JPA `MilkProduction` e
-    `FarmMilkProduction` foram preservados apenas para compatibilidade de
-    consultas/tabelas;
-  - consultas farm-wide de gravidez pertencem a Reproduction por meio de
-    `PregnancyDryOffQueryUseCase`; o contexto Milk não executa SQL sobre
-    `pregnancy`;
-    `LactationPersistencePort` publica apenas o agregado e snapshots de leitura.
-  - `LactationBusiness` consulta produção por `MilkProductionSummaryQueryPort`,
-    sem importar entidades ou projeções de persistência.
-- Fronteiras críticas reforçadas na W4:
-  - `OwnershipService` implementa apenas `FarmAuthorizationUseCase` e consulta
-    `CurrentPrincipalQueryUseCase`, `FarmAccessQueryPort` e `FarmOwnerQueryPort`.
-  - `SpringSecurityCurrentPrincipalAdapter` é o único adaptador de aplicação
-    que lê `SecurityContextHolder`; ele resolve o email autenticado por
-    `UserPrincipalQueryPort` e carrega roles persistidas (JWT não é fonte de
-    autorização viva).
-  - Serviços de negócio usam contratos de autorização/principal e não injetam
-    `OwnershipService` concreto nem entidades `User` para decisões de acesso.
-  - `GoatGenderValidator` consulta apenas `GoatValidationQueryPort.GoatValidationSnapshot`; entidades JPA não atravessam o contrato de validação.
-  - `EventPublisher` recebe `EventPublication`, um contrato de aplicação imutável, e não a entidade `events.persistence.entity.Event`.
-  - `JwtService` emite tokens a partir de `AuthenticatedPrincipal`; o mapeamento de usuário persistente fica restrito ao caso de uso de autenticação.
-  - RabbitMQ é opcional e fail-closed: somente é criado quando `caprigestor.messaging.enabled=true`; sem a propriedade, o publisher NoOp é usado.
-  - A fronteira do Goat é protegida por `GoatPersistenceBoundaryArchUnitTest`:
-    camadas de aplicação, negócio, API, domínio e configuração não dependem de
-    entidades/repositórios/projeções JPA do Goat. A resolução de referências
-    fica em `GoatReferenceResolver`, mantendo tokens técnicos explícitos e RG
-    como lookup registral.
-  - A paginação do módulo Goat pertence ao boundary da aplicação em
-    `goat.application.pagination`: `GoatPage` e `GoatPageQuery` não dependem de
-    Spring Data. O `GoatController` converte `Pageable` HTTP para o modelo da
-    aplicação, e o `GoatPersistenceAdapter` faz a conversão inversa para
-    `Pageable`/`Page` apenas dentro do adapter. O contrato JSON publicado foi
-    preservado; `GoatHexagonalCoreArchUnitTest` impede o retorno dessa
-    dependência ao pacote de aplicação.
+O target permanente é um core de negócio isolado de Web/HTTP, JPA/persistência,
+segurança técnica e infraestrutura concreta. API mapeia transporte e chama
+casos de uso; application orquestra e expõe ports; adapters implementam ports e
+retêm detalhes de banco, integração e framework. Domain não conhece controllers,
+DTOs HTTP, JPA/Hibernate, Spring Security ou adapters.
 
-Essas regras não afirmam que todo o domínio já esteja livre de JPA. Módulos
-legados ainda manipulam entidades em alguns casos de uso; a W4 isolou os
-contratos que participam diretamente de autorização, emissão de credenciais,
-validação crítica e publicação de eventos.
+DDD, SOLID e Clean Code orientam os limites. Uma abstração é criada apenas se
+proteger um boundary ou trouxer ganho demonstrável de manutenção; uso de
+`@Service` e transações apropriadas não é, isoladamente, violação.
+
+## Regras e contratos atuais
+
+- Convenção por módulo: `api/controller`, `api/dto`, `api/mapper`,
+  `application/ports/in`, `application/ports/out`, `business`, `domain` quando
+  aplicável e `persistence/adapter`, `persistence/entity`,
+  `persistence/repository`, `persistence/projection`.
+- Controllers não acessam repositories, entities ou adapters de persistência
+  diretamente; chamam ports/casos de uso e mapeiam DTOs.
+- Toda operação farm-scoped preserva `farmId`. A intenção é declarada por
+  `@CanManageFarm`, `@FarmOwnerOnly`, `@AdminOnly`, `@AuthenticatedFarmRead` ou
+  `@PublicEndpoint` e a decisão usa o boundary `FarmAuthorizationUseCase`.
+- `CurrentPrincipalQueryUseCase` entrega o principal ao core.
+  `SpringSecurityCurrentPrincipalAdapter` é o único adapter que lê
+  `SecurityContextHolder`; JWT não é fonte de autorização viva.
+- `AuthorizationPolicyGuardTest` percorre controllers farm-scoped e impede rota
+  nova sem política explícita. Também verifica `farmId` quando a policy o usa.
+- O shared kernel de gravidez entre `milk` e `reproduction` usa
+  `PregnancySnapshot` e `PregnancySnapshotQueryPort`; `milk` não importa
+  internos de `reproduction` em API, business ou entity.
+
+## Boundaries implementados
+
+### Segurança e ownership
+
+`OwnershipService` implementa `FarmAuthorizationUseCase` e consulta
+`CurrentPrincipalQueryUseCase`, `FarmAccessQueryPort` e `FarmOwnerQueryPort`.
+Serviços de negócio não injetam `OwnershipService` concreto nem entidades `User`
+para decisões de acesso. `JwtService` recebe `AuthenticatedPrincipal`, mantendo
+o mapeamento persistente no caso de uso de autenticação.
+
+### Goat e eventos
+
+`GoatGenderValidator` usa `GoatValidationQueryPort.GoatValidationSnapshot`, e
+`EventPublisher` recebe `EventPublication`, sem transportar entidades JPA. A
+fronteira Goat é protegida por `GoatPersistenceBoundaryArchUnitTest`: application,
+business, API, domain e configuração não dependem de tipos JPA do módulo Goat.
+`GoatReferenceResolver` centraliza tokens técnicos e RG como lookup registral.
+
+`GoatPage` e `GoatPageQuery` pertencem a `goat.application.pagination` e não
+dependem de Spring Data. O controller converte o transporte HTTP e o adapter
+converte para `Pageable`/`Page` somente na borda de persistência.
+
+### Lactação e leite
+
+`milk.domain.Lactation` é agregado sem framework responsável por transições
+`ACTIVE`/`DRY`. `LactationEntity` e mapper confinam JPA ao adapter.
+`MilkProduction` e `FarmMilkProduction` possuem modelos de domínio próprios;
+nomes JPA são preservados apenas onde a persistência precisa de compatibilidade.
+Consultas farm-wide de gravidez passam por `PregnancyDryOffQueryUseCase`, sem SQL
+do módulo Milk sobre tabelas de reprodução.
+
+## Dívida arquitetural conhecida
+
+Nem todo o core já está livre de tecnologia de persistência. O baseline de
+`ApplicationPortPersistenceBoundaryArchUnitTest` contém os 14 pares explícitos
+que a DEV-A11-R já identificou e classificou como violações legadas de ports de
+aplicação para entidades JPA. É dívida de migração conhecida, a ser removida
+progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem aprovação
+arquitetural.
+
+Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
+de autenticação em módulos específicos. Guards globais de zero tolerância para
+essas categorias permanecem planejados até a remoção incremental. O estado da
+wave está no [PROJECT_STATUS](../00-overview/PROJECT_STATUS.md); gates ativos e
+planejados estão em [QUALITY_GATES](./QUALITY_GATES.md).
+
+## Goat identity
+
+`GoatId` técnico (`cabras.id`) já foi introduzido estruturalmente nas migrations
+V39–V43. RG (`num_registro`) continua identificador de negócio/ABCC e snapshot
+histórico. FKs locais críticas usam GoatId, enquanto RG pode coexistir como
+lookup e compatibilidade de contrato.
+
+O antigo plano estrutural **ID4-B0/ID4** é obsoleto e já foi implementado. Não
+há wave futura para criar GoatId, promover `cabras.id` ou repetir V39–V43. Apenas
+resíduos comprovados de **Goat Identity Transition Closure** (compatibilidade,
+aliases, identidade de API, frontend e limpeza documental) podem ser planejados.
+
+Correções de TOD/TOE/RG não reutilizam o `PUT` genérico. O caso administrativo
+de retificação preserva o GoatId, não reescreve snapshots e grava
+`goat_registration_history`; requer `ADMIN` ou `FARM_OWNER`. Trabalho pendente
+de tokens, aliases, rotas e frontend é **Goat Identity Transition Closure**, não
+uma nova implementação de GoatId.
 
 ## Fluxos principais
-1. Fluxo HTTP farm-level:
-   `Controller -> Port In -> Business -> Port Out -> Adapter -> Banco`.
-2. Fluxo de leitura de prenhez no modulo de leite:
-   `milk.business -> PregnancySnapshotQueryPort -> adapter SQL -> snapshot`.
-3. Fluxo de erro:
-   excecoes de dominio sobem para handlers globais e seguem padrao do [API_CONTRACTS](../03-api/API_CONTRACTS.md).
-4. Fluxo de sessão:
-   `AuthBusiness -> RefreshSessionPersistencePort -> RefreshSessionPersistenceAdapter -> refresh_session`. O adapter persiste somente hashes de refresh token e faz a transição condicional de sessão ativa para consumida.
 
-## Gates
-| Gate | Objetivo | Evidencia |
-|---|---|---|
-| `HexagonalArchitectureGuardTest` | Impedir import indevido de `business` para `api` | [src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/HexagonalArchitectureGuardTest.java) |
-| `MilkReproductionBoundaryArchUnitTest` | Garantir fronteira entre `milk` e `reproduction` | [src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/MilkReproductionBoundaryArchUnitTest.java) |
-| `OwnershipSecurityBoundaryArchUnitTest` | Impedir dependências de entidades JPA nos contratos críticos de segurança, validação e eventos | [src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/OwnershipSecurityBoundaryArchUnitTest.java) |
-| `GoatPersistenceBoundaryArchUnitTest` | Impedir o retorno da costura legada e o vazamento de tipos de persistência do Goat para o core | [src/test/java/com/devmaster/goatfarm/architecture/GoatPersistenceBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/GoatPersistenceBoundaryArchUnitTest.java) |
-| `LactationDomainBoundaryArchUnitTest` | Impedir vazamento de JPA/Spring/API do agregado e de persistência para o caso de uso | [src/test/java/com/devmaster/goatfarm/architecture/LactationDomainBoundaryArchUnitTest.java](../../src/test/java/com/devmaster/goatfarm/architecture/LactationDomainBoundaryArchUnitTest.java) |
+1. Farm-scoped HTTP: `Controller -> Port In -> Business -> Port Out -> Adapter -> Banco`.
+2. Leitura de prenhez em Milk: `milk.business -> PregnancySnapshotQueryPort -> adapter SQL -> snapshot`.
+3. Erro: exceções de domínio sobem para handlers globais conforme
+   [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+4. Sessão: `AuthBusiness -> RefreshSessionPersistencePort ->
+   RefreshSessionPersistenceAdapter -> refresh_session`; o adapter armazena
+   hash de refresh token e faz a transição condicional da sessão.
 
-## Referencias internas
-- Modulos mapeados: `address`, `article`, `authority`, `events`, `farm`, `genealogy`, `goat`, `health`, `milk`, `phone`, `reproduction`.
-- Convencao de API: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
-- Decisoes arquiteturais historicas: [ADR](./ADR).
+## Gates arquiteturais ativos
 
-## Retificacao da identidade registral (ID5-A)
+| Gate | Objetivo |
+|---|---|
+| `HexagonalArchitectureGuardTest` | Impede import indevido de `business` para `api`. |
+| `GlobalHexagonalBoundaryArchUnitTest` | Protege domain, controllers, confinamento de `SecurityContextHolder` e ausência de `JpaRepository` no core. |
+| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado de 14 ports para entities. |
+| `OwnershipSecurityBoundaryArchUnitTest` | Protege ports críticos de segurança, ownership, validação e eventos. |
+| `GoatPersistenceBoundaryArchUnitTest` | Impede retorno de tipos JPA do Goat ao core. |
+| `GoatHexagonalCoreArchUnitTest` | Protege paginação e boundary de aplicação do Goat. |
+| `MilkReproductionBoundaryArchUnitTest` | Garante fronteira entre Milk e Reproduction. |
+| `LactationDomainBoundaryArchUnitTest` | Impede vazamento de JPA/Spring/API no agregado de lactação. |
 
-A identidade estrutural do animal é o `GoatId` (`cabras.id`). O RG
-(`num_registro`) permanece identificador de negócio/ABCC e snapshot histórico.
-Correções de TOD/TOE/RG não reutilizam o `PUT` genérico: o caso de uso
-administrativo de retificação mantém o mesmo GoatId, não reescreve snapshots
-históricos, grava `goat_registration_history` e exige `ADMIN` ou `FARM_OWNER`.
+## Referências internas
 
-O fluxo segue `Controller -> GoatRegistrationRectificationUseCase ->
-GoatRegistrationRectificationBusiness -> GoatPersistencePort +
-GoatRegistrationHistoryPersistencePort -> adapters`. A camada ABCC continua
-uma fronteira externa opcional e não é a autoridade de existência do animal
-local. A migration V43 remove as FKs estruturais que ainda apontavam para RG;
-as referências locais de genealogia usam GoatId e os RGs permanecem como
-snapshots/documentos de negócio.
+- Módulos: `address`, `article`, `audit`, `authority`, `commercial`, `events`,
+  `farm`, `genealogy`, `goat`, `health`, `inventory`, `milk`, `phone` e
+  `reproduction`.
+- Convenção de API: [API_CONTRACTS](../03-api/API_CONTRACTS.md).
+- Decisões históricas: [ADRs](./ADR). ADRs e planos preservam seu contexto e
+  não substituem código, migrations, testes ou este documento ativo.

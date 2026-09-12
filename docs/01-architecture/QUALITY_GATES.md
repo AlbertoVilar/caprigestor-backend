@@ -1,42 +1,66 @@
 # Qualidade, supply chain e observabilidade
 
-Última atualização: 2026-09-10
-Escopo: gates automatizados introduzidos na W5.
-Links relacionados: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md), [API](../03-api/API_CONTRACTS.md), [Runbook de homologação](../00-overview/HOMOLOGATION_OPERATION_RUNBOOK.md)
+Última atualização: 2026-09-12
+Escopo: gates automatizados ativos, dívida explicitamente observada e proteções planejadas.
 
-## Gates locais e CI
+Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
+[Status](../00-overview/PROJECT_STATUS.md), [API](../03-api/API_CONTRACTS.md).
 
-- `./mvnw -B clean verify` é o gate principal de compilação, testes, Flyway e
-  verificação de cobertura.
-- JaCoCo gera `target/site/jacoco` e mantém um piso de cobertura de linhas de
-  `0.7588` (75,88%) no bundle. Esse é o valor efetivo configurado no `pom.xml`;
-  novos módulos não podem reduzir o piso.
-- Testes PostgreSQL com Testcontainers executam quando Docker está disponível;
-  `disabledWithoutDocker=true` mantém o desenvolvimento local determinístico
-  quando o daemon não está acessível, mas o CI Linux deve executá-los.
+## Gates ativos
+
+- `./mvnw.cmd -B clean verify` é o gate local principal de compilação, testes,
+  Flyway e cobertura. Execute-o quando o escopo e o ambiente permitirem.
+- JaCoCo mantém piso de linhas de `0.7588` (75,88%) no bundle; novos módulos
+  não podem reduzi-lo.
+- Testes PostgreSQL com Testcontainers executam quando Docker está disponível.
+  `disabledWithoutDocker=true` mantém previsibilidade local, mas o CI Linux
+  deve executá-los com daemon funcional.
+- Os testes ArchUnit existentes protegem boundary de domínio, controller,
+  segurança/ownership, Goat, lactação, Milk/Reproduction e o baseline de ports
+  de aplicação para entities. A lista e a finalidade de cada guard estão em
+  [ARCHITECTURE.md](./ARCHITECTURE.md).
+- `GlobalHexagonalBoundaryArchUnitTest` impede o core (`domain`, `application`,
+  `business`) de depender diretamente de
+  `org.springframework.data.jpa.repository.JpaRepository`. A baseline desse
+  guard é zero.
 - `codeql.yml` analisa Java em pull requests, pushes protegidos e semanalmente.
-- `dependency_review.yml` executa uma varredura de dependências do repositório
-  (Maven e arquivos de lock reconhecidos) e bloqueia vulnerabilidades altas ou
-  críticas corrigíveis. O recurso nativo Dependency Review do GitHub não está
-  disponível neste repositório público, então o gate usa o mesmo scanner
-  Trivy de forma explícita e auditável.
-- `supply_chain.yml` publica um SBOM CycloneDX como artefato e verifica a imagem
-  Docker com Trivy, falhando em vulnerabilidades altas/críticas corrigíveis.
-- Todas as ações reutilizáveis dos workflows são fixadas por SHA imutável. As
-  ações oficiais usam gerações compatíveis com o runtime Node.js 24 dos runners,
-  evitando dependência das ações Node.js 20 obsoletas.
+- `dependency_review.yml` verifica dependências com Trivy e bloqueia
+  vulnerabilidades altas/críticas corrigíveis.
+- `supply_chain.yml` publica SBOM CycloneDX e verifica a imagem Docker com
+  Trivy, falhando em vulnerabilidades altas/críticas corrigíveis.
+- Workflows reutilizáveis são fixados por SHA imutável e usam versões
+  compatíveis com Node.js 24 nos runners.
+
+## Dívida observada e gates planejados após remoção
+
+Os 14 pares de `ApplicationPortPersistenceBoundaryArchUnitTest` são baseline de
+migração, não exceções permanentes. A allowlist pode apenas diminuir em uma
+mudança arquitetural revisada.
+
+Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
+contra dívida existente:
+
+- core para entidades JPA;
+- core para `Page`/`Pageable`/`Sort` do Spring Data;
+- core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder`.
+
+Após limpar um módulo, adicione seu guard específico; após remover todo o
+baseline de uma categoria, substitua a observação temporária pelo guard global.
+Não expanda baselines nem enfraqueça testes para acomodar regressões.
 
 ## Observabilidade
 
-O filtro `HttpRequestLoggingFilter` gera um `correlationId` por requisição ou
-propaga um identificador seguro fornecido pelo cliente. O identificador é
-devolvido no cabeçalho de resposta e incluído no padrão Logback. Logs de
-negócio registram eventos, ids técnicos e duração, sem cabeçalhos de
-autenticação, tokens ou corpos de requisição.
+`HttpRequestLoggingFilter` gera ou propaga `correlationId` seguro, devolve-o no
+cabeçalho e o inclui no padrão Logback. Logs de negócio podem registrar ids
+técnicos e duração, mas não cabeçalhos de autenticação, tokens ou corpos de
+requisição.
 
-## Limites conhecidos
+## Limites operacionais
 
-O scanner de imagem depende do acesso do runner ao registry público das imagens
-base e o Testcontainers depende de um daemon Docker funcional. Falha de
-infraestrutura do runner deve ser tratada como bloqueio de CI, não mascarada
-com `continue-on-error`.
+O scanner de imagem depende do acesso do runner ao registry das imagens-base e
+Testcontainers depende de daemon Docker. Falha de infraestrutura do runner é
+bloqueio de CI, não motivo para `continue-on-error`.
+
+O banco DEV contém dados descartáveis, mas schema, Flyway, reset e promoção de
+ambiente continuam gates explícitos. Nenhum destes é consequência automática de
+um refactor ou de um teste arquitetural.
