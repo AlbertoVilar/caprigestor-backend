@@ -26,6 +26,11 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 - `AuthorityPasswordBoundaryArchUnitTest` mantém zero dependências de
   `PasswordEncoder` nos pacotes `authority.application` e `authority.business`;
   o encoder permanece permitido em configuração, adapters e bootstrap.
+- `AuthorityAuthenticationBoundaryArchUnitTest` mantém zero dependências de
+  `AuthenticationManager`, `Authentication`,
+  `UsernamePasswordAuthenticationToken`, `JwtDecoder`, `JwtService` e `Jwt`
+  nos pacotes `authority.application` e `authority.business`; esses tipos são
+  permitidos somente nos adapters/configuração.
 - A superfície HTTP não pode reintroduzir endpoints globais de limpeza ou
   recriação administrativa. Qualquer reset de DEV deve permanecer em tooling
   explícito, fora do fluxo REST, com credenciais externas.
@@ -44,11 +49,13 @@ migração, não exceções permanentes. A allowlist pode apenas diminuir em uma
 mudança arquitetural revisada.
 
 Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
-contra dívida existente:
+contra dívida existente fora do Authority:
 
 - core para entidades JPA;
 - core para `Page`/`Pageable`/`Sort` do Spring Data;
-- core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder`.
+- core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder` em
+  módulos que ainda não foram migrados. O Authority já possui guards específicos
+  para essas APIs.
 
 Após limpar um módulo, adicione seu guard específico; após remover todo o
 baseline de uma categoria, substitua a observação temporária pelo guard global.

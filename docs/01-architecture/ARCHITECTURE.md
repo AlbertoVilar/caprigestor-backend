@@ -71,6 +71,13 @@ No Authority, hashing de senha é uma saída da aplicação (`PasswordHashingPor
 `PasswordHashingAdapter`, em `config.security`, delega ao `PasswordEncoder`
 configurado sem expor Spring Security ao business/application.
 
+Na mesma fronteira, `AuthBusiness` usa `CredentialAuthenticationPort` para
+autenticar credenciais e `AuthTokenPort` para emitir e ler metadados de tokens.
+`SpringCredentialAuthenticationAdapter` encapsula `AuthenticationManager` e
+`Authentication`; `JwtTokenAdapter` encapsula `JwtService`, `JwtDecoder` e o
+tipo `Jwt`. O caso de uso não depende dessas APIs Spring/JWT e mantém a política
+existente de login, refresh, rotação, replay, logout e claims.
+
 ### Goat e eventos
 
 `GoatGenderValidator` usa `GoatValidationQueryPort.GoatValidationSnapshot`, e
@@ -143,6 +150,8 @@ uma nova implementação de GoatId.
 | `GlobalHexagonalBoundaryArchUnitTest` | Protege domain, controllers, confinamento de `SecurityContextHolder` e ausência de `JpaRepository` no core. |
 | `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado de 14 ports para entities. |
 | `OwnershipSecurityBoundaryArchUnitTest` | Protege ports críticos de segurança, ownership, validação e eventos. |
+| `AuthorityPasswordBoundaryArchUnitTest` | Impede `PasswordEncoder` no core Authority. |
+| `AuthorityAuthenticationBoundaryArchUnitTest` | Impede APIs concretas de autenticação/JWT no core Authority. |
 | `GoatPersistenceBoundaryArchUnitTest` | Impede retorno de tipos JPA do Goat ao core. |
 | `GoatHexagonalCoreArchUnitTest` | Protege paginação e boundary de aplicação do Goat. |
 | `MilkReproductionBoundaryArchUnitTest` | Garante fronteira entre Milk e Reproduction. |
