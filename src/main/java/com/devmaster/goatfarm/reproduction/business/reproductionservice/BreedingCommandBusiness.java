@@ -1,7 +1,6 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
-import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -10,7 +9,6 @@ import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersis
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.reproduction.business.bo.BreedingRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.CoverageCorrectionRequestVO;
-import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
@@ -26,7 +24,7 @@ import java.util.Optional;
 @Service
 public class BreedingCommandBusiness implements BreedingCommandUseCase {
     private static final String ACTIVE_PREGNANCY_BLOCKS_OPERATION_MESSAGE =
-            "Nao e permitido registrar nova cobertura quando existe gestacao ativa para esta cabra na fazenda.";
+            "Nao e permitido registrar nova cobertura quando existe gestacao ativa para esta cabra.";
     private static final String BREEDING_DATE_ON_OR_BEFORE_BIRTH_MESSAGE =
             "Nao e permitido registrar cobertura na mesma data ou antes de um parto ja registrado para esta cabra.";
     private static final String SAME_DAY_BREEDING_ALREADY_EXISTS_MESSAGE =

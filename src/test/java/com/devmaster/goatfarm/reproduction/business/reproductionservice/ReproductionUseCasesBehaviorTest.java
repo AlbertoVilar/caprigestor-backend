@@ -235,7 +235,8 @@ class ReproductionUseCasesBehaviorTest {
 
         assertThatThrownBy(() -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("gestacao ativa");
+                .hasFieldOrPropertyWithValue("fieldName", "status")
+                .hasMessage("Nao e permitido registrar nova cobertura quando existe gestacao ativa para esta cabra.");
 
         verify(reproductiveEventPersistencePort, never())
                 .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(anyLong(), any(), any());
