@@ -73,7 +73,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ReproductionBusinessTest {
+class ReproductionUseCasesBehaviorTest {
 
     @Mock
     private PregnancyPersistencePort pregnancyPersistencePort;
@@ -103,7 +103,7 @@ class ReproductionBusinessTest {
     private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks
-    private ReproductionBusiness reproductionBusiness;
+    private LegacyReproductionTestFacade reproductionBusiness;
 
     private static final Long FARM_ID = 1L;
     private static final String GOAT_ID = "1643218012";
@@ -235,7 +235,8 @@ class ReproductionBusinessTest {
 
         assertThatThrownBy(() -> reproductionBusiness.registerBreeding(FARM_ID, GOAT_ID, requestVO))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("gestacao ativa");
+                .hasFieldOrPropertyWithValue("fieldName", "status")
+                .hasMessage("Nao e permitido registrar nova cobertura quando existe gestacao ativa para esta cabra.");
 
         verify(reproductiveEventPersistencePort, never())
                 .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(anyLong(), any(), any());
