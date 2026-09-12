@@ -1,12 +1,14 @@
 package com.devmaster.goatfarm.reproduction.persistence.adapter;
 
 import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
+import com.devmaster.goatfarm.reproduction.persistence.mapper.PregnancyPersistenceMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -21,22 +23,33 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
 
     private final PregnancyRepository pregnancyRepository;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
+    private final PregnancyPersistenceMapper mapper;
 
     public PregnancyPersistenceAdapter(PregnancyRepository pregnancyRepository) {
-        this(pregnancyRepository, null);
+        this(pregnancyRepository, null, new PregnancyPersistenceMapper());
+    }
+
+    public PregnancyPersistenceAdapter(PregnancyRepository pregnancyRepository,
+                                       GoatReferenceQueryPort goatReferenceQueryPort) {
+        this(pregnancyRepository, goatReferenceQueryPort, new PregnancyPersistenceMapper());
     }
 
     @Autowired
     public PregnancyPersistenceAdapter(PregnancyRepository pregnancyRepository,
-                                       GoatReferenceQueryPort goatReferenceQueryPort) {
+                                       GoatReferenceQueryPort goatReferenceQueryPort,
+                                       PregnancyPersistenceMapper mapper) {
         this.pregnancyRepository = pregnancyRepository;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
+        this.mapper = mapper;
     }
 
     @Override
     public Pregnancy save(Pregnancy entity) {
-        populateTechnicalIdentity(entity);
-        return pregnancyRepository.save(entity);
+        PregnancyEntity persistence = mapper.toEntity(entity);
+        if (persistence.getGoatTechnicalId() == null) {
+            technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(persistence::setGoatTechnicalId);
+        }
+        return mapper.toDomain(pregnancyRepository.save(persistence));
     }
 
     @Override
@@ -62,22 +75,22 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     public Optional<Pregnancy> findByIdAndFarmIdAndGoatId(Long pregnancyId, Long farmId, String goatId) {
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
-            Optional<Pregnancy> technical = pregnancyRepository.findByIdAndFarmIdAndGoatTechnicalId(pregnancyId, farmId, technicalId.get());
+            Optional<Pregnancy> technical = pregnancyRepository.findByIdAndFarmIdAndGoatTechnicalId(pregnancyId, farmId, technicalId.get()).map(mapper::toDomain);
             if (technical.isPresent()) {
                 return technical;
             }
         }
-        return pregnancyRepository.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId);
+        return pregnancyRepository.findByIdAndFarmIdAndGoatId(pregnancyId, farmId, goatId).map(mapper::toDomain);
     }
 
     @Override
     public Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long pregnancyId) {
-        return pregnancyRepository.findByFarmIdAndId(farmId, pregnancyId);
+        return pregnancyRepository.findByFarmIdAndId(farmId, pregnancyId).map(mapper::toDomain);
     }
 
     @Override
     public Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId) {
-        return pregnancyRepository.findByFarmIdAndCoverageEventId(farmId, coverageEventId);
+        return pregnancyRepository.findByFarmIdAndCoverageEventId(farmId, coverageEventId).map(mapper::toDomain);
     }
 
     @Override
@@ -102,12 +115,12 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Page<Pregnancy> technical = pregnancyRepository.findAllByFarmIdAndGoatTechnicalIdOrderByBreedingDateDescIdDesc(
-                    farmId, technicalId.get(), pageable);
+                    farmId, technicalId.get(), pageable).map(mapper::toDomain);
             if (technical.hasContent()) {
                 return technical;
             }
         }
-        return pregnancyRepository.findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(farmId, goatId, pageable);
+        return pregnancyRepository.findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(farmId, goatId, pageable).map(mapper::toDomain);
     }
 
     @Override
@@ -115,12 +128,12 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             List<Pregnancy> technical = pregnancyRepository.findByFarmIdAndGoatTechnicalIdAndStatusOrderByBreedingDateDescIdDesc(
-                    farmId, technicalId.get(), PregnancyStatus.ACTIVE);
+                    farmId, technicalId.get(), PregnancyStatus.ACTIVE).stream().map(mapper::toDomain).toList();
             if (!technical.isEmpty()) {
                 return technical;
             }
         }
-        return pregnancyRepository.findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(farmId, goatId, PregnancyStatus.ACTIVE);
+        return pregnancyRepository.findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(farmId, goatId, PregnancyStatus.ACTIVE).stream().map(mapper::toDomain).toList();
     }
 
     @Override
@@ -131,7 +144,7 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
                         PregnancyStatus.ACTIVE,
                         referenceDate,
                         pageable
-                );
+                ).map(mapper::toDomain);
     }
 
     private Optional<Long> technicalId(Long farmId, String registrationNumber) {
@@ -146,7 +159,7 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     private Optional<Pregnancy> findActiveByTechnicalId(Long farmId, Long technicalId) {
         List<Pregnancy> pregnancies = pregnancyRepository
                 .findByFarmIdAndGoatTechnicalIdAndStatusOrderByBreedingDateDescIdDesc(
-                        farmId, technicalId, PregnancyStatus.ACTIVE);
+                        farmId, technicalId, PregnancyStatus.ACTIVE).stream().map(mapper::toDomain).toList();
         if (pregnancies.isEmpty()) {
             return Optional.empty();
         }
@@ -156,9 +169,4 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
         return Optional.of(pregnancies.get(0));
     }
 
-    private void populateTechnicalIdentity(Pregnancy entity) {
-        if (entity.getGoatTechnicalId() == null) {
-            technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(entity::setGoatTechnicalId);
-        }
-    }
 }

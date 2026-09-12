@@ -4,8 +4,8 @@ import com.devmaster.goatfarm.application.core.business.validation.GoatGenderVal
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.model.FarmRegistrationSnapshot;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
@@ -21,8 +21,8 @@ import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessM
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCloseReason;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
@@ -37,7 +37,7 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
     private final ReproductiveEventPersistencePort eventPersistencePort;
     private final GoatPersistencePort goatPersistencePort;
     private final GoatReferenceResolver goatReferenceResolver;
-    private final GoatFarmPersistencePort goatFarmPersistencePort;
+    private final FarmRegistrationQueryUseCase farmRegistrationQueryUseCase;
     private final GoatManagementUseCase goatManagementUseCase;
     private final GoatGenderValidator goatGenderValidator;
     private final ReproductionBusinessMapper mapper;
@@ -45,10 +45,10 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
 
     public BirthCommandBusiness(PregnancyPersistencePort pregnancyPersistencePort, ReproductiveEventPersistencePort eventPersistencePort,
                                 GoatPersistencePort goatPersistencePort, GoatReferenceResolver goatReferenceResolver,
-                                GoatFarmPersistencePort goatFarmPersistencePort, GoatManagementUseCase goatManagementUseCase,
+                                FarmRegistrationQueryUseCase farmRegistrationQueryUseCase, GoatManagementUseCase goatManagementUseCase,
                                 GoatGenderValidator goatGenderValidator, ReproductionBusinessMapper mapper, Clock clock) {
         this.pregnancyPersistencePort = pregnancyPersistencePort; this.eventPersistencePort = eventPersistencePort; this.goatPersistencePort = goatPersistencePort;
-        this.goatReferenceResolver = goatReferenceResolver; this.goatFarmPersistencePort = goatFarmPersistencePort; this.goatManagementUseCase = goatManagementUseCase;
+        this.goatReferenceResolver = goatReferenceResolver; this.farmRegistrationQueryUseCase = farmRegistrationQueryUseCase; this.goatManagementUseCase = goatManagementUseCase;
         this.goatGenderValidator = goatGenderValidator; this.mapper = mapper; this.clock = clock;
     }
 
@@ -74,8 +74,8 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
             GoatRequestVO request = buildKidRequestVO(farmId, goatId, mother, vo.getFatherRegistrationNumber(), birthFarmTod, vo.getBirthDate(), kid);
             GoatResponseVO saved = goatManagementUseCase.createGoat(farmId, request); createdKids.add(mapper.toBirthKidResponseVO(saved));
         }
-        pregnancy.setStatus(PregnancyStatus.CLOSED); pregnancy.setClosedAt(vo.getBirthDate()); pregnancy.setCloseReason(PregnancyCloseReason.BIRTH);
-        if (vo.getNotes() != null && !vo.getNotes().isBlank()) pregnancy.setNotes(vo.getNotes());
+        pregnancy.close(PregnancyCloseReason.BIRTH, vo.getBirthDate());
+        if (vo.getNotes() != null && !vo.getNotes().isBlank()) pregnancy.updateNotes(vo.getNotes());
         Pregnancy savedPregnancy = pregnancyPersistencePort.save(pregnancy);
         ReproductiveEvent closeEvent = eventPersistencePort.save(ReproductiveEvent.builder().farmId(farmId).goatId(goatId).pregnancyId(savedPregnancy.getId())
                 .eventType(ReproductiveEventType.PREGNANCY_CLOSE).eventDate(vo.getBirthDate()).notes(vo.getNotes()).build());
@@ -105,7 +105,7 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
                 .fatherRegistrationNumber(normalizeRegistration(fatherRegistrationNumber)).motherRegistrationNumber(motherGoatId).farmId(farmId).build();
     }
     private String resolveBirthFarmTod(Long farmId) {
-        String tod = goatFarmPersistencePort.findById(farmId).map(GoatFarm::getTod).map(this::normalizeRegistration).orElseThrow(() -> new BusinessRuleException("kids.registrationNumber", "Nao e possivel registrar cria: a fazenda de nascimento nao possui TOD cadastrado"));
+        String tod = farmRegistrationQueryUseCase.findRegistrationById(farmId).map(FarmRegistrationSnapshot::tod).map(this::normalizeRegistration).orElseThrow(() -> new BusinessRuleException("kids.registrationNumber", "Nao e possivel registrar cria: a fazenda de nascimento nao possui TOD cadastrado"));
         if (!tod.matches("[0-9]{5}")) throw new BusinessRuleException("kids.registrationNumber", "Nao e possivel registrar cria: o TOD da fazenda de nascimento deve conter 5 digitos"); return tod;
     }
     private void ensureDistinctKidRegistrations(List<BirthKidRequestVO> kids) { Set<String> seen = new HashSet<>(); for (BirthKidRequestVO kid : kids) { String registration = normalizeBirthRegistration(kid.getRegistrationNumber()); if (registration == null) throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria e obrigatorio"); if (!seen.add(registration)) throw new BusinessRuleException("kids.registrationNumber", "Nao e permitido informar crias com registro duplicado no mesmo parto"); } }

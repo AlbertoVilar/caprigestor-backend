@@ -9,14 +9,14 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "ReproductiveEvent")
 @Table(name = "reproductive_event")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ReproductiveEvent {
+public class ReproductiveEventEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersis
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,7 +46,7 @@ class ReproductionQueryBirthAlertsTest {
     private GoatReferenceResolver goatReferenceResolver;
 
     @Mock
-    private GoatFarmPersistencePort goatFarmPersistencePort;
+    private FarmRegistrationQueryUseCase farmRegistrationQueryUseCase;
 
     @Mock
     private GoatManagementUseCase goatManagementUseCase;
@@ -64,7 +64,7 @@ class ReproductionQueryBirthAlertsTest {
                 reproductiveEventPersistencePort,
                 goatPersistencePort,
                 goatReferenceResolver,
-                goatFarmPersistencePort,
+                farmRegistrationQueryUseCase,
                 goatManagementUseCase,
                 goatGenderValidator,
                 reproductionBusinessMapper,

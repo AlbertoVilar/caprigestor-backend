@@ -15,7 +15,7 @@ import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;

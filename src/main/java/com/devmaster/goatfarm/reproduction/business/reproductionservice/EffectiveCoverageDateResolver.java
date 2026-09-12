@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.business.reproductionservice;
 
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

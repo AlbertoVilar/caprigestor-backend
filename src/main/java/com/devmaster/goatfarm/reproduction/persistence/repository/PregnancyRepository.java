@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.reproduction.persistence.repository;
 
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
+import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,17 +14,17 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PregnancyRepository extends JpaRepository<Pregnancy, Long> {
-    List<Pregnancy> findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, String goatId, PregnancyStatus status);
-    List<Pregnancy> findByFarmIdAndGoatTechnicalIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, Long goatTechnicalId, PregnancyStatus status);
-    Optional<Pregnancy> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
-    Optional<Pregnancy> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
-    Optional<Pregnancy> findByFarmIdAndId(Long farmId, Long id);
-    Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
+public interface PregnancyRepository extends JpaRepository<PregnancyEntity, Long> {
+    List<PregnancyEntity> findByFarmIdAndGoatIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, String goatId, PregnancyStatus status);
+    List<PregnancyEntity> findByFarmIdAndGoatTechnicalIdAndStatusOrderByBreedingDateDescIdDesc(Long farmId, Long goatTechnicalId, PregnancyStatus status);
+    Optional<PregnancyEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<PregnancyEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
+    Optional<PregnancyEntity> findByFarmIdAndId(Long farmId, Long id);
+    Optional<PregnancyEntity> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     boolean existsByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
-    Page<Pregnancy> findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
-    Page<Pregnancy> findAllByFarmIdAndGoatTechnicalIdOrderByBreedingDateDescIdDesc(Long farmId, Long goatTechnicalId, Pageable pageable);
-    Page<Pregnancy> findByFarmIdAndStatusAndExpectedDueDateIsNotNullAndExpectedDueDateLessThanEqualOrderByExpectedDueDateAscIdAsc(
+    Page<PregnancyEntity> findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(Long farmId, String goatId, Pageable pageable);
+    Page<PregnancyEntity> findAllByFarmIdAndGoatTechnicalIdOrderByBreedingDateDescIdDesc(Long farmId, Long goatTechnicalId, Pageable pageable);
+    Page<PregnancyEntity> findByFarmIdAndStatusAndExpectedDueDateIsNotNullAndExpectedDueDateLessThanEqualOrderByExpectedDueDateAscIdAsc(
             Long farmId,
             PregnancyStatus status,
             LocalDate referenceDate,
