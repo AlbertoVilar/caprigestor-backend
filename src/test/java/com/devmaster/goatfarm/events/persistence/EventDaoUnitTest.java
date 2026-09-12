@@ -7,7 +7,6 @@ import com.devmaster.goatfarm.events.persistence.adapter.EventPersistenceAdapter
 import com.devmaster.goatfarm.events.persistence.entity.Event;
 import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;

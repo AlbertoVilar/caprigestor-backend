@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.events.application.ports.out.EventPublisher;
 import com.devmaster.goatfarm.events.business.bo.EventPublication;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
+import com.devmaster.goatfarm.events.domain.GoatEventReference;
 import com.devmaster.goatfarm.events.domain.OperationalEvent;
 import com.devmaster.goatfarm.events.enums.EventType;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
@@ -56,7 +57,7 @@ public class EventBusiness implements EventManagementUseCase {
         requireRequestMatchesPath(request, registrationNumber);
 
         OperationalEvent saved = eventPersistencePort.save(OperationalEvent.create(
-                goat, request.eventType(), request.date(), request.description(), request.location(),
+                toEventReference(goat), request.eventType(), request.date(), request.description(), request.location(),
                 request.veterinarian(), request.outcome()));
         eventPublisher.publishEvent(toPublication(saved));
         return toResponse(saved);
@@ -129,6 +130,10 @@ public class EventBusiness implements EventManagementUseCase {
                     }
                     throw new ResourceNotFoundException("Cabra não encontrada para a fazenda informada.");
                 });
+    }
+
+    private GoatEventReference toEventReference(GoatReference goat) {
+        return new GoatEventReference(goat.id(), goat.farmId(), goat.registrationNumber(), goat.name());
     }
 
     private OperationalEvent findEvent(Long eventId, GoatReference goat, Long farmId) {
