@@ -2,7 +2,8 @@ package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
@@ -41,7 +42,8 @@ class GoatRegistrationRectificationBusinessTest {
     @Mock private GoatPersistencePort goatPersistencePort;
     @Mock private GoatReferenceResolver goatReferenceResolver;
     @Mock private GoatRegistrationHistoryPersistencePort historyPersistencePort;
-    @Mock private OwnershipService ownershipService;
+    @Mock private FarmAuthorizationUseCase ownershipService;
+    @Mock private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock private OperationalAuditUseCase operationalAuditUseCase;
 
     private GoatRegistrationRectificationBusiness business;
@@ -51,7 +53,7 @@ class GoatRegistrationRectificationBusinessTest {
     void setUp() {
         business = new GoatRegistrationRectificationBusiness(
                 goatPersistencePort, goatReferenceResolver, historyPersistencePort,
-                ownershipService, operationalAuditUseCase);
+                ownershipService, operationalAuditUseCase, currentPrincipalQuery);
         goat = Goat.rehydrate(
                 new GoatId(7L), RegistrationIdentity.fromTodAndToe("16432", "18012"),
                 "Matriz", Gender.FEMEA, GoatBreed.SAANEN, "Branca", LocalDate.of(2024, 1, 1),
@@ -61,7 +63,7 @@ class GoatRegistrationRectificationBusinessTest {
                 .thenReturn(Optional.of(new GoatReference(new GoatId(7L), 1L, goat.registrationNumber(), goat.name(), goat.gender())));
         when(goatPersistencePort.findByIdAndFarmId(new GoatId(7L), 1L)).thenReturn(Optional.of(goat));
         lenient().when(goatPersistencePort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(ownershipService.getCurrentPrincipal()).thenReturn(
+        lenient().when(currentPrincipalQuery.requireCurrent()).thenReturn(
                 new AuthenticatedPrincipal(9L, "alberto@example.com", "Alberto", Set.of()));
         lenient().when(historyPersistencePort.save(any(GoatRegistrationHistory.class))).thenAnswer(invocation -> {
             GoatRegistrationHistory value = invocation.getArgument(0);

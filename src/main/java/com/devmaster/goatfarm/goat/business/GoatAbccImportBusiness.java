@@ -4,7 +4,8 @@ import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
@@ -62,20 +63,22 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     private static final DateTimeFormatter ABCC_DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd/MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final GoatFarmPersistencePort goatFarmPort;
     private final GoatAbccPublicQueryPort abccPublicQueryPort;
     private final GoatManagementUseCase goatManagementUseCase;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final EntityFinder entityFinder;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     public GoatAbccImportBusiness(
-            OwnershipService ownershipService,
+            FarmAuthorizationUseCase ownershipService,
             GoatFarmPersistencePort goatFarmPort,
             GoatAbccPublicQueryPort abccPublicQueryPort,
             GoatManagementUseCase goatManagementUseCase,
             GoatReferenceQueryPort goatReferenceQueryPort,
-            EntityFinder entityFinder
+            EntityFinder entityFinder,
+            CurrentPrincipalQueryUseCase currentPrincipalQuery
     ) {
         this.ownershipService = ownershipService;
         this.goatFarmPort = goatFarmPort;
@@ -83,6 +86,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         this.goatManagementUseCase = goatManagementUseCase;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.entityFinder = entityFinder;
+        this.currentPrincipalQuery = currentPrincipalQuery;
     }
 
     @Override
@@ -276,7 +280,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             throw new BusinessRuleException("goat", "Dados do animal são obrigatórios para confirmar a importação.");
         }
 
-        boolean isAdmin = ownershipService.isCurrentUserAdmin();
+        boolean isAdmin = currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN");
         GoatFarm farm = loadFarm(farmId);
         String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
 
@@ -302,7 +306,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             throw new BusinessRuleException("items", "Selecione ao menos um animal da página atual para importar.");
         }
 
-        boolean isAdmin = ownershipService.isCurrentUserAdmin();
+        boolean isAdmin = currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN");
         GoatFarm farm = loadFarm(farmId);
         requireFarmTodForNonAdmin(farm, isAdmin);
 

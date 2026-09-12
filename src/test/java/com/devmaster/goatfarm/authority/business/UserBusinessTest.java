@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.out.RolePersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
 import com.devmaster.goatfarm.authority.application.ports.out.RefreshSessionPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.business.mapper.AuthorityBusinessMapper;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -20,8 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +53,9 @@ class UserBusinessTest {
 
     @Mock
     private RefreshSessionPersistencePort refreshSessionPersistencePort;
+
+    @Mock
+    private CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     @InjectMocks
     private UserBusiness userBusiness;
@@ -94,7 +97,6 @@ class UserBusinessTest {
 
     @AfterEach
     void clearSecurityContext() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -213,10 +215,8 @@ class UserBusinessTest {
     private void authenticateAs(User user, Role assignedRole) {
         user.getRoles().clear();
         user.addRole(assignedRole);
-        when(userPort.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(user.getEmail(), "ignored", java.util.List.of())
-        );
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(
+                user.getId(), user.getEmail(), user.getName(), java.util.Set.of(assignedRole.getAuthority())));
     }
 
     private Role role(String authority) {

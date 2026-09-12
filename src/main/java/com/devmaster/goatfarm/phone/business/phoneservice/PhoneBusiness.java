@@ -5,7 +5,7 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.phone.business.mapper.PhoneBusinessMapper;
@@ -34,7 +34,7 @@ public class PhoneBusiness implements PhoneManagementUseCase {
     private final PhonePersistencePort phonePort;
     private final PhoneBusinessMapper phoneMapper;
     private final GoatFarmPersistencePort goatFarmPort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
 
     @Transactional

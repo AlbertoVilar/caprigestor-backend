@@ -5,7 +5,8 @@ import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBreedCount;
@@ -58,7 +59,8 @@ class GoatBusinessBehavioralCoverageTest {
 
     @Mock private GoatPersistencePort goatPort;
     @Mock private GoatFarmPersistencePort goatFarmPort;
-    @Mock private OwnershipService ownershipService;
+    @Mock private FarmAuthorizationUseCase ownershipService;
+    @Mock private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock private EntityFinder entityFinder;
     @Mock private OperationalAuditUseCase audit;
     @Mock private GoatParentagePort parentage;
@@ -68,7 +70,7 @@ class GoatBusinessBehavioralCoverageTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery);
         goat = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
         lenient().when(parentage.resolve(any(), any(), any(), any()))
@@ -89,7 +91,7 @@ class GoatBusinessBehavioralCoverageTest {
 
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentPrincipal()).thenReturn(
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(
                 new AuthenticatedPrincipal(1L, "test@example.com", "Test", Set.of()));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(parentage.resolve(Category.PA, "1643222002", "164321001", "164321002"))

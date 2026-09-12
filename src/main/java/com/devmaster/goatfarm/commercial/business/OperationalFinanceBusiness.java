@@ -9,7 +9,7 @@ import com.devmaster.goatfarm.commercial.business.bo.OperationalExpenseResponseV
 import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.stereotype.Service;
@@ -27,13 +27,13 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     private final OperationalFinancePersistencePort persistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
 
     public OperationalFinanceBusiness(
             OperationalFinancePersistencePort persistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
             InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort,
-            OwnershipService ownershipService
+            FarmAuthorizationUseCase ownershipService
     ) {
         this.persistencePort = persistencePort;
         this.goatFarmPersistencePort = goatFarmPersistencePort;

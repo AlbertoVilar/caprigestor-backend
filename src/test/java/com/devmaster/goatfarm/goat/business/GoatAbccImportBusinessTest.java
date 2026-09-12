@@ -4,7 +4,8 @@ import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
@@ -49,7 +50,9 @@ import static org.mockito.Mockito.when;
 class GoatAbccImportBusinessTest {
 
     @Mock
-    private OwnershipService ownershipService;
+    private FarmAuthorizationUseCase ownershipService;
+    @Mock
+    private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock
     private GoatFarmPersistencePort goatFarmPort;
     @Mock
@@ -71,7 +74,8 @@ class GoatAbccImportBusinessTest {
                 abccPublicQueryPort,
                 goatManagementUseCase,
                 goatReferenceQueryPort,
-                entityFinder
+                entityFinder,
+                currentPrincipalQuery
         );
 
         lenient().when(entityFinder.findOrThrow(any(), any())).thenAnswer(invocation -> {
@@ -81,7 +85,8 @@ class GoatAbccImportBusinessTest {
         });
 
         lenient().doNothing().when(ownershipService).verifyFarmOwnership(1L);
-        lenient().when(ownershipService.getCurrentUser()).thenReturn(buildUser("Alberto Vilar"));
+        lenient().when(currentPrincipalQuery.requireCurrent()).thenReturn(
+                new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto Vilar", java.util.Set.of("ROLE_FARM_OWNER")));
     }
 
     @Test
@@ -379,7 +384,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldConfirmIndividualWhenAbccSituationIsSemRgd() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012", "Sem RGD")
@@ -412,7 +417,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldConfirmByReusingGoatCreateFlowWhenTodMatches() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012")
@@ -442,7 +447,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldBlockConfirmWhenRequestTodDoesNotMatchFarmTod() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012")
@@ -468,7 +473,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldAllowConfirmWithDifferentTodForAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(true);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_ADMIN")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "99999", "18012")
@@ -496,7 +501,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldConfirmBatchWithDuplicateAndTodMismatchWithoutFailingWholeBatch() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
 
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
@@ -541,7 +546,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldConfirmBatchWhenAbccSituationIsSemRgd() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
 
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
@@ -572,7 +577,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldBlockBatchWhenFarmTodIsMissingForNonAdmin() {
-        when(ownershipService.isCurrentUserAdmin()).thenReturn(false);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", null)));
 
         assertThatThrownBy(() -> business.confirmBatch(1L, List.of(

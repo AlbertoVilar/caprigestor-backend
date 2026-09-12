@@ -3,7 +3,8 @@ package com.devmaster.goatfarm.goat.business;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
@@ -34,7 +35,8 @@ import static org.mockito.Mockito.*;
 class GoatBusinessTest {
     @Mock private GoatPersistencePort goatPort;
     @Mock private GoatFarmPersistencePort goatFarmPort;
-    @Mock private OwnershipService ownershipService;
+    @Mock private FarmAuthorizationUseCase ownershipService;
+    @Mock private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock private EntityFinder entityFinder;
     @Mock private OperationalAuditUseCase audit;
     @Mock private GoatParentagePort parentage;
@@ -45,7 +47,7 @@ class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery);
         request = new GoatRequestVO();
         request.setRegistrationNumber("1643222002"); request.setName("Xeque"); request.setGender(Gender.MACHO);
         request.setBreed(GoatBreed.ALPINA); request.setBirthDate(LocalDate.of(2025, 1, 1));
@@ -63,7 +65,7 @@ class GoatBusinessTest {
         GoatFarm farm = new GoatFarm(); farm.setId(1L);
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentPrincipal()).thenReturn(principal(1L));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -90,7 +92,7 @@ class GoatBusinessTest {
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         GoatFarm farm = new GoatFarm(); farm.setId(1L);
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
-        when(ownershipService.getCurrentPrincipal()).thenReturn(principal(1L));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -99,6 +101,18 @@ class GoatBusinessTest {
 
         assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
         verify(goatPort).existsByRegistrationNumber("1643222002");
+    }
+
+    @Test
+    void deleteRejectsGoatOutsideRequestedFarmWithOwnershipMessage() {
+        doNothing().when(ownershipService).verifyFarmOwnership(1L);
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> business.deleteGoat(1L, "1643222002"))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessage("Cabra não pertence à fazenda informada.");
+        verify(ownershipService).verifyFarmOwnership(1L);
+        verify(goatPort, never()).deleteById(any());
     }
 
     private AuthenticatedPrincipal principal(Long id) {

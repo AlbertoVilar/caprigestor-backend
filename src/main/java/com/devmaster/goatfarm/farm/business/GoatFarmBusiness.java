@@ -10,7 +10,6 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
@@ -20,7 +19,8 @@ import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.business.bo.FarmPermissionsVO;
 import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,8 +38,9 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     private final UserBusiness userBusiness;
     private final PhoneBusiness phoneBusiness;
     private final FarmBusinessMapper farmBusinessMapper;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     public GoatFarmBusiness(
             GoatFarmPersistencePort goatFarmPort,
@@ -47,8 +48,9 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
             UserBusiness userBusiness,
             PhoneBusiness phoneBusiness,
             FarmBusinessMapper farmBusinessMapper,
-            OwnershipService ownershipService,
-            EntityFinder entityFinder
+            FarmAuthorizationUseCase ownershipService,
+            EntityFinder entityFinder,
+            CurrentPrincipalQueryUseCase currentPrincipalQuery
     ) {
         this.goatFarmPort = goatFarmPort;
         this.addressBusiness = addressBusiness;
@@ -57,6 +59,7 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         this.farmBusinessMapper = farmBusinessMapper;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
+        this.currentPrincipalQuery = currentPrincipalQuery;
     }
 
     @Transactional(readOnly = true)
@@ -97,12 +100,9 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
 
     @Transactional
     public GoatFarmFullResponseVO createGoatFarm(GoatFarmFullRequestVO fullRequestVO) {
-        User currentUser = null;
-        try {
-            currentUser = ownershipService.getCurrentUser();
-        } catch (UnauthorizedException e) {
-            // Usuário anônimo
-        }
+        User currentUser = currentPrincipalQuery.findCurrent()
+                .flatMap(principal -> userBusiness.findUserByEmail(principal.email()))
+                .orElse(null);
 
         validateGoatFarmCreation(fullRequestVO, currentUser);
 

@@ -3,7 +3,7 @@ package com.devmaster.goatfarm.health.business.healthservice;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
@@ -32,7 +32,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     private final GoatGenderValidator goatGenderValidator;
     private final HealthEventBusinessMapper mapper;
     private final EntityFinder entityFinder;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
@@ -40,7 +40,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
             GoatGenderValidator goatGenderValidator,
             HealthEventBusinessMapper mapper,
             EntityFinder entityFinder,
-            OwnershipService ownershipService
+            FarmAuthorizationUseCase ownershipService
     ) {
         this.persistencePort = persistencePort;
         this.goatReferenceResolver = goatReferenceResolver;
@@ -53,7 +53,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     @Override
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
-        // Controle de acesso deve ser feito no Controller via OwnershipService.canManageFarm(farmId)
+        // Controle de acesso deve ser feito no Controller via FarmAuthorizationUseCase.canManageFarm(farmId)
         goatGenderValidator.requireActive(farmId, goatId);
 
         var entity = mapper.toEntity(request);

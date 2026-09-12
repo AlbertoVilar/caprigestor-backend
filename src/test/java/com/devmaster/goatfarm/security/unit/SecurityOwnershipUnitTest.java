@@ -1,25 +1,19 @@
 package com.devmaster.goatfarm.security.unit;
 
-import com.devmaster.goatfarm.authority.application.ports.out.UserPersistencePort;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.out.FarmAccessQueryPort;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
 import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
 import java.util.Set;
@@ -38,46 +32,32 @@ import static org.mockito.Mockito.when;
 class SecurityOwnershipUnitTest {
 
     @Mock
-    private GoatFarmPersistencePort goatFarmPort;
-    @Mock
-    private UserPersistencePort userPort;
-    @Mock
-    private GoatReferenceResolver goatReferenceResolver;
+    private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock
     private FarmAccessQueryPort farmAccessQueryPort;
+    @Mock
+    private FarmOwnerQueryPort farmOwnerQueryPort;
 
-    @InjectMocks
     private OwnershipService ownershipService;
 
     private User currentUser;
-    private GoatFarm farm;
 
     @BeforeEach
     void setUp() {
-        // Setup Security Context
-        Authentication authentication = mock(Authentication.class);
-        SecurityContext securityContext = mock(SecurityContext.class);
-        lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
+        currentPrincipalQuery = mock(CurrentPrincipalQueryUseCase.class);
+        ownershipService = new OwnershipService(currentPrincipalQuery, farmAccessQueryPort, farmOwnerQueryPort);
 
         currentUser = new User();
         currentUser.setId(1L);
         currentUser.setEmail("user@test.com");
         
-        lenient().when(authentication.isAuthenticated()).thenReturn(true);
-        lenient().when(authentication.getPrincipal()).thenReturn("user@test.com"); // Not anonymous
-        lenient().when(authentication.getName()).thenReturn("user@test.com");
-        
-        lenient().when(userPort.findByEmail("user@test.com")).thenReturn(Optional.of(currentUser));
-
-        farm = new GoatFarm();
-        farm.setId(10L);
-        farm.setUser(currentUser);
+        lenient().when(currentPrincipalQuery.requireCurrent()).thenAnswer(inv -> new AuthenticatedPrincipal(
+                currentUser.getId(), currentUser.getEmail(), currentUser.getName(),
+                currentUser.getRoles().stream().map(Role::getAuthority).collect(java.util.stream.Collectors.toSet())));
     }
 
     @AfterEach
     void tearDown() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -101,7 +81,7 @@ class SecurityOwnershipUnitTest {
         currentUser.addRole(ownerRole);
 
         // Mock farm lookup
-        when(goatFarmPort.findById(10L)).thenReturn(Optional.of(farm));
+        when(farmOwnerQueryPort.findOwnerId(10L)).thenReturn(Optional.of(1L));
 
         boolean result = ownershipService.canManageFarm(10L);
 
@@ -115,11 +95,7 @@ class SecurityOwnershipUnitTest {
         currentUser.getRoles().clear();
         currentUser.addRole(ownerRole);
 
-        User otherUser = new User();
-        otherUser.setId(99L);
-        farm.setUser(otherUser);
-
-        when(goatFarmPort.findById(10L)).thenReturn(Optional.of(farm));
+        when(farmOwnerQueryPort.findOwnerId(10L)).thenReturn(Optional.of(99L));
 
         boolean result = ownershipService.canManageFarm(10L);
 
@@ -152,7 +128,7 @@ class SecurityOwnershipUnitTest {
         ownerRole.setAuthority("ROLE_FARM_OWNER");
         currentUser.getRoles().clear();
         currentUser.addRole(ownerRole);
-        when(goatFarmPort.findById(10L)).thenReturn(Optional.of(farm));
+        when(farmOwnerQueryPort.findOwnerId(10L)).thenReturn(Optional.of(1L));
 
         assertDoesNotThrow(() -> ownershipService.verifyFarmOwnership(10L));
     }
@@ -185,18 +161,4 @@ class SecurityOwnershipUnitTest {
         assertFalse(result);
     }
 
-    @Test
-    void getCurrentPrincipal_shouldExposeOnlyApplicationIdentity() {
-        currentUser.setName("Alberto");
-        Role ownerRole = new Role();
-        ownerRole.setAuthority("ROLE_FARM_OWNER");
-        currentUser.addRole(ownerRole);
-
-        AuthenticatedPrincipal principal = ownershipService.getCurrentPrincipal();
-
-        assertEquals(1L, principal.id());
-        assertEquals("user@test.com", principal.email());
-        assertEquals("Alberto", principal.name());
-        assertTrue(principal.hasAuthority("ROLE_FARM_OWNER"));
-    }
 }

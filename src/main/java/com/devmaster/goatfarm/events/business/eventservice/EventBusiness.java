@@ -2,7 +2,7 @@ package com.devmaster.goatfarm.events.business.eventservice;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.events.application.ports.in.EventManagementUseCase;
 import com.devmaster.goatfarm.events.application.ports.out.EventPage;
 import com.devmaster.goatfarm.events.application.ports.out.EventPageQuery;
@@ -34,13 +34,13 @@ public class EventBusiness implements EventManagementUseCase {
 
     private final EventPersistencePort eventPersistencePort;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EventPublisher eventPublisher;
 
     public EventBusiness(
             EventPersistencePort eventPersistencePort,
             GoatReferenceQueryPort goatReferenceQueryPort,
-            OwnershipService ownershipService,
+            FarmAuthorizationUseCase ownershipService,
             EventPublisher eventPublisher
     ) {
         this.eventPersistencePort = eventPersistencePort;

@@ -7,8 +7,9 @@ import com.devmaster.goatfarm.audit.business.bo.OperationalAuditEntryVO;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
@@ -28,34 +29,26 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
 
     private final OperationalAuditPersistencePort operationalAuditPersistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     @Autowired
     public OperationalAuditBusiness(
             OperationalAuditPersistencePort operationalAuditPersistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
-            OwnershipService ownershipService,
+            FarmAuthorizationUseCase ownershipService,
             EntityFinder entityFinder,
-            GoatReferenceQueryPort goatReferenceQueryPort
+            GoatReferenceQueryPort goatReferenceQueryPort,
+            CurrentPrincipalQueryUseCase currentPrincipalQuery
     ) {
         this.operationalAuditPersistencePort = operationalAuditPersistencePort;
         this.goatFarmPersistencePort = goatFarmPersistencePort;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
-    }
-
-    /** Compatibility constructor for isolated unit tests and legacy callers. */
-    public OperationalAuditBusiness(
-            OperationalAuditPersistencePort operationalAuditPersistencePort,
-            GoatFarmPersistencePort goatFarmPersistencePort,
-            OwnershipService ownershipService,
-            EntityFinder entityFinder
-    ) {
-        this(operationalAuditPersistencePort, goatFarmPersistencePort, ownershipService,
-                entityFinder, null);
+        this.currentPrincipalQuery = currentPrincipalQuery;
     }
 
     @Override
@@ -73,7 +66,7 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
         String description = normalizeRequiredText("description", recordVO.description(), "Descricao da auditoria e obrigatoria.");
 
         GoatFarm farm = requireFarm(recordVO.farmId());
-        AuthenticatedPrincipal currentUser = ownershipService.getCurrentPrincipal();
+        AuthenticatedPrincipal currentUser = currentPrincipalQuery.requireCurrent();
 
         operationalAuditPersistencePort.save(OperationalAuditEntry.builder()
                 .farm(farm)

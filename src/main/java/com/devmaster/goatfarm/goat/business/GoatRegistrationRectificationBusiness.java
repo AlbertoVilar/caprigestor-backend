@@ -4,11 +4,12 @@ import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatRegistrationHistoryPersistencePort;
@@ -32,21 +33,24 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
     private final GoatPersistencePort goatPersistencePort;
     private final GoatReferenceResolver goatReferenceResolver;
     private final GoatRegistrationHistoryPersistencePort historyPersistencePort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final OperationalAuditUseCase operationalAuditUseCase;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
     public GoatRegistrationRectificationBusiness(
             GoatPersistencePort goatPersistencePort,
             GoatReferenceResolver goatReferenceResolver,
             GoatRegistrationHistoryPersistencePort historyPersistencePort,
-            OwnershipService ownershipService,
-            OperationalAuditUseCase operationalAuditUseCase
+            FarmAuthorizationUseCase ownershipService,
+            OperationalAuditUseCase operationalAuditUseCase,
+            CurrentPrincipalQueryUseCase currentPrincipalQuery
     ) {
         this.goatPersistencePort = goatPersistencePort;
         this.goatReferenceResolver = goatReferenceResolver;
         this.historyPersistencePort = historyPersistencePort;
         this.ownershipService = ownershipService;
         this.operationalAuditUseCase = operationalAuditUseCase;
+        this.currentPrincipalQuery = currentPrincipalQuery;
     }
 
     @Override
@@ -74,7 +78,7 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
 
         goat.rectifyRegistration(corrected);
         Goat saved = goatPersistencePort.save(goat);
-        AuthenticatedPrincipal actor = ownershipService.getCurrentPrincipal();
+        AuthenticatedPrincipal actor = currentPrincipalQuery.requireCurrent();
         LocalDateTime changedAt = LocalDateTime.now();
 
         GoatRegistrationHistory history = historyPersistencePort.save(new GoatRegistrationHistory(
