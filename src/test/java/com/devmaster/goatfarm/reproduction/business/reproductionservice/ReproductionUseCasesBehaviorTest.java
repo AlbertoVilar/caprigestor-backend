@@ -73,7 +73,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ReproductionBusinessTest {
+class ReproductionUseCasesBehaviorTest {
 
     @Mock
     private PregnancyPersistencePort pregnancyPersistencePort;
@@ -103,7 +103,7 @@ class ReproductionBusinessTest {
     private Clock clock = Clock.systemDefaultZone();
 
     @InjectMocks
-    private ReproductionBusiness reproductionBusiness;
+    private LegacyReproductionTestFacade reproductionBusiness;
 
     private static final Long FARM_ID = 1L;
     private static final String GOAT_ID = "1643218012";

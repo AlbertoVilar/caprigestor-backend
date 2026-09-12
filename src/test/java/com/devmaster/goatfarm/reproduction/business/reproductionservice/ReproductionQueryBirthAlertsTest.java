@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ReproductionBusinessBirthAlertsTest {
+class ReproductionQueryBirthAlertsTest {
 
     @Mock
     private PregnancyPersistencePort pregnancyPersistencePort;
@@ -54,12 +54,12 @@ class ReproductionBusinessBirthAlertsTest {
     @Mock
     private ReproductionBusinessMapper reproductionBusinessMapper;
 
-    private ReproductionBusiness reproductionBusiness;
+    private LegacyReproductionTestFacade reproductionBusiness;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-07-03T10:00:00Z"), ZoneOffset.UTC);
-        reproductionBusiness = new ReproductionBusiness(
+        reproductionBusiness = new LegacyReproductionTestFacade(
                 pregnancyPersistencePort,
                 reproductiveEventPersistencePort,
                 goatPersistencePort,

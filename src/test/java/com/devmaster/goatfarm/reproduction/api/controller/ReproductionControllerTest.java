@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
-import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.BirthCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.WeaningCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.BreedingCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancyCommandUseCase;
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -51,7 +54,16 @@ class ReproductionControllerTest {
     private ReproductionQueryUseCase queryUseCase;
 
     @MockBean
-    private ReproductionCommandUseCase commandUseCase;
+    private BirthCommandUseCase birthCommandUseCase;
+
+    @MockBean
+    private WeaningCommandUseCase weaningCommandUseCase;
+
+    @MockBean
+    private BreedingCommandUseCase breedingCommandUseCase;
+
+    @MockBean
+    private PregnancyCommandUseCase pregnancyCommandUseCase;
 
     @MockBean
     private ReproductionMapper mapper;
@@ -146,7 +158,7 @@ class ReproductionControllerTest {
                 .build();
 
         when(mapper.toBirthRequestVO(any(BirthRequestDTO.class))).thenReturn(requestVO);
-        when(commandUseCase.registerBirth(farmId, goatId, pregnancyId, requestVO)).thenReturn(responseVO);
+        when(birthCommandUseCase.registerBirth(farmId, goatId, pregnancyId, requestVO)).thenReturn(responseVO);
         when(mapper.toBirthResponseDTO(responseVO)).thenReturn(responseDTO);
 
         String payload = """
@@ -197,7 +209,7 @@ class ReproductionControllerTest {
                 .build();
 
         when(mapper.toWeaningRequestVO(any(WeaningRequestDTO.class))).thenReturn(requestVO);
-        when(commandUseCase.registerWeaning(farmId, goatId, requestVO)).thenReturn(responseVO);
+        when(weaningCommandUseCase.registerWeaning(farmId, goatId, requestVO)).thenReturn(responseVO);
         when(mapper.toWeaningResponseDTO(responseVO)).thenReturn(responseDTO);
 
         String payload = """
