@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.milk.application.ports.out;
 
-import com.devmaster.goatfarm.milk.persistence.entity.FarmMilkProduction;
+import com.devmaster.goatfarm.milk.domain.FarmMilkProduction;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -56,10 +56,6 @@ class ApplicationPortPersistenceBoundaryArchUnitTest {
                     + " -> com.devmaster.goatfarm.farm.persistence.entity.GoatFarm",
             "com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort"
                     + " -> com.devmaster.goatfarm.health.persistence.entity.HealthEvent",
-            "com.devmaster.goatfarm.milk.application.ports.out.FarmMilkProductionPersistencePort"
-                    + " -> com.devmaster.goatfarm.milk.persistence.entity.FarmMilkProduction",
-            "com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort"
-                    + " -> com.devmaster.goatfarm.milk.persistence.entity.MilkProduction",
             "com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort"
                     + " -> com.devmaster.goatfarm.phone.persistence.entity.Phone"
     );

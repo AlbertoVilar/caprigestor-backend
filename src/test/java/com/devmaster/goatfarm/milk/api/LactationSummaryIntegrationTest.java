@@ -14,7 +14,7 @@ import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -115,7 +115,7 @@ class LactationSummaryIntegrationTest {
         lactation.setStatus(LactationStatus.ACTIVE);
         lactation = lactationRepository.save(lactation);
 
-        MilkProduction production1 = new MilkProduction();
+        MilkProductionEntity production1 = new MilkProductionEntity();
         production1.setFarmId(ownerFarm.getId());
         production1.setGoatId(ownerGoat.getRegistrationNumber());
         production1.setLactation(lactation);
@@ -125,7 +125,7 @@ class LactationSummaryIntegrationTest {
         production1.setShift(MilkingShift.MORNING);
         milkProductionRepository.save(production1);
 
-        MilkProduction production2 = new MilkProduction();
+        MilkProductionEntity production2 = new MilkProductionEntity();
         production2.setFarmId(ownerFarm.getId());
         production2.setGoatId(ownerGoat.getRegistrationNumber());
         production2.setLactation(lactation);
@@ -135,7 +135,7 @@ class LactationSummaryIntegrationTest {
         production2.setShift(MilkingShift.AFTERNOON);
         milkProductionRepository.save(production2);
 
-        MilkProduction production3 = new MilkProduction();
+        MilkProductionEntity production3 = new MilkProductionEntity();
         production3.setFarmId(ownerFarm.getId());
         production3.setGoatId(ownerGoat.getRegistrationNumber());
         production3.setLactation(lactation);

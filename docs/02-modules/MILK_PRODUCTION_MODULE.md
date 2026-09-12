@@ -1,5 +1,5 @@
 # Módulo Milk Production
-Última atualização: 2026-09-10
+Última atualização: 2026-09-11
 Escopo: registro diário de ordenhas por cabra e consulta paginada de produção.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -9,6 +9,15 @@ Este módulo gerencia produções de leite por cabra, com operações de criaç�
 As respostas de produção e alertas podem retornar `goatTechnicalId`; `goatId`
 continua sendo snapshot registral para compatibilidade. A integridade técnica
 é derivada da lactação pela migration V41.
+
+### Fronteira de persistência (DEV-A9B)
+
+`milk.domain.MilkProduction` e `milk.domain.FarmMilkProduction` são modelos
+framework-free. As entidades JPA `MilkProductionEntity` e
+`FarmMilkProductionEntity` permanecem confinadas aos adaptadores, preservando
+as tabelas e os nomes de entidade JPQL existentes. O módulo Milk não consulta
+diretamente a tabela `pregnancy`; alertas de secagem usam o contrato batch
+`PregnancyDryOffQueryUseCase`, fornecido pelo contexto Reproduction.
 
 ## Regras / Contratos
 - Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.

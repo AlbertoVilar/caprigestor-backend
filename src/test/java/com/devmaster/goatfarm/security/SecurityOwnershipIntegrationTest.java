@@ -14,7 +14,7 @@ import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
@@ -209,7 +209,7 @@ public class SecurityOwnershipIntegrationTest {
         event.setEventType(EventType.COBERTURA);
         eventRepository.save(event);
 
-        MilkProduction production = new MilkProduction();
+        MilkProductionEntity production = new MilkProductionEntity();
         production.setFarmId(ownerFarm.getId());
         production.setGoatId(ownerGoat.getRegistrationNumber());
         production.setLactation(lactation);
@@ -357,7 +357,7 @@ public class SecurityOwnershipIntegrationTest {
     }
 
     @Test
-    void privateMilkProductionEndpoints_shouldReturn401WithoutToken() throws Exception {
+    void privateMilkProductionEntityEndpoints_shouldReturn401WithoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/milk-productions"))
                 .andExpect(status().isUnauthorized());

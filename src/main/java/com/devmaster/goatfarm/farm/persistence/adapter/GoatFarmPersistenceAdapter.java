@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.farm.persistence.adapter;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
 import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmExistenceQueryUseCase;
 import com.devmaster.goatfarm.farm.application.model.FarmRegistrationSnapshot;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 @Component
-public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort, FarmOwnerQueryPort, FarmRegistrationQueryUseCase {
+public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort, FarmOwnerQueryPort, FarmRegistrationQueryUseCase, FarmExistenceQueryUseCase {
 
     private final GoatFarmRepository repository;
 
@@ -24,6 +25,11 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort, Farm
     @Override
     public Optional<GoatFarm> findById(Long id) {
         return repository.findById(id);
+    }
+
+    @Override
+    public boolean existsById(Long farmId) {
+        return repository.existsById(farmId);
     }
 
     @Override

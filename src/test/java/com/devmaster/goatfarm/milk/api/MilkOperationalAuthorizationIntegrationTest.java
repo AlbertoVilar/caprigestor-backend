@@ -16,7 +16,7 @@ import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -84,7 +84,7 @@ class MilkOperationalAuthorizationIntegrationTest {
     private GoatEntity goat;
     private GoatEntity goatWithoutLactation;
     private LactationEntity activeLactation;
-    private MilkProduction production;
+    private MilkProductionEntity production;
 
     @BeforeEach
     void setUp() {
@@ -119,7 +119,7 @@ class MilkOperationalAuthorizationIntegrationTest {
         activeLactation.setStatus(LactationStatus.ACTIVE);
         activeLactation = lactationRepository.save(activeLactation);
 
-        production = new MilkProduction();
+        production = new MilkProductionEntity();
         production.setFarmId(farm.getId());
         production.setGoatId(goat.getRegistrationNumber());
         production.setLactation(activeLactation);
@@ -136,7 +136,7 @@ class MilkOperationalAuthorizationIntegrationTest {
     }
 
     @Test
-    void linkedOperatorCanPerformOperationalLactationAndMilkProductionRoutines() throws Exception {
+    void linkedOperatorCanPerformOperationalLactationAndMilkProductionEntityRoutines() throws Exception {
         String token = loginAndGetToken(linkedOperator.getEmail());
 
         mockMvc.perform(get(lactationPath(goat) + "/active").header("Authorization", bearer(token)))
@@ -215,7 +215,7 @@ class MilkOperationalAuthorizationIntegrationTest {
     }
 
     @Test
-    void linkedOperatorCannotCancelMilkProduction() throws Exception {
+    void linkedOperatorCannotCancelMilkProductionEntity() throws Exception {
         String token = loginAndGetToken(linkedOperator.getEmail());
 
         mockMvc.perform(delete(milkProductionPath(goat) + "/{id}", production.getId())
