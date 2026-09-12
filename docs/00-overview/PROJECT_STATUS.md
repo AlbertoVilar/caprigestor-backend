@@ -10,8 +10,8 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 
 ## Baseline atual
 
-- A baseline integrada de `develop` é o merge da PR #266 (`I2-B`); a próxima
-  onda `I2-C` está em implementação nesta branch.
+- A baseline integrada de `develop` inclui a PR #267 (`DEV-A11-I2-C`), merge
+  `adb025d`; a boundary arquitetural Authority/Security I2 está concluída.
 - A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
 - O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
   autenticação JWT e autorização farm-scoped.
@@ -35,9 +35,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 ## Waves concluídas relevantes
 
 - DEV-A11-R (Final Hexagonal Closure Audit) foi concluída em modo read-only. Os
-  14 pares legados de ports de aplicação para entidades JPA foram identificados
-  e classificados como dívida arquitetural conhecida, a ser removida
-  progressivamente em DEV-A11-I3.
+  14 pares legados de ports de aplicação para entidades JPA foram identificados;
+  após a I2-C, restam 11 pares explícitos, a serem removidos progressivamente
+  em DEV-A11-I3.
 - A10 isolou limites de principal autenticado, autorização por fazenda,
   validação crítica, publicação de eventos e emissão de JWT.
 - A11-I1 reforçou o guard global que impede o domínio de depender de
@@ -48,14 +48,19 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 - V44 reforçou a regra de uma única lactação ativa por animal/fazenda.
 - A retificação registral preserva GoatId, é administrativa e mantém histórico
   imutável; o `PUT` comum não altera identidade.
+- DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)
+  foi concluída e integrada no merge `adb025d` (PR #267). O core Authority não
+  depende de infraestrutura Spring Security nem de entidades JPA de Authority.
 
 ## Dívida arquitetural conhecida
 
-- O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém os 14 pares
-  explícitos já classificados pela DEV-A11-R como violações legadas de ports de
-  aplicação ainda acoplados a entidades JPA. É dívida de migração conhecida,
-  não aceitação permanente: será removida progressivamente em DEV-A11-I3 e pode
-  diminuir, nunca crescer sem revisão.
+- O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente
+  11 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
+  É dívida de migração conhecida, não aceitação permanente: será removida
+  progressivamente em DEV-A11-I3 e pode diminuir, nunca crescer sem revisão.
+- A ponte transitória `FarmUserPersistencePort -> authority.persistence.entity.User`
+  está classificada como dívida cross-module/persistence de I3 e não deve ganhar
+  novos consumidores.
 - Há dependências legadas do core a JPA entities, `Page`/`Pageable`/`Sort` e,
   no contexto Authority, a APIs de autenticação. Guards globais para essas
   dívidas permanecem planejados até a remoção incremental.
@@ -77,16 +82,24 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   `AuthTokenPort`; as APIs concretas de autenticação e JWT permanecem confinadas
   aos adapters de infraestrutura. Login, refresh, rotação, replay, logout,
   claims e contratos HTTP são preservados.
-- DEV-A11-I2-C (Authority Account & Role Persistence Boundary) está em
-  implementação: `AuthorityAccount`, `AuthorityRole`, sessões e tokens são
-  modelos da aplicação; JPA permanece nos adapters/mapper. O onboarding de
-  fazenda usa uma ponte explícita e transitória fora do core Authority para a
-  relação legada com `User`.
+- DEV-A11-I2-C (Authority Account & Role Persistence Boundary) foi concluída e
+  integrada. `AuthorityAccount`, `AuthorityRole`, `RefreshSessionRecord` e
+  `PasswordResetTokenRecord` são modelos da aplicação; JPA permanece nos
+  adapters/mapper. O onboarding de fazenda usa uma ponte explícita e transitória
+  fora do core Authority para a relação legada com `User`.
+- I2-D e I2-E, como descritas no roadmap antigo, são obsoletas como waves
+  arquiteturais independentes: seus limites de persistência e UserDetails já
+  foram cobertos pela I2-C. A implementação de `User implements UserDetails` é
+  apenas limpeza opcional futura.
+- A atomicidade concorrente do consumo de token de recuperação de senha é dívida
+  de hardening de segurança separada, não dívida hexagonal. A próxima frente
+  arquitetural autorizada é a auditoria read-only DEV-A11-I3-R.
 - DEV-A11-I2-P0 foi integrada na `develop`: as duas rotas HTTP de limpeza global
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por
   padrão.
-- Adiado: remoção de dívida A11-I2/I3, mudanças adicionais de contrato/API,
+- Adiado: remoção da dívida I3, hardening separado de recuperação de senha,
+  mudanças adicionais de contrato/API,
   mudanças de schema, reset DEV, HML e `main`.
 
 ## Compatibilidade e operações

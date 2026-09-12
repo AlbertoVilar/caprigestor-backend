@@ -38,6 +38,21 @@ Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONT
 - O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.
 - Alterações de senha, redefinição de senha e alterações de papéis revogam todas as sessões de refresh do usuário. O access token já emitido continua válido somente até sua expiração curta.
 
+## Fechamento arquitetural DEV-A11-I2
+
+DEV-A11-I2 está concluída e integrada em `develop` (merge `adb025d`, PR #267).
+O core Authority usa somente modelos e ports da aplicação: dependências de
+`PasswordEncoder`, autenticação/JWT, `SecurityContextHolder` e entidades JPA
+`User`/`Role` são zero nos pacotes de aplicação/business. Os contratos de
+refresh e recuperação também não expõem entidades JPA.
+
+As antigas waves I2-D e I2-E são obsoletas como waves arquiteturais isoladas.
+`User implements UserDetails` permanece apenas como limpeza opcional na borda
+de persistência. A atomicidade concorrente do consumo de token de recuperação é
+hardening de segurança separado. A ponte `FarmUserPersistencePort` para a
+relação JPA legada da fazenda foi movida para a dívida cross-module/persistence
+de I3 e não deve ser ampliada.
+
 ## Políticas semânticas de autorização
 
 Os controllers usam poucas annotations de intenção, definidas em

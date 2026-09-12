@@ -48,9 +48,16 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 
 ## Dívida observada e gates planejados após remoção
 
-Os 14 pares de `ApplicationPortPersistenceBoundaryArchUnitTest` são baseline de
-migração, não exceções permanentes. A allowlist pode apenas diminuir em uma
-mudança arquitetural revisada.
+Os 11 pares atuais de `ApplicationPortPersistenceBoundaryArchUnitTest` são
+baseline de migração, não exceções permanentes. A allowlist pode apenas
+diminuir em uma mudança arquitetural revisada.
+
+DEV-A11-I2 está arquiteturalmente concluída: os guards de password hashing,
+autenticação/JWT e isolamento JPA de Authority permanecem verdes. I2-D/I2-E
+não são waves independentes; a implementação `User implements UserDetails` é
+limpeza opcional, e atomicidade de password reset é hardening de segurança
+separado. A ponte `FarmUserPersistencePort -> User` pertence à auditoria e
+limpeza cross-module de I3.
 
 Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
 contra dívida existente fora do Authority:
