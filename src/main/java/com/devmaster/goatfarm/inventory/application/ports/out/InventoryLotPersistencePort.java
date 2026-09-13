@@ -4,7 +4,8 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotCreateVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotResponseVO;
-import org.springframework.data.domain.Page;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.Optional;
 
@@ -12,7 +13,7 @@ public interface InventoryLotPersistencePort {
 
     InventoryLotResponseVO save(InventoryLotCreateVO lot);
 
-    Page<InventoryLotResponseVO> listLots(InventoryLotFilterVO filter);
+    PageResult<InventoryLotResponseVO> listLots(InventoryLotFilterVO filter, PageQuery page);
 
     Optional<InventoryLotResponseVO> findByFarmIdAndId(Long farmId, Long lotId);
 

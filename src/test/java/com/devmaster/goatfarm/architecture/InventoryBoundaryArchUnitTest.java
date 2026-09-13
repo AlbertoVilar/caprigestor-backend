@@ -20,4 +20,17 @@ class InventoryBoundaryArchUnitTest {
                 .because("inventory deve manter fronteira de contexto sem acoplamento direto.")
                 .check(imported);
     }
+
+    @Test
+    void inventoryApplicationAndBusinessMustNotDependOnSpringData() {
+        JavaClasses imported = new ClassFileImporter()
+                .importPackages("com.devmaster.goatfarm");
+
+        noClasses()
+                .that().resideInAnyPackage("..inventory.application..", "..inventory.business..")
+                .should().dependOnClassesThat()
+                .resideInAnyPackage("org.springframework.data.domain..")
+                .because("paginação deve ser neutra no core de aplicação e negócio de Inventory.")
+                .check(imported);
+    }
 }

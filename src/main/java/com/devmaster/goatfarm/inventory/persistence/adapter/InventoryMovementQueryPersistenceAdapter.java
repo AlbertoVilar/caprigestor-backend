@@ -1,14 +1,13 @@
 package com.devmaster.goatfarm.inventory.persistence.adapter;
 
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementQueryPort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementHistoryResponseVO;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryMovementQueryRow;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryMovementRepository;
 import jakarta.persistence.EntityManager;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -30,7 +29,7 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
     }
 
     @Override
-    public Page<InventoryMovementHistoryResponseVO> listMovements(InventoryMovementFilterVO filter) {
+    public PageResult<InventoryMovementHistoryResponseVO> listMovements(InventoryMovementFilterVO filter, PageQuery page) {
         StringBuilder select = new StringBuilder("""
                 select new com.devmaster.goatfarm.inventory.persistence.repository.InventoryMovementQueryRow(
                     m.id,
@@ -73,7 +72,6 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
 
         select.append(" order by m.movementDate desc, m.createdAt desc");
 
-        Pageable pageable = filter.pageable();
         var dataQuery = entityManager.createQuery(select.toString(), InventoryMovementQueryRow.class);
         var countQuery = entityManager.createQuery(count.toString(), Long.class);
 
@@ -82,8 +80,8 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
             countQuery.setParameter(key, value);
         });
 
-        dataQuery.setFirstResult((int) pageable.getOffset());
-        dataQuery.setMaxResults(pageable.getPageSize());
+        dataQuery.setFirstResult((int) ((long) page.page() * page.size()));
+        dataQuery.setMaxResults(page.size());
 
         List<InventoryMovementHistoryResponseVO> content = dataQuery.getResultList().stream().map(row -> new InventoryMovementHistoryResponseVO(
                 row.movementId(),
@@ -106,7 +104,7 @@ public class InventoryMovementQueryPersistenceAdapter implements InventoryMoveme
                 row.createdAt()
         )).toList();
 
-        return new PageImpl<>(content, pageable, countQuery.getSingleResult());
+        return new PageResult<>(content, countQuery.getSingleResult(), page.page(), page.size());
     }
 
     private java.math.BigDecimal calculateSubtotal(

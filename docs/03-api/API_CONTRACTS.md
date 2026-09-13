@@ -343,6 +343,8 @@ Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
 - `GET /api/v1/goatfarms/{farmId}/inventory/movements`
   - filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`
   - ordenação padrão: `movementDate desc`, `createdAt desc`
+  - compatibilidade: a ordenação de movimentos é fixa; parâmetros `sort` são
+    aceitos pelo transporte, mas não alteram a ordem efetiva.
   - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `unitCost`, `subtotalCost`, `freightCost`, `discountAmount`, `totalCost`, `purchaseDate`, `supplierName`, `createdAt`
 - validações obrigatórias:
   - `fromDate <= toDate`

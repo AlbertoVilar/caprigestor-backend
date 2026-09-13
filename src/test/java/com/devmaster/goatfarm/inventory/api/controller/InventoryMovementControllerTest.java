@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.inventory.api.mapper.InventoryMovementApiMapper;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryMovementCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryMovementQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementHistoryResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
@@ -16,7 +18,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -83,8 +84,8 @@ class InventoryMovementControllerTest {
                 OffsetDateTime.parse("2026-02-28T12:15:00Z")
         );
 
-        when(queryUseCase.listMovements(any(InventoryMovementFilterVO.class)))
-                .thenReturn(new PageImpl<>(List.of(responseVO), PageRequest.of(0, 20), 1));
+        when(queryUseCase.listMovements(any(InventoryMovementFilterVO.class), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(responseVO), 1, 0, 20));
         when(apiMapper.toHistoryResponseDTO(responseVO)).thenReturn(responseDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/inventory/movements", 1L)
@@ -96,12 +97,12 @@ class InventoryMovementControllerTest {
                 .andExpect(jsonPath("$.content[0].type").value("OUT"))
                 .andExpect(jsonPath("$.page.totalElements").value(1));
 
-        verify(queryUseCase).listMovements(any(InventoryMovementFilterVO.class));
+        verify(queryUseCase).listMovements(any(InventoryMovementFilterVO.class), any(PageQuery.class));
     }
 
     @Test
     void listMovements_shouldReturn400_whenDateRangeIsInvalid() throws Exception {
-        when(queryUseCase.listMovements(any(InventoryMovementFilterVO.class)))
+        when(queryUseCase.listMovements(any(InventoryMovementFilterVO.class), any(PageQuery.class)))
                 .thenThrow(new InvalidArgumentException("fromDate", "Data inicial não pode ser maior que data final."));
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/inventory/movements", 1L)
