@@ -21,8 +21,8 @@ public record CreatorReference(
 
     public CreatorReference {
         creatorTod = normalizeOptional(creatorTod);
-        creatorNameSnapshot = normalizeOptional(creatorNameSnapshot);
-        evidenceReference = normalizeOptional(evidenceReference);
+        creatorNameSnapshot = preserveSnapshot(creatorNameSnapshot);
+        evidenceReference = preserveSnapshot(evidenceReference);
         if (creatorFarmId != null && creatorFarmId <= 0) {
             throw new IllegalArgumentException("creatorFarmId must be positive when provided");
         }
@@ -75,5 +75,13 @@ public record CreatorReference(
         }
         String normalized = value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String preserveSnapshot(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

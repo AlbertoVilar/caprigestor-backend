@@ -17,7 +17,8 @@ class CreatorReferenceTest {
         assertEquals("12345", creator.creatorTod());
         assertEquals(7L, creator.creatorFarmId());
         assertTrue(creator.isFarmLinked());
-        assertEquals("CAPRILVILAR", creator.creatorNameSnapshot());
+        assertEquals("Capril Vilar", creator.creatorNameSnapshot());
+        assertEquals("birth-record", creator.evidenceReference());
     }
 
     @Test

@@ -5,7 +5,9 @@ import com.devmaster.goatfarm.goat.domain.GoatId;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Immutable-in-history interval in which a farm owns a goat.
@@ -127,8 +129,10 @@ public final class GoatOwnershipPeriod {
                 }
             }
         }
-        long openPeriods = periods.stream().filter(GoatOwnershipPeriod::isOpen).count();
-        if (openPeriods > 1) {
+        Map<GoatId, Long> openPeriodsByGoat = periods.stream()
+                .filter(GoatOwnershipPeriod::isOpen)
+                .collect(Collectors.groupingBy(GoatOwnershipPeriod::goatId, Collectors.counting()));
+        if (openPeriodsByGoat.values().stream().anyMatch(count -> count > 1)) {
             throw new IllegalArgumentException("a GoatId may have at most one open ownership period");
         }
     }

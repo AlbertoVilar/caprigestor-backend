@@ -142,9 +142,15 @@ public final class OwnershipTransfer {
         if (completedAt.isBefore(acceptedAt)) {
             throw new IllegalArgumentException("completedAt must not precede acceptedAt");
         }
+        if (acceptedAt.isBefore(requestedAt)) {
+            throw new IllegalArgumentException("acceptedAt must not precede requestedAt");
+        }
+        if (!effectiveAt.equals(completedAt)) {
+            throw new IllegalArgumentException("effectiveAt must equal completedAt in V1");
+        }
         this.acceptedAt = acceptedAt;
         this.acceptedBy = acceptedBy;
-        this.effectiveAt = effectiveAt;
+        this.effectiveAt = completedAt;
         this.completedAt = completedAt;
         this.completedBy = acceptedBy;
         this.status = OwnershipTransferStatus.ACCEPTED;
@@ -162,15 +168,21 @@ public final class OwnershipTransfer {
         if (acceptedAt == null || completedAt.isBefore(acceptedAt)) {
             throw new IllegalArgumentException("completedAt must not precede acceptedAt");
         }
+        if (!effectiveAt.equals(completedAt)) {
+            throw new IllegalArgumentException("effectiveAt must equal completedAt in V1");
+        }
         this.completedAt = completedAt;
         this.completedBy = completedBy;
-        this.effectiveAt = effectiveAt;
+        this.effectiveAt = completedAt;
         this.status = OwnershipTransferStatus.COMPLETED;
     }
 
     public void markAccepted(Instant acceptedAt, long acceptedBy) {
         requireStatus(OwnershipTransferStatus.REQUESTED);
         Objects.requireNonNull(acceptedAt, "acceptedAt must not be null");
+        if (acceptedAt.isBefore(requestedAt)) {
+            throw new IllegalArgumentException("acceptedAt must not precede requestedAt");
+        }
         if (acceptedBy <= 0) {
             throw new IllegalArgumentException("acceptedBy must be positive");
         }
@@ -189,6 +201,10 @@ public final class OwnershipTransfer {
             throw new IllegalStateException("only a pending transfer can be cancelled");
         }
         this.cancelledAt = Objects.requireNonNull(cancelledAt, "cancelledAt must not be null");
+        if (cancelledAt.isBefore(requestedAt)
+                || (acceptedAt != null && cancelledAt.isBefore(acceptedAt))) {
+            throw new IllegalArgumentException("cancelledAt must not precede transfer timestamps");
+        }
         this.status = OwnershipTransferStatus.CANCELLED;
     }
 
@@ -223,18 +239,50 @@ public final class OwnershipTransfer {
     }
 
     private void validateTimestamps() {
-        if (status == OwnershipTransferStatus.REQUESTED && (effectiveAt != null || completedAt != null)) {
-            throw new IllegalArgumentException("requested transfer cannot have effectiveAt or completedAt");
-        }
-        if (status == OwnershipTransferStatus.COMPLETED
-                && (acceptedAt == null || effectiveAt == null || completedAt == null)) {
-            throw new IllegalArgumentException("completed transfer requires acceptance, effectiveAt and completion timestamps");
-        }
         if (acceptedAt != null && acceptedAt.isBefore(requestedAt)) {
             throw new IllegalArgumentException("acceptedAt must not precede requestedAt");
         }
         if (completedAt != null && acceptedAt != null && completedAt.isBefore(acceptedAt)) {
             throw new IllegalArgumentException("completedAt must not precede acceptedAt");
+        }
+        if (cancelledAt != null && (cancelledAt.isBefore(requestedAt)
+                || (acceptedAt != null && cancelledAt.isBefore(acceptedAt)))) {
+            throw new IllegalArgumentException("cancelledAt must not precede transfer timestamps");
+        }
+        if (effectiveAt != null && completedAt != null && !effectiveAt.equals(completedAt)) {
+            throw new IllegalArgumentException("effectiveAt must equal completedAt in V1");
+        }
+        switch (status) {
+            case REQUESTED -> {
+                if (acceptedAt != null || effectiveAt != null || completedAt != null || cancelledAt != null
+                        || acceptedBy != null || completedBy != null) {
+                    throw new IllegalArgumentException("requested transfer has inconsistent lifecycle fields");
+                }
+            }
+            case ACCEPTED -> {
+                if (acceptedAt == null || acceptedBy == null || effectiveAt != null || completedAt != null
+                        || cancelledAt != null || completedBy != null) {
+                    throw new IllegalArgumentException("accepted transfer has inconsistent lifecycle fields");
+                }
+            }
+            case COMPLETED -> {
+                if (acceptedAt == null || acceptedBy == null || effectiveAt == null || completedAt == null
+                        || completedBy == null || cancelledAt != null || !effectiveAt.equals(completedAt)) {
+                    throw new IllegalArgumentException("completed transfer has inconsistent lifecycle fields");
+                }
+            }
+            case REJECTED -> {
+                if (acceptedAt != null || effectiveAt != null || completedAt != null || cancelledAt != null
+                        || acceptedBy != null || completedBy != null) {
+                    throw new IllegalArgumentException("rejected transfer has inconsistent lifecycle fields");
+                }
+            }
+            case CANCELLED -> {
+                if (cancelledAt == null || effectiveAt != null || completedAt != null || completedBy != null
+                        || (acceptedAt == null) != (acceptedBy == null)) {
+                    throw new IllegalArgumentException("cancelled transfer has inconsistent lifecycle fields");
+                }
+            }
         }
     }
 

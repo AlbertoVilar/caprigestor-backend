@@ -42,6 +42,18 @@ class OwnershipTransferTest {
     }
 
     @Test
+    void acceptanceRejectsBackdatedTimestampsAndMismatchedEffectiveTime() {
+        OwnershipTransfer transfer = OwnershipTransfer.request(
+                GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                "relocation", "request-backdate", REQUESTED_AT, 100L, null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> transfer.acceptAndComplete(REQUESTED_AT.minusSeconds(1), ACCEPTED_AT, 200L, ACCEPTED_AT));
+        assertThrows(IllegalArgumentException.class,
+                () -> transfer.acceptAndComplete(ACCEPTED_AT, ACCEPTED_AT, 200L, ACCEPTED_AT.plusSeconds(1)));
+    }
+
+    @Test
     void rejectionAndCancellationAreTerminalWithoutChangingPeriods() {
         OwnershipTransfer rejected = OwnershipTransfer.request(
                 GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
@@ -84,5 +96,25 @@ class OwnershipTransferTest {
                 1L, GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
                 OwnershipTransferStatus.COMPLETED, "relocation", "request-7", REQUESTED_AT,
                 ACCEPTED_AT, null, ACCEPTED_AT, null, 100L, 200L, 200L, null));
+    }
+
+    @Test
+    void rehydrationRequiresStateConsistentLifecycleFields() {
+        assertThrows(IllegalArgumentException.class, () -> OwnershipTransfer.rehydrate(
+                1L, GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                OwnershipTransferStatus.ACCEPTED, "relocation", "request-8", REQUESTED_AT,
+                null, null, null, null, 100L, 200L, null, null));
+        assertThrows(IllegalArgumentException.class, () -> OwnershipTransfer.rehydrate(
+                1L, GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                OwnershipTransferStatus.REQUESTED, "relocation", "request-9", REQUESTED_AT,
+                ACCEPTED_AT, null, null, null, 100L, 200L, null, null));
+        assertThrows(IllegalArgumentException.class, () -> OwnershipTransfer.rehydrate(
+                1L, GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                OwnershipTransferStatus.CANCELLED, "relocation", "request-10", REQUESTED_AT,
+                null, null, null, null, 100L, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> OwnershipTransfer.rehydrate(
+                1L, GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                OwnershipTransferStatus.CANCELLED, "relocation", "request-11", REQUESTED_AT,
+                ACCEPTED_AT, null, null, ACCEPTED_AT, 100L, null, null, null));
     }
 }

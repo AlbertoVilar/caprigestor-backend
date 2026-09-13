@@ -63,4 +63,14 @@ class GoatOwnershipPeriodTest {
         assertThrows(IllegalArgumentException.class,
                 () -> GoatOwnershipPeriod.ensureConsistent(List.of(first, second)));
     }
+
+    @Test
+    void differentGoatsMayEachHaveOneOpenPeriod() {
+        GoatOwnershipPeriod first = GoatOwnershipPeriod.open(GOAT, 1L, START,
+                OwnershipEntryType.BIRTH, "test");
+        GoatOwnershipPeriod second = GoatOwnershipPeriod.open(new GoatId(11L), 2L, START,
+                OwnershipEntryType.BIRTH, "test");
+
+        assertDoesNotThrow(() -> GoatOwnershipPeriod.ensureConsistent(List.of(first, second)));
+    }
 }
