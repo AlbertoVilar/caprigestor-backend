@@ -1,6 +1,6 @@
 # Qualidade, supply chain e observabilidade
 
-Última atualização: 2026-09-12
+Última atualização: 2026-09-13
 Escopo: gates automatizados ativos, dívida explicitamente observada e proteções planejadas.
 
 Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),

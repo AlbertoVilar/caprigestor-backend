@@ -1,6 +1,6 @@
 # Arquitetura do Sistema CapriGestor
 
-Última atualização: 2026-09-12
+Última atualização: 2026-09-13
 Escopo: referência arquitetural, modularização por domínio, shared kernel e gates.
 
 Links: [Portal](../INDEX.md), [ADRs](./ADR),
