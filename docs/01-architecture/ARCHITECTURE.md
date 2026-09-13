@@ -117,14 +117,15 @@ do módulo Milk sobre tabelas de reprodução.
 ## Dívida arquitetural conhecida
 
 Nem todo o core já está livre de tecnologia de persistência. O baseline de
-`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 5 pares
+`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 4 pares
 explícitos que a DEV-A11-R identificou e classificou como violações legadas de
 ports de aplicação para entidades JPA. É dívida de migração conhecida, a ser
 removida progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem
 aprovação arquitetural.
 
-A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health e a
-DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5).
+A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, a
+DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5) e
+DEV-A11-I3-D isolou Audit (baseline 5 -> 4).
 Address e Phone foram agrupados com Farm para uma boundary única de persistência
 do agregado, pois seus ciclos de vida ainda são montados por `GoatFarm`.
 
@@ -132,9 +133,12 @@ A boundary DEV-A11-I2 de Authority/Security está concluída. O core Authority
 tem zero dependências de infraestrutura concreta de Spring Security e zero
 dependências de entidades JPA de Authority; os contratos de conta, papel,
 refresh e recuperação usam modelos da aplicação. A antiga I2-D/I2-E não deve
-ser recriada como waves independentes. Commercial, Finance e Audit ainda usam
-projeções mínimas de fazenda e permanecem nos cinco pares legados allowlisted,
-sem novos consumidores. A atomicidade concorrente do consumo de token de
+ser recriada como waves independentes. Commercial e Finance ainda usam
+projeções mínimas de fazenda e permanecem nos quatro pares legados allowlisted,
+sem novos consumidores. Audit usa `OperationalAuditRecord` como snapshot
+tecnológico neutro; o adapter mapeia esse record para `OperationalAuditEntry` e
+resolve a referência JPA de `GoatFarm`, mantendo entidades fora do core e o
+fallback histórico por RG. A atomicidade concorrente do consumo de token de
 recuperação é hardening de segurança separado.
 
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
@@ -177,8 +181,9 @@ uma nova implementação de GoatId.
 |---|---|
 | `HexagonalArchitectureGuardTest` | Impede import indevido de `business` para `api`. |
 | `GlobalHexagonalBoundaryArchUnitTest` | Protege domain, controllers, confinamento de `SecurityContextHolder` e ausência de `JpaRepository` no core. |
-| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 5 ports para entities. |
+| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 4 ports para entities. |
 | `FarmAddressPhoneCoreBoundaryArchUnitTest` | Impede entidades JPA nos cores application/business de Farm, Address e Phone. |
+| `AuditCoreBoundaryArchUnitTest` | Impede entidades JPA nos cores application/business de Audit. |
 | `HealthBoundaryArchUnitTest` | Impede dependências de entidades JPA no core application/business de Health. |
 | `OwnershipSecurityBoundaryArchUnitTest` | Protege ports críticos de segurança, ownership, validação e eventos. |
 | `AuthorityPasswordBoundaryArchUnitTest` | Impede `PasswordEncoder` no core Authority. |
