@@ -105,8 +105,6 @@ class OperationalFinanceBusinessTest {
 
     @Test
     void getMonthlySummary_shouldAggregateRevenueAndExpenses() {
-        GoatFarm farm = new GoatFarm();
-        farm.setId(17L);
         when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farmRecord()));
         when(persistencePort.sumPaidAnimalSalesByFarmIdAndPeriod(17L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
                 .thenReturn(new BigDecimal("1400.00"));
