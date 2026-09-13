@@ -270,6 +270,10 @@ Rotas canônicas de produção de leite:
 Paginação atual:
 - As listagens de lactação e produção continuam retornando `Page` do Spring para preservar compatibilidade.
 - O endpoint `dry-off` retorna envelope agregado com `totalPending` e `alerts`.
+- A listagem de produção de leite mantém o JSON Spring atual (`content` e o
+  objeto `page` com `number`, `size`, `totalElements` e `totalPages`). A
+  neutralização de `Pageable` ocorre somente dentro do backend e não altera o
+  contrato HTTP. A listagem de lactação permanece pendente para F4-I2.
 
 Exemplo de alerta de secagem:
 

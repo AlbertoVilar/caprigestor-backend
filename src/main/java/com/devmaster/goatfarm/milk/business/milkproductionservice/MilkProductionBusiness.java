@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.milk.business.milkproductionservice;
 import com.devmaster.goatfarm.milk.application.ports.in.MilkProductionUseCase;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -20,8 +22,6 @@ import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
 import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -148,22 +148,22 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
      * Consulta de produções por período
      */
     @Override
-    public Page<MilkProductionResponseVO> getMilkProductions(
+    public PageResult<MilkProductionResponseVO> getMilkProductions(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable,
+            PageQuery pageQuery,
             boolean includeCanceled
     ) {
         goatGenderValidator.requireFemale(farmId, goatId);
-        Page<MilkProduction> productions =
+        PageResult<MilkProduction> productions =
                 milkProductionPersistencePort.search(
                         farmId,
                         goatId,
                         from,
                         to,
-                        pageable,
+                        pageQuery,
                         includeCanceled
                 );
         return productions.map(milkProductionMapper::toResponseVO);

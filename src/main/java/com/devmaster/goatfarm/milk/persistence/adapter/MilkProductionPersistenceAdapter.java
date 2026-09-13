@@ -9,8 +9,13 @@ import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.mapper.MilkProductionPersistenceMapper;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -90,30 +95,31 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
     }
 
     @Override
-    public Page<MilkProduction> search(
+    public PageResult<MilkProduction> search(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable,
+            PageQuery pageQuery,
             boolean includeCanceled
     ) {
+        Pageable pageable = toPageable(pageQuery);
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Page<MilkProductionEntity> technical = milkProductionRepository.searchByTechnicalId(
                     farmId, technicalId.get(), from, to, pageable, includeCanceled);
             if (technical.hasContent()) {
-                return technical.map(mapper::toDomain);
+                return toPageResult(technical);
             }
         }
-        return milkProductionRepository.search(
+        return toPageResult(milkProductionRepository.search(
                 farmId,
                 goatId,
                 from,
                 to,
                 pageable,
                 includeCanceled
-        ).map(mapper::toDomain);
+        ));
     }
 
     @Override
@@ -156,6 +162,21 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
         if (entity.getGoatTechnicalId() == null) {
             technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(entity::setGoatTechnicalId);
         }
+    }
+
+    private Pageable toPageable(PageQuery query) {
+        List<Sort.Order> orders = query.sort().stream()
+                .map(spec -> new Sort.Order(
+                        spec.direction() == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC,
+                        spec.field()))
+                .toList();
+        Sort sort = orders.isEmpty() ? Sort.unsorted() : Sort.by(orders);
+        return PageRequest.of(query.page(), query.size(), sort);
+    }
+
+    private PageResult<MilkProduction> toPageResult(Page<MilkProductionEntity> page) {
+        return new PageResult<>(page.getContent().stream().map(mapper::toDomain).toList(),
+                page.getTotalElements(), page.getNumber(), page.getSize());
     }
 
 }
