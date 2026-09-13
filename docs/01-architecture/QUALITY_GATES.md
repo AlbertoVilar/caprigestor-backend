@@ -1,7 +1,7 @@
 # Qualidade, supply chain e observabilidade
 
 Última atualização: 2026-09-13
-Escopo: gates automatizados ativos, dívida explicitamente observada e proteções planejadas.
+Escopo: gates automatizados ativos e dívida explicitamente observada.
 
 Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 [Status](../00-overview/PROJECT_STATUS.md), [API](../03-api/API_CONTRACTS.md).
@@ -30,6 +30,10 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
   `org.springframework.dao` no core `application`/`business`; a tradução de
   conflitos ocorre nos adapters e a representação HTTP permanece nos handlers
   externos.
+- `GlobalHexagonalBoundaryArchUnitTest` mantém zero dependências de
+  `org.springframework.data.domain` no core global `application`/`business`;
+  controllers e adapters são as únicas bordas autorizadas a usar paginação
+  Spring.
 - `AuthorityPasswordBoundaryArchUnitTest` mantém zero dependências de
   `PasswordEncoder` nos pacotes `authority.application` e `authority.business`;
   o encoder permanece permitido em configuração, adapters e bootstrap.
@@ -53,8 +57,7 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
   filtros são neutros e a conversão permanece restrita à API e aos adapters.
 - `MilkProductionPaginationBoundaryArchUnitTest` mantém zero dependências de
   `org.springframework.data.domain` no caso de uso, port e business de produção
-  de leite. A regra é focada nessa sub-boundary; o histórico de Lactation será
-  protegido somente após F4-I2.
+  de leite e Lactation. Reproduction é coberto pelo guard global após F5.
 - A superfície HTTP não pode reintroduzir endpoints globais de limpeza ou
   recriação administrativa. Qualquer reset de DEV deve permanecer em tooling
   explícito, fora do fluxo REST, com credenciais externas.
@@ -89,18 +92,15 @@ modelos tecnologicamente neutros e não possui dependências JPA no core.
 `FarmAddressPhoneCoreBoundaryArchUnitTest` mantém zero dependências de entidades
 JPA nos pacotes application/business de Farm, Address e Phone.
 
-Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
-contra dívida existente fora do Authority:
-
-- core para `Page`/`Pageable`/`Sort` do Spring Data no módulo ainda não migrado
-  (Reproduction; Milk possui guard module-wide ativo após F4-I2);
-- core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder` em
-  módulos que ainda não foram migrados. O Authority já possui guards específicos
-  para essas APIs.
+O guard global de zero tolerância para `org.springframework.data.domain` no
+core `application`/`business` está ativo após DEV-A11-I3-F5 e deve permanecer
+verde. Ainda não existe um guard global equivalente para
+`AuthenticationManager`, `PasswordEncoder` e `JwtDecoder` em módulos fora do
+Authority; esses tipos continuam protegidos pelos guards específicos existentes.
 
 Após limpar um módulo, adicione seu guard específico; após remover todo o
-baseline de uma categoria, substitua a observação temporária pelo guard global.
-Não expanda baselines nem enfraqueça testes para acomodar regressões.
+baseline de uma categoria, mantenha o guard global correspondente. Não expanda
+baselines nem enfraqueça testes para acomodar regressões.
 
 ## Observabilidade
 

@@ -144,20 +144,27 @@ createdAt DESC`; parâmetros `sort` recebidos continuam sem alterar essa ordem.
 nomes JPA são preservados apenas onde a persistência precisa de compatibilidade.
 Consultas farm-wide de gravidez passam por `PregnancyDryOffQueryUseCase`, sem SQL
 do módulo Milk sobre tabelas de reprodução.
- A listagem de produção de leite já usa `PageQuery`/`PageResult` no core; a
- conversão para `Pageable`/`Page` permanece no controller/adapter. A paginação
- de histórico de lactações e a composição dos alertas de secagem continuam
- deliberadamente Spring-coupled até F4-I2.
+ A listagem de produção de leite e o histórico de lactações usam
+ `PageQuery`/`PageResult` no core; a conversão para `Pageable`/`Page` permanece no
+ controller/adapter. A composição dos alertas de secagem também permanece
+ orientada à intenção, sem paginação Spring no business.
+
+### Paginação de Reproduction
+
+DEV-A11-I3-F5 (PR #282) aplica o mesmo boundary neutro a Reproduction:
+`ReproductionQueryUseCase`, `ReproductionQueryBusiness` e ports de persistência
+usam `PageQuery`/`PageResult`; controllers continuam expondo o contrato HTTP
+Spring e adapters traduzem para `Pageable`/`Page`. O guard global impede que
+`org.springframework.data.domain` volte a vazar para qualquer `application` ou
+`business`.
 
 ## Dívida arquitetural conhecida
 
 O core application/business está livre de dependências diretas em entidades
 JPA: o baseline de `ApplicationPortPersistenceBoundaryArchUnitTest` é zero e
-o guard global impede regressões. Ainda existem dívidas independentes de
- persistência (por exemplo, `Page`/`Pageable`/`Sort`) que permanecem em
- Lactation e Reproduction e serão tratadas em waves posteriores,
- sem reabrir o isolamento JPA concluído. Article e Farm já não importam esses
- tipos Spring no application/business.
+o guard global impede regressões. Após F4-I2 e DEV-A11-I3-F5 (PR #282), não há
+dependências de `Page`/`Pageable`/`Sort` do Spring Data no core; a conversão fica
+restrita à API e aos adapters.
 
 A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, e a
 DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5) e
@@ -199,12 +206,11 @@ de integridade. O guard global mantém zero dependências de
 `org.springframework.dao` em `application`/`business`; handlers externos e
 adapters continuam autorizados a conhecer Spring DAO.
 
-Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
-de autenticação em módulos específicos. Após F4-I2, a dívida de paginação permanece
-somente em Reproduction. Guards globais de zero tolerância para
-essas categorias permanecem planejados até a remoção incremental. O estado da
-wave está no [PROJECT_STATUS](../00-overview/PROJECT_STATUS.md); gates ativos e
-planejados estão em [QUALITY_GATES](./QUALITY_GATES.md).
+Persistem apenas usos legados de APIs de autenticação em módulos específicos,
+com guards próprios e hardening separado. O guard global de Spring Data para
+`application`/`business` está ativo e verde. O estado da wave está no
+[PROJECT_STATUS](../00-overview/PROJECT_STATUS.md); gates ativos estão em
+[QUALITY_GATES](./QUALITY_GATES.md).
 
 ## Goat identity
 
@@ -251,7 +257,8 @@ uma nova implementação de GoatId.
 | `GoatHexagonalCoreArchUnitTest` | Protege paginação e boundary de aplicação do Goat. |
 | `MilkReproductionBoundaryArchUnitTest` | Garante fronteira entre Milk e Reproduction. |
 | `LactationDomainBoundaryArchUnitTest` | Impede vazamento de JPA/Spring/API no agregado de lactação. |
-| `MilkProductionPaginationBoundaryArchUnitTest` | Impede Spring Data no core de Milk (produção e Lactation); Reproduction permanece fora até sua wave própria. |
+| `MilkProductionPaginationBoundaryArchUnitTest` | Impede Spring Data no core de Milk (produção e Lactation). |
+| `GlobalHexagonalBoundaryArchUnitTest` | Mantém zero dependências de Spring Data pagination no core global `application`/`business`. |
 
 ## Referências internas
 

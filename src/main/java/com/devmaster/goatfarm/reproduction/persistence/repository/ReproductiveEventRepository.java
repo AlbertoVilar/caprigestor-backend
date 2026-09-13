@@ -37,44 +37,44 @@ public interface ReproductiveEventRepository extends JpaRepository<ReproductiveE
             LocalDate eventDate
     );
 
-    @Query(value = """
-            select c.* from reproductive_event c
-            left join reproductive_event corr
-                on corr.related_event_id = c.id
-                and corr.event_type = 'COVERAGE_CORRECTION'
-                and corr.farm_id = c.farm_id
-                and corr.goat_id = c.goat_id
-            where c.farm_id = :farmId
-              and c.goat_id = :goatId
-              and c.event_type = 'COVERAGE'
-              and coalesce(corr.corrected_event_date, c.event_date) <= :eventDate
-            order by coalesce(corr.corrected_event_date, c.event_date) desc, c.id desc
-            limit 1
-            """, nativeQuery = true)
-    Optional<ReproductiveEventEntity> findLatestEffectiveCoverageOnOrBefore(
+    @Query("""
+            select c from ReproductiveEvent c
+            left join ReproductiveEvent corr
+                on corr.relatedEventId = c.id
+                and corr.eventType = com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType.COVERAGE_CORRECTION
+                and corr.farmId = c.farmId
+                and corr.goatId = c.goatId
+            where c.farmId = :farmId
+              and c.goatId = :goatId
+              and c.eventType = com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType.COVERAGE
+              and coalesce(corr.correctedEventDate, c.eventDate) <= :eventDate
+            order by coalesce(corr.correctedEventDate, c.eventDate) desc, c.id desc
+            """)
+    List<ReproductiveEventEntity> findLatestEffectiveCoverageOnOrBefore(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId,
-            @Param("eventDate") LocalDate eventDate
+            @Param("eventDate") LocalDate eventDate,
+            Pageable pageable
     );
 
-    @Query(value = """
-            select c.* from reproductive_event c
-            left join reproductive_event corr
-                on corr.related_event_id = c.id
-                and corr.event_type = 'COVERAGE_CORRECTION'
-                and corr.farm_id = c.farm_id
-                and corr.goat_technical_id = c.goat_technical_id
-            where c.farm_id = :farmId
-              and c.goat_technical_id = :goatTechnicalId
-              and c.event_type = 'COVERAGE'
-              and coalesce(corr.corrected_event_date, c.event_date) <= :eventDate
-            order by coalesce(corr.corrected_event_date, c.event_date) desc, c.id desc
-            limit 1
-            """, nativeQuery = true)
-    Optional<ReproductiveEventEntity> findLatestEffectiveCoverageOnOrBeforeByTechnicalId(
+    @Query("""
+            select c from ReproductiveEvent c
+            left join ReproductiveEvent corr
+                on corr.relatedEventId = c.id
+                and corr.eventType = com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType.COVERAGE_CORRECTION
+                and corr.farmId = c.farmId
+                and corr.goatTechnicalId = c.goatTechnicalId
+            where c.farmId = :farmId
+              and c.goatTechnicalId = :goatTechnicalId
+              and c.eventType = com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType.COVERAGE
+              and coalesce(corr.correctedEventDate, c.eventDate) <= :eventDate
+            order by coalesce(corr.correctedEventDate, c.eventDate) desc, c.id desc
+            """)
+    List<ReproductiveEventEntity> findLatestEffectiveCoverageOnOrBeforeByTechnicalId(
             @Param("farmId") Long farmId,
             @Param("goatTechnicalId") Long goatTechnicalId,
-            @Param("eventDate") LocalDate eventDate
+            @Param("eventDate") LocalDate eventDate,
+            Pageable pageable
     );
 
     Optional<ReproductiveEventEntity> findTopByFarmIdAndGoatIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(

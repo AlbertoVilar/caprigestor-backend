@@ -112,7 +112,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Optional<ReproductiveEvent> technical = repository.findLatestEffectiveCoverageOnOrBeforeByTechnicalId(
-                    farmId, technicalId.get(), date).map(mapper::toDomain);
+                    farmId, technicalId.get(), date, PageRequest.of(0, 1)).stream().map(mapper::toDomain).findFirst();
             if (technical.isPresent()) {
                 return technical;
             }
@@ -120,8 +120,9 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         return repository.findLatestEffectiveCoverageOnOrBefore(
                 farmId,
                 goatId,
-                date
-        ).map(mapper::toDomain);
+                date,
+                PageRequest.of(0, 1)
+        ).stream().map(mapper::toDomain).findFirst();
     }
 
     @Override
