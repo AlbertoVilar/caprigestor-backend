@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.reproduction.application.ports.out;
 
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +17,7 @@ public interface PregnancyPersistencePort {
     Optional<Pregnancy> findByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     boolean existsByFarmIdAndCoverageEventId(Long farmId, Long coverageEventId);
     Optional<LocalDate> findLatestBirthCloseDate(Long farmId, String goatId);
-    Page<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+    PageResult<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery);
     List<Pregnancy> findAllActiveByFarmIdAndGoatIdOrdered(Long farmId, String goatId);
-    Page<Pregnancy> findActiveWithDueDateOnOrBefore(Long farmId, LocalDate referenceDate, Pageable pageable);
+    PageResult<Pregnancy> findActiveWithDueDateOnOrBefore(Long farmId, LocalDate referenceDate, PageQuery pageQuery);
 }

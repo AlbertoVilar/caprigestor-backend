@@ -93,4 +93,13 @@ class GlobalHexagonalBoundaryArchUnitTest {
                 .because("application and business core must exchange technology-neutral models with persistence adapters")
                 .check(IMPORTED_CLASSES);
     }
+
+    @Test
+    void applicationAndBusinessCoreMustNotDependOnSpringDataPagination() {
+        noClasses()
+                .that().resideInAnyPackage("..application..", "..business..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.data.domain..")
+                .because("application and business core must use neutral pagination contracts")
+                .check(IMPORTED_CLASSES);
+    }
 }

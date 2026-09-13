@@ -23,6 +23,8 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.api.dto.ReproductiveEventResponseDTO;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -30,10 +32,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -261,9 +259,8 @@ class ReproductionControllerTest {
                 .goatId(goatId).status(PregnancyStatus.CLOSED).build();
         PregnancyResponseDTO responseDTO = PregnancyResponseDTO.builder().id(10L).farmId(farmId)
                 .goatId(goatId).status(PregnancyStatus.CLOSED).build();
-        Pageable expected = PageRequest.of(0, 10, Sort.by(Sort.Order.desc("breedingDate")));
-        when(queryUseCase.getPregnancies(eq(farmId), eq(goatId), any(Pageable.class))).thenReturn(
-                new PageImpl<>(List.of(responseVO), expected, 1));
+        when(queryUseCase.getPregnancies(eq(farmId), eq(goatId), any(PageQuery.class))).thenReturn(
+                new PageResult<>(List.of(responseVO), 1, 0, 10));
         when(mapper.toPregnancyResponseDTO(responseVO)).thenReturn(responseDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies", farmId, goatId))
@@ -273,10 +270,10 @@ class ReproductionControllerTest {
                 .andExpect(jsonPath("$.page.size").value(10))
                 .andExpect(jsonPath("$.page.totalElements").value(1))
                 .andExpect(jsonPath("$.page.totalPages").value(1));
-        verify(queryUseCase).getPregnancies(eq(farmId), eq(goatId), argThat(p -> p.getPageNumber() == 0
-                && p.getPageSize() == 10
-                && p.getSort().getOrderFor("breedingDate") != null
-                && p.getSort().getOrderFor("breedingDate").isDescending()));
+        verify(queryUseCase).getPregnancies(eq(farmId), eq(goatId), argThat(p -> p.page() == 0
+                && p.size() == 10
+                && p.sort().get(0).field().equals("breedingDate")
+                && p.sort().get(0).direction().name().equals("DESC")));
     }
 
     @Test
@@ -287,13 +284,8 @@ class ReproductionControllerTest {
                 .farmId(farmId).goatId(goatId).build();
         ReproductiveEventResponseDTO responseDTO = ReproductiveEventResponseDTO.builder().id(11L)
                 .farmId(farmId).goatId(goatId).build();
-        when(queryUseCase.getReproductiveEvents(eq(farmId), eq(goatId), argThat(p -> p.getPageNumber() == 1
-                && p.getPageSize() == 2
-                && p.getSort().toList().get(0).getProperty().equals("eventDate")
-                && p.getSort().toList().get(0).isAscending()
-                && p.getSort().toList().get(1).getProperty().equals("id")
-                && p.getSort().toList().get(1).isDescending()))).thenReturn(
-                new PageImpl<>(List.of(responseVO), PageRequest.of(1, 2), 3));
+        when(queryUseCase.getReproductiveEvents(eq(farmId), eq(goatId), any(PageQuery.class))).thenReturn(
+                new PageResult<>(List.of(responseVO), 3, 1, 2));
         when(mapper.toReproductiveEventResponseDTO(responseVO)).thenReturn(responseDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events", farmId, goatId)
@@ -307,8 +299,12 @@ class ReproductionControllerTest {
                 .andExpect(jsonPath("$.page.size").value(2))
                 .andExpect(jsonPath("$.page.totalElements").value(3))
                 .andExpect(jsonPath("$.page.totalPages").value(2));
-        verify(queryUseCase).getReproductiveEvents(eq(farmId), eq(goatId), argThat(p -> p.getPageNumber() == 1
-                && p.getPageSize() == 2 && p.getSort().toList().size() == 2));
+        verify(queryUseCase).getReproductiveEvents(eq(farmId), eq(goatId), argThat(p -> p.page() == 1
+                && p.size() == 2 && p.sort().size() == 2
+                && p.sort().get(0).field().equals("eventDate")
+                && p.sort().get(0).direction().name().equals("ASC")
+                && p.sort().get(1).field().equals("id")
+                && p.sort().get(1).direction().name().equals("DESC")));
     }
 }
 

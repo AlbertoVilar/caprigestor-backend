@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.reproduction.persistence.adapter;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
@@ -33,6 +34,7 @@ class PregnancyPersistenceAdapterTest {
     void history_shouldFallbackToLegacyWhenTechnicalPageIsEmpty() {
         Long farmId = 7L;
         String registration = "RG-007";
+        PageQuery query = new PageQuery(1, 2, List.of());
         PageRequest page = PageRequest.of(1, 2);
         PregnancyEntity legacy = PregnancyEntity.builder().id(42L).farmId(farmId)
                 .goatId(registration).status(PregnancyStatus.CLOSED).build();
@@ -44,10 +46,10 @@ class PregnancyPersistenceAdapterTest {
                 .thenReturn(new PageImpl<>(List.of(legacy), page, 3));
 
         var result = new PregnancyPersistenceAdapter(repository, goatReferenceQueryPort)
-                .findAllByFarmIdAndGoatId(farmId, registration, page);
+                .findAllByFarmIdAndGoatId(farmId, registration, query);
 
-        assertThat(result.getContent()).extracting("id").containsExactly(42L);
-        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.content()).extracting("id").containsExactly(42L);
+        assertThat(result.totalElements()).isEqualTo(3);
         verify(repository).findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(farmId, registration, page);
     }
 }

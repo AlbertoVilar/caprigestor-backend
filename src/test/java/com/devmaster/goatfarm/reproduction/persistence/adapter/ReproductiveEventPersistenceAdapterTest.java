@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -39,17 +38,16 @@ class ReproductiveEventPersistenceAdapterTest {
                 .eventDate(referenceDate.minusDays(30)).build();
         when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registration, farmId))
                 .thenReturn(Optional.of(new GoatReference(new GoatId(99L), farmId, registration, "Doe")));
-        when(repository.findLatestEffectiveCoverageOnOrBeforeByTechnicalId(farmId, 99L, referenceDate,
-                PageRequest.of(0, 1))).thenReturn(List.of());
-        when(repository.findLatestEffectiveCoverageOnOrBefore(farmId, registration, referenceDate,
-                PageRequest.of(0, 1))).thenReturn(List.of(legacy));
+        when(repository.findLatestEffectiveCoverageOnOrBeforeByTechnicalId(farmId, 99L, referenceDate))
+                .thenReturn(Optional.empty());
+        when(repository.findLatestEffectiveCoverageOnOrBefore(farmId, registration, referenceDate))
+                .thenReturn(Optional.of(legacy));
 
         var result = new ReproductiveEventPersistenceAdapter(repository, goatReferenceQueryPort)
                 .findLatestEffectiveCoverageByFarmIdAndGoatIdOnOrBefore(farmId, registration, referenceDate);
 
         assertThat(result).isPresent();
         assertThat(result.orElseThrow().getId()).isEqualTo(41L);
-        verify(repository).findLatestEffectiveCoverageOnOrBefore(farmId, registration, referenceDate,
-                PageRequest.of(0, 1));
+        verify(repository).findLatestEffectiveCoverageOnOrBefore(farmId, registration, referenceDate);
     }
 }
