@@ -36,8 +36,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 
 - DEV-A11-R (Final Hexagonal Closure Audit) foi concluída em modo read-only. Os
   14 pares legados de ports de aplicação para entidades JPA foram identificados;
-  após a I2-C, restam 11 pares explícitos, a serem removidos progressivamente
-  em DEV-A11-I3.
+  após a I2-C, restavam 11 pares explícitos. A wave DEV-A11-I3-A isolou Article,
+  reduzindo a baseline atual para 10; Address e Phone permanecem agrupados com
+  Farm para a futura boundary do agregado.
 - A10 isolou limites de principal autenticado, autorização por fazenda,
   validação crítica, publicação de eventos e emissão de JWT.
 - A11-I1 reforçou o guard global que impede o domínio de depender de
@@ -55,7 +56,7 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 ## Dívida arquitetural conhecida
 
 - O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente
-  11 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
+  10 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
   É dívida de migração conhecida, não aceitação permanente: será removida
   progressivamente em DEV-A11-I3 e pode diminuir, nunca crescer sem revisão.
 - A ponte transitória `FarmUserPersistencePort -> authority.persistence.entity.User`
@@ -92,8 +93,8 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   foram cobertos pela I2-C. A implementação de `User implements UserDetails` é
   apenas limpeza opcional futura.
 - A atomicidade concorrente do consumo de token de recuperação de senha é dívida
-  de hardening de segurança separada, não dívida hexagonal. A próxima frente
-  arquitetural autorizada é a auditoria read-only DEV-A11-I3-R.
+  de hardening de segurança separada, não dívida hexagonal. A boundary Article da
+  DEV-A11-I3-A foi concluída; Address + Phone permanecem com Farm para a I3-C.
 - DEV-A11-I2-P0 foi integrada na `develop`: as duas rotas HTTP de limpeza global
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por

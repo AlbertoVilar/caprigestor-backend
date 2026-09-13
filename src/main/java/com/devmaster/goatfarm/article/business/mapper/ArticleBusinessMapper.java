@@ -3,15 +3,16 @@ package com.devmaster.goatfarm.article.business.mapper;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicDetailResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
-import com.devmaster.goatfarm.article.persistence.entity.Article;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface ArticleBusinessMapper {
 
-    ArticleResponseVO toResponseVO(Article entity);
+    default ArticleResponseVO toResponseVO(ArticleResponseVO article) {
+        return article;
+    }
 
-    ArticlePublicListResponseVO toPublicListResponseVO(Article entity);
+    ArticlePublicListResponseVO toPublicListResponseVO(ArticleResponseVO article);
 
-    ArticlePublicDetailResponseVO toPublicDetailResponseVO(Article entity);
+    ArticlePublicDetailResponseVO toPublicDetailResponseVO(ArticleResponseVO article);
 }
