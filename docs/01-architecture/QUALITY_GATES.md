@@ -26,6 +26,10 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 - `GlobalHexagonalBoundaryArchUnitTest` também mantém zero dependências de
   entidades JPA nos pacotes `application` e `business`; conversões ficam nos
   adapters de persistência.
+- `GlobalHexagonalBoundaryArchUnitTest` mantém zero dependências de
+  `org.springframework.dao` no core `application`/`business`; a tradução de
+  conflitos ocorre nos adapters e a representação HTTP permanece nos handlers
+  externos.
 - `AuthorityPasswordBoundaryArchUnitTest` mantém zero dependências de
   `PasswordEncoder` nos pacotes `authority.application` e `authority.business`;
   o encoder permanece permitido em configuração, adapters e bootstrap.

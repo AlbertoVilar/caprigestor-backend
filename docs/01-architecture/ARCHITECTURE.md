@@ -190,6 +190,15 @@ resolve a referência JPA de `GoatFarm`, mantendo entidades fora do core e o
 fallback histórico por RG. A atomicidade concorrente do consumo de token de
 recuperação é hardening de segurança separado.
 
+DEV-A11-I2-I isolou conflitos de persistência do core: `GoatFarmPersistenceAdapter`
+e `PhonePersistenceAdapter` traduzem `DataIntegrityViolationException` para o
+`PersistenceConflictException` neutro antes da fronteira de aplicação. O
+onboarding de fazenda contextualiza esse conflito no contrato histórico de
+duplicidade (HTTP 409), enquanto os demais fluxos preservam o contrato genérico
+de integridade. O guard global mantém zero dependências de
+`org.springframework.dao` em `application`/`business`; handlers externos e
+adapters continuam autorizados a conhecer Spring DAO.
+
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
 de autenticação em módulos específicos. Após F3, a dívida de paginação permanece
 em Milk e Reproduction. Guards globais de zero tolerância para

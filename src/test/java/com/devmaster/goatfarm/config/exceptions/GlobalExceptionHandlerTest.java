@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,6 +144,20 @@ class GlobalExceptionHandlerTest {
         assertEquals("Conflito de dados", body.getError());
         assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "duplicate".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
+    }
+
+    @Test
+    void shouldHandlePersistenceConflictWithGenericIntegrityContract() {
+        ResponseEntity<ValidationError> response = globalExceptionHandler.handlePersistenceConflict(
+                new PersistenceConflictException("conflict", new RuntimeException("constraint")), httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        ValidationError body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Conflito de integridade de dados", body.getError());
+        assertTrue(body.getErrors().stream().anyMatch(error ->
+                "integrity".equals(error.getFieldName())
+                        && "Violação de integridade no banco de dados".equals(error.getMessage())));
     }
 
     @Test

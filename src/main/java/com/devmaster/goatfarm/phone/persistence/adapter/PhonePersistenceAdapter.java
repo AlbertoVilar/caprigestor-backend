@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.phone.persistence.adapter;
 
 import com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import com.devmaster.goatfarm.phone.persistence.entity.Phone;
@@ -8,6 +9,7 @@ import com.devmaster.goatfarm.phone.persistence.repository.PhoneRepository;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +34,13 @@ public class PhonePersistenceAdapter implements PhonePersistencePort {
             GoatFarm farm = farmRepository.findById(farmId).orElseThrow(() -> new IllegalArgumentException("Fazenda não encontrada: " + farmId));
             entity.setGoatFarm(farm);
         }
-        return toResponse(phoneRepository.save(entity));
+        Phone saved;
+        try {
+            saved = phoneRepository.save(entity);
+        } catch (DataIntegrityViolationException exception) {
+            throw new PersistenceConflictException("Conflito de persistência ao salvar o telefone.", exception);
+        }
+        return toResponse(saved);
     }
 
     @Override
