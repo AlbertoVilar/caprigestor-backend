@@ -1,8 +1,10 @@
 package com.devmaster.goatfarm.article.persistence.adapter;
 
 import com.devmaster.goatfarm.article.application.ports.out.ArticlePersistencePort;
+import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.persistence.entity.Article;
+import com.devmaster.goatfarm.article.persistence.mapper.ArticlePersistenceMapper;
 import com.devmaster.goatfarm.article.persistence.repository.ArticleRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,29 +17,31 @@ import java.util.Optional;
 public class ArticlePersistenceAdapter implements ArticlePersistencePort {
 
     private final ArticleRepository articleRepository;
+    private final ArticlePersistenceMapper mapper;
 
-    public ArticlePersistenceAdapter(ArticleRepository articleRepository) {
+    public ArticlePersistenceAdapter(ArticleRepository articleRepository, ArticlePersistenceMapper mapper) {
         this.articleRepository = articleRepository;
+        this.mapper = mapper;
     }
 
     @Override
-    public Article save(Article article) {
-        return articleRepository.save(article);
+    public ArticleResponseVO save(ArticleResponseVO article) {
+        return mapper.toModel(articleRepository.save(mapper.toEntity(article)));
     }
 
     @Override
-    public Optional<Article> findById(Long id) {
-        return articleRepository.findById(id);
+    public Optional<ArticleResponseVO> findById(Long id) {
+        return articleRepository.findById(id).map(mapper::toModel);
     }
 
     @Override
-    public Optional<Article> findBySlug(String slug) {
-        return articleRepository.findBySlug(slug);
+    public Optional<ArticleResponseVO> findBySlug(String slug) {
+        return articleRepository.findBySlug(slug).map(mapper::toModel);
     }
 
     @Override
-    public Optional<Article> findBySlugAndPublishedTrue(String slug) {
-        return articleRepository.findBySlugAndPublishedTrue(slug);
+    public Optional<ArticleResponseVO> findBySlugAndPublishedTrue(String slug) {
+        return articleRepository.findBySlugAndPublishedTrue(slug).map(mapper::toModel);
     }
 
     @Override
@@ -51,23 +55,24 @@ public class ArticlePersistenceAdapter implements ArticlePersistencePort {
     }
 
     @Override
-    public Page<Article> findAll(Pageable pageable) {
-        return articleRepository.findAll(pageable);
+    public Page<ArticleResponseVO> findAll(Pageable pageable) {
+        return articleRepository.findAll(pageable).map(mapper::toModel);
     }
 
     @Override
-    public Page<Article> findPublished(ArticleCategory category, String q, Pageable pageable) {
-        return articleRepository.findPublished(category, q, pageable);
+    public Page<ArticleResponseVO> findPublished(ArticleCategory category, String q, Pageable pageable) {
+        return articleRepository.findPublished(category, q, pageable).map(mapper::toModel);
     }
 
     @Override
-    public List<Article> findTop3HighlightedPublished() {
-        return articleRepository.findTop3ByPublishedTrueAndHighlightedTrueOrderByPublishedAtDesc();
+    public List<ArticleResponseVO> findTop3HighlightedPublished() {
+        return articleRepository.findTop3ByPublishedTrueAndHighlightedTrueOrderByPublishedAtDesc()
+                .stream().map(mapper::toModel).toList();
     }
 
     @Override
-    public Page<Article> findLatestPublished(Pageable pageable) {
-        return articleRepository.findByPublishedTrue(pageable);
+    public Page<ArticleResponseVO> findLatestPublished(Pageable pageable) {
+        return articleRepository.findByPublishedTrue(pageable).map(mapper::toModel);
     }
 
     @Override

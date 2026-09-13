@@ -11,7 +11,6 @@ import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.business.mapper.ArticleBusinessMapper;
-import com.devmaster.goatfarm.article.persistence.entity.Article;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -22,7 +21,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -52,7 +50,7 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
             throw new DuplicateEntityException("Já existe um artigo com este slug.");
         }
 
-        Article article = Article.builder()
+        ArticleResponseVO article = ArticleResponseVO.builder()
                 .title(requestVO.getTitle())
                 .slug(slug)
                 .excerpt(requestVO.getExcerpt())
@@ -64,7 +62,7 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
                 .highlighted(false)
                 .build();
 
-        Article saved = articlePersistencePort.save(article);
+        ArticleResponseVO saved = articlePersistencePort.save(article);
         return articleMapper.toResponseVO(saved);
     }
 
@@ -72,7 +70,7 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
     public ArticleResponseVO updateArticle(Long id, ArticleRequestVO requestVO) {
         validateArticleContent(requestVO);
 
-        Article article = articlePersistencePort.findById(id)
+        ArticleResponseVO article = articlePersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artigo não encontrado."));
 
         String slug = generateSlug(requestVO.getTitle());
@@ -87,13 +85,13 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
         article.setCategory(requestVO.getCategory());
         article.setCoverImageUrl(requestVO.getCoverImageUrl());
 
-        Article saved = articlePersistencePort.save(article);
+        ArticleResponseVO saved = articlePersistencePort.save(article);
         return articleMapper.toResponseVO(saved);
     }
 
     @Override
     public ArticleResponseVO publishArticle(Long id, ArticlePublishRequestVO requestVO) {
-        Article article = articlePersistencePort.findById(id)
+        ArticleResponseVO article = articlePersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artigo não encontrado."));
 
         if (requestVO.isPublished()) {
@@ -105,23 +103,23 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
             article.setPublishedAt(null);
         }
 
-        Article saved = articlePersistencePort.save(article);
+        ArticleResponseVO saved = articlePersistencePort.save(article);
         return articleMapper.toResponseVO(saved);
     }
 
     @Override
     public ArticleResponseVO highlightArticle(Long id, ArticleHighlightRequestVO requestVO) {
-        Article article = articlePersistencePort.findById(id)
+        ArticleResponseVO article = articlePersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artigo não encontrado."));
 
         article.setHighlighted(requestVO.isHighlighted());
-        Article saved = articlePersistencePort.save(article);
+        ArticleResponseVO saved = articlePersistencePort.save(article);
         return articleMapper.toResponseVO(saved);
     }
 
     @Override
     public void deleteArticle(Long id) {
-        Article article = articlePersistencePort.findById(id)
+        ArticleResponseVO article = articlePersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artigo não encontrado."));
         articlePersistencePort.deleteById(article.getId());
     }
@@ -135,23 +133,23 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
 
     @Override
     public ArticlePublicDetailResponseVO getPublishedArticleBySlug(String slug) {
-        Article article = articlePersistencePort.findBySlugAndPublishedTrue(slug)
+        ArticleResponseVO article = articlePersistencePort.findBySlugAndPublishedTrue(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Artigo não encontrado."));
         return articleMapper.toPublicDetailResponseVO(article);
     }
 
     @Override
     public List<ArticlePublicListResponseVO> getHighlights() {
-        List<Article> highlighted = articlePersistencePort.findTop3HighlightedPublished();
-        List<Article> result = new ArrayList<>(highlighted);
+        List<ArticleResponseVO> highlighted = articlePersistencePort.findTop3HighlightedPublished();
+        List<ArticleResponseVO> result = new ArrayList<>(highlighted);
 
         if (result.size() < HIGHLIGHT_COUNT) {
             int remaining = HIGHLIGHT_COUNT - result.size();
             Pageable pageable = PageRequest.of(0, remaining + HIGHLIGHT_COUNT, Sort.by(Sort.Direction.DESC, "publishedAt"));
-            List<Article> latest = articlePersistencePort.findLatestPublished(pageable).getContent();
+            List<ArticleResponseVO> latest = articlePersistencePort.findLatestPublished(pageable).getContent();
             Set<Long> existingIds = new HashSet<>();
             result.forEach(article -> existingIds.add(article.getId()));
-            for (Article article : latest) {
+            for (ArticleResponseVO article : latest) {
                 if (existingIds.contains(article.getId())) {
                     continue;
                 }
@@ -173,7 +171,7 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
 
     @Override
     public ArticleResponseVO getArticleById(Long id) {
-        Article article = articlePersistencePort.findById(id)
+        ArticleResponseVO article = articlePersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Artigo não encontrado."));
         return articleMapper.toResponseVO(article);
     }
@@ -193,7 +191,7 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
         }
     }
 
-    private void validateArticleContent(Article article) {
+    private void validateArticleContent(ArticleResponseVO article) {
         ArticleRequestVO requestVO = ArticleRequestVO.builder()
                 .title(article.getTitle())
                 .excerpt(article.getExcerpt())
