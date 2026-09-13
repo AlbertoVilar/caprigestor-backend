@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.api.controller.GoatFarmController;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullResponseVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import org.junit.jupiter.api.Assertions;
@@ -68,13 +70,9 @@ class GoatFarmControllerTest {
     @Test
     void shouldListGoatFarmsThroughCanonicalRoute() throws Exception {
         farmResponse.setUserEmail("contato@caprilvilar.com.br");
-        Page<GoatFarmFullResponseVO> farms = new PageImpl<>(
-                List.of(farmResponse),
-                PageRequest.of(0, 10),
-                1
-        );
+        PageResult<GoatFarmFullResponseVO> farms = new PageResult<>(List.of(farmResponse), 1, 0, 10);
 
-        when(farmUseCase.findAllGoatFarm(any(Pageable.class))).thenReturn(farms);
+        when(farmUseCase.findAllGoatFarm(any(PageQuery.class))).thenReturn(farms);
         when(ownershipService.canManageFarm(1L)).thenReturn(false);
 
         mockMvc.perform(get("/api/v1/goatfarms")
@@ -87,18 +85,14 @@ class GoatFarmControllerTest {
                 .andExpect(jsonPath("$.content[0].user.cpf").doesNotExist())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(farmUseCase).findAllGoatFarm(any(Pageable.class));
+        verify(farmUseCase).findAllGoatFarm(any(PageQuery.class));
     }
 
     @Test
     void shouldAllowLegacyGoatFarmListRouteDuringCompatibilityWindow() throws Exception {
-        Page<GoatFarmFullResponseVO> farms = new PageImpl<>(
-                List.of(farmResponse),
-                PageRequest.of(0, 10),
-                1
-        );
+        PageResult<GoatFarmFullResponseVO> farms = new PageResult<>(List.of(farmResponse), 1, 0, 10);
 
-        when(farmUseCase.findAllGoatFarm(any(Pageable.class))).thenReturn(farms);
+        when(farmUseCase.findAllGoatFarm(any(PageQuery.class))).thenReturn(farms);
         when(ownershipService.canManageFarm(1L)).thenReturn(false);
 
         mockMvc.perform(get("/api/v1/goatfarms")
@@ -108,7 +102,7 @@ class GoatFarmControllerTest {
                 .andExpect(jsonPath("$.content[0].name").value("Capril Vilar"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        verify(farmUseCase).findAllGoatFarm(any(Pageable.class));
+        verify(farmUseCase).findAllGoatFarm(any(PageQuery.class));
     }
 
     @Test

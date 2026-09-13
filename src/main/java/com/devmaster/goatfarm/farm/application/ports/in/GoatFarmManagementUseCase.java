@@ -8,8 +8,8 @@ import com.devmaster.goatfarm.farm.business.bo.GoatFarmFullRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmRequestVO;
 import com.devmaster.goatfarm.farm.business.bo.GoatFarmResponseVO;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.List;
 
@@ -28,9 +28,9 @@ public interface GoatFarmManagementUseCase {
 
     GoatFarmFullResponseVO findGoatFarmById(Long id);
 
-    Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable);
+    PageResult<GoatFarmFullResponseVO> searchGoatFarmByName(String name, PageQuery pageQuery);
 
-    Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable);
+    PageResult<GoatFarmFullResponseVO> findAllGoatFarm(PageQuery pageQuery);
 
     void deleteGoatFarm(Long id);
 

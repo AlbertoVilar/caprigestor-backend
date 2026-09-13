@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.farm.api.dto.GoatFarmUpdateRequestDTO;
 import com.devmaster.goatfarm.farm.api.dto.FarmPermissionsDTO;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 import com.devmaster.goatfarm.farm.api.mapper.GoatFarmMapper;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.authority.api.mapper.UserMapper;
 import com.devmaster.goatfarm.address.api.mapper.AddressMapper;
 import com.devmaster.goatfarm.phone.api.mapper.PhoneMapper;
@@ -125,9 +126,10 @@ public class GoatFarmController {
             @Parameter(description = "Trecho do nome da fazenda para busca.", example = "Capril")
             @RequestParam(value = "name", defaultValue = "") String name,
             @PageableDefault(size = 12, page = 0) Pageable pageable) {
-        return ResponseEntity.ok(farmUseCase.searchGoatFarmByName(name, pageable)
+        var page = farmUseCase.searchGoatFarmByName(name, SpringPageMapper.toQuery(pageable))
                 .map(farmMapper::toFullDTO)
-                .map(this::toPublicSafeDTO));
+                .map(this::toPublicSafeDTO);
+        return ResponseEntity.ok(SpringPageMapper.toSpringPage(page, pageable));
     }
 
     @GetMapping
@@ -138,9 +140,10 @@ public class GoatFarmController {
             @ApiResponse(responseCode = "400", description = "Parâmetros de paginação inválidos.")
     })
     public ResponseEntity<Page<GoatFarmFullResponseDTO>> findAllGoatFarm(@PageableDefault(size = 12, page = 0) Pageable pageable) {
-        return ResponseEntity.ok(farmUseCase.findAllGoatFarm(pageable)
+        var page = farmUseCase.findAllGoatFarm(SpringPageMapper.toQuery(pageable))
                 .map(farmMapper::toFullDTO)
-                .map(this::toPublicSafeDTO));
+                .map(this::toPublicSafeDTO);
+        return ResponseEntity.ok(SpringPageMapper.toSpringPage(page, pageable));
     }
 
     @FarmOwnerOnly

@@ -13,6 +13,8 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.farm.application.model.FarmPersistenceCommand;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.farm.application.ports.in.GoatFarmManagementUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.business.bo.*;
@@ -20,8 +22,6 @@ import com.devmaster.goatfarm.farm.business.mapper.FarmBusinessMapper;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,8 +37,8 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         this.goatFarmPort = goatFarmPort; this.addressBusiness = addressBusiness; this.userManagement = userManagement; this.phoneBusiness = phoneBusiness; this.mapper = mapper; this.authorization = authorization; this.principalQuery = principalQuery;
     }
     @Transactional(readOnly = true) public GoatFarmFullResponseVO findGoatFarmById(Long id) { return mapper.toFullResponseVO(require(id, true)); }
-    @Transactional(readOnly = true) public Page<GoatFarmFullResponseVO> searchGoatFarmByName(String name, Pageable pageable) { return goatFarmPort.searchByName(name, pageable).map(mapper::toFullResponseVO); }
-    @Transactional(readOnly = true) public Page<GoatFarmFullResponseVO> findAllGoatFarm(Pageable pageable) { return goatFarmPort.findAll(pageable).map(mapper::toFullResponseVO); }
+    @Transactional(readOnly = true) public PageResult<GoatFarmFullResponseVO> searchGoatFarmByName(String name, PageQuery pageQuery) { return goatFarmPort.searchByName(name, pageQuery).map(mapper::toFullResponseVO); }
+    @Transactional(readOnly = true) public PageResult<GoatFarmFullResponseVO> findAllGoatFarm(PageQuery pageQuery) { return goatFarmPort.findAll(pageQuery).map(mapper::toFullResponseVO); }
     @Transactional public void deleteGoatFarm(Long id) { authorization.verifyFarmOwnership(id); require(id, false); goatFarmPort.deleteById(id); }
 
     @Transactional

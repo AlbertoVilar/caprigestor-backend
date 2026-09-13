@@ -11,13 +11,11 @@ import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.business.mapper.ArticleBusinessMapper;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
@@ -125,9 +123,9 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
     }
 
     @Override
-    public Page<ArticlePublicListResponseVO> getPublishedArticles(ArticleCategory category, String q, Pageable pageable) {
+    public PageResult<ArticlePublicListResponseVO> getPublishedArticles(ArticleCategory category, String q, PageQuery pageQuery) {
         String query = normalizeQuery(q);
-        return articlePersistencePort.findPublished(category, query, pageable)
+        return articlePersistencePort.findPublished(category, query, pageQuery)
                 .map(articleMapper::toPublicListResponseVO);
     }
 
@@ -145,8 +143,7 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
 
         if (result.size() < HIGHLIGHT_COUNT) {
             int remaining = HIGHLIGHT_COUNT - result.size();
-            Pageable pageable = PageRequest.of(0, remaining + HIGHLIGHT_COUNT, Sort.by(Sort.Direction.DESC, "publishedAt"));
-            List<ArticleResponseVO> latest = articlePersistencePort.findLatestPublished(pageable).getContent();
+            List<ArticleResponseVO> latest = articlePersistencePort.findLatestPublished(remaining + HIGHLIGHT_COUNT);
             Set<Long> existingIds = new HashSet<>();
             result.forEach(article -> existingIds.add(article.getId()));
             for (ArticleResponseVO article : latest) {
@@ -165,8 +162,8 @@ public class ArticleBusiness implements ArticleCommandUseCase, ArticleQueryUseCa
     }
 
     @Override
-    public Page<ArticleResponseVO> getAllArticles(Pageable pageable) {
-        return articlePersistencePort.findAll(pageable).map(articleMapper::toResponseVO);
+    public PageResult<ArticleResponseVO> getAllArticles(PageQuery pageQuery) {
+        return articlePersistencePort.findAll(pageQuery).map(articleMapper::toResponseVO);
     }
 
     @Override

@@ -6,6 +6,12 @@ import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.persistence.entity.Article;
 import com.devmaster.goatfarm.article.persistence.mapper.ArticlePersistenceMapper;
 import com.devmaster.goatfarm.article.persistence.repository.ArticleRepository;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortSpec;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -55,13 +61,15 @@ public class ArticlePersistenceAdapter implements ArticlePersistencePort {
     }
 
     @Override
-    public Page<ArticleResponseVO> findAll(Pageable pageable) {
-        return articleRepository.findAll(pageable).map(mapper::toModel);
+    public PageResult<ArticleResponseVO> findAll(PageQuery pageQuery) {
+        var page = articleRepository.findAll(toPageable(pageQuery));
+        return new PageResult<>(page.getContent().stream().map(mapper::toModel).toList(), page.getTotalElements(), page.getNumber(), page.getSize());
     }
 
     @Override
-    public Page<ArticleResponseVO> findPublished(ArticleCategory category, String q, Pageable pageable) {
-        return articleRepository.findPublished(category, q, pageable).map(mapper::toModel);
+    public PageResult<ArticleResponseVO> findPublished(ArticleCategory category, String q, PageQuery pageQuery) {
+        var page = articleRepository.findPublished(category, q, toPageable(pageQuery));
+        return new PageResult<>(page.getContent().stream().map(mapper::toModel).toList(), page.getTotalElements(), page.getNumber(), page.getSize());
     }
 
     @Override
@@ -71,12 +79,24 @@ public class ArticlePersistenceAdapter implements ArticlePersistencePort {
     }
 
     @Override
-    public Page<ArticleResponseVO> findLatestPublished(Pageable pageable) {
-        return articleRepository.findByPublishedTrue(pageable).map(mapper::toModel);
+    public List<ArticleResponseVO> findLatestPublished(int limit) {
+        if (limit <= 0) return List.of();
+        return articleRepository.findByPublishedTrue(PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "publishedAt")))
+                .getContent().stream().map(mapper::toModel).toList();
     }
 
     @Override
     public void deleteById(Long id) {
         articleRepository.deleteById(id);
+    }
+
+    private Pageable toPageable(PageQuery query) {
+        Sort sort = Sort.by(query.sort().stream().map(this::toOrder).toList());
+        return PageRequest.of(query.page(), query.size(), sort);
+    }
+
+    private Sort.Order toOrder(SortSpec spec) {
+        return new Sort.Order(spec.direction() == SortDirection.ASC
+                ? Sort.Direction.ASC : Sort.Direction.DESC, spec.field());
     }
 }

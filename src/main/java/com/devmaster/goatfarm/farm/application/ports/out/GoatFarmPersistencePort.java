@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.farm.application.ports.out;
 
 import com.devmaster.goatfarm.farm.application.model.FarmPersistenceCommand;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.Optional;
 
@@ -18,8 +18,8 @@ public interface GoatFarmPersistencePort {
 
     Optional<FarmRecord> findByIdWithDetails(Long id);
     
-    Page<FarmRecord> searchByName(String name, Pageable pageable);
-    Page<FarmRecord> findAll(Pageable pageable);
+    PageResult<FarmRecord> searchByName(String name, PageQuery pageQuery);
+    PageResult<FarmRecord> findAll(PageQuery pageQuery);
 
     boolean existsByName(String name);
     boolean existsByTod(String tod);

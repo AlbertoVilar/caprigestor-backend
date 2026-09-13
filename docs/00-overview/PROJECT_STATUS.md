@@ -51,6 +51,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   V39–V43. FKs locais críticas usam identidade técnica; RG permanece
   identificador registral/ABCC e snapshot de negócio.
 - V44 reforçou a regra de uma única lactação ativa por animal/fazenda.
+- DEV-A11-I3-F1 isolou a paginação de Article e Farm do core: `PageQuery`,
+  `PageResult` e `SortSpec` são modelos neutros; controllers mantêm o contrato
+  HTTP Spring e adapters traduzem para `Pageable`/`Page`.
 - A retificação registral preserva GoatId, é administrativa e mantém histórico
   imutável; o `PUT` comum não altera identidade.
 - DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)
@@ -71,7 +74,8 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   agora usa `CustomerRecord`, `AnimalSaleRecord` e `MilkSaleRecord`, com adapters
   responsáveis por resolver entidades JPA. Audit já usa `OperationalAuditRecord`
   e está isolado de entidades JPA no core (DEV-A11-I3-D).
-- Há dependências legadas do core a JPA entities, `Page`/`Pageable`/`Sort` e,
+- Há dependências legadas do core a `Page`/`Pageable`/`Sort` em módulos fora do
+  escopo F1 e,
   no contexto Authority, a APIs de autenticação. Guards globais para essas
   dívidas permanecem planejados até a remoção incremental.
 - A transição de identidade ainda contém compatibilidades de API/token por RG e
