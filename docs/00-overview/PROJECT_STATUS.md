@@ -71,6 +71,12 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   usa `PageQuery`/`PageResult` no application/business/port, mantendo Spring
   `Pageable`/`Page` apenas na API e no adapter. A paginação de Lactation e os
   alertas de secagem permanecem abertos para F4-I2.
+- DEV-A11-I3-F4-I2 isolou a paginação de Lactation: histórico usa
+  `PageQuery`/`PageResult`, alertas de secagem usam composição e slicing neutros,
+  e a seleção da última lactação usa consulta orientada à intenção. O contrato
+  HTTP de histórico e o envelope `totalPending` dos alertas permanecem intactos.
+  Milk application/business não possui mais dependências de Spring Data; a dívida
+  de paginação remanescente está em Reproduction.
 - A retificação registral preserva GoatId, é administrativa e mantém histórico
   imutável; o `PUT` comum não altera identidade.
 - DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)

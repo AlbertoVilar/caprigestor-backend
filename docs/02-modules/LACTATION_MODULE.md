@@ -1,5 +1,5 @@
 ﻿# Modulo Lactacao
-Ultima atualizacao: 2026-09-11
+Ultima atualizacao: 2026-09-13
 Escopo: abertura, secagem, retomada, consulta de lactacoes e alertas de secagem por fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Milk Production](./MILK_PRODUCTION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -25,8 +25,9 @@ consultas JPQL existentes, sem alteração de schema ou migrations.
 
 O resumo de produção é consumido por um contrato de aplicação
 (`MilkProductionSummaryQueryPort`), mantendo as entidades JPA de produção
-confinadas aos adaptadores. A paginação `Page`/`Pageable` continua uma
-compatibilidade deliberada. Alertas de secagem agora combinam lactações
+confinadas aos adaptadores. A paginação Spring permanece apenas na API: o
+histórico atravessa o core como `PageQuery`/`PageResult` e o adapter traduz para
+`Page`/`Pageable`. Alertas de secagem combinam lactações
 ativas do contexto Milk com o contrato batch `PregnancyDryOffQueryUseCase`,
 proprietário de Reproduction; Milk não consulta mais a tabela `pregnancy`.
 
@@ -138,6 +139,7 @@ GET /api/v1/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size
 - As rotas sao publicadas exclusivamente em `/api/v1/...`.
 - O historico de lactacoes continua retornando `Page` do Spring para preservar compatibilidade com consumidores ja publicados.
 - O endpoint de alertas retorna um envelope agregado proprio (`totalPending` + `alerts`).
+- Alertas calculam e ordenam o conjunto completo, preservam `totalPending` antes do slicing e só então recortam a página solicitada.
 
 ## Erros/Status
 - `400`: validacao de payload, parametros invalidos ou paginacao inconsistente.

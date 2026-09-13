@@ -63,6 +63,8 @@ GoatId e a remoção do alias RG serão publicadas somente em uma versão futura
 - Parâmetros padrão: `page` (base 0), `size`, `sort`.
 - O padrão alvo para novos contratos é `content` + metadados em `page.number`, `page.size`, `page.totalElements`, `page.totalPages`.
 - Quando um módulo já publicado ainda retorna `Page` do Spring, a exceção deve ser documentada no módulo e preservada por compatibilidade.
+- Lactation mantém `Page` do Spring somente no histórico HTTP por compatibilidade;
+  os alertas de secagem preservam o envelope próprio `totalPending` + `alerts`.
 
 ### Convenções de payload
 - DTOs de request e response separados por módulo.
