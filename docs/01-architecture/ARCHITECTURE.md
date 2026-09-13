@@ -83,10 +83,15 @@ existente de login, refresh, rotação, replay, logout e claims.
 acesso. `AuthorityPersistenceMapper` e os adapters traduzem esses modelos para
 as entidades JPA `User`, `Role`, `RefreshSession` e `PasswordResetToken`.
 
-O cadastro atômico de fazenda ainda mantém a associação JPA histórica com
-`User`; essa dependência foi isolada em `FarmUserPersistencePort` e
-`FarmUserPersistenceAdapter`, fora do pacote Authority. É uma ponte transitória
-e não deve ser ampliada para novos casos de uso.
+O cadastro atômico de fazenda mantém a associação JPA histórica com `User`, mas
+a boundary DEV-A11-I3-C agora a resolve somente no adapter de persistência.
+`GoatFarmBusiness` usa `UserManagementUseCase`/`AuthorityAccount`, sem importar
+entidade JPA ou port específico de User.
+
+Farm, Address e Phone usam modelos e commands tecnológicos neutros nos ports e
+no core; os adapters montam a graph JPA e preservam a transação externa do caso
+de uso de fazenda. Endpoints diretos de Address/Phone e as políticas de ownership
+permanecem compatíveis.
 
 ### Goat e eventos
 
@@ -112,25 +117,25 @@ do módulo Milk sobre tabelas de reprodução.
 ## Dívida arquitetural conhecida
 
 Nem todo o core já está livre de tecnologia de persistência. O baseline de
-`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 9 pares
+`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 5 pares
 explícitos que a DEV-A11-R identificou e classificou como violações legadas de
 ports de aplicação para entidades JPA. É dívida de migração conhecida, a ser
 removida progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem
 aprovação arquitetural.
 
-A wave DEV-A11-I3-A isolou Article e a DEV-A11-I3-B isolou Health das entidades
-JPA (baseline 11 -> 9), mantendo temporariamente a paginação Spring Data nos
-contratos. Address e Phone
-foram deliberadamente agrupados com Farm para uma boundary única de persistência
+A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health e a
+DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5).
+Address e Phone foram agrupados com Farm para uma boundary única de persistência
 do agregado, pois seus ciclos de vida ainda são montados por `GoatFarm`.
 
 A boundary DEV-A11-I2 de Authority/Security está concluída. O core Authority
 tem zero dependências de infraestrutura concreta de Spring Security e zero
 dependências de entidades JPA de Authority; os contratos de conta, papel,
 refresh e recuperação usam modelos da aplicação. A antiga I2-D/I2-E não deve
-ser recriada como waves independentes. A ponte `FarmUserPersistencePort` para
-`User` é dívida cross-module/persistence transitória de I3. A atomicidade
-concorrente do consumo de token de recuperação é hardening de segurança separado.
+ser recriada como waves independentes. Commercial, Finance e Audit ainda usam
+projeções mínimas de fazenda e permanecem nos cinco pares legados allowlisted,
+sem novos consumidores. A atomicidade concorrente do consumo de token de
+recuperação é hardening de segurança separado.
 
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
 de autenticação em módulos específicos. Guards globais de zero tolerância para
@@ -172,7 +177,8 @@ uma nova implementação de GoatId.
 |---|---|
 | `HexagonalArchitectureGuardTest` | Impede import indevido de `business` para `api`. |
 | `GlobalHexagonalBoundaryArchUnitTest` | Protege domain, controllers, confinamento de `SecurityContextHolder` e ausência de `JpaRepository` no core. |
-| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 9 ports para entities. |
+| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 5 ports para entities. |
+| `FarmAddressPhoneCoreBoundaryArchUnitTest` | Impede entidades JPA nos cores application/business de Farm, Address e Phone. |
 | `HealthBoundaryArchUnitTest` | Impede dependências de entidades JPA no core application/business de Health. |
 | `OwnershipSecurityBoundaryArchUnitTest` | Protege ports críticos de segurança, ownership, validação e eventos. |
 | `AuthorityPasswordBoundaryArchUnitTest` | Impede `PasswordEncoder` no core Authority. |

@@ -18,6 +18,8 @@ public interface UserManagementUseCase {
 
     UserResponseVO findById(Long userId);
 
+    com.devmaster.goatfarm.authority.business.bo.AuthorityAccount findOrCreateUser(UserRequestVO vo);
+
     void updatePassword(Long userId, String newPassword);
 
     UserResponseVO updateRoles(Long userId, java.util.List<String> roles);

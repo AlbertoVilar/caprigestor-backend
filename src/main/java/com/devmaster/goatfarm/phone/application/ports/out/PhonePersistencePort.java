@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.phone.application.ports.out;
 
-import com.devmaster.goatfarm.phone.persistence.entity.Phone;
+import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
+import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,13 +11,13 @@ import java.util.Optional;
  */
 public interface PhonePersistencePort {
 
-    Phone save(Phone phone);
+    PhoneResponseVO save(Long farmId, PhoneRequestVO phone);
 
-    Optional<Phone> findByDddAndNumber(String ddd, String number);
+    Optional<PhoneResponseVO> findByDddAndNumber(String ddd, String number);
 
-    Optional<Phone> findByIdAndFarmId(Long id, Long farmId);
+    Optional<PhoneResponseVO> findByIdAndFarmId(Long id, Long farmId);
 
-    List<Phone> findAllByFarmId(Long farmId);
+    List<PhoneResponseVO> findAllByFarmId(Long farmId);
 
     long countByFarmId(Long farmId);
 
@@ -24,6 +25,6 @@ public interface PhonePersistencePort {
 
     boolean existsByDddAndNumber(String ddd, String number);
 
-    List<Phone> findAllByIds(List<Long> ids);
+    List<PhoneResponseVO> findAllByIds(List<Long> ids);
 
 }

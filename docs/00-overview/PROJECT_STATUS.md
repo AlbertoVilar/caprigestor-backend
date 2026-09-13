@@ -36,9 +36,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 
 - DEV-A11-R (Final Hexagonal Closure Audit) foi concluída em modo read-only. Os
   14 pares legados de ports de aplicação para entidades JPA foram identificados;
-  após a I2-C, restavam 11 pares explícitos. As waves DEV-A11-I3-A (Article) e
-  DEV-A11-I3-B (Health) reduziram a baseline atual para 9; Address e Phone
-  permanecem agrupados com Farm para a futura boundary do agregado.
+  após a I2-C, restavam 11 pares explícitos. As waves DEV-A11-I3-A (Article),
+  DEV-A11-I3-B (Health) e DEV-A11-I3-C (Farm/Address/Phone) reduziram a
+  baseline atual para 5 pares legados fora desta boundary.
 - A10 isolou limites de principal autenticado, autorização por fazenda,
   validação crítica, publicação de eventos e emissão de JWT.
 - A11-I1 reforçou o guard global que impede o domínio de depender de
@@ -56,12 +56,15 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 ## Dívida arquitetural conhecida
 
 - O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente
-  9 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
+  5 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
   É dívida de migração conhecida, não aceitação permanente: será removida
   progressivamente em DEV-A11-I3 e pode diminuir, nunca crescer sem revisão.
-- A ponte transitória `FarmUserPersistencePort -> authority.persistence.entity.User`
-  está classificada como dívida cross-module/persistence de I3 e não deve ganhar
-  novos consumidores.
+- A boundary DEV-A11-I3-C removeu `FarmUserPersistencePort` e o adapter de User:
+  o onboarding de fazenda usa o contrato de aplicação `UserManagementUseCase`
+  e `AuthorityAccount`, enquanto o adapter de Farm resolve a entidade JPA.
+- Consumidores legados de Commercial, Finance e Audit ainda usam projeções
+  mínimas de fazenda durante a migração; permanecem na allowlist de 5 pares e
+  não devem ganhar novos acoplamentos.
 - Há dependências legadas do core a JPA entities, `Page`/`Pageable`/`Sort` e,
   no contexto Authority, a APIs de autenticação. Guards globais para essas
   dívidas permanecem planejados até a remoção incremental.
@@ -93,8 +96,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   foram cobertos pela I2-C. A implementação de `User implements UserDetails` é
   apenas limpeza opcional futura.
 - A atomicidade concorrente do consumo de token de recuperação de senha é dívida
-  de hardening de segurança separada, não dívida hexagonal. A boundary Article da
-  DEV-A11-I3-A foi concluída; Address + Phone permanecem com Farm para a I3-C.
+  de hardening de segurança separada, não dívida hexagonal. As boundaries Article,
+  Health e Farm/Address/Phone foram implementadas; a revisão arquitetural da
+  I3-C permanece pendente.
 - DEV-A11-I2-P0 foi integrada na `develop`: as duas rotas HTTP de limpeza global
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por

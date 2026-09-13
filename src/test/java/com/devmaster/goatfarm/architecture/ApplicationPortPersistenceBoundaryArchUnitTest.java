@@ -30,12 +30,8 @@ class ApplicationPortPersistenceBoundaryArchUnitTest {
      * or intentionally renames one of these dependencies.
      */
     private static final Set<String> EXPECTED_LEGACY_DEPENDENCIES = Set.of(
-            "com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort"
-                    + " -> com.devmaster.goatfarm.address.persistence.entity.Address",
             "com.devmaster.goatfarm.audit.application.ports.out.OperationalAuditPersistencePort"
                     + " -> com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry",
-            "com.devmaster.goatfarm.farm.application.ports.out.FarmUserPersistencePort"
-                    + " -> com.devmaster.goatfarm.authority.persistence.entity.User",
             "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
                     + " -> com.devmaster.goatfarm.commercial.persistence.entity.AnimalSale",
             "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
@@ -43,11 +39,7 @@ class ApplicationPortPersistenceBoundaryArchUnitTest {
             "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
                     + " -> com.devmaster.goatfarm.commercial.persistence.entity.MilkSale",
             "com.devmaster.goatfarm.commercial.application.ports.out.OperationalFinancePersistencePort"
-                    + " -> com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense",
-            "com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort"
-                    + " -> com.devmaster.goatfarm.farm.persistence.entity.GoatFarm",
-            "com.devmaster.goatfarm.phone.application.ports.out.PhonePersistencePort"
-                    + " -> com.devmaster.goatfarm.phone.persistence.entity.Phone"
+                    + " -> com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense"
     );
 
     @Test

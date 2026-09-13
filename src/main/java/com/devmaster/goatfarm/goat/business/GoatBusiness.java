@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.out.FarmReferenceQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
@@ -69,7 +70,7 @@ public class GoatBusiness implements GoatManagementUseCase {
         RegistrationIdentity identity = identityForCreation(requestVO);
         String registration = identity.registrationNumber();
         if (goatPort.existsByRegistrationNumber(registration)) throw new DuplicateEntityException("Número de registro já existe.");
-        entityFinder.findOrThrow(() -> goatFarmPort.findById(farmId), "Fazenda não encontrada.");
+        if (goatFarmPort.findById(farmId).isEmpty()) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda não encontrada.");
         GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), registration,
                 requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
         Goat goat = Goat.register(identity,

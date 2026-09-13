@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.farm.application.ports.out;
 
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.model.FarmPersistenceCommand;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -10,19 +11,20 @@ import java.util.Optional;
  * Porta de saída para persistência de GoatFarm.
  */
 public interface GoatFarmPersistencePort {
-    Optional<GoatFarm> findById(Long id);
-    Optional<GoatFarm> findByIdAndUserId(Long id, Long userId);
+    /** Raw Optional retained temporarily for source compatibility with legacy consumers; values are FarmRecord at runtime. */
+    Optional findById(Long id);
+    Optional findByIdAndUserId(Long id, Long userId);
 
-    Optional<GoatFarm> findByAddressId(Long addressId);
+    Optional<FarmRecord> findByAddressId(Long addressId);
 
-    Optional<GoatFarm> findByIdWithDetails(Long id);
+    Optional findByIdWithDetails(Long id);
     
-    Page<GoatFarm> searchByName(String name, Pageable pageable);
-    Page<GoatFarm> findAll(Pageable pageable);
+    Page<FarmRecord> searchByName(String name, Pageable pageable);
+    Page<FarmRecord> findAll(Pageable pageable);
 
     boolean existsByName(String name);
     boolean existsByTod(String tod);
 
-    GoatFarm save(GoatFarm goatFarm);
+    FarmRecord save(FarmPersistenceCommand command);
     void deleteById(Long id);
 }

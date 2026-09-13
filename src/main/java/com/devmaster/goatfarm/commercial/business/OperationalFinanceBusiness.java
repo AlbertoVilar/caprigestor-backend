@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -115,8 +116,17 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
             throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
         }
 
-        return goatFarmPersistencePort.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda nao encontrada."));
+        java.util.Optional<?> optional = goatFarmPersistencePort.findById(farmId);
+        if (optional.isEmpty()) throw new ResourceNotFoundException("Fazenda nao encontrada.");
+        FarmRecord record = toRecord(optional.get());
+        GoatFarm farm = new GoatFarm(); farm.setId(record.id()); farm.setName(record.name()); farm.setTod(record.tod());
+        return farm;
+    }
+
+    private FarmRecord toRecord(Object value) {
+        if (value instanceof FarmRecord record) return record;
+        GoatFarm legacy = (GoatFarm) value;
+        return new FarmRecord(legacy.getId(), legacy.getName(), legacy.getTod(), legacy.getLogoUrl(), null, null, java.util.List.of(), legacy.getCreatedAt(), legacy.getUpdatedAt(), legacy.getVersion());
     }
 
     private void validateRequest(OperationalExpenseRequestVO requestVO) {
