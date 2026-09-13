@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.milk.api.dto.LactationResponseDTO;
 import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -126,5 +130,33 @@ class LactationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(14))
                 .andExpect(jsonPath("$.status").value(LactationStatus.ACTIVE.name()));
+    }
+
+    @Test
+    void getAllLactations_shouldPreserveSpringPageContractAtHttpBoundary() throws Exception {
+        Long farmId = 1L;
+        String goatId = "BR123";
+        LactationResponseVO responseVO = LactationResponseVO.builder()
+                .id(22L).farmId(farmId).goatId(goatId).status(LactationStatus.DRY)
+                .startDate(LocalDate.of(2026, 1, 10)).build();
+        LactationResponseDTO responseDTO = LactationResponseDTO.builder()
+                .id(responseVO.getId()).farmId(responseVO.getFarmId()).goatId(responseVO.getGoatId())
+                .status(responseVO.getStatus()).startDate(responseVO.getStartDate()).build();
+
+        when(lactationQueryUseCase.getAllLactations(eq(farmId), eq(goatId), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(java.util.List.of(responseVO), 3, 1, 2));
+        when(lactationMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations", farmId, goatId)
+                        .param("page", "1")
+                        .param("size", "2")
+                        .param("sort", "startDate,desc")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(22))
+                .andExpect(jsonPath("$.page.number").value(1))
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
     }
 }

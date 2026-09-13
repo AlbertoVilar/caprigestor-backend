@@ -86,6 +86,10 @@ GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-
   `sort` explícito mantém a semântica atual do Spring. `includeCanceled=false`
   continua excluindo registros cancelados de conteúdo e totais.
 
+Após DEV-A11-I3-F4-I2, o contexto Milk está isolado de Spring Data em
+application/business também no fluxo de Lactation; Reproduction permanece como
+a próxima dívida de paginação independente.
+
 ## Erros/Status
 - `400`: payload inválido, filtros inconsistentes ou paginação inválida.
 - `401`: autenticação ausente ou inválida.

@@ -92,8 +92,8 @@ JPA nos pacotes application/business de Farm, Address e Phone.
 Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
 contra dívida existente fora do Authority:
 
-- core para `Page`/`Pageable`/`Sort` do Spring Data nos módulos ainda não
-  migrados (Lactation e Reproduction; produção de leite já possui guard focado);
+- core para `Page`/`Pageable`/`Sort` do Spring Data no módulo ainda não migrado
+  (Reproduction; Milk possui guard module-wide ativo após F4-I2);
 - core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder` em
   módulos que ainda não foram migrados. O Authority já possui guards específicos
   para essas APIs.

@@ -1,6 +1,9 @@
 package com.devmaster.goatfarm.milk.persistence.adapter;
 
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
 import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
@@ -10,6 +13,8 @@ import com.devmaster.goatfarm.milk.persistence.mapper.LactationPersistenceMapper
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -72,15 +77,29 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     }
 
     @Override
-    public Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
+    public PageResult<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery) {
+        Pageable pageable = toPageable(pageQuery);
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Page<LactationEntity> technical = lactationRepository.findAllByFarmIdAndGoatTechnicalId(farmId, technicalId.get(), pageable);
             if (technical.hasContent()) {
+                return toPageResult(technical);
+            }
+        }
+        return toPageResult(lactationRepository.findAllByFarmIdAndGoatId(farmId, goatId, pageable));
+    }
+
+    @Override
+    public Optional<Lactation> findLatestByFarmIdAndGoatId(Long farmId, String goatId) {
+        Optional<Long> technicalId = technicalId(farmId, goatId);
+        if (technicalId.isPresent()) {
+            Optional<LactationEntity> technical = lactationRepository
+                    .findFirstByFarmIdAndGoatTechnicalIdOrderByStartDateDescIdDesc(farmId, technicalId.get());
+            if (technical.isPresent()) {
                 return technical.map(lactationMapper::toDomain);
             }
         }
-        return lactationRepository.findAllByFarmIdAndGoatId(farmId, goatId, pageable)
+        return lactationRepository.findFirstByFarmIdAndGoatIdOrderByStartDateDescIdDesc(farmId, goatId)
                 .map(lactationMapper::toDomain);
     }
 
@@ -103,6 +122,17 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
         if (entity.getGoatTechnicalId() == null) {
             technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(entity::setGoatTechnicalId);
         }
+    }
+
+    private Pageable toPageable(PageQuery query) {
+        var orders = query.sort().stream()
+                .map(spec -> new Sort.Order(spec.direction() == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC, spec.field()))
+                .toList();
+        return PageRequest.of(query.page(), query.size(), Sort.by(orders));
+    }
+
+    private PageResult<Lactation> toPageResult(Page<LactationEntity> page) {
+        return new PageResult<>(page.getContent().stream().map(lactationMapper::toDomain).toList(), page.getTotalElements(), page.getNumber(), page.getSize());
     }
 
 }

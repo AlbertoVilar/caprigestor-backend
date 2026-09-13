@@ -200,8 +200,8 @@ de integridade. O guard global mantém zero dependências de
 adapters continuam autorizados a conhecer Spring DAO.
 
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
-de autenticação em módulos específicos. Após F3, a dívida de paginação permanece
-em Milk e Reproduction. Guards globais de zero tolerância para
+de autenticação em módulos específicos. Após F4-I2, a dívida de paginação permanece
+somente em Reproduction. Guards globais de zero tolerância para
 essas categorias permanecem planejados até a remoção incremental. O estado da
 wave está no [PROJECT_STATUS](../00-overview/PROJECT_STATUS.md); gates ativos e
 planejados estão em [QUALITY_GATES](./QUALITY_GATES.md).
@@ -251,7 +251,7 @@ uma nova implementação de GoatId.
 | `GoatHexagonalCoreArchUnitTest` | Protege paginação e boundary de aplicação do Goat. |
 | `MilkReproductionBoundaryArchUnitTest` | Garante fronteira entre Milk e Reproduction. |
 | `LactationDomainBoundaryArchUnitTest` | Impede vazamento de JPA/Spring/API no agregado de lactação. |
-| `MilkProductionPaginationBoundaryArchUnitTest` | Impede Spring Data no core do fluxo de produção de leite; Lactation permanece fora até F4-I2. |
+| `MilkProductionPaginationBoundaryArchUnitTest` | Impede Spring Data no core de Milk (produção e Lactation); Reproduction permanece fora até sua wave própria. |
 
 ## Referências internas
 

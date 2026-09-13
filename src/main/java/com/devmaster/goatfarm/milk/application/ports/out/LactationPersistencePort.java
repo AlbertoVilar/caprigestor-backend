@@ -1,8 +1,8 @@
 package com.devmaster.goatfarm.milk.application.ports.out;
 
 import com.devmaster.goatfarm.milk.domain.Lactation;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -16,7 +16,9 @@ public interface LactationPersistencePort {
 
     Optional<Lactation> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
 
-    Page<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+    PageResult<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery);
+
+    Optional<Lactation> findLatestByFarmIdAndGoatId(Long farmId, String goatId);
 
     List<Lactation> findAllActiveByFarmId(Long farmId);
 }

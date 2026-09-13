@@ -15,12 +15,9 @@ import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.springframework.stereotype.Service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
@@ -78,11 +75,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
             throw new BusinessRuleException("Já existe uma lactação ativa para esta cabra.");
         }
         
-        Optional<Lactation> latestLactation = lactationPersistencePort.findAllByFarmIdAndGoatId(
-                farmId,
-                goatId,
-                PageRequest.of(0, 1, Sort.by(Sort.Order.desc("startDate"), Sort.Order.desc("id")))
-        ).stream().findFirst();
+        Optional<Lactation> latestLactation = lactationPersistencePort.findLatestByFarmIdAndGoatId(farmId, goatId);
 
         Optional<PregnancySnapshot> pregnancySnapshot = pregnancySnapshotQueryPort
                 .findLatestByFarmIdAndGoatId(farmId, goatId, vo.getStartDate());
@@ -190,14 +183,14 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     }
 
     @Override
-    public Page<LactationResponseVO> getAllLactations(Long farmId, String goatId, Pageable pageable) {
+    public PageResult<LactationResponseVO> getAllLactations(Long farmId, String goatId, PageQuery pageQuery) {
         goatGenderValidator.requireFemale(farmId, goatId);
-        Page<Lactation> page = lactationPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable);
+        PageResult<Lactation> page = lactationPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageQuery);
         return page.map(lactationMapper::toResponseVO);
     }
 
     @Override
-    public Page<LactationDryOffAlertVO> getDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable) {
+    public PageResult<LactationDryOffAlertVO> getDryOffAlerts(Long farmId, LocalDate referenceDate, PageQuery pageQuery) {
         LocalDate reference = referenceDate != null ? referenceDate : LocalDate.now();
         List<Lactation> activeLactations = lactationPersistencePort.findAllActiveByFarmId(farmId);
         List<PregnancyDryOffSnapshot> pregnancies = pregnancyDryOffQueryUseCase
@@ -225,9 +218,11 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         alerts.sort(Comparator.comparing(LactationDryOffAlertVO::getDryOffDate)
                 .thenComparing(a -> a.getGoatId() == null ? "" : a.getGoatId())
                 .thenComparing(LactationDryOffAlertVO::getLactationId));
-        int from = Math.min((int) pageable.getOffset(), alerts.size());
-        int to = Math.min(from + pageable.getPageSize(), alerts.size());
-        return new PageImpl<>(alerts.subList(from, to), pageable, alerts.size());
+        long offset = (long) pageQuery.page() * pageQuery.size();
+        int from = offset >= alerts.size() ? alerts.size() : (int) offset;
+        long requestedEnd = offset + pageQuery.size();
+        int to = requestedEnd >= alerts.size() ? alerts.size() : (int) requestedEnd;
+        return new PageResult<>(alerts.subList(from, to), alerts.size(), pageQuery.page(), pageQuery.size());
     }
 
     private String goatKey(Lactation lactation) {

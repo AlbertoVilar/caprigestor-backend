@@ -20,4 +20,15 @@ class MilkProductionPaginationBoundaryArchUnitTest {
                 .because("Milk Production pagination must cross the application boundary as neutral PageQuery/PageResult types.")
                 .check(imported);
     }
+
+    @Test
+    void milkApplicationAndBusinessMustNotDependOnSpringDataPagination() {
+        JavaClasses imported = new ClassFileImporter().importPackages("com.devmaster.goatfarm");
+
+        noClasses()
+                .that().resideInAnyPackage("com.devmaster.goatfarm.milk.application..", "com.devmaster.goatfarm.milk.business..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.data.domain..")
+                .because("Milk application and business layers must use neutral pagination contracts.")
+                .check(imported);
+    }
 }
