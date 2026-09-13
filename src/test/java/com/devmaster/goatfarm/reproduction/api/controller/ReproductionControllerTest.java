@@ -16,11 +16,15 @@ import com.devmaster.goatfarm.reproduction.api.dto.WeaningResponseDTO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
+import com.devmaster.goatfarm.reproduction.api.dto.ReproductiveEventResponseDTO;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,7 +40,9 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -243,6 +249,62 @@ class ReproductionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void getPregnancies_shouldPreserveDefaultSpringPageContract() throws Exception {
+        Long farmId = 1L;
+        String goatId = "GOAT-001";
+        PregnancyResponseVO responseVO = PregnancyResponseVO.builder().id(10L).farmId(farmId)
+                .goatId(goatId).status(PregnancyStatus.CLOSED).build();
+        PregnancyResponseDTO responseDTO = PregnancyResponseDTO.builder().id(10L).farmId(farmId)
+                .goatId(goatId).status(PregnancyStatus.CLOSED).build();
+        when(queryUseCase.getPregnancies(eq(farmId), eq(goatId), any(PageQuery.class))).thenReturn(
+                new PageResult<>(List.of(responseVO), 1, 0, 10));
+        when(mapper.toPregnancyResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies", farmId, goatId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(10))
+                .andExpect(jsonPath("$.page.number").value(0))
+                .andExpect(jsonPath("$.page.size").value(10))
+                .andExpect(jsonPath("$.page.totalElements").value(1))
+                .andExpect(jsonPath("$.page.totalPages").value(1));
+        verify(queryUseCase).getPregnancies(eq(farmId), eq(goatId), argThat(p -> p.page() == 0
+                && p.size() == 10
+                && p.sort().get(0).field().equals("breedingDate")
+                && p.sort().get(0).direction().name().equals("DESC")));
+    }
+
+    @Test
+    void getReproductiveEvents_shouldPreserveExplicitMultiSortAndMetadata() throws Exception {
+        Long farmId = 1L;
+        String goatId = "GOAT-001";
+        ReproductiveEventResponseVO responseVO = ReproductiveEventResponseVO.builder().id(11L)
+                .farmId(farmId).goatId(goatId).build();
+        ReproductiveEventResponseDTO responseDTO = ReproductiveEventResponseDTO.builder().id(11L)
+                .farmId(farmId).goatId(goatId).build();
+        when(queryUseCase.getReproductiveEvents(eq(farmId), eq(goatId), any(PageQuery.class))).thenReturn(
+                new PageResult<>(List.of(responseVO), 3, 1, 2));
+        when(mapper.toReproductiveEventResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events", farmId, goatId)
+                        .param("page", "1")
+                        .param("size", "2")
+                        .param("sort", "eventDate,asc")
+                        .param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(11))
+                .andExpect(jsonPath("$.page.number").value(1))
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
+        verify(queryUseCase).getReproductiveEvents(eq(farmId), eq(goatId), argThat(p -> p.page() == 1
+                && p.size() == 2 && p.sort().size() == 2
+                && p.sort().get(0).field().equals("eventDate")
+                && p.sort().get(0).direction().name().equals("ASC")
+                && p.sort().get(1).field().equals("id")
+                && p.sort().get(1).direction().name().equals("DESC")));
     }
 }
 

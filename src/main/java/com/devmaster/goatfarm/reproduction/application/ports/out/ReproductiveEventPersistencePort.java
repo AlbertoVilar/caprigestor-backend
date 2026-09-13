@@ -3,8 +3,8 @@ package com.devmaster.goatfarm.reproduction.application.ports.out;
 import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import com.devmaster.goatfarm.reproduction.application.model.PregnancyDiagnosisAlertSnapshot;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface ReproductiveEventPersistencePort {
     ReproductiveEvent save(ReproductiveEvent entity);
 
-    Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
+    PageResult<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery);
 
     Optional<ReproductiveEvent> findLatestCoverageByFarmIdAndGoatIdOnOrBefore(Long farmId, String goatId, LocalDate date);
 
@@ -26,10 +26,10 @@ public interface ReproductiveEventPersistencePort {
 
     Optional<ReproductiveEvent> findLatestByFarmIdAndGoatIdAndEventType(Long farmId, String goatId, ReproductiveEventType eventType);
 
-    Page<PregnancyDiagnosisAlertSnapshot> findPendingPregnancyDiagnosisAlerts(
+    PageResult<PregnancyDiagnosisAlertSnapshot> findPendingPregnancyDiagnosisAlerts(
             Long farmId,
             LocalDate referenceDate,
             int minDays,
-            Pageable pageable
+            PageQuery pageQuery
     );
 }

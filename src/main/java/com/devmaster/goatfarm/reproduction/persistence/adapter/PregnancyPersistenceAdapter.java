@@ -9,8 +9,13 @@ import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.mapper.PregnancyPersistenceMapper;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -111,16 +116,18 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     }
 
     @Override
-    public Page<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
+    public PageResult<Pregnancy> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery) {
+        Pageable pageable = toPageable(pageQuery);
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
-            Page<Pregnancy> technical = pregnancyRepository.findAllByFarmIdAndGoatTechnicalIdOrderByBreedingDateDescIdDesc(
-                    farmId, technicalId.get(), pageable).map(mapper::toDomain);
+            Page<PregnancyEntity> technicalPage = pregnancyRepository.findAllByFarmIdAndGoatTechnicalIdOrderByBreedingDateDescIdDesc(
+                    farmId, technicalId.get(), pageable);
+            Page<Pregnancy> technical = technicalPage.map(mapper::toDomain);
             if (technical.hasContent()) {
-                return technical;
+                return toPageResult(technicalPage);
             }
         }
-        return pregnancyRepository.findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(farmId, goatId, pageable).map(mapper::toDomain);
+        return toPageResult(pregnancyRepository.findAllByFarmIdAndGoatIdOrderByBreedingDateDescIdDesc(farmId, goatId, pageable));
     }
 
     @Override
@@ -137,14 +144,15 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
     }
 
     @Override
-    public Page<Pregnancy> findActiveWithDueDateOnOrBefore(Long farmId, LocalDate referenceDate, Pageable pageable) {
-        return pregnancyRepository
+    public PageResult<Pregnancy> findActiveWithDueDateOnOrBefore(Long farmId, LocalDate referenceDate, PageQuery pageQuery) {
+        Pageable pageable = toPageable(pageQuery);
+        return toPageResult(pregnancyRepository
                 .findByFarmIdAndStatusAndExpectedDueDateIsNotNullAndExpectedDueDateLessThanEqualOrderByExpectedDueDateAscIdAsc(
                         farmId,
                         PregnancyStatus.ACTIVE,
                         referenceDate,
                         pageable
-                ).map(mapper::toDomain);
+                ));
     }
 
     private Optional<Long> technicalId(Long farmId, String registrationNumber) {
@@ -167,6 +175,21 @@ public class PregnancyPersistenceAdapter implements PregnancyPersistencePort {
             throw new DuplicateEntityException("status", "Foram encontradas múltiplas gestações ativas para a mesma cabra na fazenda");
         }
         return Optional.of(pregnancies.get(0));
+    }
+
+    private Pageable toPageable(PageQuery query) {
+        if (query == null) {
+            return PageRequest.of(0, 10);
+        }
+        var orders = query.sort().stream()
+                .map(spec -> new Sort.Order(spec.direction() == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC, spec.field()))
+                .toList();
+        return PageRequest.of(query.page(), query.size(), Sort.by(orders));
+    }
+
+    private PageResult<Pregnancy> toPageResult(Page<PregnancyEntity> page) {
+        return new PageResult<>(page.getContent().stream().map(mapper::toDomain).toList(),
+                page.getTotalElements(), page.getNumber(), page.getSize());
     }
 
 }

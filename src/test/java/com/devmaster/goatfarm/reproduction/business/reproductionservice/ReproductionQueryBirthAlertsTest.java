@@ -10,13 +10,13 @@ import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEve
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -76,7 +76,7 @@ class ReproductionQueryBirthAlertsTest {
     void getPendingBirthAlerts_shouldReturnActivePregnanciesDueTodayOrEarlier() {
         Long farmId = 14L;
         LocalDate referenceDate = LocalDate.of(2026, 7, 3);
-        PageRequest pageable = PageRequest.of(0, 20);
+        PageQuery pageQuery = new PageQuery(0, 20, List.of());
         Pregnancy pregnancy = Pregnancy.builder()
                 .id(27L)
                 .farmId(farmId)
@@ -85,13 +85,13 @@ class ReproductionQueryBirthAlertsTest {
                 .expectedDueDate(LocalDate.of(2026, 7, 1))
                 .build();
 
-        when(pregnancyPersistencePort.findActiveWithDueDateOnOrBefore(farmId, referenceDate, pageable))
-                .thenReturn(new PageImpl<>(List.of(pregnancy), pageable, 1));
+        when(pregnancyPersistencePort.findActiveWithDueDateOnOrBefore(farmId, referenceDate, pageQuery))
+                .thenReturn(new PageResult<>(List.of(pregnancy), 1, 0, 20));
 
-        var result = reproductionBusiness.getPendingBirthAlerts(farmId, referenceDate, pageable);
+        var result = reproductionBusiness.getPendingBirthAlerts(farmId, referenceDate, pageQuery);
 
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent()).singleElement().satisfies(alert -> {
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.content()).singleElement().satisfies(alert -> {
             assertThat(alert.getPregnancyId()).isEqualTo(27L);
             assertThat(alert.getGoatId()).isEqualTo("1615325001");
             assertThat(alert.getExpectedDueDate()).isEqualTo(LocalDate.of(2026, 7, 1));

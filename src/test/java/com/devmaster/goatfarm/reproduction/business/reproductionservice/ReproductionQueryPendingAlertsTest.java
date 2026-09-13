@@ -9,13 +9,13 @@ import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersis
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
 import com.devmaster.goatfarm.reproduction.application.model.PregnancyDiagnosisAlertSnapshot;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -79,22 +79,23 @@ class ReproductionQueryPendingAlertsTest {
 
         PregnancyDiagnosisAlertSnapshot projection = new PregnancyDiagnosisAlertSnapshot(null, "GOAT-001", coverageDate, null, null);
 
+        PageQuery pageQuery = new PageQuery(0, 20, List.of());
         when(reproductiveEventPersistencePort.findPendingPregnancyDiagnosisAlerts(
                 farmId,
                 referenceDate,
                 60,
-                PageRequest.of(0, 20)
-        )).thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 20), 1));
+                pageQuery
+        )).thenReturn(new PageResult<>(List.of(projection), 1, 0, 20));
 
         var result = reproductionBusiness.getPendingPregnancyDiagnosisAlerts(
                 farmId,
                 referenceDate,
-                PageRequest.of(0, 20)
+                pageQuery
         );
 
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getEligibleDate()).isEqualTo(coverageDate.plusDays(60));
-        assertThat(result.getContent().get(0).getDaysOverdue()).isEqualTo(20);
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).getEligibleDate()).isEqualTo(coverageDate.plusDays(60));
+        assertThat(result.content().get(0).getDaysOverdue()).isEqualTo(20);
     }
 }

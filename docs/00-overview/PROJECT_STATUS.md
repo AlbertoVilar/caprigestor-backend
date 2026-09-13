@@ -75,8 +75,11 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   `PageQuery`/`PageResult`, alertas de secagem usam composição e slicing neutros,
   e a seleção da última lactação usa consulta orientada à intenção. O contrato
   HTTP de histórico e o envelope `totalPending` dos alertas permanecem intactos.
-  Milk application/business não possui mais dependências de Spring Data; a dívida
-  de paginação remanescente está em Reproduction.
+  Milk application/business não possui mais dependências de Spring Data.
+- DEV-A11-I3-F5 implementa o isolamento da paginação de Reproduction na PR #282:
+  o core usa `PageQuery`/`PageResult`, os controllers preservam `Page`/`Pageable`
+  HTTP e os adapters traduzem para Spring Data. O guard global de Spring Data no
+  core está ativo e verde; a PR aguarda revisão arquitetural antes do merge.
 - A retificação registral preserva GoatId, é administrativa e mantém histórico
   imutável; o `PUT` comum não altera identidade.
 - DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)
@@ -97,10 +100,10 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   agora usa `CustomerRecord`, `AnimalSaleRecord` e `MilkSaleRecord`, com adapters
   responsáveis por resolver entidades JPA. Audit já usa `OperationalAuditRecord`
   e está isolado de entidades JPA no core (DEV-A11-I3-D).
-- Há dependências legadas do core a `Page`/`Pageable`/`Sort` em módulos fora do
-  escopo F3 e,
-  no contexto Authority, a APIs de autenticação. Guards globais para essas
-  dívidas permanecem planejados até a remoção incremental.
+- Não há dependências de `Page`/`Pageable`/`Sort` do Spring Data no core
+  `application`/`business`; o guard global correspondente está ativo e verde.
+  Permanecem apenas APIs de autenticação em módulos fora da boundary Authority,
+  com guards específicos e trabalho de hardening separado quando aplicável.
 - A transição de identidade ainda contém compatibilidades de API/token por RG e
   `String goatId`. Esse trabalho chama-se **Goat Identity Transition Closure**;
   não é a criação de GoatId.
@@ -138,9 +141,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   padrão.
 - As boundaries Health, Audit, Commercial (I3-E1) e Finance (I3-E2) foram
   implementadas e integradas em `develop`; a dívida JPA do core foi zerada.
-- Adiado: remoção da dívida I3 restante em Lactation/Reproduction (F4-I2 e waves posteriores), hardening separado de recuperação de senha,
-  mudanças adicionais de contrato/API,
-  mudanças de schema, reset DEV, HML e `main`.
+- Adiado: hardening separado de recuperação de senha, mudanças adicionais de
+  contrato/API, mudanças de schema, reset DEV, HML e `main`. F4-I2 está concluída
+  e F5 está implementada na PR #282, aguardando merge arquitetural.
 
 ## Compatibilidade e operações
 

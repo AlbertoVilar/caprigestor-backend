@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyDiagnosisAlertItemDTO;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyDiagnosisAlertResponseDTO;
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyDueAlertItemDTO;
@@ -15,9 +16,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,16 +60,16 @@ public class FarmReproductionAlertsController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        Pageable pageable = createPageable(page, size);
-        Page<PregnancyDiagnosisAlertVO> alertsPage = queryUseCase
-                .getPendingPregnancyDiagnosisAlerts(farmId, referenceDate, pageable);
+        PageQuery pageQuery = createPageQuery(page, size);
+        var alertsPage = queryUseCase
+                .getPendingPregnancyDiagnosisAlerts(farmId, referenceDate, pageQuery);
 
-        List<PregnancyDiagnosisAlertItemDTO> alerts = alertsPage.getContent().stream()
+        List<PregnancyDiagnosisAlertItemDTO> alerts = alertsPage.content().stream()
                 .map(mapper::toPregnancyDiagnosisAlertItemDTO)
                 .toList();
 
         return ResponseEntity.ok(PregnancyDiagnosisAlertResponseDTO.builder()
-                .totalPending(alertsPage.getTotalElements())
+                .totalPending(alertsPage.totalElements())
                 .alerts(alerts)
                 .build());
     }
@@ -90,21 +88,21 @@ public class FarmReproductionAlertsController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        Pageable pageable = createPageable(page, size);
-        Page<PregnancyDueAlertVO> alertsPage = queryUseCase
-                .getPendingBirthAlerts(farmId, referenceDate, pageable);
+        PageQuery pageQuery = createPageQuery(page, size);
+        var alertsPage = queryUseCase
+                .getPendingBirthAlerts(farmId, referenceDate, pageQuery);
 
-        List<PregnancyDueAlertItemDTO> alerts = alertsPage.getContent().stream()
+        List<PregnancyDueAlertItemDTO> alerts = alertsPage.content().stream()
                 .map(mapper::toPregnancyDueAlertItemDTO)
                 .toList();
 
         return ResponseEntity.ok(PregnancyDueAlertResponseDTO.builder()
-                .totalPending(alertsPage.getTotalElements())
+                .totalPending(alertsPage.totalElements())
                 .alerts(alerts)
                 .build());
     }
 
-    private Pageable createPageable(int page, int size) {
+    private PageQuery createPageQuery(int page, int size) {
         if (page < 0) {
             throw new InvalidArgumentException("page", "Página deve ser maior ou igual a zero");
         }
@@ -114,6 +112,6 @@ public class FarmReproductionAlertsController {
                     "Tamanho da página deve estar entre 1 e " + MAX_ALERT_PAGE_SIZE
             );
         }
-        return PageRequest.of(page, size);
+        return new PageQuery(page, size, List.of());
     }
 }

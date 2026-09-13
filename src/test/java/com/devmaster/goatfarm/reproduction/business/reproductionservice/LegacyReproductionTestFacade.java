@@ -10,8 +10,8 @@ import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersis
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
 import com.devmaster.goatfarm.reproduction.business.bo.*;
 import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import java.time.Clock;
 import java.time.LocalDate;
 
@@ -43,9 +43,9 @@ class LegacyReproductionTestFacade implements ReproductionQueryUseCase {
     public WeaningResponseVO registerWeaning(Long f, String g, WeaningRequestVO v) { return weaning.registerWeaning(f,g,v); }
     @Override public PregnancyResponseVO getActivePregnancy(Long f,String g){return query.getActivePregnancy(f,g);}
     @Override public PregnancyResponseVO getPregnancyById(Long f,String g,Long id){return query.getPregnancyById(f,g,id);}
-    @Override public Page<PregnancyResponseVO> getPregnancies(Long f,String g,Pageable p){return query.getPregnancies(f,g,p);}
-    @Override public Page<ReproductiveEventResponseVO> getReproductiveEvents(Long f,String g,Pageable p){return query.getReproductiveEvents(f,g,p);}
+    @Override public PageResult<PregnancyResponseVO> getPregnancies(Long f,String g,PageQuery p){return query.getPregnancies(f,g,p);}
+    @Override public PageResult<ReproductiveEventResponseVO> getReproductiveEvents(Long f,String g,PageQuery p){return query.getReproductiveEvents(f,g,p);}
     @Override public DiagnosisRecommendationResponseVO getDiagnosisRecommendation(Long f,String g,LocalDate d){return query.getDiagnosisRecommendation(f,g,d);}
-    @Override public Page<PregnancyDiagnosisAlertVO> getPendingPregnancyDiagnosisAlerts(Long f,LocalDate d,Pageable p){return query.getPendingPregnancyDiagnosisAlerts(f,d,p);}
-    @Override public Page<PregnancyDueAlertVO> getPendingBirthAlerts(Long f,LocalDate d,Pageable p){return query.getPendingBirthAlerts(f,d,p);}
+    @Override public PageResult<PregnancyDiagnosisAlertVO> getPendingPregnancyDiagnosisAlerts(Long f,LocalDate d,PageQuery p){return query.getPendingPregnancyDiagnosisAlerts(f,d,p);}
+    @Override public PageResult<PregnancyDueAlertVO> getPendingBirthAlerts(Long f,LocalDate d,PageQuery p){return query.getPendingBirthAlerts(f,d,p);}
 }

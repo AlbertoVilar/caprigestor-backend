@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.reproduction.api.dto.*;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.application.ports.in.BreedingCommandUseCase;
@@ -226,8 +227,9 @@ public class ReproductionController {
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "eventDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<ReproductiveEventResponseVO> pageVO = queryUseCase.getReproductiveEvents(farmId, goatId, pageable);
-        Page<ReproductiveEventResponseDTO> pageDTO = pageVO.map(mapper::toReproductiveEventResponseDTO);
+        var pageVO = queryUseCase.getReproductiveEvents(farmId, goatId, SpringPageMapper.toQuery(pageable));
+        Page<ReproductiveEventResponseDTO> pageDTO = SpringPageMapper.toSpringPage(
+                pageVO.map(mapper::toReproductiveEventResponseDTO), pageable);
         return ResponseEntity.ok(pageDTO);
     }
 
@@ -242,8 +244,9 @@ public class ReproductionController {
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "breedingDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<PregnancyResponseVO> pageVO = queryUseCase.getPregnancies(farmId, goatId, pageable);
-        Page<PregnancyResponseDTO> pageDTO = pageVO.map(mapper::toPregnancyResponseDTO);
+        var pageVO = queryUseCase.getPregnancies(farmId, goatId, SpringPageMapper.toQuery(pageable));
+        Page<PregnancyResponseDTO> pageDTO = SpringPageMapper.toSpringPage(
+                pageVO.map(mapper::toPregnancyResponseDTO), pageable);
         return ResponseEntity.ok(pageDTO);
     }
 
