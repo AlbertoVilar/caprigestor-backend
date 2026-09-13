@@ -1,5 +1,5 @@
 # Módulo Saúde e Veterinário
-Última atualização: 2026-09-07
+Última atualização: 2026-09-12
 Escopo: eventos sanitários por cabra e consultas agregadas por fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Domínio](../00-overview/BUSINESS_DOMAIN.md)
 
@@ -9,6 +9,11 @@ O módulo `health` registra, atualiza e consulta eventos de saúde (vacina, medi
 Eventos sanitários, carência e alertas carregam `goatTechnicalId` de forma
 aditiva. O RG em `goatId` é mantido como snapshot e para as URLs v1 legadas;
 FKs farm-scoped usam a identidade técnica.
+
+A camada application/business usa o modelo tecnológico-neutro
+`HealthEventRecord`. A entidade JPA `HealthEvent` e sua conversão ficam
+confinadas ao adapter/mapper de persistence; a paginação Spring Data permanece
+temporariamente no contrato por compatibilidade.
 
 ## Regras / Contratos
 - Status de evento: `AGENDADO`, `REALIZADO`, `CANCELADO`.

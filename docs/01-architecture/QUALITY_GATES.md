@@ -48,11 +48,11 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 
 ## Dívida observada e gates planejados após remoção
 
-Os 10 pares atuais de `ApplicationPortPersistenceBoundaryArchUnitTest` são
+Os 9 pares atuais de `ApplicationPortPersistenceBoundaryArchUnitTest` são
 baseline de migração, não exceções permanentes. A allowlist pode apenas
 diminuir em uma mudança arquitetural revisada.
 
-DEV-A11-I3-A isolou o módulo Article (11 -> 10). Address e Phone não foram
+DEV-A11-I3-A isolou Article e DEV-A11-I3-B isolou Health (11 -> 9). Address e Phone não foram
 parcialmente migrados: permanecem com Farm para a boundary coerente do agregado
 `Farm / Address / Phone` prevista em I3-C.
 

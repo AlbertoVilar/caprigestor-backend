@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCreateRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventDoneRequestVO;
@@ -14,7 +15,6 @@ import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventUpdateRequestVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ class HealthEventBusinessTest {
     private final Long farmId = 1L;
     private final String goatId = "goat-123";
     private final Long eventId = 100L;
-    private HealthEvent healthEvent;
+    private HealthEventRecord healthEvent;
 
     @BeforeEach
     void setUp() {
@@ -69,7 +69,7 @@ class HealthEventBusinessTest {
                 ownershipService
         );
 
-        healthEvent = new HealthEvent();
+        healthEvent = new HealthEventRecord();
         healthEvent.setId(eventId);
         healthEvent.setFarmId(farmId);
         healthEvent.setGoatId(goatId);
@@ -81,8 +81,8 @@ class HealthEventBusinessTest {
     void create_success() {
         HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
 
-        when(mapper.toEntity(request)).thenReturn(healthEvent);
-        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(mapper.toRecord(request)).thenReturn(healthEvent);
+        when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.create(farmId, goatId, request);
@@ -124,7 +124,7 @@ class HealthEventBusinessTest {
         assertNotNull(ex.getMessage());
         org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("ATIVO"));
         verify(persistencePort, never()).save(any());
-        verify(mapper, never()).toEntity(any());
+        verify(mapper, never()).toRecord(any());
     }
 
     @Test
@@ -133,14 +133,14 @@ class HealthEventBusinessTest {
         HealthEventUpdateRequestVO request = HealthEventUpdateRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
-        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.update(farmId, goatId, eventId, request);
 
         assertNotNull(response);
         verify(goatGenderValidator).requireActive(farmId, goatId);
-        verify(mapper).updateEntity(healthEvent, request);
+        verify(mapper).updateRecord(healthEvent, request);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -180,7 +180,7 @@ class HealthEventBusinessTest {
         HealthEventDoneRequestVO request = HealthEventDoneRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
-        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.markAsDone(farmId, goatId, eventId, request);
@@ -212,7 +212,7 @@ class HealthEventBusinessTest {
         HealthEventCancelRequestVO request = HealthEventCancelRequestVO.builder().build();
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
-        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.cancel(farmId, goatId, eventId, request);
@@ -229,7 +229,7 @@ class HealthEventBusinessTest {
         healthEvent.setPerformedAt(LocalDateTime.now().minusDays(1));
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
-        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.reopen(farmId, goatId, eventId);
@@ -248,7 +248,7 @@ class HealthEventBusinessTest {
         healthEvent.setPerformedAt(LocalDateTime.now().minusDays(2));
 
         when(persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId)).thenReturn(Optional.of(healthEvent));
-        when(persistencePort.save(any(HealthEvent.class))).thenReturn(healthEvent);
+        when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
         when(mapper.toResponseVO(healthEvent)).thenReturn(HealthEventResponseVO.builder().build());
 
         HealthEventResponseVO response = healthEventBusiness.reopen(farmId, goatId, eventId);
