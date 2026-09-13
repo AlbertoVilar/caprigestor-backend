@@ -38,8 +38,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   14 pares legados de ports de aplicação para entidades JPA foram identificados;
   após a I2-C, restavam 11 pares explícitos. As waves DEV-A11-I3-A (Article),
   DEV-A11-I3-B (Health), DEV-A11-I3-C (Farm/Address/Phone) e DEV-A11-I3-D
-  (Audit) reduziram a baseline atual para 4 pares legados fora destas
-  boundaries.
+  (Audit) reduziram a baseline para 4 pares legados fora destas boundaries.
+  DEV-A11-I3-E1 isolou Commercial (Customer, AnimalSale e MilkSale) com
+  modelos/ports tecnológicos neutros; a baseline integrada caiu de 4 para 1.
 - A10 isolou limites de principal autenticado, autorização por fazenda,
   validação crítica, publicação de eventos e emissão de JWT.
 - A11-I1 reforçou o guard global que impede o domínio de depender de
@@ -57,16 +58,18 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 ## Dívida arquitetural conhecida
 
 - O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente
-  4 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
+  1 par explícito de port de aplicação ainda acoplado a entidade JPA
+  (`OperationalFinancePersistencePort` -> `OperationalExpense`).
   É dívida de migração conhecida, não aceitação permanente: será removida
   progressivamente em DEV-A11-I3 e pode diminuir, nunca crescer sem revisão.
 - A boundary DEV-A11-I3-C removeu `FarmUserPersistencePort` e o adapter de User:
   o onboarding de fazenda usa o contrato de aplicação `UserManagementUseCase`
   e `AuthorityAccount`, enquanto o adapter de Farm resolve a entidade JPA.
-- Consumidores legados de Commercial e Finance ainda usam projeções mínimas de
-  fazenda durante a migração; permanecem na allowlist de 4 pares e não devem
-  ganhar novos acoplamentos. Audit já usa `OperationalAuditRecord` e está
-  isolado de entidades JPA no core (DEV-A11-I3-D).
+- Finance ainda usa projeções mínimas de fazenda durante a migração e permanece
+  na única allowlist restante; não deve ganhar novos acoplamentos. Commercial
+  agora usa `CustomerRecord`, `AnimalSaleRecord` e `MilkSaleRecord`, com adapters
+  responsáveis por resolver entidades JPA. Audit já usa `OperationalAuditRecord`
+  e está isolado de entidades JPA no core (DEV-A11-I3-D).
 - Há dependências legadas do core a JPA entities, `Page`/`Pageable`/`Sort` e,
   no contexto Authority, a APIs de autenticação. Guards globais para essas
   dívidas permanecem planejados até a remoção incremental.
@@ -105,8 +108,8 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por
   padrão.
-- A boundary Health da DEV-A11-I3-B e a boundary Audit da DEV-A11-I3-D foram
-  concluídas em suas branches de implementação; o merge de I3-D aguarda
+- As boundaries Health, Audit e Commercial (I3-E1) foram implementadas e
+  integradas em `develop`; a próxima wave Finance (I3-E2) permanece pendente de
   revisão arquitetural.
 - Adiado: remoção da dívida I3 restante, hardening separado de recuperação de senha,
   mudanças adicionais de contrato/API,

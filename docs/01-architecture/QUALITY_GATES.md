@@ -48,12 +48,13 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 
 ## Dívida observada e gates planejados após remoção
 
-Os 4 pares atuais de `ApplicationPortPersistenceBoundaryArchUnitTest` são
+O par restante de `ApplicationPortPersistenceBoundaryArchUnitTest` é
 baseline de migração, não exceções permanentes. A allowlist pode apenas
 diminuir em uma mudança arquitetural revisada.
 
 DEV-A11-I3-A isolou Article, DEV-A11-I3-B isolou Health e DEV-A11-I3-C isolou
-Farm/Address/Phone (11 -> 5) e Audit (5 -> 4). A boundary de I3-C usa modelos tecnológicos
+Farm/Address/Phone (11 -> 5), Audit (5 -> 4) e Commercial em I3-E1 (4 -> 1).
+A boundary de I3-C usa modelos tecnológicos
 neutros, mantém a transação e preserva os endpoints existentes; o adapter é o
 único ponto que monta a graph JPA.
 
@@ -61,9 +62,8 @@ DEV-A11-I2 está arquiteturalmente concluída: os guards de password hashing,
 autenticação/JWT e isolamento JPA de Authority permanecem verdes. I2-D/I2-E
 não são waves independentes; a implementação `User implements UserDetails` é
 limpeza opcional, e atomicidade de password reset é hardening de segurança
-separado. `FarmUserPersistencePort` foi removido na I3-C. Commercial e Finance
-mantêm somente os quatro pares legados explicitamente allowlisted até suas
-waves próprias.
+separado. `FarmUserPersistencePort` foi removido na I3-C. Finance mantém
+somente o par legado explicitamente allowlisted até a wave I3-E2.
 
 `FarmAddressPhoneCoreBoundaryArchUnitTest` mantém zero dependências de entidades
 JPA nos pacotes application/business de Farm, Address e Phone.
