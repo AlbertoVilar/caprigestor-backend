@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.in.*;
 import com.devmaster.goatfarm.authority.business.bo.*;
+import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.business.bo.*;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -28,4 +30,36 @@ class GoatFarmBusinessTest {
     private FarmRecord record() { return new FarmRecord(1L,"Farm","12345",null,new com.devmaster.goatfarm.farm.application.model.OwnerReference(7L,"Owner","o@x","12345678901",List.of("ROLE_FARM_OWNER")),new AddressResponseVO(2L,null,null,null,null,null,null),List.of(new com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO(3L,"11","999999999")),null,null,0); }
     @Test void authenticatedCreateUsesCleanPorts() { when(principal.findCurrent()).thenReturn(Optional.of(new AuthenticatedPrincipal(7L,"o@x","Owner",Set.of("ROLE_FARM_OWNER")))); when(farmPort.existsByName(any())).thenReturn(false); when(farmPort.existsByTod(any())).thenReturn(false); when(addressBusiness.findOrCreateAddress(any())).thenReturn(new AddressResponseVO(2L,null,null,null,null,null,null)); when(farmPort.save(any())).thenReturn(record()); when(farmPort.findByIdWithDetails(1L)).thenReturn(Optional.of(record())); when(mapper.toFullResponseVO(any())).thenReturn(new GoatFarmFullResponseVO()); assertNotNull(business().createGoatFarm(request())); verify(farmPort).save(any()); verify(phones).createPhones(eq(1L),any()); }
     @Test void duplicateNameIsRejected() { when(principal.findCurrent()).thenReturn(Optional.of(new AuthenticatedPrincipal(7L,"o@x","Owner",Set.of()))); when(farmPort.existsByName("Farm")).thenReturn(true); assertThrows(RuntimeException.class,()->business().createGoatFarm(request())); }
+
+    @Test
+    void persistenceConflictDuringFarmSaveKeepsDuplicateOnboardingContract() {
+        when(principal.findCurrent()).thenReturn(Optional.of(new AuthenticatedPrincipal(7L, "o@x", "Owner", Set.of("ROLE_FARM_OWNER"))));
+        when(farmPort.existsByName(any())).thenReturn(false);
+        when(farmPort.existsByTod(any())).thenReturn(false);
+        when(addressBusiness.findOrCreateAddress(any())).thenReturn(new AddressResponseVO(2L, null, null, null, null, null, null));
+        when(farmPort.save(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        DuplicateEntityException exception = assertThrows(DuplicateEntityException.class,
+                () -> business().createGoatFarm(request()));
+
+        assertEquals("Não foi possível processar a solicitação devido a conflito de dados.", exception.getMessage());
+        verifyNoInteractions(phones, mapper);
+    }
+
+    @Test
+    void persistenceConflictDuringPhoneCreationKeepsDuplicateOnboardingContract() {
+        when(principal.findCurrent()).thenReturn(Optional.of(new AuthenticatedPrincipal(7L, "o@x", "Owner", Set.of("ROLE_FARM_OWNER"))));
+        when(farmPort.existsByName(any())).thenReturn(false);
+        when(farmPort.existsByTod(any())).thenReturn(false);
+        when(addressBusiness.findOrCreateAddress(any())).thenReturn(new AddressResponseVO(2L, null, null, null, null, null, null));
+        when(farmPort.save(any())).thenReturn(record());
+        doThrow(new DataIntegrityViolationException("duplicate phone"))
+                .when(phones).createPhones(eq(1L), any());
+
+        DuplicateEntityException exception = assertThrows(DuplicateEntityException.class,
+                () -> business().createGoatFarm(request()));
+
+        assertEquals("Não foi possível processar a solicitação devido a conflito de dados.", exception.getMessage());
+        verifyNoInteractions(mapper);
+    }
 }
