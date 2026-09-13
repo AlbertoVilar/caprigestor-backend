@@ -126,6 +126,16 @@ alertas; a operação de saída `findNextScheduledEvents(..., limit)` retorna um
 `HealthEventWindow` com até cinco eventos e o total de correspondências. O
 adapter aplica internamente `scheduledDate ASC`, `page=0` e o limite solicitado.
 
+### Paginação de Inventory
+
+Inventory segue a mesma fronteira neutra. Os filtros (`InventoryBalanceFilterVO`,
+`InventoryLotFilterVO` e `InventoryMovementFilterVO`) contêm somente critérios
+de negócio; `PageQuery` é passado separadamente aos casos de uso e ports. A API
+converte `Pageable` com `SpringPageMapper`, e os adapters reconstroem
+`PageRequest`/`Sort` e mapeiam resultados para `PageResult`. O endpoint de
+movimentos mantém, por compatibilidade, a ordenação fixa `movementDate DESC,
+createdAt DESC`; parâmetros `sort` recebidos continuam sem alterar essa ordem.
+
 ### Lactação e leite
 
 `milk.domain.Lactation` é agregado sem framework responsável por transições
@@ -141,7 +151,7 @@ O core application/business está livre de dependências diretas em entidades
 JPA: o baseline de `ApplicationPortPersistenceBoundaryArchUnitTest` é zero e
 o guard global impede regressões. Ainda existem dívidas independentes de
  persistência (por exemplo, `Page`/`Pageable`/`Sort`) que permanecem em
- Health, Inventory, Milk e Reproduction e serão tratadas em waves posteriores,
+ Milk e Reproduction e serão tratadas em waves posteriores,
  sem reabrir o isolamento JPA concluído. Article e Farm já não importam esses
  tipos Spring no application/business.
 
@@ -177,8 +187,8 @@ fallback histórico por RG. A atomicidade concorrente do consumo de token de
 recuperação é hardening de segurança separado.
 
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
-de autenticação em módulos específicos. Após F2, a dívida de paginação permanece
-em Inventory, Milk e Reproduction. Guards globais de zero tolerância para
+de autenticação em módulos específicos. Após F3, a dívida de paginação permanece
+em Milk e Reproduction. Guards globais de zero tolerância para
 essas categorias permanecem planejados até a remoção incremental. O estado da
 wave está no [PROJECT_STATUS](../00-overview/PROJECT_STATUS.md); gates ativos e
 planejados estão em [QUALITY_GATES](./QUALITY_GATES.md).

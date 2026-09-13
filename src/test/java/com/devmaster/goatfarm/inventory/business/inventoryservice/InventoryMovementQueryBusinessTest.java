@@ -2,6 +2,8 @@ package com.devmaster.goatfarm.inventory.business.inventoryservice;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryMovementQueryPort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementHistoryResponseVO;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
@@ -10,8 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -41,13 +41,13 @@ class InventoryMovementQueryBusinessTest {
                 null,
                 null,
                 LocalDate.of(2026, 3, 1),
-                LocalDate.of(2026, 2, 1),
-                PageRequest.of(0, 20)
+                LocalDate.of(2026, 2, 1)
         );
+        PageQuery page = new PageQuery(0, 20, List.of());
 
         InvalidArgumentException exception = assertThrows(
                 InvalidArgumentException.class,
-                () -> business.listMovements(filter)
+                () -> business.listMovements(filter, page)
         );
 
         assertThat(exception.getMessage()).contains("Data inicial");
@@ -62,13 +62,13 @@ class InventoryMovementQueryBusinessTest {
                 null,
                 null,
                 null,
-                null,
-                PageRequest.of(0, 120)
+                null
         );
+        PageQuery page = new PageQuery(0, 120, List.of());
 
         InvalidArgumentException exception = assertThrows(
                 InvalidArgumentException.class,
-                () -> business.listMovements(filter)
+                () -> business.listMovements(filter, page)
         );
 
         assertThat(exception.getMessage()).contains("size");
@@ -83,11 +83,11 @@ class InventoryMovementQueryBusinessTest {
                 null,
                 InventoryMovementType.OUT,
                 LocalDate.of(2026, 2, 1),
-                LocalDate.of(2026, 2, 28),
-                PageRequest.of(0, 20)
+                LocalDate.of(2026, 2, 28)
         );
+        PageQuery pageQuery = new PageQuery(0, 20, List.of());
 
-        when(queryPort.listMovements(filter)).thenReturn(new PageImpl<>(List.of(
+        when(queryPort.listMovements(filter, pageQuery)).thenReturn(new PageResult<>(List.of(
                 new InventoryMovementHistoryResponseVO(
                         9001L,
                         InventoryMovementType.OUT,
@@ -101,13 +101,13 @@ class InventoryMovementQueryBusinessTest {
                         new BigDecimal("18.750"),
                         OffsetDateTime.parse("2026-02-28T12:15:00Z")
                 )
-        )));
+        ), 1, 0, 20));
 
-        var page = business.listMovements(filter);
+        var page = business.listMovements(filter, pageQuery);
 
-        assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent()).extracting(InventoryMovementHistoryResponseVO::itemName)
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.content()).extracting(InventoryMovementHistoryResponseVO::itemName)
                 .containsExactly("Ração Premium");
-        verify(queryPort).listMovements(filter);
+        verify(queryPort).listMovements(filter, pageQuery);
     }
 }

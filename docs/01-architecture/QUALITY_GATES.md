@@ -44,6 +44,9 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 - `HealthBoundaryArchUnitTest` mantém zero dependências de
   `org.springframework.data.domain` no application/business de Health; a
   conversão permanece restrita à API e aos adapters.
+- `InventoryBoundaryArchUnitTest` mantém zero dependências de
+  `org.springframework.data.domain` no application/business de Inventory; os
+  filtros são neutros e a conversão permanece restrita à API e aos adapters.
 - A superfície HTTP não pode reintroduzir endpoints globais de limpeza ou
   recriação administrativa. Qualquer reset de DEV deve permanecer em tooling
   explícito, fora do fluxo REST, com credenciais externas.
@@ -82,7 +85,7 @@ Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
 contra dívida existente fora do Authority:
 
 - core para `Page`/`Pageable`/`Sort` do Spring Data nos módulos ainda não
-  migrados (Inventory, Milk e Reproduction);
+  migrados (Milk e Reproduction);
 - core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder` em
   módulos que ainda não foram migrados. O Authority já possui guards específicos
   para essas APIs.

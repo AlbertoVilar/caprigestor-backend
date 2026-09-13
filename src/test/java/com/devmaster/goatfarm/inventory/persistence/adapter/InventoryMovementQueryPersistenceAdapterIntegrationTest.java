@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.inventory.persistence.adapter;
 
 import com.devmaster.goatfarm.inventory.business.bo.InventoryMovementFilterVO;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryAdjustDirection;
 import com.devmaster.goatfarm.inventory.domain.enums.InventoryMovementType;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryItemEntity;
@@ -12,8 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
@@ -57,12 +56,11 @@ class InventoryMovementQueryPersistenceAdapterIntegrationTest {
                 501L,
                 InventoryMovementType.OUT,
                 LocalDate.of(2026, 2, 25),
-                LocalDate.of(2026, 2, 28),
-                PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "movementDate"))
-        ));
+                LocalDate.of(2026, 2, 28)
+        ), new PageQuery(0, 20, java.util.List.of()));
 
-        assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent()).singleElement().satisfies(movement -> {
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.content()).singleElement().satisfies(movement -> {
             assertThat(movement.itemName()).isEqualTo("Ração Premium");
             assertThat(movement.type()).isEqualTo(InventoryMovementType.OUT);
             assertThat(movement.reason()).isEqualTo("Baixa por aplicação");
@@ -85,13 +83,12 @@ class InventoryMovementQueryPersistenceAdapterIntegrationTest {
                 null,
                 null,
                 null,
-                null,
-                PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "movementDate").and(Sort.by(Sort.Direction.DESC, "createdAt")))
-        ));
+                null
+        ), new PageQuery(0, 1, java.util.List.of()));
 
-        assertThat(page.getTotalElements()).isEqualTo(2);
-        assertThat(page.getTotalPages()).isEqualTo(2);
-        assertThat(page.getContent()).singleElement().satisfies(movement -> {
+        assertThat(page.totalElements()).isEqualTo(2);
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content()).singleElement().satisfies(movement -> {
             assertThat(movement.type()).isEqualTo(InventoryMovementType.ADJUST);
             assertThat(movement.itemName()).isEqualTo("Milho");
             assertThat(movement.movementDate()).isEqualTo(LocalDate.of(2026, 2, 12));
@@ -124,11 +121,10 @@ class InventoryMovementQueryPersistenceAdapterIntegrationTest {
                 null,
                 InventoryMovementType.IN,
                 null,
-                null,
-                PageRequest.of(0, 20)
-        ));
+                null
+        ), new PageQuery(0, 20, java.util.List.of()));
 
-        assertThat(page.getContent()).singleElement().satisfies(entry -> {
+        assertThat(page.content()).singleElement().satisfies(entry -> {
             assertThat(entry.subtotalCost()).isEqualByComparingTo("185.00");
             assertThat(entry.freightCost()).isEqualByComparingTo("25.00");
             assertThat(entry.discountAmount()).isEqualByComparingTo("10.00");

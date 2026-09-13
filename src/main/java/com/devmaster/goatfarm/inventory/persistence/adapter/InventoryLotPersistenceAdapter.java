@@ -1,6 +1,10 @@
 package com.devmaster.goatfarm.inventory.persistence.adapter;
 
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryLotPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
+import com.devmaster.goatfarm.application.pagination.SortSpec;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotCreateVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotFilterVO;
@@ -8,7 +12,9 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryLotResponseVO;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryLotEntity;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryItemRepository;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryLotRepository;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -41,9 +47,21 @@ public class InventoryLotPersistenceAdapter implements InventoryLotPersistencePo
     }
 
     @Override
-    public Page<InventoryLotResponseVO> listLots(InventoryLotFilterVO filter) {
-        return lotRepository.searchLots(filter.farmId(), filter.itemId(), filter.active(), filter.pageable())
-                .map(this::toResponseVO);
+    public PageResult<InventoryLotResponseVO> listLots(InventoryLotFilterVO filter, PageQuery page) {
+        var springPage = lotRepository.searchLots(filter.farmId(), filter.itemId(), filter.active(), toPageable(page));
+        return new PageResult<>(springPage.getContent().stream().map(this::toResponseVO).toList(),
+                springPage.getTotalElements(), page.page(), page.size());
+    }
+
+    private Pageable toPageable(PageQuery page) {
+        var orders = page.sort().stream().map(this::toOrder).toList();
+        return PageRequest.of(page.page(), page.size(), Sort.by(orders));
+    }
+
+    private Sort.Order toOrder(SortSpec spec) {
+        return spec.direction() == SortDirection.ASC
+                ? Sort.Order.asc(spec.field())
+                : Sort.Order.desc(spec.field());
     }
 
     @Override

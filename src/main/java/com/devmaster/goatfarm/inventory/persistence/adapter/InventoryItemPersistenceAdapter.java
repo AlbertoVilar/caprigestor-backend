@@ -1,14 +1,19 @@
 package com.devmaster.goatfarm.inventory.persistence.adapter;
 
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
+import com.devmaster.goatfarm.application.pagination.SortSpec;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryItemPersistencePort;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemCreateVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemResponseVO;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryItemEntity;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryItemRepository;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -45,8 +50,23 @@ public class InventoryItemPersistenceAdapter implements InventoryItemPersistence
     }
 
     @Override
-    public Page<InventoryItemResponseVO> listByFarmId(Long farmId, Pageable pageable) {
-        return itemRepository.findByFarmId(farmId, pageable).map(this::toResponseVO);
+    public PageResult<InventoryItemResponseVO> listByFarmId(Long farmId, PageQuery page) {
+        var springPage = itemRepository.findByFarmId(farmId, toPageable(page));
+        return new PageResult<>(springPage.getContent().stream().map(this::toResponseVO).toList(),
+                springPage.getTotalElements(), page.page(), page.size());
+    }
+
+    private Pageable toPageable(PageQuery page) {
+        var orders = page.sort().stream()
+                .map(this::toOrder)
+                .toList();
+        return PageRequest.of(page.page(), page.size(), Sort.by(orders));
+    }
+
+    private Sort.Order toOrder(SortSpec spec) {
+        return spec.direction() == SortDirection.ASC
+                ? Sort.Order.asc(spec.field())
+                : Sort.Order.desc(spec.field());
     }
 
     private InventoryItemResponseVO toResponseVO(InventoryItemEntity entity) {
