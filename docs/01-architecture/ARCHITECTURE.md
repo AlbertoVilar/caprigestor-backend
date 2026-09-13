@@ -116,17 +116,16 @@ do módulo Milk sobre tabelas de reprodução.
 
 ## Dívida arquitetural conhecida
 
-Nem todo o core já está livre de tecnologia de persistência. O baseline de
-`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 1 par
-explícitos que a DEV-A11-R identificou e classificou como violações legadas de
-ports de aplicação para entidades JPA. É dívida de migração conhecida, a ser
-removida progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem
-aprovação arquitetural.
+O core application/business está livre de dependências diretas em entidades
+JPA: o baseline de `ApplicationPortPersistenceBoundaryArchUnitTest` é zero e
+o guard global impede regressões. Ainda existem dívidas independentes de
+persistência (por exemplo, `Page`/`Pageable`/`Sort`) que serão tratadas em waves
+posteriores, sem reabrir o isolamento JPA concluído.
 
 A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, a
 DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5) e
-DEV-A11-I3-D isolou Audit (baseline 5 -> 4) e DEV-A11-I3-E1 isolou Commercial
-(baseline 4 -> 1).
+DEV-A11-I3-D isolou Audit (baseline 5 -> 4), DEV-A11-I3-E1 isolou Commercial
+(baseline 4 -> 1) e DEV-A11-I3-E2 isolou Finance (baseline 1 -> 0).
 Address e Phone foram agrupados com Farm para uma boundary única de persistência
 do agregado, pois seus ciclos de vida ainda são montados por `GoatFarm`.
 
@@ -135,16 +134,20 @@ tecnologicamente neutros (`CustomerPersistencePort`, `AnimalSalePersistencePort`
 e `MilkSalePersistencePort`). `CommercialBusiness` mantém a orquestração
 transacional e os adapters resolvem Farm/Customer JPA na borda; contratos HTTP,
 semântica de pagamento, snapshots de RG/nome e integração com `GoatManagementUseCase`
-permanecem inalterados. Finance é a única dependência JPA de application/business
-restante e será tratada em I3-E2.
+permanecem inalterados. A DEV-A11-I3-E2 aplica o mesmo limite ao Finance com
+`OperationalExpenseCommand`/`OperationalExpenseRecord`; `OperationalFinanceBusiness`
+usa apenas contratos de aplicação, enquanto o adapter resolve Farm e
+`OperationalExpense` JPA. A baseline global de entidades JPA no core
+application/business agora é zero.
 
 A boundary DEV-A11-I2 de Authority/Security está concluída. O core Authority
 tem zero dependências de infraestrutura concreta de Spring Security e zero
 dependências de entidades JPA de Authority; os contratos de conta, papel,
 refresh e recuperação usam modelos da aplicação. A antiga I2-D/I2-E não deve
-ser recriada como waves independentes. Commercial e Finance ainda usam
-projeções mínimas de fazenda e permanece no único par legado allowlisted,
-sem novos consumidores. Audit usa `OperationalAuditRecord` como snapshot
+ser recriada como waves independentes. Commercial usa modelos tecnológicos
+neutros e Finance usa `farmId` com `GoatFarmPersistencePort` somente para
+validar existência; ambos mantêm entidades JPA apenas nos adapters. Audit usa
+`OperationalAuditRecord` como snapshot
 tecnológico neutro; o adapter mapeia esse record para `OperationalAuditEntry` e
 resolve a referência JPA de `GoatFarm`, mantendo entidades fora do core e o
 fallback histórico por RG. A atomicidade concorrente do consumo de token de

@@ -1,15 +1,15 @@
 package com.devmaster.goatfarm.commercial.business;
 
 import com.devmaster.goatfarm.commercial.application.ports.out.InventoryPurchaseCostQueryPort;
+import com.devmaster.goatfarm.commercial.application.model.OperationalExpenseCommand;
+import com.devmaster.goatfarm.commercial.application.model.OperationalExpenseRecord;
 import com.devmaster.goatfarm.commercial.application.ports.out.OperationalFinancePersistencePort;
 import com.devmaster.goatfarm.commercial.business.bo.OperationalExpenseRequestVO;
 import com.devmaster.goatfarm.commercial.enums.OperationalExpenseCategory;
-import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -50,14 +50,20 @@ class OperationalFinanceBusinessTest {
 
     @Test
     void createOperationalExpense_shouldPersistValidExpense() {
-        GoatFarm farm = new GoatFarm();
-        farm.setId(17L);
-
         when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farmRecord()));
         when(persistencePort.saveOperationalExpense(any())).thenAnswer(invocation -> {
-            OperationalExpense expense = invocation.getArgument(0, OperationalExpense.class);
-            expense.setId(9L);
-            return expense;
+            OperationalExpenseCommand command = invocation.getArgument(0, OperationalExpenseCommand.class);
+            return new OperationalExpenseRecord(
+                    9L,
+                    command.farmId(),
+                    command.category(),
+                    command.description(),
+                    command.amount(),
+                    command.expenseDate(),
+                    command.notes(),
+                    null,
+                    null
+            );
         });
 
         var response = operationalFinanceBusiness.createOperationalExpense(
@@ -78,8 +84,6 @@ class OperationalFinanceBusinessTest {
 
     @Test
     void createOperationalExpense_shouldRejectInvalidAmount() {
-        GoatFarm farm = new GoatFarm();
-        farm.setId(17L);
         when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farmRecord()));
 
         InvalidArgumentException exception = assertThrows(

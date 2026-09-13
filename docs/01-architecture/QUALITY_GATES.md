@@ -23,6 +23,9 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
   `business`) de depender diretamente de
   `org.springframework.data.jpa.repository.JpaRepository`. A baseline desse
   guard é zero.
+- `GlobalHexagonalBoundaryArchUnitTest` também mantém zero dependências de
+  entidades JPA nos pacotes `application` e `business`; conversões ficam nos
+  adapters de persistência.
 - `AuthorityPasswordBoundaryArchUnitTest` mantém zero dependências de
   `PasswordEncoder` nos pacotes `authority.application` e `authority.business`;
   o encoder permanece permitido em configuração, adapters e bootstrap.
@@ -48,12 +51,13 @@ Links: [Portal](../INDEX.md), [Arquitetura](./ARCHITECTURE.md),
 
 ## Dívida observada e gates planejados após remoção
 
-O par restante de `ApplicationPortPersistenceBoundaryArchUnitTest` é
-baseline de migração, não exceções permanentes. A allowlist pode apenas
-diminuir em uma mudança arquitetural revisada.
+`ApplicationPortPersistenceBoundaryArchUnitTest` mantém uma regra estrutural
+de zero dependências de entidades JPA em ports de aplicação. A allowlist
+temporária da DEV-A3 foi removida após a conclusão da I3-E2.
 
 DEV-A11-I3-A isolou Article, DEV-A11-I3-B isolou Health e DEV-A11-I3-C isolou
-Farm/Address/Phone (11 -> 5), Audit (5 -> 4) e Commercial em I3-E1 (4 -> 1).
+Farm/Address/Phone (11 -> 5), Audit (5 -> 4), Commercial em I3-E1 (4 -> 1) e
+Finance em I3-E2 (1 -> 0).
 A boundary de I3-C usa modelos tecnológicos
 neutros, mantém a transação e preserva os endpoints existentes; o adapter é o
 único ponto que monta a graph JPA.
@@ -62,8 +66,8 @@ DEV-A11-I2 está arquiteturalmente concluída: os guards de password hashing,
 autenticação/JWT e isolamento JPA de Authority permanecem verdes. I2-D/I2-E
 não são waves independentes; a implementação `User implements UserDetails` é
 limpeza opcional, e atomicidade de password reset é hardening de segurança
-separado. `FarmUserPersistencePort` foi removido na I3-C. Finance mantém
-somente o par legado explicitamente allowlisted até a wave I3-E2.
+separado. `FarmUserPersistencePort` foi removido na I3-C. Finance agora usa
+modelos tecnologicamente neutros e não possui dependências JPA no core.
 
 `FarmAddressPhoneCoreBoundaryArchUnitTest` mantém zero dependências de entidades
 JPA nos pacotes application/business de Farm, Address e Phone.
@@ -71,7 +75,6 @@ JPA nos pacotes application/business de Farm, Address e Phone.
 Não estão ativos como guards globais de zero tolerância, pois ainda falhariam
 contra dívida existente fora do Authority:
 
-- core para entidades JPA;
 - core para `Page`/`Pageable`/`Sort` do Spring Data;
 - core para `AuthenticationManager`, `PasswordEncoder` e `JwtDecoder` em
   módulos que ainda não foram migrados. O Authority já possui guards específicos
