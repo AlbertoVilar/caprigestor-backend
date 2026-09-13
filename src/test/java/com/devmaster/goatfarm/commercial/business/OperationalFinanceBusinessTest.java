@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,7 @@ class OperationalFinanceBusinessTest {
         GoatFarm farm = new GoatFarm();
         farm.setId(17L);
 
-        when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farmRecord()));
         when(persistencePort.saveOperationalExpense(any())).thenAnswer(invocation -> {
             OperationalExpense expense = invocation.getArgument(0, OperationalExpense.class);
             expense.setId(9L);
@@ -79,7 +80,7 @@ class OperationalFinanceBusinessTest {
     void createOperationalExpense_shouldRejectInvalidAmount() {
         GoatFarm farm = new GoatFarm();
         farm.setId(17L);
-        when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farmRecord()));
 
         InvalidArgumentException exception = assertThrows(
                 InvalidArgumentException.class,
@@ -102,7 +103,7 @@ class OperationalFinanceBusinessTest {
     void getMonthlySummary_shouldAggregateRevenueAndExpenses() {
         GoatFarm farm = new GoatFarm();
         farm.setId(17L);
-        when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(17L)).thenReturn(Optional.of(farmRecord()));
         when(persistencePort.sumPaidAnimalSalesByFarmIdAndPeriod(17L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
                 .thenReturn(new BigDecimal("1400.00"));
         when(persistencePort.sumPaidMilkSalesByFarmIdAndPeriod(17L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
@@ -130,5 +131,9 @@ class OperationalFinanceBusinessTest {
 
         verify(goatFarmPersistencePort, never()).findById(17L);
         verify(persistencePort, never()).saveOperationalExpense(any());
+    }
+
+    private FarmRecord farmRecord() {
+        return new FarmRecord(17L, "Fazenda QA", null, null, null, null, java.util.List.of(), null, null, null);
     }
 }

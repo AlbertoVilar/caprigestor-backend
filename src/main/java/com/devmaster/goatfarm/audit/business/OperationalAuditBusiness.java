@@ -103,16 +103,9 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
     }
 
     private GoatFarm requireFarm(Long farmId) {
-        java.util.Optional<?> optional = goatFarmPersistencePort.findById(farmId);
-        if (optional.isEmpty()) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada.");
-        FarmRecord record = toRecord(optional.get());
+        FarmRecord record = goatFarmPersistencePort.findById(farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada."));
         GoatFarm farm = new GoatFarm(); farm.setId(record.id()); return farm;
-    }
-
-    private FarmRecord toRecord(Object value) {
-        if (value instanceof FarmRecord record) return record;
-        GoatFarm legacy = (GoatFarm) value;
-        return new FarmRecord(legacy.getId(), legacy.getName(), legacy.getTod(), legacy.getLogoUrl(), null, null, java.util.List.of(), legacy.getCreatedAt(), legacy.getUpdatedAt(), legacy.getVersion());
     }
 
     private int normalizeLimit(int limit) {

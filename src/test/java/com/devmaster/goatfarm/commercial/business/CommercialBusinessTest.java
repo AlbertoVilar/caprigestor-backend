@@ -18,6 +18,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
@@ -108,7 +109,7 @@ class CommercialBusinessTest {
                 "Venda de teste"
         );
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.findCustomerByIdAndFarmId(10L, farmId)).thenReturn(Optional.of(customer));
         when(goatManagementUseCase.findGoatById(farmId, "G001")).thenReturn(goat);
         when(goatManagementUseCase.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
@@ -144,7 +145,7 @@ class CommercialBusinessTest {
         LocalDate saleDate = LocalDate.now().minusDays(3);
         GoatResponseVO goat = goat("G002", "Cabra Vendida", GoatStatus.VENDIDO, GoatExitType.VENDA, saleDate);
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.findCustomerByIdAndFarmId(10L, farmId)).thenReturn(Optional.of(customer));
         when(goatManagementUseCase.findGoatById(farmId, "G002")).thenReturn(goat);
         when(commercialPersistencePort.existsAnimalSaleByGoatRegistrationNumber("G002")).thenReturn(false);
@@ -171,7 +172,7 @@ class CommercialBusinessTest {
         LocalDate saleDate = LocalDate.now().minusDays(2);
         GoatResponseVO goat = goat("G003", "Cabra Transferida", GoatStatus.VENDIDO, GoatExitType.TRANSFERENCIA, saleDate);
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.findCustomerByIdAndFarmId(10L, farmId)).thenReturn(Optional.of(customer));
         when(goatManagementUseCase.findGoatById(farmId, "G003")).thenReturn(goat);
 
@@ -193,7 +194,7 @@ class CommercialBusinessTest {
         Customer customer = activeCustomer(22L, farm);
         LocalDate saleDate = LocalDate.now().minusDays(1);
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.findCustomerByIdAndFarmId(22L, farmId)).thenReturn(Optional.of(customer));
         when(commercialPersistencePort.saveMilkSale(any(MilkSale.class))).thenAnswer(invocation -> {
             MilkSale entity = invocation.getArgument(0);
@@ -231,7 +232,7 @@ class CommercialBusinessTest {
                 .paymentStatus(SalePaymentStatus.OPEN)
                 .build();
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.findAnimalSaleByIdAndFarmId(12L, farmId)).thenReturn(Optional.of(sale));
         when(commercialPersistencePort.saveAnimalSale(any(AnimalSale.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -277,7 +278,7 @@ class CommercialBusinessTest {
                 .paymentDate(LocalDate.now().minusDays(1))
                 .build();
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.countCustomersByFarmId(farmId)).thenReturn(1L);
         when(commercialPersistencePort.findAnimalSalesByFarmId(farmId)).thenReturn(List.of(animalSale));
         when(commercialPersistencePort.findMilkSalesByFarmId(farmId)).thenReturn(List.of(milkSale));
@@ -304,7 +305,7 @@ class CommercialBusinessTest {
         GoatFarm farm = farm(farmId);
         Customer customer = activeCustomer(22L, farm);
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farmRecord(farmId)));
         when(commercialPersistencePort.findCustomerByIdAndFarmId(22L, farmId)).thenReturn(Optional.of(customer));
 
         assertThrows(
@@ -346,6 +347,11 @@ class CommercialBusinessTest {
         farm.setId(id);
         farm.setName("Fazenda QA");
         return farm;
+    }
+
+    private FarmRecord farmRecord(Long id) {
+        GoatFarm farm = farm(id);
+        return new FarmRecord(id, farm.getName(), farm.getTod(), farm.getLogoUrl(), null, null, List.of(), null, null, null);
     }
 
     private Customer activeCustomer(Long id, GoatFarm farm) {

@@ -10,7 +10,6 @@ import com.devmaster.goatfarm.farm.application.model.OwnerReference;
 import com.devmaster.goatfarm.farm.application.ports.in.FarmExistenceQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
-import com.devmaster.goatfarm.farm.application.ports.out.FarmReferenceQueryPort;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
@@ -23,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort, FarmReferenceQueryPort,
+public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort,
         FarmOwnerQueryPort, FarmRegistrationQueryUseCase, FarmExistenceQueryUseCase {
     private final GoatFarmRepository repository;
     private final UserRepository userRepository;

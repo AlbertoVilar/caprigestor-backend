@@ -354,17 +354,10 @@ public class CommercialBusiness implements CommercialUseCase {
         if (!ownershipService.canManageFarm(farmId)) {
             throw new AccessDeniedException("Usuario nao pode gerenciar esta fazenda.");
         }
-        java.util.Optional<?> optional = goatFarmPersistencePort.findById(farmId);
-        if (optional.isEmpty()) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada.");
-        FarmRecord record = toRecord(optional.get());
+        FarmRecord record = goatFarmPersistencePort.findById(farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada."));
         GoatFarm farm = new GoatFarm(); farm.setId(record.id()); farm.setName(record.name()); farm.setTod(record.tod());
         return farm;
-    }
-
-    private FarmRecord toRecord(Object value) {
-        if (value instanceof FarmRecord record) return record;
-        GoatFarm legacy = (GoatFarm) value;
-        return new FarmRecord(legacy.getId(), legacy.getName(), legacy.getTod(), legacy.getLogoUrl(), null, null, java.util.List.of(), legacy.getCreatedAt(), legacy.getUpdatedAt(), legacy.getVersion());
     }
 
     private Customer requireActiveCustomer(Long farmId, Long customerId) {

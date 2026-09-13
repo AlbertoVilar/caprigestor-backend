@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
@@ -64,7 +65,7 @@ class GoatBusinessTest {
     void createsUsingDomainPort() {
         GoatFarm farm = new GoatFarm(); farm.setId(1L);
         doNothing().when(ownershipService).verifyFarmManagement(1L);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -91,7 +92,7 @@ class GoatBusinessTest {
     void derivesRegistrationFromTodAndToeOnCreation() {
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         GoatFarm farm = new GoatFarm(); farm.setId(1L);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -117,6 +118,10 @@ class GoatBusinessTest {
 
     private AuthenticatedPrincipal principal(Long id) {
         return new AuthenticatedPrincipal(id, "test@example.com", "Test", Set.of());
+    }
+
+    private FarmRecord farmRecord() {
+        return new FarmRecord(1L, "Capril", null, null, null, null, List.of(), null, null, null);
     }
 
     @Test

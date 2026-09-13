@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailabl
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
@@ -142,7 +143,7 @@ class GoatAbccImportBusinessTest {
                 .items(List.of(GoatAbccRawSearchItemVO.builder()
                         .externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build()))
                 .build());
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1234567890", "ANIMAL", "12345", "67890")
         );
@@ -219,7 +220,7 @@ class GoatAbccImportBusinessTest {
                 .items(List.of(GoatAbccRawSearchItemVO.builder()
                         .externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build()))
                 .build());
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "9999999999", "ANIMAL", "12345", "67890")
         );
@@ -239,7 +240,7 @@ class GoatAbccImportBusinessTest {
                 .items(List.of(GoatAbccRawSearchItemVO.builder()
                         .externalId("A-001").tod("12345").toe("67890").raca("SAANEN").build()))
                 .build());
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         GoatAbccRawPreviewVO wrongRacePreview = buildRawPreview(
                 "A-001", "1234567890", "ANIMAL", "12345", "67890"
         );
@@ -345,7 +346,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldPreviewExternalAnimalEvenWhenTodDiffersFromTheFarm() {
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "ANIMAL", "99999", "00001")
         );
@@ -357,7 +358,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldPreviewExternalAnimalWithoutCurrentUser() {
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "ANIMAL", "99999", "00001")
         );
@@ -371,7 +372,7 @@ class GoatAbccImportBusinessTest {
 
     @Test
     void shouldMapSemRgdAsAtivoOnPreview() {
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "ANIMAL", "12345", "00001", "Sem RGD")
         );
@@ -385,7 +386,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldConfirmIndividualWhenAbccSituationIsSemRgd() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012", "Sem RGD")
         );
@@ -418,7 +419,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldConfirmByReusingGoatCreateFlowWhenTodMatches() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012")
         );
@@ -448,7 +449,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldBlockConfirmWhenRequestTodDoesNotMatchFarmTod() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012")
         );
@@ -474,7 +475,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldAllowConfirmWithDifferentTodForAdmin() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_ADMIN")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1643218012", "XEQUE V", "99999", "18012")
         );
@@ -502,7 +503,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldConfirmBatchWithDuplicateAndTodMismatchWithoutFailingWholeBatch() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
 
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "IMPORTAVEL", "12345", "11111")
@@ -547,7 +548,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldConfirmBatchWhenAbccSituationIsSemRgd() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", "12345")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
 
         when(abccPublicQueryPort.preview("A-001")).thenReturn(
                 buildRawPreview("A-001", "1111111111", "IMPORTAVEL", "12345", "11111", "Sem RGD")
@@ -578,7 +579,7 @@ class GoatAbccImportBusinessTest {
     @Test
     void shouldBlockBatchWhenFarmTodIsMissingForNonAdmin() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarm(1L, "Capril Vilar", null)));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", null)));
 
         assertThatThrownBy(() -> business.confirmBatch(1L, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("A-001").build()
@@ -600,6 +601,10 @@ class GoatAbccImportBusinessTest {
         farm.setName(name);
         farm.setTod(tod);
         return farm;
+    }
+
+    private FarmRecord buildFarmRecord(Long farmId, String name, String tod) {
+        return new FarmRecord(farmId, name, tod, null, null, null, List.of(), null, null, null);
     }
 
     private User buildUser(String name) {

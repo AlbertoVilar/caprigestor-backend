@@ -5,7 +5,6 @@ import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.UserManagementUseCase;
-import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
@@ -70,12 +69,12 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
     }
     @Transactional(readOnly = true) public FarmPermissionsVO getFarmPermissions(Long farmId) { require(farmId, false); return new FarmPermissionsVO(authorization.canManageFarm(farmId), authorization.canAdministerFarm(farmId)); }
 
-    private FarmRecord require(Long id, boolean details) { Optional<?> found = details ? goatFarmPort.findByIdWithDetails(id) : goatFarmPort.findById(id); return (FarmRecord) found.orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id)); }
+    private FarmRecord require(Long id, boolean details) { Optional<FarmRecord> found = details ? goatFarmPort.findByIdWithDetails(id) : goatFarmPort.findById(id); return found.orElseThrow(() -> new ResourceNotFoundException("Fazenda não encontrada com ID: " + id)); }
     private OwnerData resolveOwner(UserRequestVO user, AuthenticatedPrincipal current) {
         if (current != null) return new OwnerData(current.id());
         if (user.getRoles() != null && !user.getRoles().isEmpty()) throw new BusinessRuleException("Não é permitido definir permissões (roles) no cadastro público.");
         if (userManagement.findByEmail(user.getEmail()) != null) throw new DuplicateEntityException("Não foi possível completar o cadastro com os dados informados.");
-        user.setRoles(List.of("ROLE_FARM_OWNER")); AuthorityAccount account = userManagement.findOrCreateUser(user); return new OwnerData(account.id());
+        user.setRoles(List.of("ROLE_FARM_OWNER")); var account = userManagement.findOrCreateUser(user); return new OwnerData(account.getId());
     }
     private void validateCreation(GoatFarmFullRequestVO request, AuthenticatedPrincipal current) { if (request == null || request.getFarm() == null) throw new InvalidArgumentException("farm", "Dados da fazenda são obrigatórios."); if (current == null && request.getUser() == null) throw new InvalidArgumentException("user", "Dados do usuário são obrigatórios para cadastro público."); if (request.getAddress() == null) throw new InvalidArgumentException("address", "Dados de endereço são obrigatórios."); if (request.getPhones() == null || request.getPhones().isEmpty()) throw new InvalidArgumentException("phones", "É obrigatório informar ao menos um telefone."); }
     private void validateLogoUrl(String value) { if (value == null) return; String normalized = value.trim().toLowerCase(); if (value.isBlank() || value.length() > 1000 || (!normalized.startsWith("http://") && !normalized.startsWith("https://"))) throw new InvalidArgumentException("logoUrl", "URL do logo inválida."); }

@@ -402,16 +402,10 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     }
 
     private FarmRecord loadFarm(Long farmId) {
-        return toRecord(entityFinder.findOrThrow(
+        return entityFinder.findOrThrow(
                 () -> goatFarmPort.findById(farmId),
                 "Fazenda não encontrada."
-        ));
-    }
-
-    private FarmRecord toRecord(Object value) {
-        if (value instanceof FarmRecord record) return record;
-        com.devmaster.goatfarm.farm.persistence.entity.GoatFarm legacy = (com.devmaster.goatfarm.farm.persistence.entity.GoatFarm) value;
-        return new FarmRecord(legacy.getId(), legacy.getName(), legacy.getTod(), legacy.getLogoUrl(), null, null, java.util.List.of(), legacy.getCreatedAt(), legacy.getUpdatedAt(), legacy.getVersion());
+        );
     }
 
     private String requireFarmTodForNonAdmin(FarmRecord farm, boolean isAdmin) {
