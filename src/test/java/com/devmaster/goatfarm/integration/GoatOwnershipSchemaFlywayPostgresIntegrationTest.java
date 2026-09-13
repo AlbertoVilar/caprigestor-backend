@@ -68,6 +68,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                     "fk_operational_audit_entry_farm_goat_technical"}) {
                 assertThat(foreignKeyExists(connection, constraint)).as(constraint).isTrue();
             }
+            assertDirectGoatForeignKeys(connection);
         }
     }
 
@@ -469,6 +470,41 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             statement.setString(1, constraintName);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next();
+            }
+        }
+    }
+
+    private void assertDirectGoatForeignKeys(Connection connection) throws SQLException {
+        var expected = new String[][]{
+                {"fk_pregnancy_goat_technical_direct", "pregnancy"},
+                {"fk_reproductive_event_goat_technical_direct", "reproductive_event"},
+                {"fk_health_events_goat_technical_direct", "health_events"},
+                {"fk_lactation_goat_technical_direct", "lactation"},
+                {"fk_milk_production_goat_technical_direct", "milk_production"},
+                {"fk_animal_sale_goat_technical_direct", "animal_sale"},
+                {"fk_operational_audit_entry_goat_technical_direct", "operational_audit_entry"}
+        };
+        for (var item : expected) {
+            try (var statement = connection.prepareStatement("""
+                    select c.convalidated, c.confdeltype,
+                           child.attname as child_column, parent.attname as parent_column,
+                           c.conrelid::regclass::text as child_table,
+                           c.confrelid::regclass::text as parent_table
+                    from pg_constraint c
+                    join pg_attribute child on child.attrelid = c.conrelid and child.attnum = c.conkey[1]
+                    join pg_attribute parent on parent.attrelid = c.confrelid and parent.attnum = c.confkey[1]
+                    where c.conname = ?
+                    """)) {
+                statement.setString(1, item[0]);
+                try (ResultSet rs = statement.executeQuery()) {
+                    assertThat(rs.next()).as(item[0]).isTrue();
+                    assertThat(rs.getBoolean("convalidated")).as(item[0] + " validated").isTrue();
+                    assertThat(rs.getString("confdeltype")).as(item[0] + " delete action").isEqualTo("a");
+                    assertThat(rs.getString("child_table")).as(item[0] + " table").isEqualTo(item[1]);
+                    assertThat(rs.getString("parent_table")).as(item[0] + " parent").isEqualTo("cabras");
+                    assertThat(rs.getString("child_column")).as(item[0] + " child column").isEqualTo("goat_technical_id");
+                    assertThat(rs.getString("parent_column")).as(item[0] + " parent column").isEqualTo("id");
+                }
             }
         }
     }
