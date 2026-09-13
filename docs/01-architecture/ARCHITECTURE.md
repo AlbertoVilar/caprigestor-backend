@@ -112,14 +112,15 @@ do módulo Milk sobre tabelas de reprodução.
 ## Dívida arquitetural conhecida
 
 Nem todo o core já está livre de tecnologia de persistência. O baseline de
-`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 10 pares
+`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 9 pares
 explícitos que a DEV-A11-R identificou e classificou como violações legadas de
 ports de aplicação para entidades JPA. É dívida de migração conhecida, a ser
 removida progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem
 aprovação arquitetural.
 
-A wave DEV-A11-I3-A isolou o módulo Article da entidade JPA (baseline 11 -> 10),
-mantendo temporariamente a paginação Spring Data nos contratos. Address e Phone
+A wave DEV-A11-I3-A isolou Article e a DEV-A11-I3-B isolou Health das entidades
+JPA (baseline 11 -> 9), mantendo temporariamente a paginação Spring Data nos
+contratos. Address e Phone
 foram deliberadamente agrupados com Farm para uma boundary única de persistência
 do agregado, pois seus ciclos de vida ainda são montados por `GoatFarm`.
 
@@ -171,7 +172,8 @@ uma nova implementação de GoatId.
 |---|---|
 | `HexagonalArchitectureGuardTest` | Impede import indevido de `business` para `api`. |
 | `GlobalHexagonalBoundaryArchUnitTest` | Protege domain, controllers, confinamento de `SecurityContextHolder` e ausência de `JpaRepository` no core. |
-| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 10 ports para entities. |
+| `ApplicationPortPersistenceBoundaryArchUnitTest` | Mantém exato e visível o baseline legado atual de 9 ports para entities. |
+| `HealthBoundaryArchUnitTest` | Impede dependências de entidades JPA no core application/business de Health. |
 | `OwnershipSecurityBoundaryArchUnitTest` | Protege ports críticos de segurança, ownership, validação e eventos. |
 | `AuthorityPasswordBoundaryArchUnitTest` | Impede `PasswordEncoder` no core Authority. |
 | `AuthorityAuthenticationBoundaryArchUnitTest` | Impede APIs concretas de autenticação/JWT no core Authority. |

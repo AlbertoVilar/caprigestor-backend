@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCreateRequestVO;
@@ -16,7 +17,6 @@ import com.devmaster.goatfarm.health.business.bo.HealthEventUpdateRequestVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -56,14 +56,14 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
         // Controle de acesso deve ser feito no Controller via FarmAuthorizationUseCase.canManageFarm(farmId)
         goatGenderValidator.requireActive(farmId, goatId);
 
-        var entity = mapper.toEntity(request);
-        entity.setFarmId(farmId);
-        entity.setGoatId(goatId);
+        var record = mapper.toRecord(request);
+        record.setFarmId(farmId);
+        record.setGoatId(goatId);
 
         // Invariável de domínio: criação é sempre AGENDADO
-        entity.setStatus(HealthEventStatus.AGENDADO);
+        record.setStatus(HealthEventStatus.AGENDADO);
 
-        var saved = persistencePort.save(entity);
+        var saved = persistencePort.save(record);
         return mapper.toResponseVO(saved);
     }
 
@@ -78,7 +78,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
             throw new BusinessRuleException("Não é permitido alterar um evento de saúde já realizado ou cancelado.");
         }
 
-        mapper.updateEntity(healthEvent, request);
+        mapper.updateRecord(healthEvent, request);
 
         var saved = persistencePort.save(healthEvent);
         return mapper.toResponseVO(saved);
@@ -204,7 +204,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
         return healthEvents.map(mapper::toResponseVO);
     }
 
-    private HealthEvent findEventOrThrow(Long farmId, String goatId, Long eventId) {
+    private HealthEventRecord findEventOrThrow(Long farmId, String goatId, Long eventId) {
         return entityFinder.findOrThrow(
                 () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
                 "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId

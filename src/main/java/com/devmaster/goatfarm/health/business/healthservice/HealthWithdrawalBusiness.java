@@ -3,11 +3,11 @@ package com.devmaster.goatfarm.health.business.healthservice;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.business.bo.HealthWithdrawalOriginVO;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,7 +71,7 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
                 .toList();
     }
 
-    private GoatWithdrawalStatusVO buildStatus(String goatId, Long goatTechnicalId, List<HealthEvent> events, LocalDate referenceDate) {
+    private GoatWithdrawalStatusVO buildStatus(String goatId, Long goatTechnicalId, List<HealthEventRecord> events, LocalDate referenceDate) {
         Optional<HealthWithdrawalOriginVO> milkWithdrawal = events.stream()
                 .map(event -> toOrigin(event, event.getWithdrawalMilkDays()))
                 .filter(Optional::isPresent)
@@ -97,7 +97,7 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
                 .build();
     }
 
-    private Optional<HealthWithdrawalOriginVO> toOrigin(HealthEvent event, Integer withdrawalDays) {
+    private Optional<HealthWithdrawalOriginVO> toOrigin(HealthEventRecord event, Integer withdrawalDays) {
         if (event.getPerformedAt() == null || withdrawalDays == null || withdrawalDays <= 0) {
             return Optional.empty();
         }

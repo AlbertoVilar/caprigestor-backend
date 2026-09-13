@@ -5,10 +5,10 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -113,7 +113,7 @@ class HealthWithdrawalBusinessTest {
         assertTrue(statuses.getFirst().hasActiveMilkWithdrawal());
     }
 
-    private HealthEvent buildPerformedEvent(
+    private HealthEventRecord buildPerformedEvent(
             Long eventId,
             Long farmId,
             String goatId,
@@ -122,7 +122,7 @@ class HealthWithdrawalBusinessTest {
             Integer milkWithdrawalDays,
             Integer meatWithdrawalDays
     ) {
-        HealthEvent event = new HealthEvent();
+        HealthEventRecord event = new HealthEventRecord();
         event.setId(eventId);
         event.setFarmId(farmId);
         event.setGoatId(goatId);

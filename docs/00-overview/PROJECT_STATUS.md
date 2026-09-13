@@ -10,8 +10,8 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 
 ## Baseline atual
 
-- A baseline integrada de `develop` inclui a PR #267 (`DEV-A11-I2-C`), merge
-  `adb025d`; a boundary arquitetural Authority/Security I2 está concluída.
+- A baseline integrada de `develop` inclui a PR #269 (`DEV-A11-I3-A`), merge
+  `f1ff12f`; as boundaries Authority/Security I2 e Article I3-A estão concluídas.
 - A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
 - O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
   autenticação JWT e autorização farm-scoped.
@@ -36,9 +36,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 
 - DEV-A11-R (Final Hexagonal Closure Audit) foi concluída em modo read-only. Os
   14 pares legados de ports de aplicação para entidades JPA foram identificados;
-  após a I2-C, restavam 11 pares explícitos. A wave DEV-A11-I3-A isolou Article,
-  reduzindo a baseline atual para 10; Address e Phone permanecem agrupados com
-  Farm para a futura boundary do agregado.
+  após a I2-C, restavam 11 pares explícitos. As waves DEV-A11-I3-A (Article) e
+  DEV-A11-I3-B (Health) reduziram a baseline atual para 9; Address e Phone
+  permanecem agrupados com Farm para a futura boundary do agregado.
 - A10 isolou limites de principal autenticado, autorização por fazenda,
   validação crítica, publicação de eventos e emissão de JWT.
 - A11-I1 reforçou o guard global que impede o domínio de depender de
@@ -56,7 +56,7 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 ## Dívida arquitetural conhecida
 
 - O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente
-  10 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
+  9 pares explícitos de ports de aplicação ainda acoplados a entidades JPA.
   É dívida de migração conhecida, não aceitação permanente: será removida
   progressivamente em DEV-A11-I3 e pode diminuir, nunca crescer sem revisão.
 - A ponte transitória `FarmUserPersistencePort -> authority.persistence.entity.User`
@@ -99,7 +99,9 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   foram removidas, assim como a credencial hard-coded e a orquestração sem
   consumidores; o bootstrap administrativo continua externo e desabilitado por
   padrão.
-- Adiado: remoção da dívida I3, hardening separado de recuperação de senha,
+- A boundary Health da DEV-A11-I3-B foi concluída na branch de implementação;
+  a PR aguarda revisão arquitetural antes do merge.
+- Adiado: remoção da dívida I3 restante, hardening separado de recuperação de senha,
   mudanças adicionais de contrato/API,
   mudanças de schema, reset DEV, HML e `main`.
 
