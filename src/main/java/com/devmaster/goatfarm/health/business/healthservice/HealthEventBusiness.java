@@ -9,6 +9,8 @@ import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseC
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
 import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCreateRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventDoneRequestVO;
@@ -17,8 +19,6 @@ import com.devmaster.goatfarm.health.business.bo.HealthEventUpdateRequestVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -155,13 +155,13 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HealthEventResponseVO> listCalendar(
+    public PageResult<HealthEventResponseVO> listCalendar(
             Long farmId,
             LocalDate from,
             LocalDate to,
             HealthEventType type,
             HealthEventStatus status,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
         var healthEvents = persistencePort.findByFarmIdAndPeriod(
                 farmId,
@@ -169,7 +169,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
                 to,
                 type,
                 status,
-                pageable
+                pageQuery
         );
 
         return healthEvents.map(mapper::toResponseVO);
@@ -177,14 +177,14 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HealthEventResponseVO> listByGoat(
+    public PageResult<HealthEventResponseVO> listByGoat(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
             HealthEventType type,
             HealthEventStatus status,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
         entityFinder.findOrThrow(
                 () -> goatReferenceResolver.resolve(goatId, farmId),
@@ -198,7 +198,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
                 to,
                 type,
                 status,
-                pageable
+                pageQuery
         );
 
         return healthEvents.map(mapper::toResponseVO);

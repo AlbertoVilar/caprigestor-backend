@@ -116,6 +116,16 @@ Todas as ordens de sort recebidas são preservadas na ordem original. Destaques
 de Article usam a intenção `findLatestPublished(limit)`, sem paginação Spring no
 business.
 
+### Paginação de Health
+
+Health segue o mesmo boundary neutro: `HealthEventQueryUseCase` e
+`HealthEventPersistencePort` usam `PageQuery`/`PageResult`, enquanto controllers
+continuam recebendo `Pageable` e reconstruindo o `Page` Spring via
+`SpringPageMapper`. `FarmHealthAlertsBusiness` não usa paginação HTTP para seus
+alertas; a operação de saída `findNextScheduledEvents(..., limit)` retorna uma
+`HealthEventWindow` com até cinco eventos e o total de correspondências. O
+adapter aplica internamente `scheduledDate ASC`, `page=0` e o limite solicitado.
+
 ### Lactação e leite
 
 `milk.domain.Lactation` é agregado sem framework responsável por transições
@@ -135,7 +145,7 @@ o guard global impede regressões. Ainda existem dívidas independentes de
  sem reabrir o isolamento JPA concluído. Article e Farm já não importam esses
  tipos Spring no application/business.
 
-A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, a
+A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, e a
 DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5) e
 DEV-A11-I3-D isolou Audit (baseline 5 -> 4), DEV-A11-I3-E1 isolou Commercial
 (baseline 4 -> 1) e DEV-A11-I3-E2 isolou Finance (baseline 1 -> 0).
@@ -167,7 +177,8 @@ fallback histórico por RG. A atomicidade concorrente do consumo de token de
 recuperação é hardening de segurança separado.
 
 Também persistem usos legados de JPA entities, `Page`/`Pageable`/`Sort` e APIs
-de autenticação em módulos específicos. Guards globais de zero tolerância para
+de autenticação em módulos específicos. Após F2, a dívida de paginação permanece
+em Inventory, Milk e Reproduction. Guards globais de zero tolerância para
 essas categorias permanecem planejados até a remoção incremental. O estado da
 wave está no [PROJECT_STATUS](../00-overview/PROJECT_STATUS.md); gates ativos e
 planejados estão em [QUALITY_GATES](./QUALITY_GATES.md).
