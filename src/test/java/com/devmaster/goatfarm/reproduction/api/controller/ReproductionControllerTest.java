@@ -16,10 +16,12 @@ import com.devmaster.goatfarm.reproduction.api.dto.WeaningResponseDTO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.BirthResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyResponseVO;
+import com.devmaster.goatfarm.reproduction.business.bo.ReproductiveEventResponseVO;
 import com.devmaster.goatfarm.reproduction.business.bo.WeaningRequestVO;
 import com.devmaster.goatfarm.reproduction.business.bo.WeaningResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
+import com.devmaster.goatfarm.reproduction.api.dto.ReproductiveEventResponseDTO;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -36,7 +42,9 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -243,6 +251,64 @@ class ReproductionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void getPregnancies_shouldPreserveDefaultSpringPageContract() throws Exception {
+        Long farmId = 1L;
+        String goatId = "GOAT-001";
+        PregnancyResponseVO responseVO = PregnancyResponseVO.builder().id(10L).farmId(farmId)
+                .goatId(goatId).status(PregnancyStatus.CLOSED).build();
+        PregnancyResponseDTO responseDTO = PregnancyResponseDTO.builder().id(10L).farmId(farmId)
+                .goatId(goatId).status(PregnancyStatus.CLOSED).build();
+        Pageable expected = PageRequest.of(0, 10, Sort.by(Sort.Order.desc("breedingDate")));
+        when(queryUseCase.getPregnancies(eq(farmId), eq(goatId), any(Pageable.class))).thenReturn(
+                new PageImpl<>(List.of(responseVO), expected, 1));
+        when(mapper.toPregnancyResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/pregnancies", farmId, goatId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(10))
+                .andExpect(jsonPath("$.page.number").value(0))
+                .andExpect(jsonPath("$.page.size").value(10))
+                .andExpect(jsonPath("$.page.totalElements").value(1))
+                .andExpect(jsonPath("$.page.totalPages").value(1));
+        verify(queryUseCase).getPregnancies(eq(farmId), eq(goatId), argThat(p -> p.getPageNumber() == 0
+                && p.getPageSize() == 10
+                && p.getSort().getOrderFor("breedingDate") != null
+                && p.getSort().getOrderFor("breedingDate").isDescending()));
+    }
+
+    @Test
+    void getReproductiveEvents_shouldPreserveExplicitMultiSortAndMetadata() throws Exception {
+        Long farmId = 1L;
+        String goatId = "GOAT-001";
+        ReproductiveEventResponseVO responseVO = ReproductiveEventResponseVO.builder().id(11L)
+                .farmId(farmId).goatId(goatId).build();
+        ReproductiveEventResponseDTO responseDTO = ReproductiveEventResponseDTO.builder().id(11L)
+                .farmId(farmId).goatId(goatId).build();
+        when(queryUseCase.getReproductiveEvents(eq(farmId), eq(goatId), argThat(p -> p.getPageNumber() == 1
+                && p.getPageSize() == 2
+                && p.getSort().toList().get(0).getProperty().equals("eventDate")
+                && p.getSort().toList().get(0).isAscending()
+                && p.getSort().toList().get(1).getProperty().equals("id")
+                && p.getSort().toList().get(1).isDescending()))).thenReturn(
+                new PageImpl<>(List.of(responseVO), PageRequest.of(1, 2), 3));
+        when(mapper.toReproductiveEventResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/reproduction/events", farmId, goatId)
+                        .param("page", "1")
+                        .param("size", "2")
+                        .param("sort", "eventDate,asc")
+                        .param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(11))
+                .andExpect(jsonPath("$.page.number").value(1))
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
+        verify(queryUseCase).getReproductiveEvents(eq(farmId), eq(goatId), argThat(p -> p.getPageNumber() == 1
+                && p.getPageSize() == 2 && p.getSort().toList().size() == 2));
     }
 }
 
