@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.milk.api.controller;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
 import com.devmaster.goatfarm.milk.api.mapper.MilkProductionMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.MilkProductionUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
@@ -11,8 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,13 +49,13 @@ class MilkProductionPaginationCharacterizationTest {
         MilkProductionResponseDTO dto = dto(vo);
         when(milkProductionUseCase.getMilkProductions(
                 eq(farmId), eq(goatId), eq(null), eq(null),
-                argThat(pageable -> pageable.getPageNumber() == 0
-                        && pageable.getPageSize() == 12
-                        && pageable.getSort().toString().contains("date: DESC")
-                        && pageable.getSort().toString().contains("shift: ASC")
-                        && pageable.getSort().toString().contains("id: DESC")),
+                argThat(query -> query.page() == 0
+                        && query.size() == 12
+                        && query.sort().stream().anyMatch(sort -> sort.field().equals("date"))
+                        && query.sort().stream().anyMatch(sort -> sort.field().equals("shift"))
+                        && query.sort().stream().anyMatch(sort -> sort.field().equals("id"))),
                 eq(false)))
-                .thenReturn(new PageImpl<>(List.of(vo), org.springframework.data.domain.PageRequest.of(0, 12), 25));
+                .thenReturn(new PageResult<>(List.of(vo), 25, 0, 12));
         when(milkProductionMapper.toResponseDTO(vo)).thenReturn(dto);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions", farmId, goatId)
@@ -69,7 +69,7 @@ class MilkProductionPaginationCharacterizationTest {
 
         verify(milkProductionUseCase).getMilkProductions(
                 eq(farmId), eq(goatId), eq(null), eq(null),
-                argThat(pageable -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 12), eq(false));
+                argThat(query -> query.page() == 0 && query.size() == 12), eq(false));
     }
 
     @Test
@@ -79,12 +79,12 @@ class MilkProductionPaginationCharacterizationTest {
         MilkProductionResponseVO vo = response(22L, LocalDate.of(2026, 2, 22));
         when(milkProductionUseCase.getMilkProductions(
                 eq(farmId), eq(goatId), eq(LocalDate.of(2026, 2, 1)), eq(LocalDate.of(2026, 2, 28)),
-                argThat(pageable -> pageable.getPageNumber() == 2
-                        && pageable.getPageSize() == 5
-                        && pageable.getSort().getOrderFor("volumeLiters") != null
-                        && pageable.getSort().getOrderFor("date") != null),
+                argThat(query -> query.page() == 2
+                        && query.size() == 5
+                        && query.sort().stream().anyMatch(sort -> sort.field().equals("volumeLiters"))
+                        && query.sort().stream().anyMatch(sort -> sort.field().equals("date"))),
                 eq(true)))
-                .thenReturn(new PageImpl<>(List.of(vo), org.springframework.data.domain.PageRequest.of(2, 5), 11));
+                .thenReturn(new PageResult<>(List.of(vo), 11, 2, 5));
         when(milkProductionMapper.toResponseDTO(vo)).thenReturn(dto(vo));
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions", farmId, goatId)

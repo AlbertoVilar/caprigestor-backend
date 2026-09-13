@@ -8,6 +8,8 @@ import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.mapper.MilkProductionPersistenceMapper;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,51 +49,54 @@ class MilkProductionPersistenceAdapterPaginationCharacterizationTest {
     @Test
     void technicalPageWithContentDoesNotInvokeLegacyFallback() {
         PageRequest pageable = PageRequest.of(1, 2);
+        PageQuery query = new PageQuery(1, 2, List.of());
         MilkProductionEntity technicalEntity = entity(10L, 7L);
         when(repository.searchByTechnicalId(eq(1L), eq(7L), isNull(), isNull(), eq(pageable), eq(false)))
                 .thenReturn(new PageImpl<>(List.of(technicalEntity), pageable, 3));
 
-        Page<com.devmaster.goatfarm.milk.domain.MilkProduction> result =
-                adapter.search(1L, "BR123", null, null, pageable, false);
+        PageResult<com.devmaster.goatfarm.milk.domain.MilkProduction> result =
+                adapter.search(1L, "BR123", null, null, query, false);
 
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.totalElements()).isEqualTo(3);
         verify(repository, never()).search(anyLong(), anyString(), any(), any(), any(), anyBoolean());
     }
 
     @Test
     void emptyTechnicalPageInvokesLegacyFallbackAndPreservesLegacyMetadata() {
         PageRequest pageable = PageRequest.of(2, 5);
+        PageQuery query = new PageQuery(2, 5, List.of());
         when(repository.searchByTechnicalId(eq(1L), eq(7L), isNull(), isNull(), eq(pageable), eq(true)))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
         MilkProductionEntity legacyEntity = entity(11L, null);
         when(repository.search(eq(1L), eq("BR123"), isNull(), isNull(), eq(pageable), eq(true)))
                 .thenReturn(new PageImpl<>(List.of(legacyEntity), pageable, 6));
 
-        Page<com.devmaster.goatfarm.milk.domain.MilkProduction> result =
-                adapter.search(1L, "BR123", null, null, pageable, true);
+        PageResult<com.devmaster.goatfarm.milk.domain.MilkProduction> result =
+                adapter.search(1L, "BR123", null, null, query, true);
 
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getTotalElements()).isEqualTo(11);
-        assertThat(result.getNumber()).isEqualTo(2);
-        assertThat(result.getSize()).isEqualTo(5);
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.totalElements()).isEqualTo(11);
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(5);
         verify(repository).search(eq(1L), eq("BR123"), isNull(), isNull(), eq(pageable), eq(true));
     }
 
     @Test
     void emptyTechnicalAndLegacyPagesReturnEmptySelectedPage() {
         PageRequest pageable = PageRequest.of(3, 5);
+        PageQuery query = new PageQuery(3, 5, List.of());
         when(repository.searchByTechnicalId(eq(1L), eq(7L), isNull(), isNull(), eq(pageable), eq(false)))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
         when(repository.search(eq(1L), eq("BR123"), isNull(), isNull(), eq(pageable), eq(false)))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
-        Page<com.devmaster.goatfarm.milk.domain.MilkProduction> result =
-                adapter.search(1L, "BR123", null, null, pageable, false);
+        PageResult<com.devmaster.goatfarm.milk.domain.MilkProduction> result =
+                adapter.search(1L, "BR123", null, null, query, false);
 
-        assertThat(result).isEmpty();
-        assertThat(result.getNumber()).isEqualTo(3);
-        assertThat(result.getSize()).isEqualTo(5);
+        assertThat(result.content()).isEmpty();
+        assertThat(result.page()).isEqualTo(3);
+        assertThat(result.size()).isEqualTo(5);
     }
 
     private MilkProductionEntity entity(Long id, Long technicalId) {

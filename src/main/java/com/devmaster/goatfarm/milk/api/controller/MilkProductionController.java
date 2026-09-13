@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.api.controller;
 
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionUpdateRequestDTO;
@@ -137,11 +138,12 @@ public class MilkProductionController {
             })
             Pageable pageable
     ) {
-        Page<MilkProductionResponseVO> page =
-                milkProductionUseCase.getMilkProductions(farmId, goatId, from, to, pageable, includeCanceled);
+        var page =
+                milkProductionUseCase.getMilkProductions(farmId, goatId, from, to,
+                        SpringPageMapper.toQuery(pageable), includeCanceled);
 
         Page<MilkProductionResponseDTO> dtoPage =
-                page.map(milkProductionMapper::toResponseDTO);
+                SpringPageMapper.toSpringPage(page.map(milkProductionMapper::toResponseDTO), pageable);
 
         return ResponseEntity.ok(dtoPage);
     }

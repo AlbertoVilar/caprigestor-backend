@@ -144,6 +144,10 @@ createdAt DESC`; parâmetros `sort` recebidos continuam sem alterar essa ordem.
 nomes JPA são preservados apenas onde a persistência precisa de compatibilidade.
 Consultas farm-wide de gravidez passam por `PregnancyDryOffQueryUseCase`, sem SQL
 do módulo Milk sobre tabelas de reprodução.
+ A listagem de produção de leite já usa `PageQuery`/`PageResult` no core; a
+ conversão para `Pageable`/`Page` permanece no controller/adapter. A paginação
+ de histórico de lactações e a composição dos alertas de secagem continuam
+ deliberadamente Spring-coupled até F4-I2.
 
 ## Dívida arquitetural conhecida
 
@@ -151,7 +155,7 @@ O core application/business está livre de dependências diretas em entidades
 JPA: o baseline de `ApplicationPortPersistenceBoundaryArchUnitTest` é zero e
 o guard global impede regressões. Ainda existem dívidas independentes de
  persistência (por exemplo, `Page`/`Pageable`/`Sort`) que permanecem em
- Milk e Reproduction e serão tratadas em waves posteriores,
+ Lactation e Reproduction e serão tratadas em waves posteriores,
  sem reabrir o isolamento JPA concluído. Article e Farm já não importam esses
  tipos Spring no application/business.
 
@@ -238,6 +242,7 @@ uma nova implementação de GoatId.
 | `GoatHexagonalCoreArchUnitTest` | Protege paginação e boundary de aplicação do Goat. |
 | `MilkReproductionBoundaryArchUnitTest` | Garante fronteira entre Milk e Reproduction. |
 | `LactationDomainBoundaryArchUnitTest` | Impede vazamento de JPA/Spring/API no agregado de lactação. |
+| `MilkProductionPaginationBoundaryArchUnitTest` | Impede Spring Data no core do fluxo de produção de leite; Lactation permanece fora até F4-I2. |
 
 ## Referências internas
 

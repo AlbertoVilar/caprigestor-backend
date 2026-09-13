@@ -62,6 +62,10 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   negócio, `PageQuery` é argumento separado nos use cases/ports e adapters
   convertem para Spring Data. O contrato HTTP e a ordenação fixa de movimentos
   (`movementDate desc`, `createdAt desc`) foram preservados.
+- DEV-A11-I3-F4-I1 isolou a paginação da listagem de produção de leite. O fluxo
+  usa `PageQuery`/`PageResult` no application/business/port, mantendo Spring
+  `Pageable`/`Page` apenas na API e no adapter. A paginação de Lactation e os
+  alertas de secagem permanecem abertos para F4-I2.
 - A retificação registral preserva GoatId, é administrativa e mantém histórico
   imutável; o `PUT` comum não altera identidade.
 - DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)
@@ -123,7 +127,7 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   padrão.
 - As boundaries Health, Audit, Commercial (I3-E1) e Finance (I3-E2) foram
   implementadas e integradas em `develop`; a dívida JPA do core foi zerada.
-- Adiado: remoção da dívida I3 restante em Milk/Reproduction, hardening separado de recuperação de senha,
+- Adiado: remoção da dívida I3 restante em Lactation/Reproduction (F4-I2 e waves posteriores), hardening separado de recuperação de senha,
   mudanças adicionais de contrato/API,
   mudanças de schema, reset DEV, HML e `main`.
 
