@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.config.exceptions;
 
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -197,6 +198,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ValidationError> accessDenied(AccessDeniedException e, HttpServletRequest request) {
+        String error = "Acesso negado";
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("auth", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ValidationError> authorizationDenied(AuthorizationDeniedException e, HttpServletRequest request) {
         String error = "Acesso negado";
         HttpStatus status = HttpStatus.FORBIDDEN;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());

@@ -58,6 +58,15 @@ class GlobalHexagonalBoundaryArchUnitTest {
     }
 
     @Test
+    void applicationAndBusinessCoreMustNotDependOnSpringSecurity() {
+        noClasses()
+                .that().resideInAnyPackage("..application..", "..business..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.security..")
+                .because("authorization decisions must use inward-owned semantic exceptions and ports")
+                .check(IMPORTED_CLASSES);
+    }
+
+    @Test
     void coreMustNotDependOnSpringDataJpaRepositories() {
         noClasses()
                 .that().resideInAnyPackage("..domain..", "..application..", "..business..")

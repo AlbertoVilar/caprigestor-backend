@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.events.business.eventservice;
 
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
@@ -18,7 +19,6 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -121,7 +121,7 @@ public class EventBusiness implements EventManagementUseCase {
         return goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registrationNumber, farmId)
                 .orElseGet(() -> {
                     if (goatReferenceQueryPort.findReferenceByRegistrationNumber(registrationNumber).isPresent()) {
-                        throw new AccessDeniedException("Cabra não pertence à fazenda informada.");
+                        throw new AuthorizationDeniedException("Cabra não pertence à fazenda informada.");
                     }
                     throw new ResourceNotFoundException("Cabra não encontrada para a fazenda informada.");
                 });
