@@ -30,13 +30,13 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
     }
 
     @Test
-    void freshInstallCreatesOwnershipSchemaAtV45() throws SQLException {
+    void freshInstallCreatesOwnershipSchemaAtV46() throws SQLException {
         flyway().migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("45");
+                    .isEqualTo("46");
             assertThat(tableExists(connection, "goat_creator_reference")).isTrue();
             assertThat(tableExists(connection, "goat_ownership_period")).isTrue();
             assertThat(tableExists(connection, "ownership_transfer")).isTrue();
@@ -50,6 +50,24 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                     .containsIgnoringCase("ACCEPTED");
             assertThat(uniqueConstraintExists(connection, "uk_ownership_transfer_request_idempotency"))
                     .isTrue();
+            assertThat(uniqueConstraintExists(connection, "uk_cabras_farm_id")).isTrue();
+            for (String constraint : new String[]{
+                    "fk_pregnancy_goat_technical_direct",
+                    "fk_reproductive_event_goat_technical_direct",
+                    "fk_health_events_goat_technical_direct",
+                    "fk_lactation_goat_technical_direct",
+                    "fk_milk_production_goat_technical_direct",
+                    "fk_animal_sale_goat_technical_direct",
+                    "fk_operational_audit_entry_goat_technical_direct",
+                    "fk_pregnancy_farm_goat_technical",
+                    "fk_reproductive_event_farm_goat_technical",
+                    "fk_health_events_farm_goat_technical",
+                    "fk_lactation_farm_goat_technical",
+                    "fk_milk_production_farm_goat_technical_lactation",
+                    "fk_animal_sale_farm_goat_technical",
+                    "fk_operational_audit_entry_farm_goat_technical"}) {
+                assertThat(foreignKeyExists(connection, constraint)).as(constraint).isTrue();
+            }
         }
     }
 
@@ -72,7 +90,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from ownership_transfer")).isZero();
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("45");
+                    .isEqualTo("46");
         }
     }
 
@@ -435,6 +453,18 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
         try (var statement = connection.prepareStatement("""
                 select 1 from information_schema.table_constraints
                 where table_schema = 'public' and constraint_name = ? and constraint_type = 'UNIQUE'
+                """)) {
+            statement.setString(1, constraintName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private boolean foreignKeyExists(Connection connection, String constraintName) throws SQLException {
+        try (var statement = connection.prepareStatement("""
+                select 1 from information_schema.table_constraints
+                where table_schema = 'public' and constraint_name = ? and constraint_type = 'FOREIGN KEY'
                 """)) {
             statement.setString(1, constraintName);
             try (ResultSet rs = statement.executeQuery()) {

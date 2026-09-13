@@ -30,7 +30,10 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
                     // RG. All goat-dependent structural references target id.
                     .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
-                    .isEqualTo(7L);
+                    // V40 composite farm/goat technical safeguards remain in
+                    // place and V46 adds one direct GoatId FK for each
+                    // consumer, so both generations are expected here.
+                    .isEqualTo(14L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in ('fk_cabras_pai_goat_id','fk_cabras_mae_goat_id')"))
                     .isEqualTo(2L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and conrelid = 'public.milk_production'::regclass and conname = 'fk_milk_production_farm_goat_technical_lactation'"))
@@ -143,7 +146,7 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
                     .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
-                    .isEqualTo(7L);
+                    .isEqualTo(14L);
         }
     }
 
