@@ -117,7 +117,7 @@ do módulo Milk sobre tabelas de reprodução.
 ## Dívida arquitetural conhecida
 
 Nem todo o core já está livre de tecnologia de persistência. O baseline de
-`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 4 pares
+`ApplicationPortPersistenceBoundaryArchUnitTest` contém atualmente 1 par
 explícitos que a DEV-A11-R identificou e classificou como violações legadas de
 ports de aplicação para entidades JPA. É dívida de migração conhecida, a ser
 removida progressivamente em DEV-A11-I3: pode diminuir, mas não crescer sem
@@ -125,16 +125,25 @@ aprovação arquitetural.
 
 A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, a
 DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5) e
-DEV-A11-I3-D isolou Audit (baseline 5 -> 4).
+DEV-A11-I3-D isolou Audit (baseline 5 -> 4) e DEV-A11-I3-E1 isolou Commercial
+(baseline 4 -> 1).
 Address e Phone foram agrupados com Farm para uma boundary única de persistência
 do agregado, pois seus ciclos de vida ainda são montados por `GoatFarm`.
+
+A boundary DEV-A11-I3-E1 isolou Commercial com três ports de persistência
+tecnologicamente neutros (`CustomerPersistencePort`, `AnimalSalePersistencePort`
+e `MilkSalePersistencePort`). `CommercialBusiness` mantém a orquestração
+transacional e os adapters resolvem Farm/Customer JPA na borda; contratos HTTP,
+semântica de pagamento, snapshots de RG/nome e integração com `GoatManagementUseCase`
+permanecem inalterados. Finance é a única dependência JPA de application/business
+restante e será tratada em I3-E2.
 
 A boundary DEV-A11-I2 de Authority/Security está concluída. O core Authority
 tem zero dependências de infraestrutura concreta de Spring Security e zero
 dependências de entidades JPA de Authority; os contratos de conta, papel,
 refresh e recuperação usam modelos da aplicação. A antiga I2-D/I2-E não deve
 ser recriada como waves independentes. Commercial e Finance ainda usam
-projeções mínimas de fazenda e permanecem nos quatro pares legados allowlisted,
+projeções mínimas de fazenda e permanece no único par legado allowlisted,
 sem novos consumidores. Audit usa `OperationalAuditRecord` como snapshot
 tecnológico neutro; o adapter mapeia esse record para `OperationalAuditEntry` e
 resolve a referência JPA de `GoatFarm`, mantendo entidades fora do core e o

@@ -1,5 +1,5 @@
 ﻿# Modulo Commercial (Comercial e Financeiro Operacional Minimo)
-Ultima atualizacao: 2026-09-07
+Ultima atualizacao: 2026-09-13
 Escopo: estado tecnico e funcional do modulo `commercial` apos a consolidacao da camada comercial minima e da etapa 1 do financeiro operacional da fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API Contracts](../03-api/API_CONTRACTS.md), [Inventory](./INVENTORY_MODULE.md)
 
@@ -22,6 +22,13 @@ O escopo atual cobre:
 - recebiveis minimos com estado `OPEN` ou `PAID`;
 - despesas operacionais da fazenda;
 - resumo mensal simples com receitas, saidas e saldo operacional.
+
+Na wave DEV-A11-I3-E1, a aplicação comercial passou a usar os modelos neutros
+`CustomerRecord`, `AnimalSaleRecord`/`AnimalSaleCommand` e
+`MilkSaleRecord`/`MilkSaleCommand`. Os três ports de persistência são coesos e
+os adapters resolvem as entidades JPA de Farm e Customer somente na borda. Não
+houve alteração de schema, contratos REST, autorização ou semântica de
+snapshots; Finance operacional continua na wave I3-E2.
 
 Fora de escopo nesta etapa:
 - ERP;

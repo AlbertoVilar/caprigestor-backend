@@ -30,12 +30,6 @@ class ApplicationPortPersistenceBoundaryArchUnitTest {
      * or intentionally renames one of these dependencies.
      */
     private static final Set<String> EXPECTED_LEGACY_DEPENDENCIES = Set.of(
-            "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
-                    + " -> com.devmaster.goatfarm.commercial.persistence.entity.AnimalSale",
-            "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
-                    + " -> com.devmaster.goatfarm.commercial.persistence.entity.Customer",
-            "com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort"
-                    + " -> com.devmaster.goatfarm.commercial.persistence.entity.MilkSale",
             "com.devmaster.goatfarm.commercial.application.ports.out.OperationalFinancePersistencePort"
                     + " -> com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense"
     );
