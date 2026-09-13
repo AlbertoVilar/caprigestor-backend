@@ -66,4 +66,13 @@ class GlobalHexagonalBoundaryArchUnitTest {
                 .because("the business core must keep Spring Data repository details in persistence adapters")
                 .check(IMPORTED_CLASSES);
     }
+
+    @Test
+    void applicationAndBusinessCoreMustNotDependOnPersistenceEntities() {
+        noClasses()
+                .that().resideInAnyPackage("..application..", "..business..")
+                .should().dependOnClassesThat().resideInAnyPackage("..persistence.entity..")
+                .because("application and business core must exchange technology-neutral models with persistence adapters")
+                .check(IMPORTED_CLASSES);
+    }
 }

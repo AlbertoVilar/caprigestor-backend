@@ -26,9 +26,11 @@ O escopo atual cobre:
 Na wave DEV-A11-I3-E1, a aplicação comercial passou a usar os modelos neutros
 `CustomerRecord`, `AnimalSaleRecord`/`AnimalSaleCommand` e
 `MilkSaleRecord`/`MilkSaleCommand`. Os três ports de persistência são coesos e
-os adapters resolvem as entidades JPA de Farm e Customer somente na borda. Não
-houve alteração de schema, contratos REST, autorização ou semântica de
-snapshots; Finance operacional continua na wave I3-E2.
+os adapters resolvem as entidades JPA de Farm e Customer somente na borda. O
+Finance operacional segue o mesmo limite com `OperationalExpenseCommand`,
+`OperationalExpenseRecord` e `OperationalFinancePersistencePort`;
+`OperationalFinanceBusiness` não recebe nem retorna JPA. Não houve alteração
+de schema, contratos REST, autorização ou semântica de snapshots.
 
 Fora de escopo nesta etapa:
 - ERP;
