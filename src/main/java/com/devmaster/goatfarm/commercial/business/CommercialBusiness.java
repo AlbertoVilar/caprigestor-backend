@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.commercial.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
@@ -23,7 +24,6 @@ import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -152,7 +152,7 @@ public class CommercialBusiness implements CommercialUseCase {
         return new CommercialSummaryVO(customerPersistencePort.countCustomersByFarmId(farmId), animals.size(), currency(animalTotal), milk.size(), measure(milkQty), currency(milkTotal), rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.OPEN).count(), currency(rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.OPEN).map(ReceivableResponseVO::amount).reduce(BigDecimal.ZERO, BigDecimal::add)), rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.PAID).count(), currency(rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.PAID).map(ReceivableResponseVO::amount).reduce(BigDecimal.ZERO, BigDecimal::add)));
     }
 
-    private FarmRecord requireFarm(Long farmId) { if (!authorization.canManageFarm(farmId)) throw new AccessDeniedException("Usuario nao pode gerenciar esta fazenda."); return goatFarmPersistencePort.findById(farmId).orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada.")); }
+    private FarmRecord requireFarm(Long farmId) { if (!authorization.canManageFarm(farmId)) throw new AuthorizationDeniedException("Usuario nao pode gerenciar esta fazenda."); return goatFarmPersistencePort.findById(farmId).orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada.")); }
     private CustomerRecord activeCustomer(Long farmId, Long id) { if (id == null) throw new InvalidArgumentException("customerId", "Cliente e obrigatorio"); CustomerRecord c = entityFinder.findOrThrow(() -> customerPersistencePort.findCustomerByIdAndFarmId(id, farmId), "Cliente nao encontrado."); if (!c.active()) throw new BusinessRuleException("customerId", "Cliente esta inativo e nao pode ser utilizado."); return c; }
     private GoatResponseVO ensureGoatReadyForSale(Long farmId, String id, LocalDate date, String notes) { GoatResponseVO goat = goatManagementUseCase.findGoatById(farmId, id); if (goat.getBirthDate() != null && date.isBefore(goat.getBirthDate())) throw new BusinessRuleException("saleDate", "Data da venda nao pode ser anterior ao nascimento da cabra."); if (goat.getStatus() == GoatStatus.ATIVO) { goatManagementUseCase.exitGoat(farmId, id, GoatExitRequestVO.builder().exitType(GoatExitType.VENDA).exitDate(date).notes(notes).build()); return goat; } if (goat.getStatus() != GoatStatus.VENDIDO) throw new BusinessRuleException("goatId", "A cabra informada nao esta em estado compativel com venda."); if (goat.getExitType() != GoatExitType.VENDA) throw new BusinessRuleException("goatId", "A cabra ja possui saida registrada com tipo diferente de venda."); if (!date.equals(goat.getExitDate())) throw new BusinessRuleException("saleDate", "A data da venda deve coincidir com a saida comercial ja registrada para a cabra."); return goat; }
     private void validatePayment(LocalDate saleDate, SalePaymentStatus status, LocalDate date) { if (status == SalePaymentStatus.PAID) throw new BusinessRuleException("paymentDate", "Esta venda ja esta marcada como paga."); if (date == null) throw new InvalidArgumentException("paymentDate", "Data de pagamento e obrigatoria"); if (date.isBefore(saleDate)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (date.isAfter(LocalDate.now())) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); }

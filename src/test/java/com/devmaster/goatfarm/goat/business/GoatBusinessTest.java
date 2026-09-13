@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
@@ -110,7 +111,7 @@ class GoatBusinessTest {
         when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> business.deleteGoat(1L, "1643222002"))
-                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .isInstanceOf(AuthorizationDeniedException.class)
                 .hasMessage("Cabra não pertence à fazenda informada.");
         verify(ownershipService).verifyFarmOwnership(1L);
         verify(goatPort, never()).deleteById(any());

@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -157,5 +159,37 @@ class GlobalExceptionHandlerTest {
         assertEquals("Regra de negócio violada", body.getError());
         assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "business_rule".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
+    }
+
+    @Test
+    void shouldHandleSpringAccessDeniedExceptionWithForbiddenContract() {
+        String message = "Acesso restrito";
+        ResponseEntity<ValidationError> response = globalExceptionHandler.accessDenied(
+                new AccessDeniedException(message), httpServletRequest);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.FORBIDDEN.value(), body.getStatus());
+        assertEquals("Acesso negado", body.getError());
+        assertEquals("/api/v1/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(error ->
+                "auth".equals(error.getFieldName()) && message.equals(error.getMessage())));
+    }
+
+    @Test
+    void shouldHandleApplicationAuthorizationDeniedExceptionWithForbiddenContract() {
+        String message = "Cabra não pertence à fazenda informada.";
+        ResponseEntity<ValidationError> response = globalExceptionHandler.authorizationDenied(
+                new AuthorizationDeniedException(message), httpServletRequest);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.FORBIDDEN.value(), body.getStatus());
+        assertEquals("Acesso negado", body.getError());
+        assertEquals("/api/v1/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(error ->
+                "auth".equals(error.getFieldName()) && message.equals(error.getMessage())));
     }
 }

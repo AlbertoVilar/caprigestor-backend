@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
@@ -30,7 +31,6 @@ import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -129,7 +129,7 @@ public class GoatBusiness implements GoatManagementUseCase {
     public void deleteGoat(Long farmId, String goatId) {
         ownershipService.verifyFarmOwnership(farmId);
         Goat goat = findInFarm(farmId, goatId)
-                .orElseThrow(() -> new AccessDeniedException("Cabra não pertence à fazenda informada."));
+                .orElseThrow(() -> new AuthorizationDeniedException("Cabra não pertence à fazenda informada."));
         goatPort.deleteById(goat.id());
     }
 
