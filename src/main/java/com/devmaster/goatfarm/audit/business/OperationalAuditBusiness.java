@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQue
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
@@ -102,10 +103,9 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
     }
 
     private GoatFarm requireFarm(Long farmId) {
-        return entityFinder.findOrThrow(
-                () -> goatFarmPersistencePort.findById(farmId),
-                "Fazenda nao encontrada."
-        );
+        FarmRecord record = goatFarmPersistencePort.findById(farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada."));
+        GoatFarm farm = new GoatFarm(); farm.setId(record.id()); return farm;
     }
 
     private int normalizeLimit(int limit) {

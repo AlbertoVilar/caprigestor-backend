@@ -7,7 +7,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailabl
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
@@ -146,7 +146,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             throw new BusinessRuleException("externalId", "Identificador externo da ABCC é obrigatório.");
         }
 
-        GoatFarm farm = loadFarm(farmId);
+        FarmRecord farm = loadFarm(farmId);
 
         GoatAbccRawPreviewVO raw;
         try {
@@ -192,7 +192,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .motherRegistrationNumber(trimOrNull(raw.getMaeRegistro()))
                 .userName(null)
                 .farmId(farmId)
-                .farmName(farm.getName())
+                .farmName(farm.name())
                 .normalizationWarnings(warnings)
                 .build();
     }
@@ -281,7 +281,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         }
 
         boolean isAdmin = currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN");
-        GoatFarm farm = loadFarm(farmId);
+        FarmRecord farm = loadFarm(farmId);
         String farmTod = requireFarmTodForNonAdmin(farm, isAdmin);
 
         GoatAbccPreviewResponseVO abccPreview = preview(
@@ -307,7 +307,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         }
 
         boolean isAdmin = currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN");
-        GoatFarm farm = loadFarm(farmId);
+        FarmRecord farm = loadFarm(farmId);
         requireFarmTodForNonAdmin(farm, isAdmin);
 
         List<GoatAbccBatchConfirmItemResultVO> results = new ArrayList<>();
@@ -401,19 +401,19 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .build();
     }
 
-    private GoatFarm loadFarm(Long farmId) {
+    private FarmRecord loadFarm(Long farmId) {
         return entityFinder.findOrThrow(
                 () -> goatFarmPort.findById(farmId),
                 "Fazenda não encontrada."
         );
     }
 
-    private String requireFarmTodForNonAdmin(GoatFarm farm, boolean isAdmin) {
+    private String requireFarmTodForNonAdmin(FarmRecord farm, boolean isAdmin) {
         if (isAdmin) {
             return null;
         }
 
-        String farmTod = trimOrNull(farm.getTod());
+        String farmTod = trimOrNull(farm.tod());
         if (farmTod == null) {
             throw new BusinessRuleException(FIELD_TOD, MSG_MISSING_FARM_TOD);
         }

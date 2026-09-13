@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBreedCount;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
@@ -90,7 +91,7 @@ class GoatBusinessBehavioralCoverageTest {
         request.setMotherRegistrationNumber("164321002");
 
         doNothing().when(ownershipService).verifyFarmManagement(1L);
-        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(currentPrincipalQuery.requireCurrent()).thenReturn(
                 new AuthenticatedPrincipal(1L, "test@example.com", "Test", Set.of()));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
@@ -238,5 +239,9 @@ class GoatBusinessBehavioralCoverageTest {
         return Goat.rehydrate(new GoatId(id), RegistrationIdentity.of(registration, tod, toe),
                 name, gender, breed, "Marrom", LocalDate.of(2025, 1, 1), status,
                 exitType, exitDate, exitNotes, Category.PA, null, null, 1L, 1L, "Capril", "Alberto");
+    }
+
+    private FarmRecord farmRecord() {
+        return new FarmRecord(1L, "Capril", null, null, null, null, List.of(), null, null, null);
     }
 }

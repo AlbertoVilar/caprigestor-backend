@@ -18,6 +18,8 @@ public interface UserManagementUseCase {
 
     UserResponseVO findById(Long userId);
 
+    UserResponseVO findOrCreateUser(UserRequestVO vo);
+
     void updatePassword(Long userId, String newPassword);
 
     UserResponseVO updateRoles(Long userId, java.util.List<String> roles);

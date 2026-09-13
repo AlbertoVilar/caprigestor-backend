@@ -215,15 +215,16 @@ public class UserBusiness implements com.devmaster.goatfarm.authority.applicatio
     }
 
     @Transactional
-    public AuthorityAccount findOrCreateUser(UserRequestVO vo) {
+    public UserResponseVO findOrCreateUser(UserRequestVO vo) {
         validateUserData(vo, true);
-        return userPort.findByEmail(vo.getEmail())
+        AuthorityAccount account = userPort.findByEmail(vo.getEmail())
                 .orElseGet(() -> {
-                    AuthorityAccount account = authorityBusinessMapper.toAccount(vo);
+                    AuthorityAccount newAccount = authorityBusinessMapper.toAccount(vo);
                     Set<String> roles = resolveUserRoles(vo);
-                    return userPort.save(new AuthorityAccount(account.id(), account.name(), account.email(), account.cpf(),
+                    return userPort.save(new AuthorityAccount(newAccount.id(), newAccount.name(), newAccount.email(), newAccount.cpf(),
                             passwordHashingPort.hash(vo.getPassword()), roles));
                 });
+        return authorityBusinessMapper.toResponseVO(account);
     }
 
     @Transactional(readOnly = true)

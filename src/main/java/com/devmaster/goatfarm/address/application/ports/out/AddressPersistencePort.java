@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.address.application.ports.out;
 
-import com.devmaster.goatfarm.address.persistence.entity.Address;
+import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 
 import java.util.Optional;
 
@@ -9,15 +9,15 @@ import java.util.Optional;
  */
 public interface AddressPersistencePort {
 
-    Address save(Address address);
+    AddressResponseVO save(AddressResponseVO address);
 
-    Optional<Address> findById(Long id);
+    Optional<AddressResponseVO> findById(Long id);
 
-    Optional<Address> findByIdAndFarmId(Long addressId, Long farmId);
+    Optional<AddressResponseVO> findByIdAndFarmId(Long addressId, Long farmId);
 
     void deleteById(Long id);
 
-    Optional<Address> searchExactAddress(String street,
+    Optional<AddressResponseVO> searchExactAddress(String street,
                                          String neighborhood,
                                          String city,
                                          String state,

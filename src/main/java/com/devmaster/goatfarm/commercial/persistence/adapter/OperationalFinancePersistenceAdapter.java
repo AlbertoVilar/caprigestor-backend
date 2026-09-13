@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleRepository;
 import com.devmaster.goatfarm.commercial.persistence.repository.MilkSaleRepository;
 import com.devmaster.goatfarm.commercial.persistence.repository.OperationalExpenseRepository;
+import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,19 +19,25 @@ public class OperationalFinancePersistenceAdapter implements OperationalFinanceP
     private final OperationalExpenseRepository operationalExpenseRepository;
     private final AnimalSaleRepository animalSaleRepository;
     private final MilkSaleRepository milkSaleRepository;
+    private final GoatFarmRepository goatFarmRepository;
 
     public OperationalFinancePersistenceAdapter(
             OperationalExpenseRepository operationalExpenseRepository,
             AnimalSaleRepository animalSaleRepository,
-            MilkSaleRepository milkSaleRepository
+            MilkSaleRepository milkSaleRepository,
+            GoatFarmRepository goatFarmRepository
     ) {
         this.operationalExpenseRepository = operationalExpenseRepository;
         this.animalSaleRepository = animalSaleRepository;
         this.milkSaleRepository = milkSaleRepository;
+        this.goatFarmRepository = goatFarmRepository;
     }
 
     @Override
     public OperationalExpense saveOperationalExpense(OperationalExpense operationalExpense) {
+        if (operationalExpense.getFarm() != null && operationalExpense.getFarm().getId() != null) {
+            operationalExpense.setFarm(goatFarmRepository.getReferenceById(operationalExpense.getFarm().getId()));
+        }
         return operationalExpenseRepository.save(operationalExpense);
     }
 

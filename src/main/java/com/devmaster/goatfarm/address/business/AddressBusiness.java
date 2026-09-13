@@ -3,8 +3,6 @@ package com.devmaster.goatfarm.address.business;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.address.business.bo.AddressRequestVO;
 import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
-import com.devmaster.goatfarm.address.business.mapper.AddressBusinessMapper;
-import com.devmaster.goatfarm.address.persistence.entity.Address;
 import com.devmaster.goatfarm.address.application.ports.out.AddressPersistencePort;
 import com.devmaster.goatfarm.address.application.ports.in.AddressManagementUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
@@ -13,7 +11,6 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Set;
 
 @Service
@@ -21,13 +18,11 @@ import java.util.Set;
 public class AddressBusiness implements AddressManagementUseCase {
 
     private final AddressPersistencePort addressPort;
-    private final AddressBusinessMapper addressMapper;
     private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
 
-    public AddressBusiness(AddressPersistencePort addressPort, AddressBusinessMapper addressMapper, FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder) {
+    public AddressBusiness(AddressPersistencePort addressPort, FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder) {
         this.addressPort = addressPort;
-        this.addressMapper = addressMapper;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
     }
@@ -35,41 +30,27 @@ public class AddressBusiness implements AddressManagementUseCase {
     public AddressResponseVO createAddress(Long farmId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateAddressData(requestVO);
-        Address entity = addressMapper.toEntity(requestVO);
-        Address saved = addressPort.save(entity);
-        return addressMapper.toResponseVO(saved);
+        return addressPort.save(toResponse(requestVO));
     }
 
     public AddressResponseVO updateAddress(Long farmId, Long addressId, AddressRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
         validateAddressData(requestVO);
-        Address current = entityFinder.findOrThrow(
+        AddressResponseVO current = entityFinder.findOrThrow(
                 () -> addressPort.findByIdAndFarmId(addressId, farmId),
                 "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
         );
-        addressMapper.updateEntity(current, requestVO);
-        Address updated = addressPort.save(current);
-        return addressMapper.toResponseVO(updated);
-    }
-
-    public Address updateAddressEntity(Long farmId, Long addressId, AddressRequestVO requestVO) {
-        ownershipService.verifyFarmOwnership(farmId);
-        validateAddressData(requestVO);
-        Address current = entityFinder.findOrThrow(
-                () -> addressPort.findByIdAndFarmId(addressId, farmId),
-                "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
-        );
-        addressMapper.updateEntity(current, requestVO);
+        copy(requestVO, current);
         return addressPort.save(current);
     }
 
     public AddressResponseVO findAddressById(Long farmId, Long addressId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Address found = entityFinder.findOrThrow(
+        AddressResponseVO found = entityFinder.findOrThrow(
                 () -> addressPort.findByIdAndFarmId(addressId, farmId),
                 "Endereço com ID " + addressId + " não encontrado na fazenda " + farmId
         );
-        return addressMapper.toResponseVO(found);
+        return found;
     }
 
     public String deleteAddress(Long farmId, Long addressId) {
@@ -103,14 +84,24 @@ public class AddressBusiness implements AddressManagementUseCase {
         }
     }
 
-    public Address findOrCreateAddressEntity(AddressRequestVO requestVO) {
+    public AddressResponseVO findOrCreateAddress(AddressRequestVO requestVO) {
         validateAddressData(requestVO);
         // Alteração crítica: Não buscamos mais endereço existente para reutilizar.
         // Como Address agora é dependente (orphanRemoval=true) da Farm, cada Farm deve ter sua própria instância de Address.
         // Isso evita que a deleção de uma fazenda apague o endereço compartilhado por outra.
         
-        Address entity = addressMapper.toEntity(requestVO);
-        return addressPort.save(entity);
+        return addressPort.save(toResponse(requestVO));
+    }
+
+    private AddressResponseVO toResponse(AddressRequestVO request) {
+        return new AddressResponseVO(request.getId(), request.getStreet(), request.getCity(),
+                request.getNeighborhood(), request.getState(), request.getZipCode(), request.getCountry());
+    }
+
+    private void copy(AddressRequestVO source, AddressResponseVO target) {
+        target.setStreet(source.getStreet()); target.setCity(source.getCity());
+        target.setNeighborhood(source.getNeighborhood()); target.setState(source.getState());
+        target.setZipCode(source.getZipCode()); target.setCountry(source.getCountry());
     }
 
     private boolean isValidBrazilianState(String state) {

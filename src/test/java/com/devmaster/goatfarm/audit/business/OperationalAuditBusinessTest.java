@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +73,7 @@ class OperationalAuditBusinessTest {
         AuthenticatedPrincipal currentUser = new AuthenticatedPrincipal(
                 7L, "operator@example.com", "Operador QA", Set.of());
 
-        when(goatFarmPersistencePort.findById(1L)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(currentPrincipalQuery.requireCurrent()).thenReturn(currentUser);
         when(operationalAuditPersistencePort.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -109,7 +110,7 @@ class OperationalAuditBusinessTest {
                 .description("Saida auditada")
                 .build();
 
-        when(goatFarmPersistencePort.findById(1L)).thenReturn(Optional.of(farm));
+        when(goatFarmPersistencePort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(operationalAuditPersistencePort.findByFarmIdAndGoatRegistrationNumber(1L, "G-001", 15)).thenReturn(List.of(entry));
 
         var result = operationalAuditBusiness.listEntries(1L, " G-001 ", 0);
@@ -117,5 +118,9 @@ class OperationalAuditBusinessTest {
         assertEquals(1, result.size());
         assertEquals("Saida do rebanho", result.get(0).actionLabel());
         assertEquals("Saida auditada", result.get(0).description());
+    }
+
+    private FarmRecord farmRecord() {
+        return new FarmRecord(1L, "Fazenda QA", null, null, null, null, java.util.List.of(), null, null, null);
     }
 }

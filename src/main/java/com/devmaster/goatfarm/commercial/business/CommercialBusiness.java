@@ -25,6 +25,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
@@ -353,10 +354,10 @@ public class CommercialBusiness implements CommercialUseCase {
         if (!ownershipService.canManageFarm(farmId)) {
             throw new AccessDeniedException("Usuario nao pode gerenciar esta fazenda.");
         }
-        return entityFinder.findOrThrow(
-                () -> goatFarmPersistencePort.findById(farmId),
-                "Fazenda nao encontrada."
-        );
+        FarmRecord record = goatFarmPersistencePort.findById(farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada."));
+        GoatFarm farm = new GoatFarm(); farm.setId(record.id()); farm.setName(record.name()); farm.setTod(record.tod());
+        return farm;
     }
 
     private Customer requireActiveCustomer(Long farmId, Long customerId) {

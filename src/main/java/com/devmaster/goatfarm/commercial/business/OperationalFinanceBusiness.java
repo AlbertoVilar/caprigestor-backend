@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -115,8 +116,10 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
             throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
         }
 
-        return goatFarmPersistencePort.findById(farmId)
+        FarmRecord record = goatFarmPersistencePort.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda nao encontrada."));
+        GoatFarm farm = new GoatFarm(); farm.setId(record.id()); farm.setName(record.name()); farm.setTod(record.tod());
+        return farm;
     }
 
     private void validateRequest(OperationalExpenseRequestVO requestVO) {
