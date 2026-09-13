@@ -86,10 +86,12 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             insertGoat(connection, "W2-GOAT-2", 1, 102);
             insertGoat(connection, "W2-GOAT-3", 2, 101);
             insertGoat(connection, "W2-GOAT-4", 2, 102);
+            insertGoat(connection, "W2-GOAT-5", 1, 101);
             long goat1 = goatId(connection, "W2-GOAT-1");
             long goat2 = goatId(connection, "W2-GOAT-2");
             long goat3 = goatId(connection, "W2-GOAT-3");
             long goat4 = goatId(connection, "W2-GOAT-4");
+            long goat5 = goatId(connection, "W2-GOAT-5");
 
             execute(connection, """
                     insert into goat_creator_reference
@@ -108,6 +110,16 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                         (goat_id, creator_tod, creator_farm_id, source, recorded_at)
                     values (999999, '12345', 101, 'BIRTH', current_timestamp)
                     """);
+            assertSqlFails(connection, """
+                    insert into goat_creator_reference
+                        (goat_id, creator_farm_id, source, recorded_at)
+                    values (%d, 101, 'BIRTH', current_timestamp)
+                    """.formatted(goat4));
+            assertSqlFails(connection, """
+                    insert into goat_creator_reference
+                        (goat_id, creator_tod, creator_farm_id, source, recorded_at)
+                    values (%d, '12345', 999999, 'BIRTH', current_timestamp)
+                    """.formatted(goat4));
 
             execute(connection, """
                     insert into goat_ownership_period
@@ -150,6 +162,11 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                         (goat_id, farm_id, started_at, entry_type, source)
                     values (%d, 999999, current_timestamp, 'BIRTH', 'test')
                     """.formatted(goat4));
+            assertSqlFails(connection, """
+                    insert into goat_ownership_period
+                        (goat_id, farm_id, started_at, entry_type, source)
+                    values (999999, 101, current_timestamp, 'BIRTH', 'test')
+                    """);
 
             insertTransfer(connection, goat1, 101, 102, "INTERNAL_TRANSFER", "REQUESTED", 1, "pending-1");
             assertSqlFails(connection, """
@@ -170,6 +187,21 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                             'same-key', current_timestamp, 1)
                     """.formatted(goat4));
             insertTransfer(connection, goat4, 101, 102, "INTERNAL_TRANSFER", "REQUESTED", 2, "same-key");
+
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, requested_by)
+                    values (%d, 102, 'INTERNAL_TRANSFER', 'REQUESTED', 'missing source',
+                            'bad-kind-source-null', current_timestamp, 1)
+                    """.formatted(goat5));
+            execute(connection, """
+                    insert into ownership_transfer
+                        (goat_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, requested_by)
+                    values (%d, 102, 'EXTERNAL_CLAIM', 'REJECTED', 'external claim',
+                            'external-claim-valid', current_timestamp, 1)
+                    """.formatted(goat5));
 
             assertSqlFails(connection, """
                     insert into ownership_transfer
@@ -216,6 +248,78 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                     values (999999, 101, 102, 'INTERNAL_TRANSFER', 'REQUESTED', 'invalid goat',
                             'bad-fk-goat', current_timestamp, 1)
                     """);
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, requested_by)
+                    values (%d, 999999, 102, 'INTERNAL_TRANSFER', 'REQUESTED', 'invalid source farm',
+                            'bad-fk-source-farm', current_timestamp, 1)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, requested_by)
+                    values (%d, 101, 999999, 'INTERNAL_TRANSFER', 'REQUESTED', 'invalid target farm',
+                            'bad-fk-target-farm', current_timestamp, 1)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, requested_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'REQUESTED', 'invalid requester',
+                            'bad-fk-requested-by', current_timestamp, 999999)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, accepted_at, accepted_by, requested_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'ACCEPTED', 'invalid accepter',
+                            'bad-fk-accepted-by', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', 999999, 1)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, accepted_at, effective_at, completed_at,
+                         requested_by, accepted_by, completed_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'COMPLETED', 'invalid completer',
+                            'bad-fk-completed-by', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', timestamptz '2026-01-03 00:00:00+00',
+                            timestamptz '2026-01-03 00:00:00+00', 1, 1, 999999)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, accepted_at, accepted_by, requested_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'REQUESTED', 'invalid requested lifecycle',
+                            'bad-state-requested', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', 1, 1)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, accepted_at, accepted_by, requested_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'REJECTED', 'invalid rejected lifecycle',
+                            'bad-state-rejected', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', 1, 1)
+                    """.formatted(goat5));
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, requested_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'CANCELLED', 'invalid cancelled lifecycle',
+                            'bad-state-cancelled', timestamptz '2026-01-01 00:00:00+00', 1)
+                    """.formatted(goat5));
+            execute(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, accepted_at, effective_at, completed_at,
+                         requested_by, accepted_by, completed_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'COMPLETED', 'valid completed transfer',
+                            'completed-valid', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', timestamptz '2026-01-03 00:00:00+00',
+                            timestamptz '2026-01-03 00:00:00+00', 1, 1, 2)
+                    """.formatted(goat5));
         }
     }
 
