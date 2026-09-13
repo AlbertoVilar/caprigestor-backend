@@ -67,6 +67,15 @@ class GlobalHexagonalBoundaryArchUnitTest {
     }
 
     @Test
+    void applicationAndBusinessCoreMustNotDependOnSpringDao() {
+        noClasses()
+                .that().resideInAnyPackage("..application..", "..business..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.dao..")
+                .because("persistence adapters must translate Spring DAO exceptions before they cross inward ports")
+                .check(IMPORTED_CLASSES);
+    }
+
+    @Test
     void coreMustNotDependOnSpringDataJpaRepositories() {
         noClasses()
                 .that().resideInAnyPackage("..domain..", "..application..", "..business..")

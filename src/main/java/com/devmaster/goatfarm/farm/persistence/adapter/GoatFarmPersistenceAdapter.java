@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.farm.application.ports.in.FarmExistenceQueryUseCas
 import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.application.pagination.PageQuery;
@@ -21,6 +22,7 @@ import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -54,7 +56,13 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort,
         if (command.addressId() != null && (farm.getAddress() == null || !command.addressId().equals(farm.getAddress().getId()))) {
             com.devmaster.goatfarm.address.persistence.entity.Address address = addressRepository.findById(command.addressId()).orElseThrow(() -> new IllegalArgumentException("Endereço não encontrado: " + command.addressId())); farm.setAddress(address);
         }
-        return toRecord(repository.save(farm));
+        GoatFarm saved;
+        try {
+            saved = repository.save(farm);
+        } catch (DataIntegrityViolationException exception) {
+            throw new PersistenceConflictException("Conflito de persistência ao salvar a fazenda.", exception);
+        }
+        return toRecord(saved);
     }
     @Override public void deleteById(Long id) { repository.deleteById(id); }
     @Override public boolean existsById(Long farmId) { return repository.existsById(farmId); }

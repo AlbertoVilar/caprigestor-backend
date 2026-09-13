@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.address.business.bo.AddressResponseVO;
 import com.devmaster.goatfarm.authority.application.ports.in.*;
 import com.devmaster.goatfarm.authority.business.bo.*;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.business.bo.*;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -37,7 +37,7 @@ class GoatFarmBusinessTest {
         when(farmPort.existsByName(any())).thenReturn(false);
         when(farmPort.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddress(any())).thenReturn(new AddressResponseVO(2L, null, null, null, null, null, null));
-        when(farmPort.save(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+        when(farmPort.save(any())).thenThrow(new PersistenceConflictException("conflict", new RuntimeException("duplicate")));
 
         DuplicateEntityException exception = assertThrows(DuplicateEntityException.class,
                 () -> business().createGoatFarm(request()));
@@ -53,7 +53,7 @@ class GoatFarmBusinessTest {
         when(farmPort.existsByTod(any())).thenReturn(false);
         when(addressBusiness.findOrCreateAddress(any())).thenReturn(new AddressResponseVO(2L, null, null, null, null, null, null));
         when(farmPort.save(any())).thenReturn(record());
-        doThrow(new DataIntegrityViolationException("duplicate phone"))
+        doThrow(new PersistenceConflictException("conflict", new RuntimeException("duplicate phone")))
                 .when(phones).createPhones(eq(1L), any());
 
         DuplicateEntityException exception = assertThrows(DuplicateEntityException.class,

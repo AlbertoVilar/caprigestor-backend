@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.exceptions;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
@@ -184,6 +185,16 @@ public class GlobalExceptionHandler {
         } else {
             err.addError("integrity", "Violação de integridade no banco de dados");
         }
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(PersistenceConflictException.class)
+    public ResponseEntity<ValidationError> handlePersistenceConflict(PersistenceConflictException e, HttpServletRequest request) {
+        logger.warn("event=persistence_conflict method={} path={}", request.getMethod(), request.getRequestURI());
+        HttpStatus status = HttpStatus.CONFLICT;
+        ValidationError err = new ValidationError(Instant.now(), status.value(),
+                "Conflito de integridade de dados", request.getRequestURI());
+        err.addError("integrity", "Violação de integridade no banco de dados");
         return ResponseEntity.status(status).body(err);
     }
 

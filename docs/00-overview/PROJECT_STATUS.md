@@ -47,6 +47,11 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   validação crítica, publicação de eventos e emissão de JWT.
 - A11-I1 reforçou o guard global que impede o domínio de depender de
   `application`.
+- DEV-A11-I2-I isolou exceções de persistência: adapters de Farm e Phone
+  traduzem conflitos Spring DAO para `PersistenceConflictException`, o
+  onboarding preserva seu 409 histórico de duplicidade e os demais fluxos
+  mantêm o contrato genérico de integridade. O guard global de Spring DAO no
+  core está ativo e verde.
 - GoatId técnico foi introduzido e propagado estruturalmente pelas migrations
   V39–V43. FKs locais críticas usam identidade técnica; RG permanece
   identificador registral/ABCC e snapshot de negócio.

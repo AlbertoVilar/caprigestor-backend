@@ -11,6 +11,7 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.farm.application.model.FarmPersistenceCommand;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.application.pagination.PageQuery;
@@ -21,7 +22,6 @@ import com.devmaster.goatfarm.farm.business.bo.*;
 import com.devmaster.goatfarm.farm.business.mapper.FarmBusinessMapper;
 import com.devmaster.goatfarm.phone.business.bo.PhoneRequestVO;
 import com.devmaster.goatfarm.phone.business.phoneservice.PhoneBusiness;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,11 +49,14 @@ public class GoatFarmBusiness implements GoatFarmManagementUseCase {
         if (farm.getTod() != null && goatFarmPort.existsByTod(farm.getTod())) throw new DuplicateEntityException("Já existe uma fazenda com o código '" + farm.getTod() + "'.");
         OwnerData owner = resolveOwner(request.getUser(), current);
         var address = addressBusiness.findOrCreateAddress(request.getAddress());
+        FarmRecord saved;
         try {
-            FarmRecord saved = goatFarmPort.save(new FarmPersistenceCommand(null, farm.getName(), farm.getTod(), farm.getLogoUrl(), owner.id(), address.getId(), farm.getVersion()));
+            saved = goatFarmPort.save(new FarmPersistenceCommand(null, farm.getName(), farm.getTod(), farm.getLogoUrl(), owner.id(), address.getId(), farm.getVersion()));
             phoneBusiness.createPhones(saved.id(), request.getPhones());
-            return mapper.toFullResponseVO(require(saved.id(), true));
-        } catch (DataIntegrityViolationException e) { throw new DuplicateEntityException("Não foi possível processar a solicitação devido a conflito de dados."); }
+        } catch (PersistenceConflictException e) {
+            throw new DuplicateEntityException("Não foi possível processar a solicitação devido a conflito de dados.");
+        }
+        return mapper.toFullResponseVO(require(saved.id(), true));
     }
 
     @Transactional
