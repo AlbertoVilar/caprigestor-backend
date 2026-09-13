@@ -1,18 +1,14 @@
 package com.devmaster.goatfarm.audit.business;
 
-import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
+import com.devmaster.goatfarm.audit.application.model.OperationalAuditRecord;
 import com.devmaster.goatfarm.audit.application.ports.out.OperationalAuditPersistencePort;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditEntryVO;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
-import com.devmaster.goatfarm.audit.persistence.entity.OperationalAuditEntry;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.application.model.FarmRecord;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +26,6 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
 
     private final OperationalAuditPersistencePort operationalAuditPersistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
-    private final FarmAuthorizationUseCase ownershipService;
-    private final EntityFinder entityFinder;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
 
@@ -39,15 +33,11 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
     public OperationalAuditBusiness(
             OperationalAuditPersistencePort operationalAuditPersistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
-            FarmAuthorizationUseCase ownershipService,
-            EntityFinder entityFinder,
             GoatReferenceQueryPort goatReferenceQueryPort,
             CurrentPrincipalQueryUseCase currentPrincipalQuery
     ) {
         this.operationalAuditPersistencePort = operationalAuditPersistencePort;
         this.goatFarmPersistencePort = goatFarmPersistencePort;
-        this.ownershipService = ownershipService;
-        this.entityFinder = entityFinder;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.currentPrincipalQuery = currentPrincipalQuery;
     }
@@ -66,20 +56,22 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
         }
         String description = normalizeRequiredText("description", recordVO.description(), "Descricao da auditoria e obrigatoria.");
 
-        GoatFarm farm = requireFarm(recordVO.farmId());
+        requireFarm(recordVO.farmId());
         AuthenticatedPrincipal currentUser = currentPrincipalQuery.requireCurrent();
 
-        operationalAuditPersistencePort.save(OperationalAuditEntry.builder()
-                .farm(farm)
-                .goatTechnicalId(resolveTechnicalId(recordVO))
-                .goatRegistrationNumber(normalizeOptionalText(recordVO.goatRegistrationNumber()))
-                .actionType(recordVO.actionType())
-                .targetId(normalizeOptionalText(recordVO.targetId()))
-                .actorUserId(currentUser.id())
-                .actorName(currentUser.name())
-                .actorEmail(currentUser.email())
-                .description(description)
-                .build());
+        operationalAuditPersistencePort.save(new OperationalAuditRecord(
+                null,
+                recordVO.farmId(),
+                resolveTechnicalId(recordVO),
+                normalizeOptionalText(recordVO.goatRegistrationNumber()),
+                recordVO.actionType(),
+                normalizeOptionalText(recordVO.targetId()),
+                currentUser.id(),
+                currentUser.name(),
+                currentUser.email(),
+                description,
+                null
+        ));
     }
 
     @Override
@@ -89,7 +81,7 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
         int normalizedLimit = normalizeLimit(limit);
         String normalizedGoatId = normalizeOptionalText(goatId);
 
-        List<OperationalAuditEntry> entries = normalizedGoatId == null
+        List<OperationalAuditRecord> entries = normalizedGoatId == null
                 ? operationalAuditPersistencePort.findByFarmId(farmId, normalizedLimit)
                 : (goatReferenceQueryPort == null ? java.util.Optional.<GoatReference>empty()
                     : goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(normalizedGoatId, farmId))
@@ -102,10 +94,9 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
                 .toList();
     }
 
-    private GoatFarm requireFarm(Long farmId) {
-        FarmRecord record = goatFarmPersistencePort.findById(farmId)
+    private void requireFarm(Long farmId) {
+        goatFarmPersistencePort.findById(farmId)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada."));
-        GoatFarm farm = new GoatFarm(); farm.setId(record.id()); return farm;
     }
 
     private int normalizeLimit(int limit) {
@@ -131,19 +122,19 @@ public class OperationalAuditBusiness implements OperationalAuditUseCase {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private OperationalAuditEntryVO toVO(OperationalAuditEntry entry) {
+    private OperationalAuditEntryVO toVO(OperationalAuditRecord entry) {
         return new OperationalAuditEntryVO(
-                entry.getId(),
-                entry.getGoatTechnicalId(),
-                entry.getGoatRegistrationNumber(),
-                entry.getActionType(),
-                entry.getActionType().getLabel(),
-                entry.getTargetId(),
-                entry.getDescription(),
-                entry.getActorUserId(),
-                entry.getActorName(),
-                entry.getActorEmail(),
-                entry.getCreatedAt()
+                entry.id(),
+                entry.goatTechnicalId(),
+                entry.goatRegistrationNumber(),
+                entry.actionType(),
+                entry.actionType().getLabel(),
+                entry.targetId(),
+                entry.description(),
+                entry.actorUserId(),
+                entry.actorName(),
+                entry.actorEmail(),
+                entry.createdAt()
         );
     }
 
