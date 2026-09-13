@@ -6,17 +6,23 @@ import com.devmaster.goatfarm.authority.persistence.repository.RoleRepository;
 import com.devmaster.goatfarm.authority.persistence.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +36,53 @@ class AdminUserInitializerTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Test
+    void shouldIgnoreBlankBootstrapConfigurationWhenBootstrapIsDisabled() throws Exception {
+        AdminUserInitializer initializer = new AdminUserInitializer(
+                userRepository,
+                roleRepository,
+                passwordEncoder,
+                false,
+                false,
+                "",
+                "",
+                "",
+                ""
+        );
+
+        initializer.run();
+
+        verifyNoInteractions(userRepository, roleRepository, passwordEncoder);
+    }
+
+    @ParameterizedTest
+    @MethodSource("blankBootstrapConfigurations")
+    void shouldFailFastWhenBootstrapIsEnabledWithBlankRequiredConfiguration(
+            String email,
+            String name,
+            String cpf,
+            String initialPassword,
+            String expectedField
+    ) {
+        AdminUserInitializer initializer = new AdminUserInitializer(
+                userRepository,
+                roleRepository,
+                passwordEncoder,
+                true,
+                false,
+                email,
+                name,
+                cpf,
+                initialPassword
+        );
+
+        assertThatThrownBy(initializer::run)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Bootstrap admin is enabled but required configuration '" + expectedField + "' is blank");
+
+        verifyNoInteractions(userRepository, roleRepository, passwordEncoder);
+    }
 
     @Test
     void shouldNotResetExistingAdminPasswordWhenResetFlagIsDisabled() throws Exception {
@@ -106,5 +159,14 @@ class AdminUserInitializerTest {
         assertThat(saved.getPassword()).isEqualTo("encoded-secret");
         assertThat(saved.hasRole("ROLE_ADMIN")).isTrue();
         assertThat(saved.hasRole("ROLE_OPERATOR")).isTrue();
+    }
+
+    private static Stream<Arguments> blankBootstrapConfigurations() {
+        return Stream.of(
+                Arguments.of("", "Bootstrap Admin", "12345678901", "super-secret", "caprigestor.bootstrap.admin.email"),
+                Arguments.of("bootstrap@local", "", "12345678901", "super-secret", "caprigestor.bootstrap.admin.name"),
+                Arguments.of("bootstrap@local", "Bootstrap Admin", "", "super-secret", "caprigestor.bootstrap.admin.cpf"),
+                Arguments.of("bootstrap@local", "Bootstrap Admin", "12345678901", "", "caprigestor.bootstrap.admin.initial-password")
+        );
     }
 }
