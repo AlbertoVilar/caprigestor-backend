@@ -2,8 +2,8 @@ package com.devmaster.goatfarm.article.application.ports.out;
 
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,13 +22,13 @@ public interface ArticlePersistencePort {
 
     boolean existsBySlugAndIdNot(String slug, Long id);
 
-    Page<ArticleResponseVO> findAll(Pageable pageable);
+    PageResult<ArticleResponseVO> findAll(PageQuery pageQuery);
 
-    Page<ArticleResponseVO> findPublished(ArticleCategory category, String q, Pageable pageable);
+    PageResult<ArticleResponseVO> findPublished(ArticleCategory category, String q, PageQuery pageQuery);
 
     List<ArticleResponseVO> findTop3HighlightedPublished();
 
-    Page<ArticleResponseVO> findLatestPublished(Pageable pageable);
+    List<ArticleResponseVO> findLatestPublished(int limit);
 
     void deleteById(Long id);
 }

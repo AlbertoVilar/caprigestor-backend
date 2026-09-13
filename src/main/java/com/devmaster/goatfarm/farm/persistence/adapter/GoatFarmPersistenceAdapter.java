@@ -13,9 +13,14 @@ import com.devmaster.goatfarm.farm.application.ports.out.FarmOwnerQueryPort;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortSpec;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
 import com.devmaster.goatfarm.phone.business.bo.PhoneResponseVO;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -34,8 +39,8 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort,
     @Override public Optional<FarmRecord> findByIdAndUserId(Long id, Long userId) { return repository.findByIdAndUserId(id, userId).map(this::toRecord); }
     @Override public Optional<FarmRecord> findByAddressId(Long addressId) { return repository.findByAddressId(addressId).map(this::toRecord); }
     @Override public Optional<FarmRecord> findByIdWithDetails(Long id) { return repository.findByIdWithDetails(id).map(this::toRecord); }
-    @Override public Page<FarmRecord> searchByName(String name, Pageable pageable) { return repository.searchGoatFarmByName(name, pageable).map(this::toRecord); }
-    @Override public Page<FarmRecord> findAll(Pageable pageable) { return repository.findAll(pageable).map(this::toRecord); }
+    @Override public PageResult<FarmRecord> searchByName(String name, PageQuery pageQuery) { var page = repository.searchGoatFarmByName(name, toPageable(pageQuery)); return new PageResult<>(page.getContent().stream().map(this::toRecord).toList(), page.getTotalElements(), page.getNumber(), page.getSize()); }
+    @Override public PageResult<FarmRecord> findAll(PageQuery pageQuery) { var page = repository.findAll(toPageable(pageQuery)); return new PageResult<>(page.getContent().stream().map(this::toRecord).toList(), page.getTotalElements(), page.getNumber(), page.getSize()); }
     @Override public boolean existsByName(String name) { return repository.existsByName(name); }
     @Override public boolean existsByTod(String tod) { return repository.existsByTod(tod); }
 
@@ -64,5 +69,15 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort,
         AddressResponseVO address = addressEntity == null ? null : new AddressResponseVO(addressEntity.getId(), addressEntity.getStreet(), addressEntity.getCity(), addressEntity.getNeighborhood(), addressEntity.getState(), addressEntity.getZipCode(), addressEntity.getCountry());
         List<PhoneResponseVO> phones = farm.getPhones() == null ? List.of() : farm.getPhones().stream().map(p -> new PhoneResponseVO(p.getId(), p.getDdd(), p.getNumber())).toList();
         return new FarmRecord(farm.getId(), farm.getName(), farm.getTod(), farm.getLogoUrl(), owner, address, phones, farm.getCreatedAt(), farm.getUpdatedAt(), farm.getVersion());
+    }
+
+    private Pageable toPageable(PageQuery query) {
+        Sort sort = Sort.by(query.sort().stream().map(this::toOrder).toList());
+        return PageRequest.of(query.page(), query.size(), sort);
+    }
+
+    private Sort.Order toOrder(SortSpec spec) {
+        return new Sort.Order(spec.direction() == SortDirection.ASC
+                ? Sort.Direction.ASC : Sort.Direction.DESC, spec.field());
     }
 }

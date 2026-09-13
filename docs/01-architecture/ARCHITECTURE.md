@@ -105,6 +105,17 @@ business, API, domain e configuração não dependem de tipos JPA do módulo Goa
 dependem de Spring Data. O controller converte o transporte HTTP e o adapter
 converte para `Pageable`/`Page` somente na borda de persistência.
 
+### Paginação compartilhada (Article e Farm)
+
+`application.pagination` fornece `PageQuery`, `SortSpec`/`SortDirection` e
+`PageResult` como contratos neutros do core. Article e Farm recebem esses tipos
+nos ports e casos de uso; a API ainda recebe `Pageable` e reconstrói o `Page`
+Spring na borda para preservar os JSONs existentes. Os adapters convertem a
+consulta neutra para `PageRequest`/`Sort` e mapeiam entidades JPA para records/VOs.
+Todas as ordens de sort recebidas são preservadas na ordem original. Destaques
+de Article usam a intenção `findLatestPublished(limit)`, sem paginação Spring no
+business.
+
 ### Lactação e leite
 
 `milk.domain.Lactation` é agregado sem framework responsável por transições
@@ -119,8 +130,10 @@ do módulo Milk sobre tabelas de reprodução.
 O core application/business está livre de dependências diretas em entidades
 JPA: o baseline de `ApplicationPortPersistenceBoundaryArchUnitTest` é zero e
 o guard global impede regressões. Ainda existem dívidas independentes de
-persistência (por exemplo, `Page`/`Pageable`/`Sort`) que serão tratadas em waves
-posteriores, sem reabrir o isolamento JPA concluído.
+ persistência (por exemplo, `Page`/`Pageable`/`Sort`) que permanecem em
+ Health, Inventory, Milk e Reproduction e serão tratadas em waves posteriores,
+ sem reabrir o isolamento JPA concluído. Article e Farm já não importam esses
+ tipos Spring no application/business.
 
 A wave DEV-A11-I3-A isolou Article, a DEV-A11-I3-B isolou Health, a
 DEV-A11-I3-C isolou Farm/Address/Phone das entidades JPA (baseline 11 -> 5) e

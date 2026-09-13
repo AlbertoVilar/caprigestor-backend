@@ -4,20 +4,20 @@ import com.devmaster.goatfarm.article.business.bo.ArticlePublicDetailResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.List;
 
 public interface ArticleQueryUseCase {
 
-    Page<ArticlePublicListResponseVO> getPublishedArticles(ArticleCategory category, String q, Pageable pageable);
+    PageResult<ArticlePublicListResponseVO> getPublishedArticles(ArticleCategory category, String q, PageQuery pageQuery);
 
     ArticlePublicDetailResponseVO getPublishedArticleBySlug(String slug);
 
     List<ArticlePublicListResponseVO> getHighlights();
 
-    Page<ArticleResponseVO> getAllArticles(Pageable pageable);
+    PageResult<ArticleResponseVO> getAllArticles(PageQuery pageQuery);
 
     ArticleResponseVO getArticleById(Long id);
 }

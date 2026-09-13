@@ -203,8 +203,8 @@ class CommercialTransactionRollbackPostgresIntegrationTest {
                 public Optional<FarmRecord> findByIdAndUserId(Long id, Long userId) { return findById(id); }
                 public Optional<FarmRecord> findByAddressId(Long addressId) { return Optional.empty(); }
                 public Optional<FarmRecord> findByIdWithDetails(Long id) { return findById(id); }
-                public org.springframework.data.domain.Page<FarmRecord> searchByName(String name, org.springframework.data.domain.Pageable pageable) { return org.springframework.data.domain.Page.empty(pageable); }
-                public org.springframework.data.domain.Page<FarmRecord> findAll(org.springframework.data.domain.Pageable pageable) { return org.springframework.data.domain.Page.empty(pageable); }
+                public com.devmaster.goatfarm.application.pagination.PageResult<FarmRecord> searchByName(String name, com.devmaster.goatfarm.application.pagination.PageQuery pageQuery) { return new com.devmaster.goatfarm.application.pagination.PageResult<>(List.of(), 0, pageQuery.page(), pageQuery.size()); }
+                public com.devmaster.goatfarm.application.pagination.PageResult<FarmRecord> findAll(com.devmaster.goatfarm.application.pagination.PageQuery pageQuery) { return new com.devmaster.goatfarm.application.pagination.PageResult<>(List.of(), 0, pageQuery.page(), pageQuery.size()); }
                 public boolean existsByName(String name) { return false; }
                 public boolean existsByTod(String tod) { return false; }
                 public FarmRecord save(com.devmaster.goatfarm.farm.application.model.FarmPersistenceCommand command) { throw new UnsupportedOperationException(); }
