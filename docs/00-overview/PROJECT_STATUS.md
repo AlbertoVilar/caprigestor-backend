@@ -54,6 +54,10 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
 - DEV-A11-I3-F1 isolou a paginação de Article e Farm do core: `PageQuery`,
   `PageResult` e `SortSpec` são modelos neutros; controllers mantêm o contrato
   HTTP Spring e adapters traduzem para `Pageable`/`Page`.
+- DEV-A11-I3-F2 isolou a paginação de Health do core usando os mesmos contratos
+  neutros. O calendário e as consultas por cabra preservam o JSON Spring na API;
+  alertas usam uma janela de eventos limitada orientada à intenção, mantendo os
+  contadores totais sem expor paginação ao business.
 - A retificação registral preserva GoatId, é administrativa e mantém histórico
   imutável; o `PUT` comum não altera identidade.
 - DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)
@@ -75,7 +79,7 @@ rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
   responsáveis por resolver entidades JPA. Audit já usa `OperationalAuditRecord`
   e está isolado de entidades JPA no core (DEV-A11-I3-D).
 - Há dependências legadas do core a `Page`/`Pageable`/`Sort` em módulos fora do
-  escopo F1 e,
+  escopo F2 e,
   no contexto Authority, a APIs de autenticação. Guards globais para essas
   dívidas permanecem planejados até a remoção incremental.
 - A transição de identidade ainda contém compatibilidades de API/token por RG e

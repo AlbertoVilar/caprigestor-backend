@@ -11,6 +11,8 @@ import com.devmaster.goatfarm.health.api.mapper.HealthWithdrawalApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
@@ -21,9 +23,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -201,7 +201,7 @@ class HealthEventControllerTest {
     void listByGoat_shouldPreservePageMetadataAndIncomingSort() throws Exception {
         var pageable = PageRequest.of(1, 2, Sort.by(Sort.Order.desc("scheduledDate"), Sort.Order.asc("title")));
         when(queryUseCase.listByGoat(anyLong(), any(), isNull(), isNull(), isNull(), isNull(), any()))
-                .thenReturn(new PageImpl<>(java.util.List.of(), pageable, 4));
+                .thenReturn(new PageResult<>(java.util.List.of(), 4, 1, 2));
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/health-events", 1L, "GOAT-001")
                         .param("page", "1")
@@ -213,13 +213,13 @@ class HealthEventControllerTest {
                 .andExpect(jsonPath("$.page.totalElements").value(4))
                 .andExpect(jsonPath("$.page.totalPages").value(2));
 
-        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(PageQuery.class);
         verify(queryUseCase).listByGoat(anyLong(), any(), isNull(), isNull(), isNull(), isNull(), pageableCaptor.capture());
         var captured = pageableCaptor.getValue();
-        org.junit.jupiter.api.Assertions.assertEquals(1, captured.getPageNumber());
-        org.junit.jupiter.api.Assertions.assertEquals(2, captured.getPageSize());
+        org.junit.jupiter.api.Assertions.assertEquals(1, captured.page());
+        org.junit.jupiter.api.Assertions.assertEquals(2, captured.size());
         org.junit.jupiter.api.Assertions.assertEquals(
                 java.util.List.of("scheduledDate: DESC", "title: ASC"),
-                captured.getSort().stream().map(order -> order.getProperty() + ": " + order.getDirection()).toList());
+                captured.sort().stream().map(order -> order.field() + ": " + order.direction()).toList());
     }
 }

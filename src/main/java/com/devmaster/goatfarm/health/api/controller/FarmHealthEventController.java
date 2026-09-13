@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.health.api.mapper.FarmHealthAlertsApiMapper;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.FarmHealthAlertsQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertsResponseVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
@@ -71,8 +73,9 @@ public class FarmHealthEventController {
             @RequestParam(required = false) HealthEventStatus status,
             Pageable pageable
     ) {
-        Page<HealthEventResponseVO> pageVO = queryUseCase.listCalendar(farmId, from, to, type, status, pageable);
-        return ResponseEntity.ok(pageVO.map(apiMapper::toDTO));
+        PageResult<HealthEventResponseVO> result = queryUseCase.listCalendar(
+                farmId, from, to, type, status, SpringPageMapper.toQuery(pageable));
+        return ResponseEntity.ok(SpringPageMapper.toSpringPage(result.map(apiMapper::toDTO), pageable));
     }
 
     @Operation(summary = "Alertas do aplicativo", description = "Retorna contadores e top 5 para hoje, próximos dias e atrasados.")

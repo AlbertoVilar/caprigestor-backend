@@ -21,4 +21,17 @@ class HealthBoundaryArchUnitTest {
                 .because("Health application and business layers must remain independent from JPA entities")
                 .check(imported);
     }
+
+    @Test
+    void healthApplicationAndBusinessMustNotDependOnSpringDataPagination() {
+        JavaClasses imported = new ClassFileImporter()
+                .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+                .importPackages("com.devmaster.goatfarm");
+
+        noClasses()
+                .that().resideInAnyPackage("..health.application..", "..health.business..")
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.data.domain..")
+                .because("Health application and business layers must remain independent from Spring Data pagination")
+                .check(imported);
+    }
 }

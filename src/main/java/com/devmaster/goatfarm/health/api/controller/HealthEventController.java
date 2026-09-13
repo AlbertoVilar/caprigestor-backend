@@ -8,6 +8,9 @@ import com.devmaster.goatfarm.health.api.mapper.HealthWithdrawalApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
@@ -189,8 +192,9 @@ public class HealthEventController {
             @RequestParam(required = false) HealthEventStatus status,
             Pageable pageable
     ) {
-        Page<HealthEventResponseVO> page = queryUseCase.listByGoat(farmId, goatId, from, to, type, status, pageable);
-        return ResponseEntity.ok(page.map(apiMapper::toDTO));
+        PageResult<HealthEventResponseVO> result = queryUseCase.listByGoat(
+                farmId, goatId, from, to, type, status, SpringPageMapper.toQuery(pageable));
+        return ResponseEntity.ok(SpringPageMapper.toSpringPage(result.map(apiMapper::toDTO), pageable));
     }
 
     @Operation(summary = "Consultar carencia sanitaria ativa", description = "Deriva o status de carencia ativa de leite e carne para a cabra informada.")

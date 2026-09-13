@@ -2,6 +2,10 @@ package com.devmaster.goatfarm.health.persistence.adapter;
 
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
+import com.devmaster.goatfarm.health.application.model.HealthEventWindow;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
@@ -11,6 +15,8 @@ import com.devmaster.goatfarm.health.persistence.repository.HealthEventRepositor
 import com.devmaster.goatfarm.health.persistence.mapper.HealthEventPersistenceMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -59,35 +65,54 @@ public class HealthEventPersistenceAdapter implements HealthEventPersistencePort
     }
 
     @Override
-    public Page<HealthEventRecord> findByFarmIdAndGoatId(
+    public PageResult<HealthEventRecord> findByFarmIdAndGoatId(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
             HealthEventType type,
             HealthEventStatus status,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
+        Pageable pageable = toPageable(pageQuery);
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Page<HealthEvent> technical = repository.searchByGoatTechnicalId(farmId, technicalId.get(), from, to, type, status, pageable);
             if (technical.hasContent()) {
-                return technical.map(mapper::toModel);
+                return toPageResult(technical);
             }
         }
-        return repository.searchByGoat(farmId, goatId, from, to, type, status, pageable).map(mapper::toModel);
+        return toPageResult(repository.searchByGoat(farmId, goatId, from, to, type, status, pageable));
     }
 
     @Override
-    public Page<HealthEventRecord> findByFarmIdAndPeriod(
+    public PageResult<HealthEventRecord> findByFarmIdAndPeriod(
             Long farmId,
             LocalDate from,
             LocalDate to,
             HealthEventType type,
             HealthEventStatus status,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
-        return repository.searchCalendar(farmId, from, to, type, status, pageable).map(mapper::toModel);
+        Pageable pageable = toPageable(pageQuery);
+        return toPageResult(repository.searchCalendar(farmId, from, to, type, status, pageable));
+    }
+
+    @Override
+    public HealthEventWindow findNextScheduledEvents(Long farmId, LocalDate from, LocalDate to,
+                                                     HealthEventType type, HealthEventStatus status, int limit) {
+        Page<HealthEvent> page = repository.searchCalendar(
+                farmId,
+                from,
+                to,
+                type,
+                status,
+                PageRequest.of(0, limit, Sort.by(Sort.Order.asc("scheduledDate")))
+        );
+        return new HealthEventWindow(
+                page.getContent().stream().map(mapper::toModel).toList(),
+                page.getTotalElements()
+        );
     }
 
     @Override
@@ -120,5 +145,23 @@ public class HealthEventPersistenceAdapter implements HealthEventPersistencePort
         if (entity.getGoatTechnicalId() == null) {
             technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(entity::setGoatTechnicalId);
         }
+    }
+
+    private Pageable toPageable(PageQuery query) {
+        var orders = query.sort().stream()
+                .map(spec -> new Sort.Order(
+                        spec.direction() == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC,
+                        spec.field()))
+                .toList();
+        return PageRequest.of(query.page(), query.size(), Sort.by(orders));
+    }
+
+    private PageResult<HealthEventRecord> toPageResult(Page<HealthEvent> page) {
+        return new PageResult<>(
+                page.getContent().stream().map(mapper::toModel).toList(),
+                page.getTotalElements(),
+                page.getNumber(),
+                page.getSize()
+        );
     }
 }

@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.health.api.mapper.FarmHealthAlertsApiMapper;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.FarmHealthAlertsQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertsResponseVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -136,7 +136,7 @@ class FarmHealthEventControllerTest {
     void listCalendar_shouldPreservePageMetadataAndIncomingSort() throws Exception {
         var pageable = PageRequest.of(2, 3, Sort.by(Sort.Order.asc("scheduledDate")));
         when(queryUseCase.listCalendar(anyLong(), isNull(), isNull(), isNull(), isNull(), any()))
-                .thenReturn(new PageImpl<>(List.of(), pageable, 7));
+                .thenReturn(new PageResult<>(List.of(), 7, 2, 3));
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/health-events/calendar", 1L)
                         .param("page", "2")
@@ -148,10 +148,10 @@ class FarmHealthEventControllerTest {
                 .andExpect(jsonPath("$.page.totalElements").value(7))
                 .andExpect(jsonPath("$.page.totalPages").value(3));
 
-        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(PageQuery.class);
         verify(queryUseCase).listCalendar(anyLong(), isNull(), isNull(), isNull(), isNull(), pageableCaptor.capture());
-        org.junit.jupiter.api.Assertions.assertEquals(2, pageableCaptor.getValue().getPageNumber());
-        org.junit.jupiter.api.Assertions.assertEquals(3, pageableCaptor.getValue().getPageSize());
-        org.junit.jupiter.api.Assertions.assertEquals("scheduledDate", pageableCaptor.getValue().getSort().getOrderFor("scheduledDate").getProperty());
+        org.junit.jupiter.api.Assertions.assertEquals(2, pageableCaptor.getValue().page());
+        org.junit.jupiter.api.Assertions.assertEquals(3, pageableCaptor.getValue().size());
+        org.junit.jupiter.api.Assertions.assertEquals("scheduledDate", pageableCaptor.getValue().sort().getFirst().field());
     }
 }
