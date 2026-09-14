@@ -508,6 +508,50 @@ autenticação válida; `403` sem administração da fazenda de origem/destino;
 transferência ainda não expostos; e `422` para Bean Validation do corpo,
 limites semânticos de paginação ou violação do ciclo de vida/regra de negócio.
 
+### Goat Ownership History (W9.2)
+
+`GET /api/v1/goats/{goatId}/ownership-history` é privado e exige autenticação
+JWT. O parâmetro é exclusivamente o `GoatId` estrutural positivo; não há
+`farmId`, RG, registro, TOD, TOE, paginação ou identificador alternativo.
+ADMIN pode ler o histórico completo, inclusive quando todos os períodos estão
+encerrados. O FARM_OWNER atual precisa administrar a fazenda proprietária
+canônica; proprietário apenas histórico e OPERATOR recebem `403`.
+
+Resposta `200`:
+
+```json
+{
+  "goatId": 42,
+  "periods": [
+    {
+      "farmId": 10,
+      "startedAt": "2025-01-01T00:00:00Z",
+      "endedAt": "2026-03-01T12:00:00Z",
+      "entryType": "MANUAL_IMPORT",
+      "exitType": "TRANSFER_OUT",
+      "current": false
+    },
+    {
+      "farmId": 20,
+      "startedAt": "2026-03-01T12:00:00Z",
+      "endedAt": null,
+      "entryType": "TRANSFER_IN",
+      "exitType": null,
+      "current": true
+    }
+  ]
+}
+```
+
+A ordem dos períodos é a ordem canônica retornada pelo caso de uso. O
+controller não reconsulta persistência nem recalcula autorização. Os campos
+internos `id`, versão JPA, `source`, `transferId`, solicitante, motivo,
+`idempotencyKey`, `saleId`, nome da fazenda e `cabras.capril_id` não fazem parte
+do contrato. Respostas esperadas: `400` para GoatId ausente, inválido, zero,
+negativo ou overflow; `401` sem token; `403` sem autorização; `404` quando o
+GoatId não existe; e `422` quando o caso de uso reporta inconsistência canônica
+por meio do handler global.
+
 ## Referências internas
 - Handler global: [src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java](../../src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java)
 - Entry point 401: [src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java)

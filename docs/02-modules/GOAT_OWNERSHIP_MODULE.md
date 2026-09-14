@@ -52,3 +52,20 @@ imutáveis; nenhuma V49 é necessária para a superfície de consulta atual.
 O controller traduz HTTP e DTOs. O caso de uso orquestra autorização e regras;
 o adapter é o único componente que conhece Spring Data/JPA e converte a página
 para o modelo neutro da aplicação.
+
+## Histórico de propriedade (W9.2)
+
+`GET /api/v1/goats/{goatId}/ownership-history` é uma leitura autenticada do
+ledger canônico. O path usa somente o `GoatId` estrutural; não aceita `farmId`,
+RG, registro, TOD ou TOE, e não possui paginação. A autorização continua
+exclusivamente no caso de uso W9.1: ADMIN pode consultar qualquer animal;
+FARM_OWNER somente quando administra a fazenda proprietária atual; proprietário
+histórico e OPERATOR são negados.
+
+O response expõe apenas `goatId` e os períodos (`farmId`, `startedAt`,
+`endedAt`, `entryType`, `exitType` e `current`). A ordem canônica é preservada
+sem reordenação no adapter HTTP, e identidades internas, versão JPA, `source` e
+detalhes de transferência não são serializados. Entradas inválidas (zero,
+negativas, não numéricas ou overflow) retornam `400`; autenticação ausente,
+`401`; falta de autorização, `403`; animal inexistente, `404`; e inconsistência
+canônica é tratada pelo contrato global existente (`422`).
