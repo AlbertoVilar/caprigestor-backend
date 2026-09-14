@@ -30,13 +30,16 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
                     // RG. All goat-dependent structural references target id.
                     .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
-                    // V40 composite farm/goat technical safeguards remain in
-                    // place and V46 adds one direct GoatId FK for each
-                    // consumer, so both generations are expected here.
-                    .isEqualTo(14L);
+                    // V47 removes farm-coupled technical safeguards and keeps
+                    // one direct GoatId FK for each consumer. Events already
+                    // had a direct technical FK in V40, so eight direct
+                    // GoatId FKs are expected here.
+                    .isEqualTo(8L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in ('fk_cabras_pai_goat_id','fk_cabras_mae_goat_id')"))
                     .isEqualTo(2L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and conrelid = 'public.milk_production'::regclass and conname = 'fk_milk_production_farm_goat_technical_lactation'"))
+                    .isZero();
+            assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and conrelid = 'public.milk_production'::regclass and conname = 'fk_milk_production_lactation'"))
                     .isEqualTo(1L);
             assertThat(hasConstraint(connection, "uk_cabras_farm_id", "UNIQUE")).isTrue();
             assertThat(hasConstraint(connection, "uk_lactation_farm_goat_technical_id", "UNIQUE")).isTrue();
@@ -146,7 +149,7 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
                     .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
-                    .isEqualTo(14L);
+              .isEqualTo(8L);
         }
     }
 
@@ -178,8 +181,9 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             insertGoat(connection, "G-CHILD", "Child", "FEMEA", 101);
             execute(connection, "update cabras set pai_num_registro = 'G-PARENT', pai_goat_id = (select id from cabras where num_registro = 'G-PARENT') where num_registro = 'G-CHILD'");
 
-            assertThatThrownBy(() -> execute(connection, "insert into pregnancy (id, farm_id, goat_id, goat_technical_id, status, created_at, updated_at) values (201, 101, 'G-101', (select id from cabras where num_registro = 'G-102'), 'ACTIVE', now(), now())"))
-                    .isInstanceOf(SQLException.class);
+            // farm_id is historical context; a GoatId may be referenced by a
+            // record created in a different farm after ownership changes.
+            execute(connection, "insert into pregnancy (id, farm_id, goat_id, goat_technical_id, status, created_at, updated_at) values (201, 101, 'G-101', (select id from cabras where num_registro = 'G-102'), 'ACTIVE', now(), now())");
             assertThatThrownBy(() -> execute(connection, "insert into health_events (id, farm_id, goat_id, goat_technical_id, type, status, title, scheduled_date) values (201, 101, 'G-101', 999999, 'VACCINE', 'SCHEDULED', 'Invalid', date '2026-01-01')"))
                     .isInstanceOf(SQLException.class);
 
