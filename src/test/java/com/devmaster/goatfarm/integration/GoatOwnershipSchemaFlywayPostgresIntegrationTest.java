@@ -30,13 +30,13 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
     }
 
     @Test
-    void freshInstallCreatesOwnershipSchemaAtV45() throws SQLException {
+    void freshInstallCreatesOwnershipSchemaAtV46() throws SQLException {
         flyway().migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("45");
+                    .isEqualTo("46");
             assertThat(tableExists(connection, "goat_creator_reference")).isTrue();
             assertThat(tableExists(connection, "goat_ownership_period")).isTrue();
             assertThat(tableExists(connection, "ownership_transfer")).isTrue();
@@ -50,6 +50,25 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                     .containsIgnoringCase("ACCEPTED");
             assertThat(uniqueConstraintExists(connection, "uk_ownership_transfer_request_idempotency"))
                     .isTrue();
+            assertThat(uniqueConstraintExists(connection, "uk_cabras_farm_id")).isTrue();
+            for (String constraint : new String[]{
+                    "fk_pregnancy_goat_technical_direct",
+                    "fk_reproductive_event_goat_technical_direct",
+                    "fk_health_events_goat_technical_direct",
+                    "fk_lactation_goat_technical_direct",
+                    "fk_milk_production_goat_technical_direct",
+                    "fk_animal_sale_goat_technical_direct",
+                    "fk_operational_audit_entry_goat_technical_direct",
+                    "fk_pregnancy_farm_goat_technical",
+                    "fk_reproductive_event_farm_goat_technical",
+                    "fk_health_events_farm_goat_technical",
+                    "fk_lactation_farm_goat_technical",
+                    "fk_milk_production_farm_goat_technical_lactation",
+                    "fk_animal_sale_farm_goat_technical",
+                    "fk_operational_audit_entry_farm_goat_technical"}) {
+                assertThat(foreignKeyExists(connection, constraint)).as(constraint).isTrue();
+            }
+            assertDirectGoatForeignKeys(connection);
         }
     }
 
@@ -72,7 +91,32 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from ownership_transfer")).isZero();
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("45");
+                    .isEqualTo("46");
+        }
+    }
+
+    @Test
+    void upgradeFromV45ToV46PreservesRowsAndLeavesOwnershipTablesEmpty() throws SQLException {
+        flyway("45").migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W3-V45-GOAT", 1, 101);
+            assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(1L);
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isZero();
+        }
+
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            assertThat(queryString(connection,
+                    "select version from flyway_schema_history order by installed_rank desc limit 1"))
+                    .isEqualTo("46");
+            assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(1L);
+            assertThat(queryLong(connection, "select count(*) from goat_creator_reference")).isZero();
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isZero();
+            assertThat(queryLong(connection, "select count(*) from ownership_transfer")).isZero();
+            assertDirectGoatForeignKeys(connection);
         }
     }
 
@@ -439,6 +483,53 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             statement.setString(1, constraintName);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next();
+            }
+        }
+    }
+
+    private boolean foreignKeyExists(Connection connection, String constraintName) throws SQLException {
+        try (var statement = connection.prepareStatement("""
+                select 1 from information_schema.table_constraints
+                where table_schema = 'public' and constraint_name = ? and constraint_type = 'FOREIGN KEY'
+                """)) {
+            statement.setString(1, constraintName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private void assertDirectGoatForeignKeys(Connection connection) throws SQLException {
+        var expected = new String[][]{
+                {"fk_pregnancy_goat_technical_direct", "pregnancy"},
+                {"fk_reproductive_event_goat_technical_direct", "reproductive_event"},
+                {"fk_health_events_goat_technical_direct", "health_events"},
+                {"fk_lactation_goat_technical_direct", "lactation"},
+                {"fk_milk_production_goat_technical_direct", "milk_production"},
+                {"fk_animal_sale_goat_technical_direct", "animal_sale"},
+                {"fk_operational_audit_entry_goat_technical_direct", "operational_audit_entry"}
+        };
+        for (var item : expected) {
+            try (var statement = connection.prepareStatement("""
+                    select c.convalidated, c.confdeltype,
+                           child.attname as child_column, parent.attname as parent_column,
+                           c.conrelid::regclass::text as child_table,
+                           c.confrelid::regclass::text as parent_table
+                    from pg_constraint c
+                    join pg_attribute child on child.attrelid = c.conrelid and child.attnum = c.conkey[1]
+                    join pg_attribute parent on parent.attrelid = c.confrelid and parent.attnum = c.confkey[1]
+                    where c.conname = ?
+                    """)) {
+                statement.setString(1, item[0]);
+                try (ResultSet rs = statement.executeQuery()) {
+                    assertThat(rs.next()).as(item[0]).isTrue();
+                    assertThat(rs.getBoolean("convalidated")).as(item[0] + " validated").isTrue();
+                    assertThat(rs.getString("confdeltype")).as(item[0] + " delete action").isEqualTo("a");
+                    assertThat(rs.getString("child_table")).as(item[0] + " table").isEqualTo(item[1]);
+                    assertThat(rs.getString("parent_table")).as(item[0] + " parent").isEqualTo("cabras");
+                    assertThat(rs.getString("child_column")).as(item[0] + " child column").isEqualTo("goat_technical_id");
+                    assertThat(rs.getString("parent_column")).as(item[0] + " parent column").isEqualTo("id");
+                }
             }
         }
     }
