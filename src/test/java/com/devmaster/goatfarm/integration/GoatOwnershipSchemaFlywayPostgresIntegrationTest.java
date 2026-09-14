@@ -96,6 +96,31 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
     }
 
     @Test
+    void upgradeFromV45ToV46PreservesRowsAndLeavesOwnershipTablesEmpty() throws SQLException {
+        flyway("45").migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W3-V45-GOAT", 1, 101);
+            assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(1L);
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isZero();
+        }
+
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            assertThat(queryString(connection,
+                    "select version from flyway_schema_history order by installed_rank desc limit 1"))
+                    .isEqualTo("46");
+            assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(1L);
+            assertThat(queryLong(connection, "select count(*) from goat_creator_reference")).isZero();
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isZero();
+            assertThat(queryLong(connection, "select count(*) from ownership_transfer")).isZero();
+            assertDirectGoatForeignKeys(connection);
+        }
+    }
+
+    @Test
     void postgresqlEnforcesOwnershipStructuralConstraints() throws SQLException {
         flyway().migrate();
 
