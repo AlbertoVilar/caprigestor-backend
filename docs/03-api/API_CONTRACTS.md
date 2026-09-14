@@ -501,10 +501,12 @@ filtra `sourceFarmId`. A ordenação é determinística por `requestedAt DESC, i
 DESC`, e a resposta usa o envelope paginado (`content`, `totalElements`,
 `number`, `size`, `totalPages`).
 
-Respostas esperadas: `401` sem autenticação válida, `403` sem administração da
-fazenda de origem/destino, `404` para transferência/fazenda/cabra inexistente
-ou para tipos de transferência ainda não expostos, e `422` para validação ou
-violação do ciclo de vida.
+Respostas esperadas: `400` quando `direction` ou `status` estiver ausente ou
+inválido, ou quando outro argumento for sintaticamente inválido; `401` sem
+autenticação válida; `403` sem administração da fazenda de origem/destino;
+`404` para transferência/fazenda/cabra inexistente ou para tipos de
+transferência ainda não expostos; e `422` para Bean Validation do corpo,
+limites semânticos de paginação ou violação do ciclo de vida/regra de negócio.
 
 ## Referências internas
 - Handler global: [src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java](../../src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java)
