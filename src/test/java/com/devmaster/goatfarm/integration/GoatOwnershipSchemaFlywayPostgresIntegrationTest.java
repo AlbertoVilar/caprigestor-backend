@@ -31,7 +31,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
 
     @Test
     void freshInstallCreatesOwnershipSchemaAtV46() throws SQLException {
-        flyway().migrate();
+        flyway("46").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
@@ -91,7 +91,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from ownership_transfer")).isZero();
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("46");
+                    .isEqualTo("47");
         }
     }
 
@@ -106,7 +106,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isZero();
         }
 
-        flyway().migrate();
+        flyway("46").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
@@ -122,7 +122,9 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
 
     @Test
     void postgresqlEnforcesOwnershipStructuralConstraints() throws SQLException {
-        flyway().migrate();
+        // This W3 characterization intentionally exercises the V46 farm-coupled
+        // constraints; W4 semantics are covered by the dedicated V47 tests.
+        flyway("46").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);

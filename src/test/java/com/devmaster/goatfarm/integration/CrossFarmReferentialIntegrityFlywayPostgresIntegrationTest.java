@@ -20,7 +20,7 @@ class CrossFarmReferentialIntegrityFlywayPostgresIntegrationTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Test
-    void databaseRejectsCrossFarmReferencesWhileAcceptingSameFarmReferences() throws SQLException {
+    void databasePreservesFarmScopedIntegrityWhileAllowingCrossFarmGoatHistory() throws SQLException {
         Flyway version37 = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .locations("classpath:db/migration")
@@ -50,26 +50,26 @@ class CrossFarmReferentialIntegrityFlywayPostgresIntegrationTest {
                     values (101, 201, 'G-101', (select id from cabras where num_registro = 'G-101'), 'Cabra 101', date '2026-01-01', 10, date '2026-01-01', 'PENDING')
                     """)).doesNotThrowAnyException();
 
-            assertRejected(connection, """
+            assertThatCode(() -> execute(connection, """
                     insert into pregnancy (farm_id, goat_id, goat_technical_id, status, created_at, updated_at)
-                    values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'ACTIVE', now(), now())
-                    """);
-            assertRejected(connection, """
+                    values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'CLOSED', now(), now())
+                    """)).doesNotThrowAnyException();
+            assertThatCode(() -> execute(connection, """
                     insert into reproductive_event (farm_id, goat_id, goat_technical_id, event_type, event_date, created_at, updated_at)
                     values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'COVERAGE', date '2026-01-01', now(), now())
-                    """);
-            assertRejected(connection, """
+                    """)).doesNotThrowAnyException();
+            assertThatCode(() -> execute(connection, """
                     insert into health_events (farm_id, goat_id, goat_technical_id, type, status, title, scheduled_date)
                     values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'VACCINE', 'SCHEDULED', 'Cross farm', date '2026-01-01')
-                    """);
+                    """)).doesNotThrowAnyException();
             assertRejected(connection, """
                     insert into animal_sale (farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status)
                     values (101, 202, 'G-101', (select id from cabras where num_registro = 'G-101'), 'Cabra 101', date '2026-01-02', 10, date '2026-01-02', 'PENDING')
                     """);
-            assertRejected(connection, """
+            assertThatCode(() -> execute(connection, """
                     insert into animal_sale (farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status)
                     values (101, 201, 'G-102', (select id from cabras where num_registro = 'G-102'), 'Cabra 102', date '2026-01-02', 10, date '2026-01-02', 'PENDING')
-                    """);
+                    """)).doesNotThrowAnyException();
             assertRejected(connection, """
                     insert into milk_sale (farm_id, customer_id, sale_date, quantity_liters, unit_price, total_amount, due_date, payment_status)
                     values (101, 202, date '2026-01-01', 1, 1, 1, date '2026-01-01', 'PENDING')
@@ -90,14 +90,14 @@ class CrossFarmReferentialIntegrityFlywayPostgresIntegrationTest {
                     insert into inventory_movement (farm_id, type, quantity, item_id, lot_id, movement_date, resulting_balance, created_at)
                     values (101, 'ENTRY', 1, 601, 702, date '2026-01-01', 1, now())
                     """);
-            assertRejected(connection, """
+            assertThatCode(() -> execute(connection, """
                     insert into lactation (farm_id, goat_id, goat_technical_id, status, start_date)
-                    values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'ACTIVE', date '2026-01-01')
-                    """);
-            assertRejected(connection, """
+                    values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'DRY', date '2026-01-01')
+                    """)).doesNotThrowAnyException();
+            assertThatCode(() -> execute(connection, """
                     insert into milk_production (farm_id, goat_id, goat_technical_id, lactation_id, date, shift, volume_liters)
-                    values (101, 'G-101', (select id from cabras where num_registro = 'G-101'), 802, date '2026-01-01', 'MORNING', 1)
-                    """);
+                    values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 802, date '2026-01-01', 'MORNING', 1)
+                    """)).doesNotThrowAnyException();
             assertRejected(connection, """
                     insert into milk_production (farm_id, goat_id, lactation_id, date, shift, volume_liters)
                     values (101, 'G-102', 801, date '2026-01-01', 'AFTERNOON', 1)
@@ -112,16 +112,16 @@ class CrossFarmReferentialIntegrityFlywayPostgresIntegrationTest {
                     """);
             assertRejected(connection, """
                     insert into pregnancy (farm_id, goat_id, status, coverage_event_id, created_at, updated_at)
-                    values (101, 'G-101', 'ACTIVE', 402, now(), now())
+                    values (101, 'G-101', 'CLOSED', 402, now(), now())
                     """);
             assertRejected(connection, """
                     insert into reproductive_event (farm_id, goat_id, event_type, event_date, related_event_id, created_at, updated_at)
                     values (101, 'G-101', 'COVERAGE_CORRECTION', date '2026-01-01', 402, now(), now())
                     """);
-            assertRejected(connection, """
-                    insert into operational_audit_entry (farm_id, goat_registration_number, action_type, actor_user_id, actor_name, actor_email, description)
-                    values (101, 'G-102', 'TEST', 1, 'Test User', 'test@example.com', 'Cross farm')
-                    """);
+            assertThatCode(() -> execute(connection, """
+                    insert into operational_audit_entry (farm_id, goat_registration_number, goat_technical_id, action_type, actor_user_id, actor_name, actor_email, description)
+                    values (101, 'G-102', (select id from cabras where num_registro = 'G-102'), 'TEST', 1, 'Test User', 'test@example.com', 'Cross farm')
+                    """)).doesNotThrowAnyException();
         }
     }
 
