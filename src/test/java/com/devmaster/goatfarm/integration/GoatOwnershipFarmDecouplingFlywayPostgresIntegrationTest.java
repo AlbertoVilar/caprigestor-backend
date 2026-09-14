@@ -31,7 +31,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void freshV1ToV47CreatesGlobalGoatIdentityAndValidatedConstraints() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
@@ -61,7 +61,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from pregnancy")).isEqualTo(1L);
         }
 
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
@@ -78,7 +78,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void historicalRecordsRemainValidWhenGoatMovesAcrossFarms() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
@@ -125,7 +125,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void biologicalProcessesCanContinueAcrossOwnershipBoundary() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
@@ -155,7 +155,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void activePregnancyAndLactationAreGlobalPerGoat() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
@@ -174,7 +174,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void unrelatedFarmCustomerIntegrityRemainsEnforced() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
@@ -188,7 +188,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void directGoatAndProcessForeignKeysRejectUnknownIdentities() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
@@ -212,7 +212,7 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
 
     @Test
     void processForeignKeysRejectCrossGoatReferences() throws SQLException {
-        flyway().migrate();
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
