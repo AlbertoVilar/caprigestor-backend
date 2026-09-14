@@ -21,6 +21,9 @@ import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,6 +40,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,6 +85,9 @@ class CommercialTransactionRollbackPostgresIntegrationTest {
     private GoatFarmRepository goatFarmRepository;
 
     @Autowired
+    private GoatOwnershipPeriodRepository ownershipPeriodRepository;
+
+    @Autowired
     private GoatFarmPersistencePort farmPort;
 
     @Autowired
@@ -122,6 +129,13 @@ class CommercialTransactionRollbackPostgresIntegrationTest {
         GoatFarm persistedFarm = persistFarm(farm, owner);
         goat.setFarm(persistedFarm);
         GoatEntity persistedGoat = goatRepository.saveAndFlush(goat);
+        GoatOwnershipPeriodEntity ownershipPeriod = new GoatOwnershipPeriodEntity();
+        ownershipPeriod.setGoatId(persistedGoat.getTechnicalId());
+        ownershipPeriod.setFarmId(persistedFarm.getId());
+        ownershipPeriod.setStartedAt(Instant.parse("2024-01-01T00:00:00Z"));
+        ownershipPeriod.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownershipPeriod.setSource("TEST_FIXTURE");
+        ownershipPeriodRepository.saveAndFlush(ownershipPeriod);
 
         configureFixture(persistedFarm.getId());
         AnimalSaleRequestVO request = new AnimalSaleRequestVO(

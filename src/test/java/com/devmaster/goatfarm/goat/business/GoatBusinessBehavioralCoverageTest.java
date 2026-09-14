@@ -16,6 +16,9 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
@@ -65,13 +68,14 @@ class GoatBusinessBehavioralCoverageTest {
     @Mock private EntityFinder entityFinder;
     @Mock private OperationalAuditUseCase audit;
     @Mock private GoatParentagePort parentage;
+    @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
 
     private GoatBusiness business;
     private Goat goat;
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase);
         goat = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
         lenient().when(parentage.resolve(any(), any(), any(), any()))
@@ -177,6 +181,8 @@ class GoatBusinessBehavioralCoverageTest {
                 .exitType(GoatExitType.VENDA).exitDate(LocalDate.now().minusDays(1))
                 .notes("Venda confirmada").build();
         when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(goat));
+        when(goatOwnershipExitUseCase.closeTerminalOwnership(any())).thenReturn(null);
+        when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
         when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         GoatExitResponseVO result = business.exitGoat(1L, "1643222002", request);
@@ -186,8 +192,26 @@ class GoatBusinessBehavioralCoverageTest {
         assertThat(result.getCurrentStatus()).isEqualTo(GoatStatus.VENDIDO);
         assertThat(result.getPreviousStatus()).isEqualTo(GoatStatus.ATIVO);
         verify(ownershipService).verifyFarmOwnership(1L);
+        ArgumentCaptor<TerminalOwnershipExitCommand> command = ArgumentCaptor.forClass(TerminalOwnershipExitCommand.class);
+        verify(goatOwnershipExitUseCase).closeTerminalOwnership(command.capture());
+        assertThat(command.getValue().goatId()).isEqualTo(new GoatId(77L));
+        assertThat(command.getValue().expectedSourceFarmId()).isEqualTo(1L);
+        assertThat(command.getValue().exitType()).isEqualTo(OwnershipExitType.EXTERNAL_SALE);
         verify(goatPort).save(any(Goat.class));
         verify(audit).record(any());
+    }
+
+    @Test
+    void rejectsGenericTransferBeforeOwnershipMutation() {
+        GoatExitRequestVO request = GoatExitRequestVO.builder()
+                .exitType(GoatExitType.TRANSFERENCIA).exitDate(LocalDate.now().minusDays(1)).build();
+        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(goat));
+
+        assertThatThrownBy(() -> business.exitGoat(1L, "1643222002", request))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("fluxo de transferência");
+        verify(goatOwnershipExitUseCase, never()).closeTerminalOwnership(any());
+        verify(goatPort, never()).save(any(Goat.class));
     }
 
     @Test

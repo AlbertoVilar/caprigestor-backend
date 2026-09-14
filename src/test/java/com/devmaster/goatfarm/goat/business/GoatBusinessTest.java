@@ -13,6 +13,7 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
 import com.devmaster.goatfarm.goat.business.bo.*;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
@@ -42,6 +43,7 @@ class GoatBusinessTest {
     @Mock private EntityFinder entityFinder;
     @Mock private OperationalAuditUseCase audit;
     @Mock private GoatParentagePort parentage;
+    @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
 
     private GoatBusiness business;
     private GoatRequestVO request;
@@ -49,7 +51,7 @@ class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase);
         request = new GoatRequestVO();
         request.setRegistrationNumber("1643222002"); request.setName("Xeque"); request.setGender(Gender.MACHO);
         request.setBreed(GoatBreed.ALPINA); request.setBirthDate(LocalDate.of(2025, 1, 1));

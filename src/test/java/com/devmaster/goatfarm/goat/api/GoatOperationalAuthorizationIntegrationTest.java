@@ -15,6 +15,9 @@ import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRegistrationHistoryRepository;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
@@ -33,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -59,6 +63,7 @@ class GoatOperationalAuthorizationIntegrationTest {
     @Autowired private FarmOperatorRepository farmOperatorRepository;
     @Autowired private PregnancyRepository pregnancyRepository;
     @Autowired private ReproductiveEventRepository reproductiveEventRepository;
+    @Autowired private GoatOwnershipPeriodRepository ownershipPeriodRepository;
 
     private User admin;
     private User owner;
@@ -333,7 +338,15 @@ class GoatOperationalAuthorizationIntegrationTest {
         goat.setBirthDate(LocalDate.now().minusYears(2));
         goat.setStatus(GoatStatus.ATIVO);
         goat.setFarm(farm);
-        return goatRepository.save(goat);
+        GoatEntity saved = goatRepository.save(goat);
+        GoatOwnershipPeriodEntity ownership = new GoatOwnershipPeriodEntity();
+        ownership.setGoatId(saved.getTechnicalId());
+        ownership.setFarmId(farm.getId());
+        ownership.setStartedAt(Instant.now().minusSeconds(5));
+        ownership.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownership.setSource("TEST_FIXTURE");
+        ownershipPeriodRepository.saveAndFlush(ownership);
+        return saved;
     }
 
     private PregnancyEntity createActivePregnancy(GoatEntity targetMother) {
@@ -394,6 +407,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         reproductiveEventRepository.deleteAll();
         farmOperatorRepository.deleteAll();
         operationalAuditEntryRepository.deleteAll();
+        ownershipPeriodRepository.deleteAll();
         goatRegistrationHistoryRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
