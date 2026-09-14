@@ -43,6 +43,12 @@ public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPer
     }
 
     @Override
+    public Optional<GoatId> findGoatIdByTransferId(Long transferId) {
+        return transferId == null ? Optional.empty()
+                : repository.findGoatIdByTransferId(transferId).map(GoatId::of);
+    }
+
+    @Override
     public Optional<OwnershipTransfer> findById(Long transferId) {
         return transferId == null ? Optional.empty() : repository.findById(transferId).map(mapper::toDomain);
     }

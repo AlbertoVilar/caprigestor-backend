@@ -109,9 +109,9 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     @Override
     @Transactional
     public OwnershipTransfer acceptTransfer(Long transferId) {
+        GoatId goatId = requireGoatId(transferId);
+        GoatOwnershipLockState lock = lockGoat(goatId);
         OwnershipTransfer transfer = requireTransfer(transferId);
-        GoatOwnershipLockState lock = lockGoat(transfer.goatId());
-        transfer = requireTransfer(transferId);
         requireInternalTransfer(transfer);
         requireCanAdminister(transfer.targetFarmId());
 
@@ -156,9 +156,9 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     @Override
     @Transactional
     public OwnershipTransfer rejectTransfer(Long transferId) {
+        GoatId goatId = requireGoatId(transferId);
+        GoatOwnershipLockState lock = lockGoat(goatId);
         OwnershipTransfer transfer = requireTransfer(transferId);
-        GoatOwnershipLockState lock = lockGoat(transfer.goatId());
-        transfer = requireTransfer(transferId);
         requireInternalTransfer(transfer);
         requireCanAdminister(transfer.targetFarmId());
         if (transfer.status() == OwnershipTransferStatus.REJECTED) {
@@ -175,9 +175,9 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     @Override
     @Transactional
     public OwnershipTransfer cancelTransfer(Long transferId) {
+        GoatId goatId = requireGoatId(transferId);
+        GoatOwnershipLockState lock = lockGoat(goatId);
         OwnershipTransfer transfer = requireTransfer(transferId);
-        GoatOwnershipLockState lock = lockGoat(transfer.goatId());
-        transfer = requireTransfer(transferId);
         requireInternalTransfer(transfer);
         requireCanAdminister(transfer.sourceFarmId());
         if (transfer.status() == OwnershipTransferStatus.CANCELLED) {
@@ -201,6 +201,14 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
             throw new InvalidArgumentException("transferId must be positive");
         }
         return transferPersistence.findById(transferId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ownership transfer not found: " + transferId));
+    }
+
+    private GoatId requireGoatId(Long transferId) {
+        if (transferId == null || transferId <= 0) {
+            throw new InvalidArgumentException("transferId must be positive");
+        }
+        return transferPersistence.findGoatIdByTransferId(transferId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ownership transfer not found: " + transferId));
     }
 

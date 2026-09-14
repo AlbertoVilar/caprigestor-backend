@@ -8,6 +8,8 @@ import java.util.Optional;
 public interface OwnershipTransferPersistencePort {
     OwnershipTransfer save(OwnershipTransfer transfer);
 
+    Optional<GoatId> findGoatIdByTransferId(Long transferId);
+
     Optional<OwnershipTransfer> findById(Long transferId);
 
     Optional<OwnershipTransfer> findPendingByGoatId(GoatId goatId);

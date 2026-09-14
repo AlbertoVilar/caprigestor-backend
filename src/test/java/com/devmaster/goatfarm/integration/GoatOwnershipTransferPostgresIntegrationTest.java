@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipT
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatCurrentOwnerProjectionPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipLockPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipPeriodPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort;
 import com.devmaster.goatfarm.goatownership.business.GoatOwnershipTransferBusiness;
 import com.devmaster.goatfarm.goatownership.domain.CreatorReference;
@@ -71,6 +72,7 @@ class GoatOwnershipTransferPostgresIntegrationTest {
     @Autowired GoatFarmPersistencePort farmPersistence;
     @Autowired GoatOwnershipLockPort ownershipLock;
     @Autowired GoatOwnershipPeriodPersistencePort periodPersistence;
+    @Autowired GoatOwnershipQueryPort ownershipQuery;
     @Autowired OwnershipTransferPersistencePort transferPersistence;
     @Autowired GoatCurrentOwnerProjectionPort projection;
     @Autowired CreatorReferencePersistenceAdapter creatorReference;
@@ -80,10 +82,25 @@ class GoatOwnershipTransferPostgresIntegrationTest {
         long sourceFarm = createFarm("W6 Source");
         long targetFarm = createFarm("W6 Target");
         long goatRow = createGoat(sourceFarm, "W6-GOAT-" + System.nanoTime());
+        long parentRow = createGoat(sourceFarm, "W6-PARENT-" + System.nanoTime());
+        jdbcTemplate.update("update cabras set tod = 'W6TOD', toe = 'W6TOE', pai_goat_id = ?, mae_goat_id = ? where id = ?", parentRow, parentRow, goatRow);
         GoatId goatId = GoatId.of(goatRow);
         jdbcTemplate.update("insert into goat_ownership_period (goat_id, farm_id, started_at, entry_type, source, version) values (?, ?, ?, 'MANUAL_IMPORT', 'w6-test', 0)", goatRow, sourceFarm, Timestamp.from(START));
         creatorReference.create(goatId, CreatorReference.farm("SRC01", sourceFarm, "Source", CreatorSource.MANUAL_DECLARATION, "W6", START));
+        long pregnancyId = jdbcTemplate.queryForObject("insert into pregnancy (farm_id, goat_id, goat_technical_id, status, created_at, updated_at) values (?, ?, ?, 'CLOSED', ?, ?) returning id", Long.class,
+                sourceFarm, "W6-GOAT", goatRow, Timestamp.from(START), Timestamp.from(START));
+        jdbcTemplate.update("insert into reproductive_event (farm_id, goat_id, goat_technical_id, event_type, event_date, created_at, updated_at, pregnancy_id) values (?, ?, ?, 'WEANING', date '2026-01-15', ?, ?, ?)",
+                sourceFarm, "W6-GOAT", goatRow, Timestamp.from(START), Timestamp.from(START), pregnancyId);
+        jdbcTemplate.update("insert into operational_audit_entry (farm_id, goat_registration_number, goat_technical_id, action_type, target_id, actor_user_id, actor_name, actor_email, description, created_at) values (?, ?, ?, 'GOAT_EXIT', ?, (select user_id from capril where id = ?), 'W6 Actor', 'w6@example.com', 'historical snapshot', ?)",
+                sourceFarm, "W6-GOAT", goatRow, "W6", sourceFarm, Timestamp.from(START));
         String registration = jdbcTemplate.queryForObject("select num_registro from cabras where id = ?", String.class, goatRow);
+        CreatorReference creatorBefore = creatorReference.findByGoatId(goatId).orElseThrow();
+        long pregnancyFarmBefore = jdbcTemplate.queryForObject("select farm_id from pregnancy where id = ?", Long.class, pregnancyId);
+        long auditFarmBefore = jdbcTemplate.queryForObject("select farm_id from operational_audit_entry where goat_technical_id = ?", Long.class, goatRow);
+
+        // Deliberately diverge the transitional projection. Request authorization/source
+        // must still come from the canonical open ownership period.
+        jdbcTemplate.update("update cabras set capril_id = ? where id = ?", targetFarm, goatRow);
 
         var business = businessAt(ACCEPTED);
         var requested = transactionTemplate.execute(status -> business.requestInternalTransfer(
@@ -91,6 +108,8 @@ class GoatOwnershipTransferPostgresIntegrationTest {
         assertThat(requested).isNotNull();
         assertThat(requested.status()).isEqualTo(OwnershipTransferStatus.REQUESTED);
         assertThat(jdbcTemplate.queryForObject("select farm_id from goat_ownership_period where goat_id = ? and ended_at is null", Long.class, goatRow)).isEqualTo(sourceFarm);
+        assertThat(requested.sourceFarmId()).isEqualTo(sourceFarm);
+        jdbcTemplate.update("update cabras set capril_id = ? where id = ?", sourceFarm, goatRow);
 
         var completed = transactionTemplate.execute(status -> business.acceptTransfer(requested.id()));
         assertThat(completed).isNotNull();
@@ -101,11 +120,22 @@ class GoatOwnershipTransferPostgresIntegrationTest {
 
         assertThat(jdbcTemplate.queryForObject("select capril_id from cabras where id = ?", Long.class, goatRow)).isEqualTo(targetFarm);
         assertThat(jdbcTemplate.queryForObject("select farm_id from goat_ownership_period where goat_id = ? and ended_at is null", Long.class, goatRow)).isEqualTo(targetFarm);
+        assertThat(ownershipQuery.findCurrentOwnerFarmId(goatId)).contains(targetFarm);
         assertThat(jdbcTemplate.queryForObject("select count(*) from goat_ownership_period where goat_id = ? and ended_at is null", Integer.class, goatRow)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("select ended_at from goat_ownership_period where goat_id = ? and farm_id = ?", Instant.class, goatRow, sourceFarm)).isEqualTo(ACCEPTED);
         assertThat(jdbcTemplate.queryForObject("select started_at from goat_ownership_period where goat_id = ? and farm_id = ?", Instant.class, goatRow, targetFarm)).isEqualTo(ACCEPTED);
         assertThat(jdbcTemplate.queryForObject("select num_registro from cabras where id = ?", String.class, goatRow)).isEqualTo(registration);
-        assertThat(creatorReference.findByGoatId(goatId)).isPresent();
+        assertThat(creatorReference.findByGoatId(goatId)).contains(creatorBefore);
+        assertThat(jdbcTemplate.queryForObject("select farm_id from pregnancy where id = ?", Long.class, pregnancyId)).isEqualTo(pregnancyFarmBefore);
+        assertThat(jdbcTemplate.queryForObject("select farm_id from operational_audit_entry where goat_technical_id = ?", Long.class, goatRow)).isEqualTo(auditFarmBefore);
+        assertThat(jdbcTemplate.queryForObject("select tod from cabras where id = ?", String.class, goatRow)).isEqualTo("W6TOD");
+        assertThat(jdbcTemplate.queryForObject("select toe from cabras where id = ?", String.class, goatRow)).isEqualTo("W6TOE");
+        assertThat(jdbcTemplate.queryForObject("select status from cabras where id = ?", String.class, goatRow)).isEqualTo("ATIVO");
+        assertThat(jdbcTemplate.queryForObject("select exit_type from cabras where id = ?", String.class, goatRow)).isNull();
+        assertThat(jdbcTemplate.queryForObject("select exit_date from cabras where id = ?", java.sql.Date.class, goatRow)).isNull();
+        assertThat(jdbcTemplate.queryForObject("select exit_notes from cabras where id = ?", String.class, goatRow)).isNull();
+        assertThat(jdbcTemplate.queryForObject("select pai_goat_id from cabras where id = ?", Long.class, goatRow)).isEqualTo(parentRow);
+        assertThat(jdbcTemplate.queryForObject("select mae_goat_id from cabras where id = ?", Long.class, goatRow)).isEqualTo(parentRow);
 
         var secondBusiness = businessAt(ACCEPTED_AGAIN);
         var second = transactionTemplate.execute(status -> secondBusiness.requestInternalTransfer(
@@ -157,6 +187,7 @@ class GoatOwnershipTransferPostgresIntegrationTest {
     void concurrentRequestsForOneGoatCreateOnlyOnePendingTransfer() throws Exception {
         long sourceFarm = createFarm("W6 Concurrent Source");
         long targetFarm = createFarm("W6 Concurrent Target");
+        long secondTargetFarm = createFarm("W6 Concurrent Target 2");
         long goatRow = createGoat(sourceFarm, "W6-CONCURRENT-" + System.nanoTime());
         seedOpenPeriod(goatRow, sourceFarm, "w6-concurrent");
         var business = businessAt(ACCEPTED);
@@ -164,7 +195,7 @@ class GoatOwnershipTransferPostgresIntegrationTest {
         var start = new CountDownLatch(1);
         try (var executor = Executors.newFixedThreadPool(2)) {
             var first = executor.submit(() -> concurrentRequest(business, GoatId.of(goatRow), targetFarm, "w6-concurrent-a", ready, start));
-            var second = executor.submit(() -> concurrentRequest(business, GoatId.of(goatRow), targetFarm, "w6-concurrent-b", ready, start));
+            var second = executor.submit(() -> concurrentRequest(business, GoatId.of(goatRow), secondTargetFarm, "w6-concurrent-b", ready, start));
             assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
             start.countDown();
             int successes = 0;
@@ -201,16 +232,10 @@ class GoatOwnershipTransferPostgresIntegrationTest {
             start.countDown();
             int completed = 0;
             for (var future : List.of(first, second)) {
-                try {
-                    assertThat(future.get(30, TimeUnit.SECONDS).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
-                    completed++;
-                } catch (ExecutionException expectedConcurrentOutcome) {
-                    // A racing retry may observe the completed handoff boundary and
-                    // fail closed; the invariants below prove no duplicate period.
-                    assertThat(expectedConcurrentOutcome.getCause()).isInstanceOf(RuntimeException.class);
-                }
+                assertThat(future.get(30, TimeUnit.SECONDS).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+                completed++;
             }
-            assertThat(completed).isGreaterThanOrEqualTo(1);
+            assertThat(completed).isEqualTo(2);
         }
         assertThat(jdbcTemplate.queryForObject("select count(*) from goat_ownership_period where goat_id = ? and ended_at is null", Integer.class, goatRow)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("select count(*) from goat_ownership_period where goat_id = ?", Integer.class, goatRow)).isEqualTo(2);
