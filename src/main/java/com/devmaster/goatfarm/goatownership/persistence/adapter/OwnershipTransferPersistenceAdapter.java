@@ -2,18 +2,25 @@ package com.devmaster.goatfarm.goatownership.persistence.adapter;
 
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferQueryPort;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipTransferDirection;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipTransferPageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
 import com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransferEntity;
 import com.devmaster.goatfarm.goatownership.persistence.mapper.OwnershipPersistenceMapper;
 import com.devmaster.goatfarm.goatownership.persistence.repository.OwnershipTransferRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
 
 @Component
-public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPersistencePort {
+public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPersistencePort, OwnershipTransferQueryPort {
     private static final List<OwnershipTransferStatus> PENDING = List.of(
             OwnershipTransferStatus.REQUESTED, OwnershipTransferStatus.ACCEPTED);
 
@@ -63,5 +70,18 @@ public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPer
     public Optional<OwnershipTransfer> findByRequesterAndIdempotencyKey(Long requestedBy, String idempotencyKey) {
         return requestedBy == null || idempotencyKey == null ? Optional.empty()
                 : repository.findByRequestedByAndIdempotencyKey(requestedBy, idempotencyKey).map(mapper::toDomain);
+    }
+
+    @Override
+    public PageResult<OwnershipTransfer> findForFarm(Long farmId,
+                                                      OwnershipTransferDirection direction,
+                                                      OwnershipTransferStatus status,
+                                                      OwnershipTransferPageQuery pageQuery) {
+        Pageable pageable = PageRequest.of(pageQuery.page(), pageQuery.size());
+        var page = direction == OwnershipTransferDirection.INCOMING
+                ? repository.findIncoming(farmId, OwnershipTransferKind.INTERNAL_TRANSFER, status, pageable)
+                : repository.findOutgoing(farmId, OwnershipTransferKind.INTERNAL_TRANSFER, status, pageable);
+        return new PageResult<>(page.getContent().stream().map(mapper::toDomain).toList(),
+                page.getTotalElements(), page.getNumber(), page.getSize());
     }
 }

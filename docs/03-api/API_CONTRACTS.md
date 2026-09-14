@@ -434,6 +434,78 @@ Erros seguem estrutura `ValidationError`:
 | `503 Service Unavailable` | consulta ABCC indisponível ou insuficiente para validação obrigatória |
 | `500 Internal Server Error` | erro não tratado |
 
+### Ownership Transfer (W7)
+
+O workflow HTTP de propriedade expõe somente `INTERNAL_TRANSFER`. Todas as
+rotas exigem access token JWT; não há `@PublicEndpoint` nem matcher `permitAll`.
+ADMIN pode operar globalmente. FARM_OWNER precisa administrar a fazenda
+envolvida; OPERATOR não pode solicitar, aceitar, rejeitar, cancelar ou consultar
+transferências por este contrato.
+
+Rotas canônicas:
+
+- `POST /api/v1/ownership-transfers`
+- `GET /api/v1/ownership-transfers/{transferId}`
+- `POST /api/v1/ownership-transfers/{transferId}/accept`
+- `POST /api/v1/ownership-transfers/{transferId}/reject`
+- `POST /api/v1/ownership-transfers/{transferId}/cancel`
+- `GET /api/v1/goatfarms/{farmId}/ownership-transfers?direction=INCOMING|OUTGOING&status=&page=0&size=20`
+
+O request de criação é:
+
+```json
+{
+  "goatId": 123,
+  "targetFarmId": 45,
+  "reason": "Transfer between farms",
+  "idempotencyKey": "client-generated-key"
+}
+```
+
+`sourceFarmId` não é aceito como autoridade do cliente: a origem é sempre
+resolvida pelo período aberto canônico do Goat. `goatId` e `targetFarmId` são
+positivos; `reason` é obrigatório e limitado a 1000 caracteres; a chave de
+idempotência é obrigatória e limitada a 255 caracteres. Uma criação válida
+retorna `201 Created`, cabeçalho `Location` e o DTO da transferência.
+
+O response não expõe a versão de persistência nem entidades JPA:
+
+```json
+{
+  "id": 900,
+  "goatId": 123,
+  "sourceFarmId": 10,
+  "targetFarmId": 45,
+  "kind": "INTERNAL_TRANSFER",
+  "status": "REQUESTED",
+  "reason": "Transfer between farms",
+  "requestedAt": "2026-09-14T12:00:00Z",
+  "acceptedAt": null,
+  "effectiveAt": null,
+  "completedAt": null,
+  "cancelledAt": null
+}
+```
+
+O ciclo normal é `REQUESTED -> COMPLETED`, `REJECTED` ou `CANCELLED`. Aceite,
+rejeição e cancelamento delegam integralmente ao caso de uso transacional do
+W6, preservando o ledger de ownership e a projeção legada.
+
+`idempotencyKey` é vinculada ao solicitante: uma repetição exata retorna o
+mesmo recurso; a mesma chave com Goat, destino ou motivo diferente retorna
+`422` por conflito de regra.
+
+O endpoint de inbox/outbox exige `direction` e aceita `status` opcional, com
+`page >= 0` e `1 <= size <= 100`. `INCOMING` filtra `targetFarmId`; `OUTGOING`
+filtra `sourceFarmId`. A ordenação é determinística por `requestedAt DESC, id
+DESC`, e a resposta usa o envelope paginado (`content`, `totalElements`,
+`number`, `size`, `totalPages`).
+
+Respostas esperadas: `401` sem autenticação válida, `403` sem administração da
+fazenda de origem/destino, `404` para transferência/fazenda/cabra inexistente
+ou para tipos de transferência ainda não expostos, e `422` para validação ou
+violação do ciclo de vida.
+
 ## Referências internas
 - Handler global: [src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java](../../src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java)
 - Entry point 401: [src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java](../../src/main/java/com/devmaster/goatfarm/config/security/CustomAuthenticationEntryPoint.java)

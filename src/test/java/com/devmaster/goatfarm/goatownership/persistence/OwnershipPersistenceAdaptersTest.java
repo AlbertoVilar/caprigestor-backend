@@ -8,6 +8,8 @@ import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipTransferDirection;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipTransferPageQuery;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.CreatorReferencePersistenceAdapter;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.GoatOwnershipLockPersistenceAdapter;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.GoatOwnershipPeriodPersistenceAdapter;
@@ -25,6 +27,8 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -51,6 +55,8 @@ class OwnershipPersistenceAdaptersTest {
     private GoatOwnershipPeriodRepository periodRepository;
     @Mock
     private GoatOwnershipLockRepository lockRepository;
+    @Mock
+    private com.devmaster.goatfarm.goatownership.persistence.repository.OwnershipTransferRepository transferRepository;
 
     @Test
     void creatorReference_roundTripsFarmExternalAndUnknownSourcesWithoutLosingSnapshots() {
@@ -132,6 +138,26 @@ class OwnershipPersistenceAdaptersTest {
             assertThat(domain.status()).isEqualTo(status);
             assertThat(mapper.toEntity(domain).getVersion()).isNull();
         }
+    }
+
+    @Test
+    void transferQueryAdapterUsesInternalKindDirectionStatusAndNeutralPage() {
+        var entity = transferEntity(OwnershipTransferStatus.REQUESTED);
+        when(transferRepository.findIncoming(2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                OwnershipTransferStatus.REQUESTED, PageRequest.of(1, 10)))
+                .thenReturn(new PageImpl<>(List.of(entity), PageRequest.of(1, 10), 11));
+        var adapter = new com.devmaster.goatfarm.goatownership.persistence.adapter.OwnershipTransferPersistenceAdapter(
+                transferRepository, mapper);
+
+        var result = adapter.findForFarm(2L, OwnershipTransferDirection.INCOMING,
+                OwnershipTransferStatus.REQUESTED, new OwnershipTransferPageQuery(1, 10));
+
+        assertThat(result.page()).isEqualTo(1);
+        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.totalElements()).isEqualTo(11);
+        assertThat(result.content()).hasSize(1);
+        verify(transferRepository).findIncoming(2L, OwnershipTransferKind.INTERNAL_TRANSFER,
+                OwnershipTransferStatus.REQUESTED, PageRequest.of(1, 10));
     }
 
     @Test
