@@ -82,7 +82,8 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(1L);
         }
 
-        flyway().migrate();
+        // Keep this W2/W3 characterization pinned before the W5 backfill.
+        flyway("47").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryLong(connection, "select count(*) from cabras")).isEqualTo(1L);
