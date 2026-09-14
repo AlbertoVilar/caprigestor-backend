@@ -9,6 +9,13 @@ import java.util.Optional;
 public interface GoatOwnershipPeriodPersistencePort {
     GoatOwnershipPeriod save(GoatOwnershipPeriod period);
 
+    /**
+     * Persists an ownership handoff inside the caller's transaction. The
+     * adapter must physically close the old open period before inserting the
+     * new one, keeping the unique-open-period invariant safe.
+     */
+    GoatOwnershipPeriod handoff(GoatOwnershipPeriod closedSource, GoatOwnershipPeriod openedTarget);
+
     Optional<GoatOwnershipPeriod> findOpenByGoatId(GoatId goatId);
 
     List<GoatOwnershipPeriod> findByGoatIdOrderByStartedAt(GoatId goatId);

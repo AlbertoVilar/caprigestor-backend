@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.CreatorReferencePersistenceAdapter;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.GoatOwnershipLockPersistenceAdapter;
+import com.devmaster.goatfarm.goatownership.persistence.adapter.GoatOwnershipPeriodPersistenceAdapter;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.GoatOwnershipQueryPersistenceAdapter;
 import com.devmaster.goatfarm.goatownership.persistence.entity.CreatorReferenceEntity;
 import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
@@ -33,6 +34,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -100,6 +102,26 @@ class OwnershipPersistenceAdaptersTest {
         when(lockRepository.lockGoatById(42L)).thenReturn(Optional.empty());
         var adapter = new GoatOwnershipLockPersistenceAdapter(lockRepository, periodRepository, mapper);
         assertThat(adapter.lockGoatOwnership(GOAT_ID)).isEmpty();
+    }
+
+    @Test
+    void ownershipHandoffClosesSourceBeforeInsertingTarget() {
+        var sourceEntity = periodEntity(11L, 8L, START, START.plusSeconds(60));
+        sourceEntity.setExitType(com.devmaster.goatfarm.goatownership.domain.OwnershipExitType.TRANSFER_OUT);
+        var target = GoatOwnershipPeriod.open(GOAT_ID, 9L, START.plusSeconds(60),
+                OwnershipEntryType.TRANSFER_IN, "OWNERSHIP_TRANSFER:3");
+        when(periodRepository.findById(11L)).thenReturn(Optional.of(sourceEntity));
+        var targetEntity = mapper.toEntity(target);
+        when(periodRepository.save(any(GoatOwnershipPeriodEntity.class))).thenReturn(targetEntity);
+        var adapter = new GoatOwnershipPeriodPersistenceAdapter(periodRepository, mapper);
+
+        adapter.handoff(GoatOwnershipPeriod.rehydrate(11L, GOAT_ID, 8L, START, START.plusSeconds(60),
+                OwnershipEntryType.PURCHASE, com.devmaster.goatfarm.goatownership.domain.OwnershipExitType.TRANSFER_OUT, "test"), target);
+
+        InOrder order = inOrder(periodRepository);
+        order.verify(periodRepository).findById(11L);
+        order.verify(periodRepository).saveAndFlush(sourceEntity);
+        order.verify(periodRepository).save(any(GoatOwnershipPeriodEntity.class));
     }
 
     @Test

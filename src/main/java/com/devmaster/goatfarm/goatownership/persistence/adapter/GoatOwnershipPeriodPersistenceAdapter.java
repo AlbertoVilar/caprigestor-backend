@@ -39,6 +39,19 @@ public class GoatOwnershipPeriodPersistenceAdapter implements GoatOwnershipPerio
     }
 
     @Override
+    public GoatOwnershipPeriod handoff(GoatOwnershipPeriod closedSource, GoatOwnershipPeriod openedTarget) {
+        if (closedSource == null || openedTarget == null || closedSource.id() == null) {
+            throw new IllegalArgumentException("closed source and opened target are required");
+        }
+        GoatOwnershipPeriodEntity sourceEntity = repository.findById(closedSource.id())
+                .orElseThrow(() -> new IllegalArgumentException("ownership period does not exist: " + closedSource.id()));
+        mapper.update(sourceEntity, closedSource);
+        repository.saveAndFlush(sourceEntity);
+        GoatOwnershipPeriodEntity targetEntity = mapper.toEntity(openedTarget);
+        return mapper.toDomain(repository.save(targetEntity));
+    }
+
+    @Override
     public Optional<GoatOwnershipPeriod> findOpenByGoatId(GoatId goatId) {
         return goatId == null ? Optional.empty()
                 : repository.findByGoatIdAndEndedAtIsNull(goatId.value()).map(mapper::toDomain);
