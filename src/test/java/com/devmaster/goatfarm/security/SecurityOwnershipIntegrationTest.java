@@ -340,6 +340,12 @@ public class SecurityOwnershipIntegrationTest {
     }
 
     @Test
+    void ownershipHistoryEndpoint_shouldReturn401WithoutToken() throws Exception {
+        mockMvc.perform(get("/api/v1/goats/1/ownership-history"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void privateLactationEndpoints_shouldReturn401WithoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/goatfarms/" + ownerFarm.getId()
                 + "/goats/" + ownerGoat.getRegistrationNumber() + "/lactations/active"))
