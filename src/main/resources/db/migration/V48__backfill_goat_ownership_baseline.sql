@@ -43,6 +43,22 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'V48: legacy exit_date precedes data_nascimento';
     END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM cabras
+        WHERE upper(btrim(status)) IN ('VENDIDO', 'FALECIDO')
+          AND (exit_type IS NULL OR exit_date IS NULL)
+    ) THEN
+        RAISE EXCEPTION 'V48: terminal legacy status requires exit_type and exit_date';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM cabras
+        WHERE (upper(btrim(status)) = 'VENDIDO' AND upper(btrim(exit_type)) <> 'VENDA')
+           OR (upper(btrim(status)) = 'FALECIDO' AND upper(btrim(exit_type)) <> 'MORTE')
+    ) THEN
+        RAISE EXCEPTION 'V48: legacy status and exit_type contradict each other';
+    END IF;
 END
 $$;
 
@@ -105,8 +121,5 @@ BEGIN
         RAISE EXCEPTION 'V48: legacy backfill must not create ownership transfers';
     END IF;
 
-    IF EXISTS (SELECT 1 FROM goat_creator_reference) THEN
-        RAISE EXCEPTION 'V48: legacy backfill must not infer creator references';
-    END IF;
 END
 $$;

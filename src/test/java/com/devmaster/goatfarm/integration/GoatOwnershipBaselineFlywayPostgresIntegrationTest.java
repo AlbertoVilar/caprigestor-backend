@@ -48,7 +48,7 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
 
         try (Connection connection = openConnection()) {
             seedUsersAndFarms(connection);
-            insertGoat(connection, "W5-ACTIVE", "ATIVO", null, null, 101L, "2020-01-02");
+            insertGoat(connection, "W5-ACTIVE", "ATIVO", null, null, 202L, "2020-01-02");
             insertGoat(connection, "W5-INACTIVE", "INATIVO", null, null, 101L, "2020-01-03");
             insertGoat(connection, "W5-SALE", "INATIVO", "VENDA", "2026-02-10", 101L, "2020-01-04");
             insertGoat(connection, "W5-DEATH", "INATIVO", "MORTE", "2026-02-11", 101L, "2020-01-05");
@@ -57,6 +57,7 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
             insertGoat(connection, "W5-TRANSFER", "INATIVO", "TRANSFERENCIA", "2026-02-14", 101L, "2020-01-08");
 
             long activeId = goatId(connection, "W5-ACTIVE");
+            insertCreatorReference(connection, activeId);
             insertHistoricalRows(connection, activeId);
             long pregnancyFarmBefore = queryLong(connection,
                     "select farm_id from pregnancy where goat_technical_id = " + activeId);
@@ -68,7 +69,8 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
 
         try (Connection connection = openConnection()) {
             assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isEqualTo(7L);
-            assertBaseline(connection, "W5-ACTIVE", 101, true, null);
+            long activeId = goatId(connection, "W5-ACTIVE");
+            assertBaseline(connection, "W5-ACTIVE", 202, true, null);
             assertBaseline(connection, "W5-INACTIVE", 101, true, null);
             assertBaseline(connection, "W5-SALE", 101, false, "EXTERNAL_SALE");
             assertBaseline(connection, "W5-DEATH", 101, false, "DEATH");
@@ -76,9 +78,14 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
             assertBaseline(connection, "W5-DONATION", 101, false, "DONATION");
             assertBaseline(connection, "W5-TRANSFER", 101, false, "TRANSFER_OUT");
             assertThat(queryLong(connection, "select count(*) from ownership_transfer")).isZero();
-            assertThat(queryLong(connection, "select count(*) from goat_creator_reference")).isZero();
+            assertThat(queryLong(connection, "select count(*) from goat_creator_reference")).isEqualTo(1L);
+            assertThat(queryString(connection, "select creator_tod from goat_creator_reference where goat_id = "
+                    + activeId)).isEqualTo("11111");
+            assertThat(queryLong(connection, "select creator_farm_id from goat_creator_reference where goat_id = "
+                    + activeId)).isEqualTo(101L);
+            assertThat(queryString(connection, "select source from goat_creator_reference where goat_id = "
+                    + activeId)).isEqualTo("MANUAL_DECLARATION");
 
-            long activeId = goatId(connection, "W5-ACTIVE");
             assertThat(queryLong(connection,
                     "select farm_id from pregnancy where goat_technical_id = " + activeId)).isEqualTo(101L);
             assertThat(queryLong(connection,
@@ -133,6 +140,44 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
                 .hasMessageContaining("V48: goat_ownership_period must be empty");
     }
 
+    @Test
+    void rejectsTerminalLegacyStatusesWithoutExitMetadata() throws SQLException {
+        flyway("47").migrate();
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W5-SOLD-WITHOUT-EXIT", "VENDIDO", null, null, 101L, "2020-01-01");
+        }
+        assertThatThrownBy(() -> flyway().migrate())
+                .hasMessageContaining("V48: terminal legacy status requires exit_type and exit_date");
+
+        resetDatabase();
+        flyway("47").migrate();
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W5-DEAD-WITHOUT-EXIT", "FALECIDO", null, null, 101L, "2020-01-01");
+        }
+        assertThatThrownBy(() -> flyway().migrate())
+                .hasMessageContaining("V48: terminal legacy status requires exit_type and exit_date");
+    }
+
+    @Test
+    void rejectsContradictoryTerminalStatusAndExitType() throws SQLException {
+        flyway("47").migrate();
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W5-SOLD-DEATH", "VENDIDO", "MORTE", "2026-02-10", 101L, "2020-01-01");
+        }
+        assertThatThrownBy(() -> flyway().migrate())
+                .hasMessageContaining("V48: legacy status and exit_type contradict each other");
+    }
+
+    private void insertCreatorReference(Connection connection, long goatId) throws SQLException {
+        execute(connection, "insert into goat_creator_reference "
+                + "(goat_id, creator_tod, creator_farm_id, creator_name_snapshot, source, evidence_reference, recorded_at) "
+                + "values (" + goatId + ", '11111', 101, 'W5 Creator', 'MANUAL_DECLARATION', 'W5 evidence', "
+                + "timestamp with time zone '2026-01-01 00:00:00+00')");
+    }
+
     private void assertBaseline(Connection connection, String registration, long farmId,
                                 boolean open, String exitType) throws SQLException {
         long goatId = goatId(connection, registration);
@@ -166,7 +211,8 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
     private void seedUsersAndFarms(Connection connection) throws SQLException {
         execute(connection, "insert into users (id, name, email, password, cpf) values "
                 + "(1, 'W5 User', 'w5@example.com', 'password', '00000000001')");
-        execute(connection, "insert into capril (id, name, user_id, tod) values (101, 'W5 Farm', 1, '11111')");
+        execute(connection, "insert into capril (id, name, user_id, tod) values "
+                + "(101, 'W5 Historical Farm', 1, '11111'), (202, 'W5 Current Farm', 1, '22222')");
     }
 
     private void insertGoat(Connection connection, String registration, String status, String exitType,
