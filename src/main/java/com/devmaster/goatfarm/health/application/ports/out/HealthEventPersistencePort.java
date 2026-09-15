@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.health.application.model.HealthEventWindow;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,5 +28,7 @@ public interface HealthEventPersistencePort {
     List<HealthEventRecord> findPerformedWithWithdrawalByFarmIdAndGoatId(Long farmId, String goatId);
 
     List<HealthEventRecord> findPerformedWithWithdrawalByFarmId(Long farmId);
+
+    List<HealthEventRecord> findPerformedWithWithdrawalByGoatTechnicalId(GoatId goatId);
 
 }

@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.application.pagination.SortDirection;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
 import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
@@ -130,6 +131,15 @@ public class HealthEventPersistenceAdapter implements HealthEventPersistencePort
     @Override
     public List<HealthEventRecord> findPerformedWithWithdrawalByFarmId(Long farmId) {
         return repository.findPerformedWithWithdrawalByFarmId(farmId).stream().map(mapper::toModel).toList();
+    }
+
+    @Override
+    public List<HealthEventRecord> findPerformedWithWithdrawalByGoatTechnicalId(GoatId goatId) {
+        if (goatId == null) {
+            return List.of();
+        }
+        return repository.findPerformedWithWithdrawalByGoatTechnicalId(goatId.value())
+                .stream().map(mapper::toModel).toList();
     }
 
     private Optional<Long> technicalId(Long farmId, String registrationNumber) {

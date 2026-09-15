@@ -46,6 +46,19 @@ public interface MilkProductionRepository extends JpaRepository<MilkProductionEn
             @Param("shift") MilkingShift shift
     );
 
+    @Query("""
+    select case when count(mp) > 0 then true else false end from MilkProduction mp
+    where mp.goatTechnicalId = :goatTechnicalId
+      and mp.date = :date
+      and mp.shift = :shift
+      and mp.status = com.devmaster.goatfarm.milk.enums.MilkProductionStatus.ACTIVE
+    """)
+    boolean existsActiveByGoatTechnicalIdAndDateAndShift(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("date") LocalDate date,
+            @Param("shift") MilkingShift shift
+    );
+
     Optional<MilkProductionEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
     Optional<MilkProductionEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
 

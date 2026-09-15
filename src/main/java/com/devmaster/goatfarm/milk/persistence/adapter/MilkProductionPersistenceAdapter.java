@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersisten
 import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionSummaryQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
@@ -80,6 +81,14 @@ public class MilkProductionPersistenceAdapter implements MilkProductionPersisten
                 date,
                 shift
         );
+    }
+
+    @Override
+    public boolean existsActiveByGoatTechnicalIdAndDateAndShift(GoatId goatId, LocalDate date, MilkingShift shift) {
+        if (goatId == null || date == null || shift == null) {
+            return false;
+        }
+        return milkProductionRepository.existsActiveByGoatTechnicalIdAndDateAndShift(goatId.value(), date, shift);
     }
 
     @Override

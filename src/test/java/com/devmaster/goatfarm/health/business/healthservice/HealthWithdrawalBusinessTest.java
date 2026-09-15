@@ -113,6 +113,29 @@ class HealthWithdrawalBusinessTest {
         assertTrue(statuses.getFirst().hasActiveMilkWithdrawal());
     }
 
+    @Test
+    void globalWithdrawalStatusUsesGoatIdentityAcrossFarmsAndHonorsPerformedDate() {
+        HealthWithdrawalBusiness business = new HealthWithdrawalBusiness(
+                healthEventPersistencePort,
+                goatReferenceResolver,
+                new EntityFinder()
+        );
+        GoatId goatId = new GoatId(42L);
+        LocalDate referenceDate = LocalDate.of(2026, 3, 29);
+        when(goatReferenceResolver.resolveGlobal(goatId)).thenReturn(Optional.of(
+                new GoatReference(goatId, 2L, "NEW-RG", "Goat", null)));
+        when(healthEventPersistencePort.findPerformedWithWithdrawalByGoatTechnicalId(goatId)).thenReturn(List.of(
+                buildPerformedEvent(30L, 1L, "OLD-RG", "Origin treatment", LocalDate.of(2026, 3, 28), 4, 0),
+                buildPerformedEvent(31L, 1L, "OLD-RG", "Future treatment", LocalDate.of(2026, 4, 1), 4, 0)
+        ));
+
+        GoatWithdrawalStatusVO status = business.getGoatWithdrawalStatus(goatId, referenceDate);
+
+        assertTrue(status.hasActiveMilkWithdrawal());
+        assertEquals(30L, status.milkWithdrawal().eventId());
+        assertEquals("NEW-RG", status.goatId());
+    }
+
     private HealthEventRecord buildPerformedEvent(
             Long eventId,
             Long farmId,

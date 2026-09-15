@@ -31,7 +31,7 @@ class GoatOwnershipBaselineFlywayPostgresIntegrationTest {
 
     @Test
     void freshV1ToV48SucceedsWithEmptyLegacyDatabase() throws SQLException {
-        flyway().migrate();
+        flyway("48").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,

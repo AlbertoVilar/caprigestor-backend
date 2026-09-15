@@ -34,9 +34,16 @@ public final class MilkProduction {
     public static MilkProduction record(Long farmId, String goatId, Long lactationId,
                                         LocalDate date, MilkingShift shift, BigDecimal volumeLiters,
                                         String notes) {
+        return record(farmId, goatId, null, lactationId, date, shift, volumeLiters, notes);
+    }
+
+    public static MilkProduction record(Long farmId, String goatId, Long goatTechnicalId, Long lactationId,
+                                        LocalDate date, MilkingShift shift, BigDecimal volumeLiters,
+                                        String notes) {
         MilkProduction production = new MilkProduction();
         production.farmId = farmId;
         production.goatId = goatId;
+        production.goatTechnicalId = goatTechnicalId;
         production.lactationId = lactationId;
         production.date = date;
         production.shift = shift;

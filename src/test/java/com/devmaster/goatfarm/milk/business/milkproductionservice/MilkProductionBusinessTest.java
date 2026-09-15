@@ -17,6 +17,10 @@ import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
 import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +58,12 @@ class MilkProductionBusinessTest {
     @Mock
     private MilkProductionBusinessMapper milkProductionMapper;
 
+    @Mock
+    private GoatReferenceResolver goatReferenceResolver;
+
+    @Mock
+    private GoatOwnershipGuardUseCase goatOwnershipGuard;
+
     @InjectMocks
     private MilkProductionBusiness milkProductionBusiness;
 
@@ -62,7 +72,12 @@ class MilkProductionBusinessTest {
         // Método executado antes de cada teste.
         // Útil para resetar mocks ou configurar comportamento padrão se necessário.
         lenient().doNothing().when(goatGenderValidator).requireFemale(anyLong(), anyString());
-        lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(anyLong(), anyString(), any(LocalDate.class)))
+        lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(any(GoatId.class));
+        lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(GoatId.class), anyLong());
+        lenient().doNothing().when(goatOwnershipGuard).requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+        lenient().when(goatReferenceResolver.resolveGlobal(anyString()))
+                .thenReturn(Optional.of(new GoatReference(new GoatId(42L), 1L, "1643218012", "Goat", null)));
+        lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(any(GoatId.class), any(LocalDate.class)))
                 .thenReturn(GoatWithdrawalStatusVO.builder()
                         .goatId("GOAT-DEFAULT")
                         .referenceDate(LocalDate.now())
@@ -90,11 +105,11 @@ class MilkProductionBusinessTest {
                 com.devmaster.goatfarm.milk.enums.LactationStatus.ACTIVE,
                 request.getDate().minusDays(10), null, null, null, 90, 60, null, null);
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                eq(farmId), eq(goatId), eq(request.getDate()), eq(request.getShift())))
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                eq(new GoatId(42L)), eq(request.getDate()), eq(request.getShift())))
                 .thenReturn(false);
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(42L)))
                 .thenReturn(Optional.of(lactation));
 
         MilkProduction savedEntity = validEntity();
@@ -113,8 +128,8 @@ class MilkProductionBusinessTest {
         assertEquals(responseVO.getShift(), result.getShift());
 
         // Verify
-        verify(milkProductionPersistencePort).existsByFarmIdAndGoatIdAndDateAndShift(farmId, goatId, request.getDate(), request.getShift());
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(new GoatId(42L), request.getDate(), request.getShift());
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(42L));
         verify(milkProductionPersistencePort).save(any(MilkProduction.class));
     }
 
@@ -147,8 +162,8 @@ class MilkProductionBusinessTest {
         String goatId = "1643218012";
         MilkProductionRequestVO request = validCreateVO();
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(true);
 
         // Act & Assert
@@ -156,8 +171,8 @@ class MilkProductionBusinessTest {
                 () -> milkProductionBusiness.createMilkProduction(farmId, goatId, request));
 
         // Verify
-        verify(milkProductionPersistencePort).existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         );
         verifyNoInteractions(lactationPersistencePort);
         verifyNoInteractions(milkProductionMapper);
@@ -171,11 +186,11 @@ class MilkProductionBusinessTest {
         String goatId = "1643218012";
         MilkProductionRequestVO request = validCreateVO();
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(false);
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(42L)))
                 .thenReturn(Optional.empty());
 
         // Act & Assert
@@ -183,10 +198,10 @@ class MilkProductionBusinessTest {
                 () -> milkProductionBusiness.createMilkProduction(farmId, goatId, request));
 
         // Verify
-        verify(milkProductionPersistencePort).existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         );
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(42L));
         verifyNoInteractions(milkProductionMapper);
         verify(milkProductionPersistencePort, never()).save(any());
     }
@@ -208,11 +223,11 @@ class MilkProductionBusinessTest {
         responseVO.setMilkWithdrawalEndDate(request.getDate().plusDays(3));
         responseVO.setMilkWithdrawalSource("Antibiotico");
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(false);
 
-        when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(farmId, goatId, request.getDate()))
+        when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(new GoatId(42L), request.getDate()))
                 .thenReturn(GoatWithdrawalStatusVO.builder()
                         .goatId(goatId)
                         .referenceDate(request.getDate())
@@ -226,7 +241,7 @@ class MilkProductionBusinessTest {
                                 .build())
                         .build());
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(42L)))
                 .thenReturn(Optional.of(lactation));
         when(milkProductionPersistencePort.save(any(MilkProduction.class))).thenReturn(savedEntity);
         when(milkProductionMapper.toResponseVO(savedEntity)).thenReturn(responseVO);
@@ -242,7 +257,7 @@ class MilkProductionBusinessTest {
         assertEquals(request.getDate().plusDays(3), captured.getMilkWithdrawalEndDate());
         assertEquals("Antibiotico", captured.getMilkWithdrawalSource());
         assertTrue(result.isRecordedDuringMilkWithdrawal());
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(42L));
     }
 
     // ==================================================================================

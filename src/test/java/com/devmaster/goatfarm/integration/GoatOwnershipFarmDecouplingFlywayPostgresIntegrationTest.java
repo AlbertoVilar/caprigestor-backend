@@ -173,6 +173,74 @@ class GoatOwnershipFarmDecouplingFlywayPostgresIntegrationTest {
     }
 
     @Test
+    void v49EnforcesGlobalActiveMilkIdentityAcrossFarmsAndAllowsCanceledReplacement() throws SQLException {
+        flyway("49").migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W12-GLOBAL-MILK-A", 1, 101);
+            insertGoat(connection, "W12-GLOBAL-MILK-B", 2, 102);
+            long goatA = goatId(connection, "W12-GLOBAL-MILK-A");
+            long goatB = goatId(connection, "W12-GLOBAL-MILK-B");
+            long lactationA = insertLactation(connection, 101, goatA, 12345, "ACTIVE");
+            long lactationB = insertLactation(connection, 102, goatB, 67890, "ACTIVE");
+
+            execute(connection, """
+                    insert into milk_production
+                        (farm_id, goat_id, goat_technical_id, lactation_id, date, shift,
+                         volume_liters, status)
+                    values (101, 'W12-GLOBAL-MILK-A', %d, %d, date '2026-01-10', 'MORNING', 2.50, 'ACTIVE')
+                    """.formatted(goatA, lactationA));
+
+            // The same biological GoatId/date/shift is rejected even when a
+            // caller supplies another farm and a different RG snapshot.
+            assertThatThrownBy(() -> execute(connection, """
+                    insert into milk_production
+                        (farm_id, goat_id, goat_technical_id, lactation_id, date, shift,
+                         volume_liters, status)
+                    values (102, 'W12-GLOBAL-MILK-B-RG-SNAPSHOT', %d, %d,
+                            date '2026-01-10', 'MORNING', 3.00, 'ACTIVE')
+                    """.formatted(goatA, lactationA)))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("ux_milk_production_active_goat_technical_daily_shift");
+
+            // Canceled history does not occupy the active identity slot and
+            // can be replaced by a new active row for the same key.
+            execute(connection, """
+                    insert into milk_production
+                        (farm_id, goat_id, goat_technical_id, lactation_id, date, shift,
+                         volume_liters, status)
+                    values (101, 'W12-GLOBAL-MILK-A', %d, %d, date '2026-01-11', 'MORNING', 1.00, 'CANCELED')
+                    """.formatted(goatA, lactationA));
+            execute(connection, """
+                    insert into milk_production
+                        (farm_id, goat_id, goat_technical_id, lactation_id, date, shift,
+                         volume_liters, status)
+                    values (102, 'W12-GLOBAL-MILK-A-NEW-RG', %d, %d, date '2026-01-11', 'MORNING', 1.25, 'ACTIVE')
+                    """.formatted(goatA, lactationA));
+
+            // Different shift/date and a different GoatId remain valid.
+            execute(connection, """
+                    insert into milk_production
+                        (farm_id, goat_id, goat_technical_id, lactation_id, date, shift,
+                         volume_liters, status)
+                    values (101, 'W12-GLOBAL-MILK-A', %d, %d, date '2026-01-10', 'AFTERNOON', 2.00, 'ACTIVE')
+                    """.formatted(goatA, lactationA));
+            execute(connection, """
+                    insert into milk_production
+                        (farm_id, goat_id, goat_technical_id, lactation_id, date, shift,
+                         volume_liters, status)
+                    values (102, 'W12-GLOBAL-MILK-B', %d, %d, date '2026-01-10', 'MORNING', 2.00, 'ACTIVE')
+                    """.formatted(goatB, lactationB));
+
+            String definition = indexDefinition(connection,
+                    "ux_milk_production_active_goat_technical_daily_shift").toLowerCase();
+            assertThat(definition).contains("goat_technical_id", "date", "shift", "status", "active");
+            assertThat(indexExists(connection, "ux_milk_production_active_daily_shift")).isFalse();
+        }
+    }
+
+    @Test
     void unrelatedFarmCustomerIntegrityRemainsEnforced() throws SQLException {
         flyway("47").migrate();
 
