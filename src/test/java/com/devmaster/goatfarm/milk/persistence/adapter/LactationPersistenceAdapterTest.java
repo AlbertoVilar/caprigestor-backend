@@ -76,6 +76,21 @@ class LactationPersistenceAdapterTest {
         verify(repository, never()).findFirstByFarmIdAndGoatIdOrderByStartDateDescIdDesc(1L, "RG-1");
     }
 
+    @Test
+    void findByIdAndTechnicalIdUsesNeutralGlobalLookupWithoutFarmFilter() {
+        LactationEntity inherited = entity(12L, 7L);
+        when(repository.findByIdAndGoatTechnicalId(12L, 7L)).thenReturn(Optional.of(inherited));
+
+        Optional<com.devmaster.goatfarm.milk.domain.Lactation> result =
+                adapter.findByIdAndGoatTechnicalId(12L, new GoatId(7L));
+
+        assertThat(result).isPresent();
+        assertThat(result.orElseThrow().getFarmId()).isEqualTo(1L);
+        verify(repository).findByIdAndGoatTechnicalId(12L, 7L);
+        verify(repository, never()).findByIdAndFarmIdAndGoatId(org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
+    }
+
     private LactationEntity entity(Long id, Long technicalId) {
         return LactationEntity.builder().id(id).farmId(1L).goatId("RG-1").goatTechnicalId(technicalId)
                 .status(LactationStatus.DRY).startDate(LocalDate.of(2026, 1, 1)).build();

@@ -78,6 +78,15 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
     }
 
     @Override
+    public Optional<Lactation> findByIdAndGoatTechnicalId(Long id, GoatId goatId) {
+        if (id == null || goatId == null) {
+            return Optional.empty();
+        }
+        return lactationRepository.findByIdAndGoatTechnicalId(id, goatId.value())
+                .map(lactationMapper::toDomain);
+    }
+
+    @Override
     public PageResult<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery) {
         Pageable pageable = toPageable(pageQuery);
         Optional<Long> technicalId = technicalId(farmId, goatId);
