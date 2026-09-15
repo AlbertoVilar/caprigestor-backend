@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.application.pagination.SortDirection;
 import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.mapper.LactationPersistenceMapper;
@@ -100,6 +101,24 @@ public class LactationPersistenceAdapter implements LactationPersistencePort {
             }
         }
         return lactationRepository.findFirstByFarmIdAndGoatIdOrderByStartDateDescIdDesc(farmId, goatId)
+                .map(lactationMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Lactation> findActiveByGoatTechnicalId(GoatId goatId) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        return lactationRepository.findByGoatTechnicalIdAndStatus(goatId.value(), LactationStatus.ACTIVE)
+                .map(lactationMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Lactation> findLatestByGoatTechnicalId(GoatId goatId) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        return lactationRepository.findFirstByGoatTechnicalIdOrderByStartDateDescIdDesc(goatId.value())
                 .map(lactationMapper::toDomain);
     }
 

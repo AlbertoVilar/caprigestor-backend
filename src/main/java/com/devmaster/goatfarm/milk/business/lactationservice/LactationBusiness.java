@@ -8,6 +8,10 @@ import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapsho
 import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancyDryOffQueryUseCase;
 import com.devmaster.goatfarm.reproduction.application.model.PregnancyDryOffSnapshot;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
@@ -36,6 +40,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Objects;
 
 @Service
 public class LactationBusiness implements LactationCommandUseCase, LactationQueryUseCase {
@@ -48,37 +53,76 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     private final PregnancyDryOffQueryUseCase pregnancyDryOffQueryUseCase;
     private final GoatGenderValidator goatGenderValidator;
     private final LactationBusinessMapper lactationMapper;
+    private final GoatReferenceResolver goatReferenceResolver;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
 
+    /**
+     * Spring constructor for the canonical GoatId/ownership-aware command
+     * path. All collaborators are mandatory so the authorization invariant
+     * cannot be disabled by constructor selection.
+     */
+    @org.springframework.beans.factory.annotation.Autowired
     public LactationBusiness(LactationPersistencePort lactationPersistencePort,
                              MilkProductionSummaryQueryPort milkProductionSummaryQueryPort,
                              PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort,
                              PregnancyDryOffQueryUseCase pregnancyDryOffQueryUseCase,
                              GoatGenderValidator goatGenderValidator,
-                             LactationBusinessMapper lactationMapper) {
+                             LactationBusinessMapper lactationMapper,
+                             GoatReferenceResolver goatReferenceResolver,
+                             GoatOwnershipGuardUseCase goatOwnershipGuard) {
         this.lactationPersistencePort = lactationPersistencePort;
         this.milkProductionSummaryQueryPort = milkProductionSummaryQueryPort;
         this.pregnancySnapshotQueryPort = pregnancySnapshotQueryPort;
         this.pregnancyDryOffQueryUseCase = pregnancyDryOffQueryUseCase;
         this.goatGenderValidator = goatGenderValidator;
         this.lactationMapper = lactationMapper;
+        this.goatReferenceResolver = goatReferenceResolver;
+        this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
     @Override
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
-        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
-        if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
-             throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
+        return openLactationWithCanonicalOwnership(farmId, goatId, vo);
+    }
+
+    private LactationResponseVO openLactationWithCanonicalOwnership(
+            Long farmId,
+            String goatRouteToken,
+            LactationRequestVO vo
+    ) {
+        GoatReference goat = goatReferenceResolver.resolveGlobal(goatRouteToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+        GoatId technicalId = goat.id();
+
+        // Canonical ownership is authoritative. Projection consistency is
+        // checked only after the ownership guard succeeds.
+        goatOwnershipGuard.requireCurrentFarm(technicalId, requireFarmId(farmId));
+        if (!Objects.equals(goat.farmId(), farmId)) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
         }
 
-        Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        // Operational attributes are validated by stable identity only after
+        // authorization, so another farm's Goat details are not disclosed.
+        goatGenderValidator.requireFemaleAndActive(technicalId);
+
+        LocalDate startDate = vo.getStartDate();
+        if (startDate == null) {
+            throw new InvalidArgumentException("startDate", "Data de início da lactação é obrigatória.");
+        }
+        if (startDate != null && startDate.isAfter(LocalDate.now())) {
+            throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
+        }
+        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, startDate);
+
+        Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByGoatTechnicalId(technicalId);
         if (activeLactation.isPresent()) {
             throw new BusinessRuleException("Já existe uma lactação ativa para esta cabra.");
         }
-        
-        Optional<Lactation> latestLactation = lactationPersistencePort.findLatestByFarmIdAndGoatId(farmId, goatId);
 
+        Optional<Lactation> latestLactation = lactationPersistencePort.findLatestByGoatTechnicalId(technicalId);
         Optional<PregnancySnapshot> pregnancySnapshot = pregnancySnapshotQueryPort
-                .findLatestByFarmIdAndGoatId(farmId, goatId, vo.getStartDate());
+                .findLatestByGoatTechnicalId(technicalId, startDate);
 
         if (latestLactation.isPresent()
                 && latestLactation.get().getStatus() == LactationStatus.DRY
@@ -86,10 +130,16 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
             throw new BusinessRuleException("Nao e permitido abrir nova lactacao enquanto houver prenhez ativa apos secagem confirmada.");
         }
 
-        Lactation lactation = Lactation.open(farmId, goatId, vo.getStartDate());
-
+        Lactation lactation = Lactation.open(farmId, goat.registrationNumber(), technicalId.value(), startDate);
         Lactation saved = lactationPersistencePort.save(lactation);
         return lactationMapper.toResponseVO(saved);
+    }
+
+    private long requireFarmId(Long farmId) {
+        if (farmId == null || farmId <= 0) {
+            throw new InvalidArgumentException("farmId", "Identificador de fazenda inválido.");
+        }
+        return farmId;
     }
 
     @Override

@@ -19,6 +19,9 @@ import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +37,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -76,6 +80,9 @@ class MilkOperationalAuthorizationIntegrationTest {
     @Autowired
     private MilkProductionRepository milkProductionRepository;
 
+    @Autowired
+    private GoatOwnershipPeriodRepository goatOwnershipPeriodRepository;
+
     private User admin;
     private User owner;
     private User linkedOperator;
@@ -111,6 +118,8 @@ class MilkOperationalAuthorizationIntegrationTest {
 
         goat = createActiveFemaleGoat("MILK-001", "Lactating GoatEntity");
         goatWithoutLactation = createActiveFemaleGoat("MILK-002", "Fresh GoatEntity");
+        initializeOwnership(goat);
+        initializeOwnership(goatWithoutLactation);
 
         activeLactation = new LactationEntity();
         activeLactation.setFarmId(farm.getId());
@@ -244,6 +253,16 @@ class MilkOperationalAuthorizationIntegrationTest {
         return goatRepository.save(goat);
     }
 
+    private void initializeOwnership(GoatEntity targetGoat) {
+        GoatOwnershipPeriodEntity period = new GoatOwnershipPeriodEntity();
+        period.setGoatId(targetGoat.getTechnicalId());
+        period.setFarmId(farm.getId());
+        period.setStartedAt(Instant.now().minusSeconds(365L * 86_400));
+        period.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        period.setSource("Milk operational authorization fixture");
+        goatOwnershipPeriodRepository.save(period);
+    }
+
     private String loginAndGetToken(String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -268,6 +287,7 @@ class MilkOperationalAuthorizationIntegrationTest {
     private void cleanDatabase() {
         milkProductionRepository.deleteAll();
         lactationRepository.deleteAll();
+        goatOwnershipPeriodRepository.deleteAll();
         farmOperatorRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();

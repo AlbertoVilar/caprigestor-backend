@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.reproduction.application.ports.in;
 
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -21,6 +22,11 @@ public interface PregnancySnapshotQueryUseCase {
     Optional<PregnancySnapshot> findLatestByFarmIdAndGoatId(
             Long farmId,
             String goatId,
+            LocalDate referenceDate
+    );
+
+    Optional<PregnancySnapshot> findLatestByGoatTechnicalId(
+            GoatId goatId,
             LocalDate referenceDate
     );
 }
