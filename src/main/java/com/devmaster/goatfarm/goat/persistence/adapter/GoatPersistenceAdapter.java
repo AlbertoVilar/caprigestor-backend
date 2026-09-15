@@ -175,11 +175,6 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
-    public void deleteById(GoatId id) {
-        goatRepository.findByTechnicalId(id.value()).ifPresent(goatRepository::delete);
-    }
-
-    @Override
     public boolean existsByRegistrationNumber(String registrationNumber) {
         return goatRepository.existsByRegistrationNumber(registrationNumber);
     }

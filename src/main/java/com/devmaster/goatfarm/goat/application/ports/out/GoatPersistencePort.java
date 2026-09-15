@@ -39,7 +39,5 @@ public interface GoatPersistencePort {
 
     GoatHerdSnapshot getHerdSummary(Long farmId);
 
-    void deleteById(GoatId id);
-
     boolean existsByRegistrationNumber(String registrationNumber);
 }

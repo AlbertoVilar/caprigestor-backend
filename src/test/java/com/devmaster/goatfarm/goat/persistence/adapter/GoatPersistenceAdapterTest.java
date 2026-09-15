@@ -107,12 +107,11 @@ class GoatPersistenceAdapterTest {
     }
 
     @Test
-    void exposesValidationSummaryAndTechnicalDelete() {
+    void exposesValidationSummary() {
         when(repository.findByRegistrationNumberAndFarmId("RG-10", 1L)).thenReturn(Optional.of(entity));
         when(repository.findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph("RG-10", 1L))
                 .thenReturn(Optional.of(entity));
         when(repository.existsByRegistrationNumber("RG-10")).thenReturn(true);
-        when(repository.findByTechnicalId(10L)).thenReturn(Optional.of(entity));
         when(repository.countByFarmId(1L)).thenReturn(20L);
         when(repository.countByFarmIdAndGender(1L, Gender.MACHO)).thenReturn(4L);
         when(repository.countByFarmIdAndGender(1L, Gender.FEMEA)).thenReturn(16L);
@@ -133,8 +132,6 @@ class GoatPersistenceAdapterTest {
         assertThat(adapter.getHerdSummary(1L).total()).isEqualTo(20L);
         assertThat(adapter.existsByRegistrationNumber("RG-10")).isTrue();
 
-        adapter.deleteById(new GoatId(10L));
-        verify(repository).delete(entity);
     }
 
     private GoatEntity entity(Long technicalId, String registration) {

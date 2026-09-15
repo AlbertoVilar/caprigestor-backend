@@ -13,44 +13,46 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatRegistrationHistoryPersistencePort;
-import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationHistoryResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationRectificationRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationRectificationResponseVO;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatRegistrationHistory;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /** Application service for an explicit, audited correction of a Goat identity. */
 @Service
 public class GoatRegistrationRectificationBusiness implements GoatRegistrationRectificationUseCase {
 
     private final GoatPersistencePort goatPersistencePort;
-    private final GoatReferenceResolver goatReferenceResolver;
     private final GoatRegistrationHistoryPersistencePort historyPersistencePort;
     private final FarmAuthorizationUseCase ownershipService;
     private final OperationalAuditUseCase operationalAuditUseCase;
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     public GoatRegistrationRectificationBusiness(
             GoatPersistencePort goatPersistencePort,
-            GoatReferenceResolver goatReferenceResolver,
             GoatRegistrationHistoryPersistencePort historyPersistencePort,
             FarmAuthorizationUseCase ownershipService,
             OperationalAuditUseCase operationalAuditUseCase,
-            CurrentPrincipalQueryUseCase currentPrincipalQuery
+            CurrentPrincipalQueryUseCase currentPrincipalQuery,
+            GoatOwnershipGuardUseCase goatOwnershipGuard
     ) {
         this.goatPersistencePort = goatPersistencePort;
-        this.goatReferenceResolver = goatReferenceResolver;
         this.historyPersistencePort = historyPersistencePort;
         this.ownershipService = ownershipService;
         this.operationalAuditUseCase = operationalAuditUseCase;
         this.currentPrincipalQuery = currentPrincipalQuery;
+        this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
     @Override
@@ -63,7 +65,9 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
         ownershipService.verifyFarmOwnership(farmId);
         validateRequest(request);
 
-        Goat goat = resolveGoat(farmId, goatRouteToken);
+        Goat goat = resolveGoatWithoutProjection(goatRouteToken);
+        goatOwnershipGuard.requireLastAssociatedFarm(goat.id(), farmId);
+        assertProjectionMatchesCanonicalFarm(goat, farmId);
         RegistrationIdentity previous = goat.registrationIdentity();
         RegistrationIdentity corrected = RegistrationIdentity.fromTodAndToe(request.tod(), request.toe());
 
@@ -117,16 +121,26 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
     @Transactional(readOnly = true)
     public List<GoatRegistrationHistoryResponseVO> history(Long farmId, String goatRouteToken) {
         ownershipService.verifyFarmOwnership(farmId);
-        Goat goat = resolveGoat(farmId, goatRouteToken);
+        Goat goat = resolveGoatWithoutProjection(goatRouteToken);
+        goatOwnershipGuard.requireLastAssociatedFarm(goat.id(), farmId);
+        assertProjectionMatchesCanonicalFarm(goat, farmId);
         return historyPersistencePort.findByFarmIdAndGoatId(farmId, goat.id()).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    private Goat resolveGoat(Long farmId, String routeToken) {
-        return goatReferenceResolver.resolve(routeToken, farmId)
-                .flatMap(reference -> goatPersistencePort.findByIdAndFarmId(reference.id(), farmId))
-                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+    private Goat resolveGoatWithoutProjection(String routeToken) {
+        return GoatRouteIdentifier.technicalId(routeToken)
+                .flatMap(goatPersistencePort::findById)
+                .or(() -> goatPersistencePort.findDomainByRegistrationNumber(routeToken))
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+    }
+
+    private void assertProjectionMatchesCanonicalFarm(Goat goat, Long canonicalFarmId) {
+        if (!Objects.equals(canonicalFarmId, goat.farmId())) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
     }
 
     private void validateRequest(GoatRegistrationRectificationRequestVO request) {

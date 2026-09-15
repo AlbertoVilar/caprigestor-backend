@@ -14,6 +14,7 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
 import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.business.bo.*;
@@ -47,6 +48,7 @@ class GoatBusinessTest {
     @Mock private GoatParentagePort parentage;
     @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
     @Mock private GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
+    @Mock private GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     private GoatBusiness business;
     private GoatRequestVO request;
@@ -54,7 +56,7 @@ class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard);
         request = new GoatRequestVO();
         request.setRegistrationNumber("1643222002"); request.setName("Xeque"); request.setGender(Gender.MACHO);
         request.setBreed(GoatBreed.ALPINA); request.setBirthDate(LocalDate.of(2025, 1, 1));
@@ -64,6 +66,7 @@ class GoatBusinessTest {
                 request.getName(), request.getGender(), request.getBreed(), request.getColor(), request.getBirthDate(), request.getStatus(),
                 null, null, null, request.getCategory(), null, null, 1L, 1L, "Capril", "Alberto");
         lenient().when(parentage.resolve(any(), any(), any(), any())).thenReturn(new GoatParentagePort.ResolvedParentage(null, null));
+        lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(), anyLong());
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(inv -> ((java.util.function.Supplier<?>) inv.getArgument(0)).get());
     }
 
@@ -115,15 +118,13 @@ class GoatBusinessTest {
     }
 
     @Test
-    void deleteRejectsGoatOutsideRequestedFarmWithOwnershipMessage() {
+    void deleteIsExplicitlyProhibitedForCanonicalGoat() {
         doNothing().when(ownershipService).verifyFarmOwnership(1L);
-        when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> business.deleteGoat(1L, "1643222002"))
-                .isInstanceOf(AuthorizationDeniedException.class)
-                .hasMessage("Cabra não pertence à fazenda informada.");
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("exclusão física");
         verify(ownershipService).verifyFarmOwnership(1L);
-        verify(goatPort, never()).deleteById(any());
     }
 
     private AuthenticatedPrincipal principal(Long id) {
@@ -142,15 +143,50 @@ class GoatBusinessTest {
         goat = Goat.rehydrate(new GoatId(99), RegistrationIdentity.of("77", "7", "7"),
                 request.getName(), request.getGender(), request.getBreed(), request.getColor(), request.getBirthDate(), request.getStatus(),
                 null, null, null, request.getCategory(), null, null, 1L, 1L, "Capril", "Alberto");
-        when(goatPort.findByRegistrationNumberAndFarmId("77", 1L)).thenReturn(Optional.of(goat));
+        when(goatPort.findDomainByRegistrationNumber("77")).thenReturn(Optional.of(goat));
         when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
 
         request.setName("Xeque atualizado");
         GoatResponseVO result = business.updateGoat(1L, "77", request);
 
         assertThat(result.getName()).isEqualTo("Xeque atualizado");
-        verify(goatPort).findByRegistrationNumberAndFarmId("77", 1L);
-        verify(goatPort, never()).findByIdAndFarmId(any(), any());
+        verify(goatPort).findDomainByRegistrationNumber("77");
+        verify(goatPort, never()).findByRegistrationNumberAndFarmId(anyString(), anyLong());
+    }
+
+    @Test
+    void rejectsStatusChangeDuringCommonUpdate() {
+        when(goatPort.findDomainByRegistrationNumber("1643222002")).thenReturn(Optional.of(goat));
+        request.setStatus(GoatStatus.INATIVO);
+
+        assertThatThrownBy(() -> business.updateGoat(1L, "1643222002", request))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("status do animal não pode ser alterado");
+        verify(goatPort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    void rejectsCommonUpdateWhenCanonicalOwnershipIsClosed() {
+        when(goatPort.findDomainByRegistrationNumber("1643222002")).thenReturn(Optional.of(goat));
+        doThrow(new AuthorizationDeniedException("ownership canônico aberto"))
+                .when(goatOwnershipGuard).requireCurrentFarm(new GoatId(77L), 1L);
+
+        assertThatThrownBy(() -> business.updateGoat(1L, "1643222002", request))
+                .isInstanceOf(AuthorizationDeniedException.class)
+                .hasMessageContaining("ownership canônico aberto");
+        verify(goatPort, never()).save(any(Goat.class));
+    }
+
+    @Test
+    void rejectsCommonUpdateWhenOwnershipProjectionDriftsFromCanonicalFarm() {
+        when(goatPort.findDomainByRegistrationNumber("1643222002")).thenReturn(Optional.of(goat));
+
+        assertThatThrownBy(() -> business.updateGoat(2L, "1643222002", request))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("diverge");
+
+        verify(goatOwnershipGuard).requireCurrentFarm(new GoatId(77L), 2L);
+        verify(goatPort, never()).save(any(Goat.class));
     }
 
     @Test

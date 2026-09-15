@@ -251,7 +251,7 @@ class GoatOperationalAuthorizationIntegrationTest {
                 .andExpect(status().isOk());
         mockMvc.perform(delete(goatsPath(managedFarm) + "/technical-" + deleteCandidate.getTechnicalId())
                         .header("Authorization", bearer(ownerToken)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isUnprocessableEntity());
 
         mockMvc.perform(put(goatsPath(managedFarm) + "/" + mother.getRegistrationNumber())
                         .header("Authorization", bearer(otherOwnerToken))
