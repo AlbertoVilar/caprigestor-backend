@@ -1,6 +1,11 @@
 package com.devmaster.goatfarm.milk.business.lactationservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
@@ -24,7 +29,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -65,13 +69,40 @@ class LactationBusinessTest {
     @Mock
     private LactationBusinessMapper lactationMapper;
 
-    @InjectMocks
+    @Mock
+    private GoatReferenceResolver goatReferenceResolver;
+
+    @Mock
+    private GoatOwnershipGuardUseCase goatOwnershipGuard;
+
     private LactationBusiness lactationBusiness;
 
     @BeforeEach
     void setUp() {
         lenient().doNothing().when(goatGenderValidator).requireFemale(anyLong(), anyString());
         lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(anyLong(), anyString());
+        lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(any(GoatId.class));
+        lenient().when(goatReferenceResolver.resolveGlobal(anyString()))
+                .thenReturn(Optional.of(new GoatReference(new GoatId(123L), 1L, "123", "Test goat", Gender.FEMEA)));
+        lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(GoatId.class), anyLong());
+        lenient().doNothing().when(goatOwnershipGuard)
+                .requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+        lenient().when(lactationPersistencePort.findActiveByGoatTechnicalId(any(GoatId.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(lactationPersistencePort.findLatestByGoatTechnicalId(any(GoatId.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(any(GoatId.class), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+        lactationBusiness = new LactationBusiness(
+                lactationPersistencePort,
+                milkProductionSummaryQueryPort,
+                pregnancySnapshotQueryPort,
+                pregnancyDryOffQueryUseCase,
+                goatGenderValidator,
+                lactationMapper,
+                goatReferenceResolver,
+                goatOwnershipGuard
+        );
     }
 
     @Test
@@ -80,11 +111,11 @@ class LactationBusinessTest {
         String goatId = "123";
         LactationRequestVO requestVO = validRequestVO();
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.empty());
-        when(lactationPersistencePort.findLatestByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findLatestByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.empty());
-        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(farmId, goatId, requestVO.getStartDate()))
+        when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(new GoatId(123L), requestVO.getStartDate()))
                 .thenReturn(Optional.empty());
 
         Lactation savedEntity = savedLactationEntity();
@@ -102,7 +133,7 @@ class LactationBusinessTest {
         assertEquals(expectedVO.getId(), result.getId());
         assertEquals(expectedVO.getStatus(), result.getStatus());
 
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(123L));
         verify(lactationPersistencePort).save(captor.capture());
 
         Lactation capturedEntity = captor.getValue();
@@ -121,13 +152,13 @@ class LactationBusinessTest {
         LactationRequestVO requestVO = validRequestVO();
         Lactation activeEntity = activeLactationEntity();
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.of(activeEntity));
 
         assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, requestVO));
 
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(123L));
         verify(lactationPersistencePort, never()).save(any(Lactation.class));
         verifyNoInteractions(lactationMapper);
     }
@@ -142,11 +173,11 @@ class LactationBusinessTest {
                 LocalDate.of(2025, 11, 1), LocalDate.of(2026, 3, 28), null,
                 LocalDate.of(2026, 3, 28), 90, 60, null, null);
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.empty());
-        when(lactationPersistencePort.findLatestByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findLatestByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.of(dryLactation));
-        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(farmId, goatId, requestVO.getStartDate()))
+        when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(new GoatId(123L), requestVO.getStartDate()))
                 .thenReturn(Optional.of(new PregnancySnapshot(
                         true,
                         LocalDate.of(2025, 12, 28),

@@ -58,8 +58,8 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     /**
      * Spring constructor for the canonical GoatId/ownership-aware command
-     * path. The legacy constructor below is retained for isolated callers
-     * that exercise the pre-GoatId behavior without application wiring.
+     * path. All collaborators are mandatory so the authorization invariant
+     * cannot be disabled by constructor selection.
      */
     @org.springframework.beans.factory.annotation.Autowired
     public LactationBusiness(LactationPersistencePort lactationPersistencePort,
@@ -80,48 +80,9 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
-    /** Compatibility constructor for focused unit tests and legacy adapters. */
-    public LactationBusiness(LactationPersistencePort lactationPersistencePort,
-                             MilkProductionSummaryQueryPort milkProductionSummaryQueryPort,
-                             PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort,
-                             PregnancyDryOffQueryUseCase pregnancyDryOffQueryUseCase,
-                             GoatGenderValidator goatGenderValidator,
-                             LactationBusinessMapper lactationMapper) {
-        this(lactationPersistencePort, milkProductionSummaryQueryPort, pregnancySnapshotQueryPort,
-                pregnancyDryOffQueryUseCase, goatGenderValidator, lactationMapper, null, null);
-    }
-
     @Override
     public LactationResponseVO openLactation(Long farmId, String goatId, LactationRequestVO vo) {
-        if (goatReferenceResolver != null && goatOwnershipGuard != null) {
-            return openLactationWithCanonicalOwnership(farmId, goatId, vo);
-        }
-
-        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
-        if (vo.getStartDate() != null && vo.getStartDate().isAfter(LocalDate.now())) {
-             throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
-        }
-
-        Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
-        if (activeLactation.isPresent()) {
-            throw new BusinessRuleException("Já existe uma lactação ativa para esta cabra.");
-        }
-        
-        Optional<Lactation> latestLactation = lactationPersistencePort.findLatestByFarmIdAndGoatId(farmId, goatId);
-
-        Optional<PregnancySnapshot> pregnancySnapshot = pregnancySnapshotQueryPort
-                .findLatestByFarmIdAndGoatId(farmId, goatId, vo.getStartDate());
-
-        if (latestLactation.isPresent()
-                && latestLactation.get().getStatus() == LactationStatus.DRY
-                && pregnancySnapshot.map(PregnancySnapshot::active).orElse(false)) {
-            throw new BusinessRuleException("Nao e permitido abrir nova lactacao enquanto houver prenhez ativa apos secagem confirmada.");
-        }
-
-        Lactation lactation = Lactation.open(farmId, goatId, vo.getStartDate());
-
-        Lactation saved = lactationPersistencePort.save(lactation);
-        return lactationMapper.toResponseVO(saved);
+        return openLactationWithCanonicalOwnership(farmId, goatId, vo);
     }
 
     private LactationResponseVO openLactationWithCanonicalOwnership(
