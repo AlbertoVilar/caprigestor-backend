@@ -222,7 +222,7 @@ class LactationBusinessTest {
         Lactation existingLactation = Lactation.rehydrate(lactationId, farmId, goatId, null,
                 LactationStatus.ACTIVE, startDate, null, null, null, 90, 60, null, null);
 
-        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
                 .thenReturn(Optional.of(existingLactation));
         when(lactationPersistencePort.save(any(Lactation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -254,7 +254,7 @@ class LactationBusinessTest {
         Long lactationId = 999L;
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
 
-        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -272,7 +272,7 @@ class LactationBusinessTest {
         Lactation closedLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.CLOSED,
                 LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
-        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
                 .thenReturn(Optional.of(closedLactation));
 
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
@@ -291,7 +291,7 @@ class LactationBusinessTest {
         Lactation activeLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.ACTIVE,
                 startDate, null, null, null, 90, 60, null, null);
 
-        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
+        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
                 .thenReturn(Optional.of(activeLactation));
 
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();

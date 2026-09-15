@@ -17,6 +17,8 @@ public interface LactationPersistencePort {
 
     Optional<Lactation> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
 
+    Optional<Lactation> findByIdAndGoatTechnicalId(Long id, GoatId goatId);
+
     PageResult<Lactation> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery);
 
     Optional<Lactation> findLatestByFarmIdAndGoatId(Long farmId, String goatId);

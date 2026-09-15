@@ -14,6 +14,7 @@ public interface LactationRepository extends JpaRepository<LactationEntity, Long
     Optional<LactationEntity> findByGoatTechnicalIdAndStatus(Long goatTechnicalId, LactationStatus status);
     Optional<LactationEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
     Optional<LactationEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
+    Optional<LactationEntity> findByIdAndGoatTechnicalId(Long id, Long goatTechnicalId);
     Page<LactationEntity> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
     Page<LactationEntity> findAllByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, Pageable pageable);
     Optional<LactationEntity> findFirstByFarmIdAndGoatIdOrderByStartDateDescIdDesc(Long farmId, String goatId);

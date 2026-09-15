@@ -124,6 +124,7 @@ class MilkOperationalAuthorizationIntegrationTest {
         activeLactation = new LactationEntity();
         activeLactation.setFarmId(farm.getId());
         activeLactation.setGoatId(goat.getRegistrationNumber());
+        activeLactation.setGoatTechnicalId(goat.getTechnicalId());
         activeLactation.setStartDate(LocalDate.now().minusDays(10));
         activeLactation.setStatus(LactationStatus.ACTIVE);
         activeLactation = lactationRepository.save(activeLactation);

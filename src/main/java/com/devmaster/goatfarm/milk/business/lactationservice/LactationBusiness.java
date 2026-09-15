@@ -144,21 +144,33 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO dryLactation(Long farmId, String goatId, Long lactationId, LactationDryRequestVO vo) {
-        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
-        Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
+        GoatReference goat = goatReferenceResolver.resolveGlobal(goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+        GoatId technicalId = goat.id();
+
+        goatOwnershipGuard.requireCurrentFarm(technicalId, requireFarmId(farmId));
+        if (!Objects.equals(goat.farmId(), farmId)) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
+
+        goatGenderValidator.requireFemaleAndActive(technicalId);
+        Lactation lactation = lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, technicalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra"));
 
         if (lactation.getStatus() != LactationStatus.ACTIVE) {
             throw new BusinessRuleException("Lactação não está ativa.");
         }
 
-        if (vo.getEndDate() == null) {
+        if (vo == null || vo.getEndDate() == null) {
             throw new BusinessRuleException("Data de fim da lactação é obrigatória.");
         }
 
         if (vo.getEndDate().isBefore(lactation.getStartDate())) {
             throw new BusinessRuleException("Data de fim da lactação não pode ser anterior à data de início.");
         }
+
+        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, vo.getEndDate());
 
         lactation.dry(vo.getEndDate());
 
