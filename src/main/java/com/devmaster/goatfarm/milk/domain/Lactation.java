@@ -57,11 +57,15 @@ public final class Lactation {
     }
 
     public static Lactation open(Long farmId, String goatId, LocalDate startDate) {
+        return open(farmId, goatId, null, startDate);
+    }
+
+    public static Lactation open(Long farmId, String goatId, Long goatTechnicalId, LocalDate startDate) {
         if (farmId == null || goatId == null || startDate == null) {
             throw new IllegalArgumentException("farmId, goatId e startDate sao obrigatorios");
         }
         return new Lactation(
-                null, farmId, goatId, null, LactationStatus.ACTIVE, startDate,
+                null, farmId, goatId, goatTechnicalId, LactationStatus.ACTIVE, startDate,
                 null, null, null, 90, 60, null, null
         );
     }

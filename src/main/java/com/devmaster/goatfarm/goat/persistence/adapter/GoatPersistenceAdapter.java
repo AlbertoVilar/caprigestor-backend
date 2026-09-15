@@ -171,6 +171,18 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public Optional<GoatValidationSnapshot> findForValidation(GoatId goatId) {
+        return goatId == null
+                ? Optional.empty()
+                : goatRepository.findByTechnicalId(goatId.value())
+                .map(goat -> new GoatValidationSnapshot(
+                        goat.getRegistrationNumber(),
+                        goat.getGender(),
+                        goat.getStatus()
+                ));
+    }
+
+    @Override
     public Optional<GoatGenealogySnapshot> findGenealogyByRegistrationNumberAndFarmId(
             String registrationNumber,
             Long farmId

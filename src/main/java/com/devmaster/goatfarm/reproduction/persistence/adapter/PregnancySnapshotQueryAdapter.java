@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.reproduction.persistence.adapter;
 
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +55,26 @@ public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryUseC
               FROM pregnancy p
              WHERE p.farm_id = :farmId
                AND p.goat_id = :goatId
+               AND (
+                    :referenceDate IS NULL
+                    OR COALESCE(p.breeding_date, p.confirm_date) <= :referenceDate
+               )
+             ORDER BY
+                   CASE WHEN COALESCE(p.breeding_date, p.confirm_date) IS NULL THEN 1 ELSE 0 END,
+                   COALESCE(p.breeding_date, p.confirm_date) DESC,
+                   p.id DESC
+             LIMIT 1
+            """;
+
+    private static final String SQL_FIND_LATEST_BY_GOAT_TECHNICAL_ID = """
+            SELECT p.status,
+                   p.breeding_date,
+                   p.confirm_date,
+                   p.close_reason,
+                   p.closed_at,
+                   COALESCE(p.breeding_date, p.confirm_date) AS start_date
+              FROM pregnancy p
+             WHERE p.goat_technical_id = :goatTechnicalId
                AND (
                     :referenceDate IS NULL
                     OR COALESCE(p.breeding_date, p.confirm_date) <= :referenceDate
@@ -118,6 +139,31 @@ public class PregnancySnapshotQueryAdapter implements PregnancySnapshotQueryUseC
         }
 
         return snapshots.stream().findFirst();
+    }
+
+    @Override
+    public Optional<PregnancySnapshot> findLatestByGoatTechnicalId(GoatId goatId, LocalDate referenceDate) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        LocalDate asOfReferenceDate = referenceDate != null ? referenceDate : LocalDate.now();
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("goatTechnicalId", goatId.value())
+                .addValue("referenceDate", referenceDate);
+        var rowMapper = (org.springframework.jdbc.core.RowMapper<PregnancySnapshot>) (rs, rowNum) -> {
+            LocalDate breedingDate = toLocalDate(rs.getDate("breeding_date"));
+            LocalDate confirmDate = toLocalDate(rs.getDate("confirm_date"));
+            LocalDate startDate = toLocalDate(rs.getDate("start_date"));
+            LocalDate closedAt = toLocalDate(rs.getDate("closed_at"));
+            return new PregnancySnapshot(
+                    isActiveAsOf(rs.getString("status"), startDate, closedAt, asOfReferenceDate),
+                    breedingDate,
+                    confirmDate,
+                    rs.getString("close_reason")
+            );
+        };
+        return jdbcTemplate.query(SQL_FIND_LATEST_BY_GOAT_TECHNICAL_ID, params, rowMapper)
+                .stream().findFirst();
     }
 
     private boolean isActiveAsOf(String status,

@@ -11,11 +11,13 @@ import java.util.Optional;
 public interface LactationRepository extends JpaRepository<LactationEntity, Long> {
     Optional<LactationEntity> findByFarmIdAndGoatIdAndStatus(Long farmId, String goatId, LactationStatus status);
     Optional<LactationEntity> findByFarmIdAndGoatTechnicalIdAndStatus(Long farmId, Long goatTechnicalId, LactationStatus status);
+    Optional<LactationEntity> findByGoatTechnicalIdAndStatus(Long goatTechnicalId, LactationStatus status);
     Optional<LactationEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
     Optional<LactationEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
     Page<LactationEntity> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable);
     Page<LactationEntity> findAllByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId, Pageable pageable);
     Optional<LactationEntity> findFirstByFarmIdAndGoatIdOrderByStartDateDescIdDesc(Long farmId, String goatId);
     Optional<LactationEntity> findFirstByFarmIdAndGoatTechnicalIdOrderByStartDateDescIdDesc(Long farmId, Long goatTechnicalId);
+    Optional<LactationEntity> findFirstByGoatTechnicalIdOrderByStartDateDescIdDesc(Long goatTechnicalId);
     List<LactationEntity> findAllByFarmIdAndStatus(Long farmId, LactationStatus status);
 }
