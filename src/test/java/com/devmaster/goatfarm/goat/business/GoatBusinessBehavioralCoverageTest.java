@@ -17,6 +17,7 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
 import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
@@ -49,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
@@ -72,17 +74,19 @@ class GoatBusinessBehavioralCoverageTest {
     @Mock private GoatParentagePort parentage;
     @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
     @Mock private GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
+    @Mock private GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     private GoatBusiness business;
     private Goat goat;
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard);
         goat = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
         lenient().when(parentage.resolve(any(), any(), any(), any()))
                 .thenReturn(new GoatParentagePort.ResolvedParentage(null, null));
+        lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(), anyLong());
         lenient().when(entityFinder.findOrThrow(any(), anyString()))
                 .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
     }

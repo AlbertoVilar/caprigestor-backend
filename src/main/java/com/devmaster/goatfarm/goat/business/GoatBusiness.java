@@ -1,7 +1,6 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
-import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
@@ -16,6 +15,7 @@ import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goatownership.application.model.GoatOwnershipInitializationCommand;
 import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
@@ -56,13 +56,15 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
     private final GoatOwnershipExitUseCase goatOwnershipExitUseCase;
     private final GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
                         FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder,
                         OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort,
                         CurrentPrincipalQueryUseCase currentPrincipalQuery,
                         GoatOwnershipExitUseCase goatOwnershipExitUseCase,
-                        GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase) {
+                        GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase,
+                        GoatOwnershipGuardUseCase goatOwnershipGuard) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
@@ -72,6 +74,7 @@ public class GoatBusiness implements GoatManagementUseCase {
         this.currentPrincipalQuery = currentPrincipalQuery;
         this.goatOwnershipExitUseCase = goatOwnershipExitUseCase;
         this.goatOwnershipInitializationUseCase = goatOwnershipInitializationUseCase;
+        this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
     @Transactional
@@ -101,7 +104,13 @@ public class GoatBusiness implements GoatManagementUseCase {
     @Override
     public GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-        Goat goat = findOrThrow(farmId, goatId);
+        Goat goat = findCanonicalGoatOrThrow(goatId);
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        if (requestVO.getStatus() != goat.status()) {
+            throw new BusinessRuleException("status",
+                    "O status do animal não pode ser alterado na atualização cadastral comum. "
+                            + "Use o fluxo de saída ou a transição de ciclo de vida apropriada.");
+        }
         RegistrationIdentity submittedIdentity;
         try {
             submittedIdentity = RegistrationIdentity.of(requestVO.getRegistrationNumber(), requestVO.getTod(), requestVO.getToe());
@@ -151,9 +160,8 @@ public class GoatBusiness implements GoatManagementUseCase {
     @Override
     public void deleteGoat(Long farmId, String goatId) {
         ownershipService.verifyFarmOwnership(farmId);
-        Goat goat = findInFarm(farmId, goatId)
-                .orElseThrow(() -> new AuthorizationDeniedException("Cabra não pertence à fazenda informada."));
-        goatPort.deleteById(goat.id());
+        throw new BusinessRuleException("goat",
+                "A exclusão física de um animal canônico é proibida para preservar seu histórico operacional.");
     }
 
     @Transactional(readOnly = true)
@@ -207,6 +215,14 @@ public class GoatBusiness implements GoatManagementUseCase {
     private Goat findOrThrow(Long farmId, String token) {
         return findInFarm(farmId, token)
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+    }
+
+    private Goat findCanonicalGoatOrThrow(String token) {
+        var technicalId = GoatRouteIdentifier.technicalId(token);
+        return technicalId.flatMap(goatPort::findById)
+                .or(() -> goatPort.findDomainByRegistrationNumber(token))
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(
+                        "Cabra não encontrada."));
     }
 
     private java.util.Optional<Goat> findInFarm(Long farmId, String token) {
