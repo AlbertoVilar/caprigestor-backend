@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
@@ -16,7 +17,7 @@ import java.util.List;
  */
 public interface GoatManagementUseCase {
 
-    GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO);
+    GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO, GoatCreationOrigin origin);
 
     GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO);
 

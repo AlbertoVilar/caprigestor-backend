@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.farm.application.model.FarmRegistrationSnapshot;
 import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
@@ -72,7 +73,7 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
         List<BirthKidResponseVO> createdKids = new ArrayList<>();
         for (BirthKidRequestVO kid : vo.getKids()) {
             GoatRequestVO request = buildKidRequestVO(farmId, goatId, mother, vo.getFatherRegistrationNumber(), birthFarmTod, vo.getBirthDate(), kid);
-            GoatResponseVO saved = goatManagementUseCase.createGoat(farmId, request); createdKids.add(mapper.toBirthKidResponseVO(saved));
+            GoatResponseVO saved = goatManagementUseCase.createGoat(farmId, request, GoatCreationOrigin.BIRTH); createdKids.add(mapper.toBirthKidResponseVO(saved));
         }
         pregnancy.close(PregnancyCloseReason.BIRTH, vo.getBirthDate());
         if (vo.getNotes() != null && !vo.getNotes().isBlank()) pregnancy.updateNotes(vo.getNotes());

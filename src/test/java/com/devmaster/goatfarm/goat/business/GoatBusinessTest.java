@@ -13,6 +13,9 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.business.bo.*;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
@@ -42,6 +45,8 @@ class GoatBusinessTest {
     @Mock private EntityFinder entityFinder;
     @Mock private OperationalAuditUseCase audit;
     @Mock private GoatParentagePort parentage;
+    @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
+    @Mock private GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
 
     private GoatBusiness business;
     private GoatRequestVO request;
@@ -49,7 +54,7 @@ class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase);
         request = new GoatRequestVO();
         request.setRegistrationNumber("1643222002"); request.setName("Xeque"); request.setGender(Gender.MACHO);
         request.setBreed(GoatBreed.ALPINA); request.setBirthDate(LocalDate.of(2025, 1, 1));
@@ -69,12 +74,16 @@ class GoatBusinessTest {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
-        when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
 
-        GoatResponseVO result = business.createGoat(1L, request);
+        GoatResponseVO result = business.createGoat(1L, request, GoatCreationOrigin.MANUAL);
 
         assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
         verify(goatPort).save(any(Goat.class));
+        verify(goatOwnershipInitializationUseCase).initialize(argThat(command ->
+                command.goatId().equals(new GoatId(77L))
+                        && command.farmId() == 1L
+                        && command.origin() == GoatCreationOrigin.MANUAL));
     }
 
     @Test
@@ -82,7 +91,7 @@ class GoatBusinessTest {
         doNothing().when(ownershipService).verifyFarmManagement(1L);
         request.setRegistrationNumber("1643299999");
 
-        assertThatThrownBy(() -> business.createGoat(1L, request))
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.MANUAL))
                 .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
                 .hasMessageContaining("composição de TOD + TOE");
         verify(goatPort, never()).existsByRegistrationNumber(anyString());
@@ -96,10 +105,10 @@ class GoatBusinessTest {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
         when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
-        when(goatPort.save(any(Goat.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
 
         request.setRegistrationNumber(" 16432 22002 ");
-        GoatResponseVO result = business.createGoat(1L, request);
+        GoatResponseVO result = business.createGoat(1L, request, GoatCreationOrigin.MANUAL);
 
         assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
         verify(goatPort).existsByRegistrationNumber("1643222002");

@@ -12,6 +12,12 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
+import com.devmaster.goatfarm.goatownership.application.model.GoatOwnershipInitializationCommand;
+import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
@@ -48,11 +54,15 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final OperationalAuditUseCase operationalAuditUseCase;
     private final GoatParentagePort parentagePort;
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
+    private final GoatOwnershipExitUseCase goatOwnershipExitUseCase;
+    private final GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
                         FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder,
                         OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort,
-                        CurrentPrincipalQueryUseCase currentPrincipalQuery) {
+                        CurrentPrincipalQueryUseCase currentPrincipalQuery,
+                        GoatOwnershipExitUseCase goatOwnershipExitUseCase,
+                        GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
@@ -60,11 +70,13 @@ public class GoatBusiness implements GoatManagementUseCase {
         this.operationalAuditUseCase = operationalAuditUseCase;
         this.parentagePort = parentagePort;
         this.currentPrincipalQuery = currentPrincipalQuery;
+        this.goatOwnershipExitUseCase = goatOwnershipExitUseCase;
+        this.goatOwnershipInitializationUseCase = goatOwnershipInitializationUseCase;
     }
 
     @Transactional
     @Override
-    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
+    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO, GoatCreationOrigin origin) {
         ownershipService.verifyFarmManagement(farmId);
         RegistrationIdentity identity = identityForCreation(requestVO);
         String registration = identity.registrationNumber();
@@ -76,7 +88,13 @@ public class GoatBusiness implements GoatManagementUseCase {
                 requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(), requestVO.getBirthDate(),
                 requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother(), farmId,
                 currentPrincipalQuery.requireCurrent().id());
-        return toResponse(goatPort.save(goat));
+        Goat saved = goatPort.save(goat);
+        if (saved == null || saved.id() == null) {
+            throw new BusinessRuleException("goat", "A criação da cabra não retornou um GoatId estrutural válido.");
+        }
+        goatOwnershipInitializationUseCase.initialize(
+                new GoatOwnershipInitializationCommand(saved.id(), farmId, origin));
+        return toResponse(saved);
     }
 
     @Transactional
@@ -112,8 +130,13 @@ public class GoatBusiness implements GoatManagementUseCase {
         validateExit(goat, requestVO);
         GoatStatus previousStatus = goat.status();
         GoatStatus currentStatus = mapExitStatus(requestVO.getExitType());
-        goat.markExit(requestVO.getExitType(), requestVO.getExitDate(), normalizeNotes(requestVO.getNotes()), currentStatus);
-        Goat saved = goatPort.save(goat);
+        goatOwnershipExitUseCase.closeTerminalOwnership(new TerminalOwnershipExitCommand(
+                goat.id(), farmId, mapOwnershipExitType(requestVO.getExitType())));
+        Goat lockedGoat = goatPort.findByIdAndFarmId(goat.id(), farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        validateExit(lockedGoat, requestVO);
+        lockedGoat.markExit(requestVO.getExitType(), requestVO.getExitDate(), normalizeNotes(requestVO.getNotes()), currentStatus);
+        Goat saved = goatPort.save(lockedGoat);
         operationalAuditUseCase.record(new OperationalAuditRecordVO(farmId,
                 saved.id() == null ? null : saved.id().value(), saved.registrationNumber(),
                 OperationalAuditActionType.GOAT_EXIT, saved.registrationNumber(), "Saída do rebanho registrada como "
@@ -217,10 +240,20 @@ public class GoatBusiness implements GoatManagementUseCase {
         if (goat.birthDate() != null && requestVO.getExitDate().isBefore(goat.birthDate())) throw new InvalidArgumentException("exitDate", "Data de saída não pode ser anterior à data de nascimento");
         if (goat.status() != GoatStatus.ATIVO) throw new BusinessRuleException("status", "A saída controlada só é permitida para animais com status ATIVO. Status atual: " + goat.status());
         if (goat.exitType() != null || goat.exitDate() != null) throw new BusinessRuleException("exitDate", "Já existe saída registrada para este animal");
+        if (requestVO.getExitType() == GoatExitType.TRANSFERENCIA) throw new BusinessRuleException("exitType", "Transferência deve usar o fluxo de transferência de propriedade.");
     }
 
     private GoatStatus mapExitStatus(GoatExitType type) {
-        return switch (type) { case VENDA -> GoatStatus.VENDIDO; case MORTE -> GoatStatus.FALECIDO; case DESCARTE, DOACAO, TRANSFERENCIA -> GoatStatus.INATIVO; };
+        return switch (type) { case VENDA -> GoatStatus.VENDIDO; case MORTE -> GoatStatus.FALECIDO; case DESCARTE, DOACAO -> GoatStatus.INATIVO; case TRANSFERENCIA -> throw new BusinessRuleException("exitType", "Transferência deve usar o fluxo de transferência de propriedade."); };
+    }
+    private OwnershipExitType mapOwnershipExitType(GoatExitType type) {
+        return switch (type) {
+            case VENDA -> OwnershipExitType.EXTERNAL_SALE;
+            case MORTE -> OwnershipExitType.DEATH;
+            case DESCARTE -> OwnershipExitType.RETIREMENT;
+            case DOACAO -> OwnershipExitType.DONATION;
+            case TRANSFERENCIA -> throw new BusinessRuleException("exitType", "Transferência deve usar o fluxo de transferência de propriedade.");
+        };
     }
     private String normalize(String value) { return value == null ? null : value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT); }
 

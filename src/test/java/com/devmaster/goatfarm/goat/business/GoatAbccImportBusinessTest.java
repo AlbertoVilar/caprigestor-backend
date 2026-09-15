@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
@@ -153,7 +154,7 @@ class GoatAbccImportBusinessTest {
 
         assertThat(response.getStatus()).isEqualTo("FOUND");
         assertThat(response.getPreview().getRegistrationNumber()).isEqualTo("1234567890");
-        verify(goatManagementUseCase, never()).createGoat(any(), any());
+        verify(goatManagementUseCase, never()).createGoat(any(Long.class), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
     }
 
     @Test
@@ -393,7 +394,7 @@ class GoatAbccImportBusinessTest {
 
         GoatResponseVO expected = new GoatResponseVO();
         expected.setRegistrationNumber("1643218012");
-        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(expected);
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.ABCC_IMPORT))).thenReturn(expected);
 
         GoatAbccPreviewResponseVO preview = business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-001").build());
         GoatRequestVO requestVO = new GoatRequestVO();
@@ -438,12 +439,12 @@ class GoatAbccImportBusinessTest {
         GoatResponseVO expected = new GoatResponseVO();
         expected.setRegistrationNumber("1643218012");
 
-        when(goatManagementUseCase.createGoat(1L, requestVO)).thenReturn(expected);
+        when(goatManagementUseCase.createGoat(1L, requestVO, GoatCreationOrigin.ABCC_IMPORT)).thenReturn(expected);
 
         GoatResponseVO response = business.confirm(1L, "A-001", requestVO);
 
         assertThat(response).isSameAs(expected);
-        verify(goatManagementUseCase).createGoat(1L, requestVO);
+        verify(goatManagementUseCase).createGoat(1L, requestVO, GoatCreationOrigin.ABCC_IMPORT);
     }
 
     @Test
@@ -469,7 +470,7 @@ class GoatAbccImportBusinessTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("TOD informado");
 
-        verify(goatManagementUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class));
+        verify(goatManagementUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
     }
 
     @Test
@@ -493,7 +494,7 @@ class GoatAbccImportBusinessTest {
 
         GoatResponseVO expected = new GoatResponseVO();
         expected.setRegistrationNumber("1643218012");
-        when(goatManagementUseCase.createGoat(1L, requestVO)).thenReturn(expected);
+        when(goatManagementUseCase.createGoat(1L, requestVO, GoatCreationOrigin.ABCC_IMPORT)).thenReturn(expected);
 
         GoatResponseVO response = business.confirm(1L, "A-001", requestVO);
 
@@ -527,7 +528,7 @@ class GoatAbccImportBusinessTest {
         GoatResponseVO created = new GoatResponseVO();
         created.setRegistrationNumber("1111111111");
         created.setName("IMPORTAVEL");
-        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(created);
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.ABCC_IMPORT))).thenReturn(created);
 
         var response = business.confirmBatch(1L, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("A-001").build(),
@@ -558,7 +559,7 @@ class GoatAbccImportBusinessTest {
         GoatResponseVO created = new GoatResponseVO();
         created.setRegistrationNumber("1111111111");
         created.setName("IMPORTAVEL");
-        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(created);
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.ABCC_IMPORT))).thenReturn(created);
 
         var response = business.confirmBatch(1L, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("A-001").build()
@@ -572,7 +573,7 @@ class GoatAbccImportBusinessTest {
         assertThat(response.getResults().getFirst().getStatus()).isEqualTo("IMPORTED");
 
         ArgumentCaptor<GoatRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
-        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture());
+        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
         assertThat(requestCaptor.getValue().getStatus()).isEqualTo(GoatStatus.ATIVO);
     }
 

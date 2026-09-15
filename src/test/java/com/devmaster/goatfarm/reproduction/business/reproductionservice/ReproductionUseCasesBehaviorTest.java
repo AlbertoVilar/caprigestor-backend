@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.farm.application.model.FarmRegistrationSnapshot;
 import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
@@ -979,7 +980,7 @@ class ReproductionUseCasesBehaviorTest {
 
         when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(activePregnancy));
-        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class)))
+        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class), eq(GoatCreationOrigin.BIRTH)))
                 .thenReturn(createdKid);
         when(reproductionBusinessMapper.toBirthKidResponseVO(createdKid))
                 .thenReturn(birthKidResponse(createdKid.getRegistrationNumber()));
@@ -997,7 +998,7 @@ class ReproductionUseCasesBehaviorTest {
         BirthResponseVO result = reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, pregnancyId, requestVO);
 
         ArgumentCaptor<GoatRequestVO> goatRequestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
-        verify(goatManagementUseCase).createGoat(eq(FARM_ID), goatRequestCaptor.capture());
+        verify(goatManagementUseCase).createGoat(eq(FARM_ID), goatRequestCaptor.capture(), eq(GoatCreationOrigin.BIRTH));
 
         GoatRequestVO createdKidRequest = goatRequestCaptor.getValue();
         assertThat(createdKidRequest.getMotherRegistrationNumber()).isEqualTo(GOAT_ID);
@@ -1022,7 +1023,7 @@ class ReproductionUseCasesBehaviorTest {
         request.getKids().get(0).setCategory(category);
         when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(10L, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(activePregnancyEntity()));
-        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class)))
+        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class), eq(GoatCreationOrigin.BIRTH)))
                 .thenReturn(createdKidResponse("1643200001"));
         when(pregnancyPersistencePort.save(any(Pregnancy.class))).thenReturn(closedPregnancyEntity());
         when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(closeEventEntity(10L));
@@ -1030,7 +1031,7 @@ class ReproductionUseCasesBehaviorTest {
         reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, 10L, request);
 
         ArgumentCaptor<GoatRequestVO> captor = ArgumentCaptor.forClass(GoatRequestVO.class);
-        verify(goatManagementUseCase).createGoat(eq(FARM_ID), captor.capture());
+        verify(goatManagementUseCase).createGoat(eq(FARM_ID), captor.capture(), eq(GoatCreationOrigin.BIRTH));
         assertThat(captor.getValue().getCategory()).isEqualTo(category);
         assertThat(captor.getValue().getFatherRegistrationNumber()).isEqualTo("1635719026A");
         assertThat(captor.getValue().getMotherRegistrationNumber()).isEqualTo(GOAT_ID);
@@ -1060,7 +1061,7 @@ class ReproductionUseCasesBehaviorTest {
 
         when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, GOAT_ID))
                 .thenReturn(Optional.of(activePregnancyEntity()));
-        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class)))
+        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class), eq(GoatCreationOrigin.BIRTH)))
                 .thenReturn(createdKidResponse("1643200101"))
                 .thenReturn(createdKidResponse("1643200102A"));
         when(reproductionBusinessMapper.toBirthKidResponseVO(any(GoatResponseVO.class)))
@@ -1076,7 +1077,7 @@ class ReproductionUseCasesBehaviorTest {
         BirthResponseVO result = reproductionBusiness.registerBirth(FARM_ID, GOAT_ID, pregnancyId, requestVO);
 
         ArgumentCaptor<GoatRequestVO> kidRequestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
-        verify(goatManagementUseCase, org.mockito.Mockito.times(2)).createGoat(eq(FARM_ID), kidRequestCaptor.capture());
+        verify(goatManagementUseCase, org.mockito.Mockito.times(2)).createGoat(eq(FARM_ID), kidRequestCaptor.capture(), eq(GoatCreationOrigin.BIRTH));
         assertThat(kidRequestCaptor.getAllValues().get(1).getRegistrationNumber()).isEqualTo("1643200102A");
         assertThat(kidRequestCaptor.getAllValues().get(1).getToe()).isEqualTo("00102A");
         assertThat(result.getKids()).hasSize(2);
@@ -1104,7 +1105,7 @@ class ReproductionUseCasesBehaviorTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("TOD da fazenda de nascimento: " + FARM_TOD);
 
-        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class));
+        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort, never()).save(any(ReproductiveEvent.class));
     }
@@ -1131,7 +1132,7 @@ class ReproductionUseCasesBehaviorTest {
                 .isInstanceOf(InvalidArgumentException.class)
                 .hasMessageContaining("entre 10 e 12 caracteres");
 
-        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class));
+        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
     }
 
@@ -1159,7 +1160,7 @@ class ReproductionUseCasesBehaviorTest {
                 .isInstanceOf(InvalidArgumentException.class)
                 .hasMessageContaining("igual a data do parto");
 
-        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class));
+        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
         verify(pregnancyPersistencePort, never()).save(any(Pregnancy.class));
     }
 

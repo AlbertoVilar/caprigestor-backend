@@ -12,6 +12,7 @@ import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationHistoryResponseDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestDTO;
 import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationResponseDTO;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
@@ -101,7 +102,7 @@ public class GoatController {
     public ResponseEntity<GoatResponseDTO> createGoat(@PathVariable("farmId") Long farmId, @Valid @RequestBody GoatRequestDTO goatRequestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(goatMapper.toResponseDTO(
-                        goatUseCase.createGoat(farmId, goatMapper.toRequestVO(goatRequestDTO))
+                        goatUseCase.createGoat(farmId, goatMapper.toRequestVO(goatRequestDTO), GoatCreationOrigin.MANUAL)
                 ));
     }
 

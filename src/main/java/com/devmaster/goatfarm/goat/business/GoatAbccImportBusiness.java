@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
@@ -294,7 +295,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             throw new BusinessRuleException(FIELD_TOD, MSG_REQUEST_TOD_MISMATCH);
         }
 
-        return goatManagementUseCase.createGoat(farmId, goatRequestVO);
+        return goatManagementUseCase.createGoat(farmId, goatRequestVO, GoatCreationOrigin.ABCC_IMPORT);
     }
 
     @Override
