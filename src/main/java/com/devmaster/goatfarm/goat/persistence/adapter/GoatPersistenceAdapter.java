@@ -114,6 +114,13 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public Optional<GoatReference> findReferenceByTechnicalId(GoatId goatId) {
+        return goatId == null
+                ? Optional.empty()
+                : goatRepository.findByTechnicalId(goatId.value()).map(this::toReference);
+    }
+
+    @Override
     public Optional<GoatReference> findReferenceByRegistrationNumberAndFarmId(
             String registrationNumber,
             Long farmId
