@@ -118,6 +118,29 @@ class GoatRegistrationRectificationBusinessTest {
     }
 
     @Test
+    void rejectsRectificationWhenOwnershipProjectionDriftsFromCanonicalFarm() {
+        assertThatThrownBy(() -> business.rectify(2L, "technical-7",
+                request("20001", "20002", "Projeção divergente")))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("diverge");
+
+        verify(goatOwnershipGuard).requireLastAssociatedFarm(new GoatId(7L), 2L);
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(historyPersistencePort, never()).save(any());
+        verify(operationalAuditUseCase, never()).record(any());
+    }
+
+    @Test
+    void rejectsRegistrationHistoryWhenOwnershipProjectionDriftsFromCanonicalFarm() {
+        assertThatThrownBy(() -> business.history(2L, "technical-7"))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("diverge");
+
+        verify(goatOwnershipGuard).requireLastAssociatedFarm(new GoatId(7L), 2L);
+        verify(historyPersistencePort, never()).findByFarmIdAndGoatId(anyLong(), any());
+    }
+
+    @Test
     void rejectsAnUnchangedIdentityWithoutHistory() {
         assertThatThrownBy(() -> business.rectify(1L, "technical-7",
                 request("16432", "18012", "Sem alteração")))

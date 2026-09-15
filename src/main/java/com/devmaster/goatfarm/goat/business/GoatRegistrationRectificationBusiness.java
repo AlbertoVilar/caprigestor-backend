@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /** Application service for an explicit, audited correction of a Goat identity. */
 @Service
@@ -66,6 +67,7 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
 
         Goat goat = resolveGoatWithoutProjection(goatRouteToken);
         goatOwnershipGuard.requireLastAssociatedFarm(goat.id(), farmId);
+        assertProjectionMatchesCanonicalFarm(goat, farmId);
         RegistrationIdentity previous = goat.registrationIdentity();
         RegistrationIdentity corrected = RegistrationIdentity.fromTodAndToe(request.tod(), request.toe());
 
@@ -121,6 +123,7 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
         ownershipService.verifyFarmOwnership(farmId);
         Goat goat = resolveGoatWithoutProjection(goatRouteToken);
         goatOwnershipGuard.requireLastAssociatedFarm(goat.id(), farmId);
+        assertProjectionMatchesCanonicalFarm(goat, farmId);
         return historyPersistencePort.findByFarmIdAndGoatId(farmId, goat.id()).stream()
                 .map(this::toResponse)
                 .toList();
@@ -131,6 +134,13 @@ public class GoatRegistrationRectificationBusiness implements GoatRegistrationRe
                 .flatMap(goatPersistencePort::findById)
                 .or(() -> goatPersistencePort.findDomainByRegistrationNumber(routeToken))
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+    }
+
+    private void assertProjectionMatchesCanonicalFarm(Goat goat, Long canonicalFarmId) {
+        if (!Objects.equals(canonicalFarmId, goat.farmId())) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
     }
 
     private void validateRequest(GoatRegistrationRectificationRequestVO request) {

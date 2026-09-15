@@ -178,6 +178,18 @@ class GoatBusinessTest {
     }
 
     @Test
+    void rejectsCommonUpdateWhenOwnershipProjectionDriftsFromCanonicalFarm() {
+        when(goatPort.findDomainByRegistrationNumber("1643222002")).thenReturn(Optional.of(goat));
+
+        assertThatThrownBy(() -> business.updateGoat(2L, "1643222002", request))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("diverge");
+
+        verify(goatOwnershipGuard).requireCurrentFarm(new GoatId(77L), 2L);
+        verify(goatPort, never()).save(any(Goat.class));
+    }
+
+    @Test
     void resolvesExplicitTechnicalRouteTokenWithoutRegistrationCollision() {
         when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
 

@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /** Application service for Goat, depending on the domain-facing persistence boundary. */
 @Service
@@ -106,6 +107,7 @@ public class GoatBusiness implements GoatManagementUseCase {
         ownershipService.verifyFarmOwnership(farmId);
         Goat goat = findCanonicalGoatOrThrow(goatId);
         goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        assertProjectionMatchesCanonicalFarm(goat, farmId);
         if (requestVO.getStatus() != goat.status()) {
             throw new BusinessRuleException("status",
                     "O status do animal não pode ser alterado na atualização cadastral comum. "
@@ -223,6 +225,13 @@ public class GoatBusiness implements GoatManagementUseCase {
                 .or(() -> goatPort.findDomainByRegistrationNumber(token))
                 .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(
                         "Cabra não encontrada."));
+    }
+
+    private void assertProjectionMatchesCanonicalFarm(Goat goat, Long canonicalFarmId) {
+        if (!Objects.equals(canonicalFarmId, goat.farmId())) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
     }
 
     private java.util.Optional<Goat> findInFarm(Long farmId, String token) {
