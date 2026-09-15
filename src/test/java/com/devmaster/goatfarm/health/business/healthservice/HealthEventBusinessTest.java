@@ -2,10 +2,14 @@ package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
@@ -49,6 +53,8 @@ class HealthEventBusinessTest {
     private HealthEventBusinessMapper mapper;
     @Mock
     private OwnershipService ownershipService;
+    @Mock
+    private GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     private HealthEventBusiness healthEventBusiness;
 
@@ -66,7 +72,8 @@ class HealthEventBusinessTest {
                 goatGenderValidator,
                 mapper,
                 entityFinder,
-                ownershipService
+                ownershipService,
+                goatOwnershipGuard
         );
 
         healthEvent = new HealthEventRecord();
@@ -80,6 +87,7 @@ class HealthEventBusinessTest {
     @DisplayName("Should create health event successfully")
     void create_success() {
         HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
+        stubGlobalGoatReference();
 
         when(mapper.toRecord(request)).thenReturn(healthEvent);
         when(persistencePort.save(any(HealthEventRecord.class))).thenReturn(healthEvent);
@@ -89,6 +97,7 @@ class HealthEventBusinessTest {
 
         assertNotNull(response);
         verify(goatGenderValidator).requireActive(farmId, goatId);
+        verify(goatOwnershipGuard).requireCurrentFarm(GoatId.of(42L), farmId);
         verify(persistencePort).save(healthEvent);
     }
 
@@ -97,9 +106,7 @@ class HealthEventBusinessTest {
     void create_fail_goatNotFound() {
         HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
 
-        doThrow(new ResourceNotFoundException("Cabra não encontrada no capril informado."))
-                .when(goatGenderValidator)
-                .requireActive(farmId, goatId);
+        when(goatReferenceResolver.resolveGlobal(goatId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 healthEventBusiness.create(farmId, goatId, request)
@@ -112,6 +119,7 @@ class HealthEventBusinessTest {
     @DisplayName("Should fail to create when goat is not active")
     void create_fail_goatNotActive() {
         HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
+        stubGlobalGoatReference();
 
         doThrow(new BusinessRuleException("status", "Apenas cabras com status ATIVO podem ser manipuladas. Status atual: VENDIDO"))
                 .when(goatGenderValidator)
@@ -125,6 +133,58 @@ class HealthEventBusinessTest {
         org.junit.jupiter.api.Assertions.assertTrue(ex.getMessage().contains("ATIVO"));
         verify(persistencePort, never()).save(any());
         verify(mapper, never()).toRecord(any());
+    }
+
+    @Test
+    @DisplayName("Should reject creation when canonical ownership denies the requested farm")
+    void create_fail_canonicalOwnershipDenied() {
+        HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
+        stubGlobalGoatReference();
+
+        doThrow(new AuthorizationDeniedException("denied"))
+                .when(goatOwnershipGuard)
+                .requireCurrentFarm(GoatId.of(42L), farmId);
+
+        assertThrows(AuthorizationDeniedException.class, () ->
+                healthEventBusiness.create(farmId, goatId, request));
+
+        verify(goatGenderValidator, never()).requireActive(farmId, goatId);
+        verify(persistencePort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should fail closed when the legacy farm projection drifts")
+    void create_fail_projectionDrift() {
+        HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
+        when(goatReferenceResolver.resolveGlobal(goatId))
+                .thenReturn(Optional.of(new GoatReference(GoatId.of(42L), 2L, goatId, "Goat")));
+
+        assertThrows(AuthorizationDeniedException.class, () ->
+                healthEventBusiness.create(farmId, goatId, request));
+
+        verify(goatOwnershipGuard).requireCurrentFarm(GoatId.of(42L), farmId);
+        verify(goatGenderValidator, never()).requireActive(farmId, goatId);
+        verify(persistencePort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should not authorize a farm only because the projection points to it")
+    void create_fail_projectionCannotGrantAuthority() {
+        HealthEventCreateRequestVO request = HealthEventCreateRequestVO.builder().build();
+        stubGlobalGoatReference();
+        doThrow(new AuthorizationDeniedException("denied"))
+                .when(goatOwnershipGuard)
+                .requireCurrentFarm(GoatId.of(42L), farmId);
+
+        assertThrows(AuthorizationDeniedException.class, () ->
+                healthEventBusiness.create(farmId, goatId, request));
+
+        verify(persistencePort, never()).save(any());
+    }
+
+    private void stubGlobalGoatReference() {
+        when(goatReferenceResolver.resolveGlobal(goatId))
+                .thenReturn(Optional.of(new GoatReference(GoatId.of(42L), farmId, goatId, "Goat")));
     }
 
     @Test

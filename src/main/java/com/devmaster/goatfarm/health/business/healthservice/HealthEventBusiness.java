@@ -2,9 +2,12 @@ package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
 import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
@@ -33,6 +36,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     private final HealthEventBusinessMapper mapper;
     private final EntityFinder entityFinder;
     private final FarmAuthorizationUseCase ownershipService;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
@@ -40,7 +44,8 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
             GoatGenderValidator goatGenderValidator,
             HealthEventBusinessMapper mapper,
             EntityFinder entityFinder,
-            FarmAuthorizationUseCase ownershipService
+            FarmAuthorizationUseCase ownershipService,
+            GoatOwnershipGuardUseCase goatOwnershipGuard
     ) {
         this.persistencePort = persistencePort;
         this.goatReferenceResolver = goatReferenceResolver;
@@ -48,12 +53,20 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
         this.mapper = mapper;
         this.entityFinder = entityFinder;
         this.ownershipService = ownershipService;
+        this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
     @Override
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
-        // Controle de acesso deve ser feito no Controller via FarmAuthorizationUseCase.canManageFarm(farmId)
+        GoatReference goat = entityFinder.findOrThrow(
+                () -> goatReferenceResolver.resolveGlobal(goatId),
+                "Cabra não encontrada."
+        );
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        requireProjectionMatchesFarm(goat, farmId);
+
+        // Controle de acesso da fazenda é feito no Controller via @CanManageFarm.
         goatGenderValidator.requireActive(farmId, goatId);
 
         var record = mapper.toRecord(request);
@@ -65,6 +78,13 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
         var saved = persistencePort.save(record);
         return mapper.toResponseVO(saved);
+    }
+
+    private void requireProjectionMatchesFarm(GoatReference goat, Long farmId) {
+        if (goat.farmId() == null || !goat.farmId().equals(farmId)) {
+            throw new AuthorizationDeniedException(
+                    "A projeção legada da cabra está divergente do contexto da fazenda informado.");
+        }
     }
 
     @Override

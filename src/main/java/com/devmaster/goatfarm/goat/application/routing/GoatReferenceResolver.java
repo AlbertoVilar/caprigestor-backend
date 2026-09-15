@@ -32,4 +32,14 @@ public class GoatReferenceResolver {
                 .flatMap(id -> referenceQueryPort.findReferenceByTechnicalIdAndFarmId(id, farmId))
                 .or(() -> referenceQueryPort.findReferenceByRegistrationNumberAndFarmId(routeToken, farmId));
     }
+
+    public Optional<GoatReference> resolveGlobal(String routeToken) {
+        if (routeToken == null) {
+            return Optional.empty();
+        }
+
+        return GoatRouteIdentifier.technicalId(routeToken)
+                .flatMap(referenceQueryPort::findReferenceByTechnicalId)
+                .or(() -> referenceQueryPort.findReferenceByRegistrationNumber(routeToken));
+    }
 }
