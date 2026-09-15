@@ -17,11 +17,14 @@ import com.devmaster.goatfarm.events.domain.OperationalEvent;
 import com.devmaster.goatfarm.events.enums.EventType;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 
@@ -33,28 +36,40 @@ import java.util.Locale;
 @Transactional
 public class EventBusiness implements EventManagementUseCase {
 
+    private static final ZoneId OWNERSHIP_CALENDAR_ZONE = ZoneId.of("America/Sao_Paulo");
+
     private final EventPersistencePort eventPersistencePort;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final FarmAuthorizationUseCase ownershipService;
     private final EventPublisher eventPublisher;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
+    private final Clock clock;
 
     public EventBusiness(
             EventPersistencePort eventPersistencePort,
             GoatReferenceQueryPort goatReferenceQueryPort,
             FarmAuthorizationUseCase ownershipService,
-            EventPublisher eventPublisher
+            EventPublisher eventPublisher,
+            GoatOwnershipGuardUseCase goatOwnershipGuard,
+            Clock clock
     ) {
         this.eventPersistencePort = eventPersistencePort;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.ownershipService = ownershipService;
         this.eventPublisher = eventPublisher;
+        this.goatOwnershipGuard = goatOwnershipGuard;
+        this.clock = clock;
     }
 
     @Override
     public EventResponseVO createEvent(Long farmId, String registrationNumber, EventRequestVO request) {
-        GoatReference goat = requireGoat(farmId, registrationNumber);
         ownershipService.verifyFarmManagement(farmId);
+        GoatReference goat = requireGoatForCreate(registrationNumber);
         requireRequestMatchesPath(request, registrationNumber);
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        requireProjectionMatchesFarm(goat, farmId);
+        requireDateNotInFuture(request.date());
+        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(goat.id(), farmId, request.date());
 
         OperationalEvent saved = eventPersistencePort.save(OperationalEvent.create(
                 toEventReference(goat), request.eventType(), request.date(), request.description(), request.location(),
@@ -125,6 +140,24 @@ public class EventBusiness implements EventManagementUseCase {
                     }
                     throw new ResourceNotFoundException("Cabra não encontrada para a fazenda informada.");
                 });
+    }
+
+    private GoatReference requireGoatForCreate(String registrationNumber) {
+        return goatReferenceQueryPort.findReferenceByRegistrationNumber(registrationNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+    }
+
+    private void requireProjectionMatchesFarm(GoatReference goat, Long farmId) {
+        if (goat.farmId() == null || !goat.farmId().equals(farmId)) {
+            throw new AuthorizationDeniedException(
+                    "A projeção legada da cabra está divergente do contexto da fazenda informado.");
+        }
+    }
+
+    private void requireDateNotInFuture(LocalDate date) {
+        if (date.isAfter(LocalDate.now(clock.withZone(OWNERSHIP_CALENDAR_ZONE)))) {
+            throw new InvalidArgumentException("date", "A data do evento não pode estar no futuro.");
+        }
     }
 
     private GoatEventReference toEventReference(GoatReference goat) {

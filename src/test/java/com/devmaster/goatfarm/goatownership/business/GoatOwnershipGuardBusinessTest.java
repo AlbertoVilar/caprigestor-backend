@@ -14,8 +14,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -96,10 +100,76 @@ class GoatOwnershipGuardBusinessTest {
                 .hasMessageContaining("outro GoatId");
     }
 
+    @Test
+    void unambiguousDateRequiresOnePeriodToCoverTheCompleteCivilDay() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        Instant dayStart = LocalDate.of(2026, 9, 9).atStartOfDay(zone).toInstant();
+        Instant nextDayStart = LocalDate.of(2026, 9, 10).atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart.minus(2, ChronoUnit.DAYS), nextDayStart,
+                        OwnershipEntryType.MANUAL_IMPORT, OwnershipExitType.TRANSFER_OUT)));
+
+        assertThatCode(() -> guard.requireUnambiguousOwnershipOnDate(
+                GOAT_ID, 10L, LocalDate.of(2026, 9, 9))).doesNotThrowAnyException();
+    }
+
+    @Test
+    void transferDayAndPartialEntryFailClosed() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        Instant transfer = LocalDate.of(2026, 9, 10).atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, LocalDate.of(2026, 9, 1).atStartOfDay(zone).toInstant(), transfer,
+                        OwnershipEntryType.MANUAL_IMPORT, OwnershipExitType.TRANSFER_OUT),
+                period(2L, 20L, transfer, null,
+                        OwnershipEntryType.TRANSFER_IN, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(
+                GOAT_ID, 10L, LocalDate.of(2026, 9, 10)))
+                .isInstanceOf(AuthorizationDeniedException.class);
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(
+                GOAT_ID, 20L, LocalDate.of(2026, 9, 10)))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void exactCivilDayBoundariesAreAccepted() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 11);
+        Instant dayStart = date.atStartOfDay(zone).toInstant();
+        Instant nextDayStart = date.plusDays(1).atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart, nextDayStart,
+                        OwnershipEntryType.MANUAL_IMPORT, OwnershipExitType.TRANSFER_OUT)));
+
+        assertThatCode(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void ownershipGapFailsClosedForDatePolicy() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 12);
+        Instant dayStart = date.atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart.minus(2, ChronoUnit.DAYS), dayStart.minus(1, ChronoUnit.HOURS),
+                        OwnershipEntryType.MANUAL_IMPORT, OwnershipExitType.TRANSFER_OUT),
+                period(2L, 10L, dayStart.plus(1, ChronoUnit.HOURS), null,
+                        OwnershipEntryType.TRANSFER_IN, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
     private GoatOwnershipPeriod period(Long id, long farmId, String startedAt, String endedAt,
                                        OwnershipEntryType entryType, OwnershipExitType exitType) {
         return GoatOwnershipPeriod.rehydrate(id, GOAT_ID, farmId,
                 Instant.parse(startedAt), endedAt == null ? null : Instant.parse(endedAt),
+                entryType, exitType, "TEST");
+    }
+
+    private GoatOwnershipPeriod period(Long id, long farmId, Instant startedAt, Instant endedAt,
+                                       OwnershipEntryType entryType, OwnershipExitType exitType) {
+        return GoatOwnershipPeriod.rehydrate(id, GOAT_ID, farmId, startedAt, endedAt,
                 entryType, exitType, "TEST");
     }
 }

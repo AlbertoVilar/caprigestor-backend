@@ -12,10 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.Instant;
 
 /** Canonical ownership policies exposed to other application modules. */
 @Service
 public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
+
+    private static final ZoneId OWNERSHIP_CALENDAR_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final GoatOwnershipQueryPort ownershipQuery;
 
@@ -51,6 +56,29 @@ public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
         if (last.farmId() != expectedFarmId) {
             throw new AuthorizationDeniedException(
                     "A fazenda informada não corresponde à última fazenda canônica associada ao animal.");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void requireUnambiguousOwnershipOnDate(GoatId goatId, long expectedFarmId, LocalDate date) {
+        if (date == null) {
+            throw new InvalidArgumentException("date must not be null");
+        }
+
+        List<GoatOwnershipPeriod> periods = loadConsistentHistory(goatId);
+        Instant dayStart = date.atStartOfDay(OWNERSHIP_CALENDAR_ZONE).toInstant();
+        Instant nextDayStart = date.plusDays(1).atStartOfDay(OWNERSHIP_CALENDAR_ZONE).toInstant();
+
+        List<GoatOwnershipPeriod> periodsCoveringWholeDay = periods.stream()
+                .filter(period -> !period.startedAt().isAfter(dayStart))
+                .filter(period -> period.endedAt() == null || !period.endedAt().isBefore(nextDayStart))
+                .toList();
+
+        if (periodsCoveringWholeDay.size() != 1
+                || periodsCoveringWholeDay.get(0).farmId() != expectedFarmId) {
+            throw new AuthorizationDeniedException(
+                    "A fazenda não possui ownership canônico inequívoco durante todo o dia informado.");
         }
     }
 
