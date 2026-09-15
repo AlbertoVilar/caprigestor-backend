@@ -120,5 +120,17 @@ public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> 
         order by e.performedAt desc, e.id desc
         """)
     List<HealthEvent> findPerformedWithWithdrawalByFarmId(@Param("farmId") Long farmId);
+
+    @Query("""
+        select e
+        from HealthEvent e
+        where e.goatTechnicalId = :goatTechnicalId
+          and e.status = com.devmaster.goatfarm.health.domain.enums.HealthEventStatus.REALIZADO
+          and e.performedAt is not null
+          and ((e.withdrawalMilkDays is not null and e.withdrawalMilkDays > 0)
+            or (e.withdrawalMeatDays is not null and e.withdrawalMeatDays > 0))
+        order by e.performedAt desc, e.id desc
+        """)
+    List<HealthEvent> findPerformedWithWithdrawalByGoatTechnicalId(@Param("goatTechnicalId") Long goatTechnicalId);
 }
 

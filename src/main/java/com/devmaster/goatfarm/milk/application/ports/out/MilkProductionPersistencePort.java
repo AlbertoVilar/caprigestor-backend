@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.application.ports.out;
 
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.devmaster.goatfarm.milk.domain.MilkProduction;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.application.pagination.PageResult;
 
@@ -16,6 +17,12 @@ public interface MilkProductionPersistencePort {
     boolean existsByFarmIdAndGoatIdAndDateAndShift(
             Long farmId,
             String goatId,
+            LocalDate date,
+            MilkingShift shift
+    );
+
+    boolean existsActiveByGoatTechnicalIdAndDateAndShift(
+            GoatId goatId,
             LocalDate date,
             MilkingShift shift
     );

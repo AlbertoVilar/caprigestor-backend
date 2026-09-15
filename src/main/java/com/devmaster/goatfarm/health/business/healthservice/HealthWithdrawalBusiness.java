@@ -52,6 +52,21 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
     }
 
     @Override
+    public GoatWithdrawalStatusVO getGoatWithdrawalStatus(com.devmaster.goatfarm.goat.domain.GoatId goatId,
+                                                           LocalDate referenceDate) {
+        GoatReference goat = entityFinder.findOrThrow(
+                () -> goatReferenceResolver.resolveGlobal(goatId),
+                "Cabra não encontrada para o GoatId informado."
+        );
+        return buildStatus(
+                goat.registrationNumber(),
+                goat.id().value(),
+                healthEventPersistencePort.findPerformedWithWithdrawalByGoatTechnicalId(goatId),
+                safeReferenceDate(referenceDate)
+        );
+    }
+
+    @Override
     public List<GoatWithdrawalStatusVO> listActiveWithdrawalStatuses(Long farmId, LocalDate referenceDate) {
         LocalDate effectiveReferenceDate = safeReferenceDate(referenceDate);
         return healthEventPersistencePort.findPerformedWithWithdrawalByFarmId(farmId).stream()
@@ -76,14 +91,14 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
                 .map(event -> toOrigin(event, event.getWithdrawalMilkDays()))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(origin -> isActive(origin.withdrawalEndDate(), referenceDate))
+                .filter(origin -> isActive(origin.performedDate(), origin.withdrawalEndDate(), referenceDate))
                 .max(Comparator.comparing(HealthWithdrawalOriginVO::withdrawalEndDate));
 
         Optional<HealthWithdrawalOriginVO> meatWithdrawal = events.stream()
                 .map(event -> toOrigin(event, event.getWithdrawalMeatDays()))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(origin -> isActive(origin.withdrawalEndDate(), referenceDate))
+                .filter(origin -> isActive(origin.performedDate(), origin.withdrawalEndDate(), referenceDate))
                 .max(Comparator.comparing(HealthWithdrawalOriginVO::withdrawalEndDate));
 
         return GoatWithdrawalStatusVO.builder()
@@ -120,8 +135,10 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
         return referenceDate != null ? referenceDate : LocalDate.now();
     }
 
-    private boolean isActive(LocalDate withdrawalEndDate, LocalDate referenceDate) {
-        return withdrawalEndDate != null && !referenceDate.isAfter(withdrawalEndDate);
+    private boolean isActive(LocalDate performedDate, LocalDate withdrawalEndDate, LocalDate referenceDate) {
+        return performedDate != null && withdrawalEndDate != null
+                && !referenceDate.isBefore(performedDate)
+                && !referenceDate.isAfter(withdrawalEndDate);
     }
 
     private record GoatWithdrawalKey(Long technicalId, String registrationNumber) {

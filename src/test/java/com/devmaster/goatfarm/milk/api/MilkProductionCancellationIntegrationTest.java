@@ -18,6 +18,9 @@ import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
 import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -72,6 +76,9 @@ class MilkProductionCancellationIntegrationTest {
     @Autowired
     private MilkProductionRepository milkProductionRepository;
 
+    @Autowired
+    private GoatOwnershipPeriodRepository goatOwnershipPeriodRepository;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
@@ -81,6 +88,7 @@ class MilkProductionCancellationIntegrationTest {
     void setUp() {
         milkProductionRepository.deleteAll();
         lactationRepository.deleteAll();
+        goatOwnershipPeriodRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
         userRepository.deleteAll();
@@ -110,9 +118,19 @@ class MilkProductionCancellationIntegrationTest {
         ownerGoat.setStatus(GoatStatus.ATIVO);
         ownerGoat = goatRepository.save(ownerGoat);
 
+        GoatOwnershipPeriodEntity ownership = new GoatOwnershipPeriodEntity();
+        ownership.setGoatId(ownerGoat.getTechnicalId());
+        ownership.setFarmId(ownerFarm.getId());
+        ownership.setStartedAt(Instant.parse("2020-01-01T00:00:00Z"));
+        ownership.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownership.setSource("test-fixture");
+        ownership.setVersion(0L);
+        goatOwnershipPeriodRepository.save(ownership);
+
         activeLactation = new LactationEntity();
         activeLactation.setFarmId(ownerFarm.getId());
         activeLactation.setGoatId(ownerGoat.getRegistrationNumber());
+        activeLactation.setGoatTechnicalId(ownerGoat.getTechnicalId());
         activeLactation.setStartDate(LocalDate.now().minusDays(10));
         activeLactation.setStatus(LactationStatus.ACTIVE);
         activeLactation = lactationRepository.save(activeLactation);
@@ -243,6 +261,7 @@ class MilkProductionCancellationIntegrationTest {
         MilkProductionEntity production = new MilkProductionEntity();
         production.setFarmId(ownerFarm.getId());
         production.setGoatId(ownerGoat.getRegistrationNumber());
+        production.setGoatTechnicalId(ownerGoat.getTechnicalId());
         production.setLactation(activeLactation);
         production.setDate(date);
         production.setShift(shift);

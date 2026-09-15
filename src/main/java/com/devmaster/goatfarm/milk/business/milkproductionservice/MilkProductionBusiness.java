@@ -12,6 +12,10 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
@@ -27,6 +31,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class MilkProductionBusiness implements MilkProductionUseCase {
@@ -36,6 +41,8 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
     private final LactationPersistencePort lactationPersistencePort;
     private final GoatGenderValidator goatGenderValidator;
     private final HealthWithdrawalQueryUseCase healthWithdrawalQueryUseCase;
+    private final GoatReferenceResolver goatReferenceResolver;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     /** Mapper de domínio */
     private final MilkProductionBusinessMapper milkProductionMapper;
@@ -44,12 +51,16 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
                                   LactationPersistencePort lactationPersistencePort,
                                   GoatGenderValidator goatGenderValidator,
                                   HealthWithdrawalQueryUseCase healthWithdrawalQueryUseCase,
-                                  MilkProductionBusinessMapper milkProductionMapper) {
+                                  MilkProductionBusinessMapper milkProductionMapper,
+                                  GoatReferenceResolver goatReferenceResolver,
+                                  GoatOwnershipGuardUseCase goatOwnershipGuard) {
         this.milkProductionPersistencePort = milkProductionPersistencePort;
         this.lactationPersistencePort = lactationPersistencePort;
         this.goatGenderValidator = goatGenderValidator;
         this.healthWithdrawalQueryUseCase = healthWithdrawalQueryUseCase;
         this.milkProductionMapper = milkProductionMapper;
+        this.goatReferenceResolver = goatReferenceResolver;
+        this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
     /**
@@ -61,11 +72,22 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             String goatId,
             MilkProductionRequestVO requestVO
     ) {
-        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
+        GoatReference goat = goatReferenceResolver.resolveGlobal(goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+        GoatId technicalId = goat.id();
+        goatOwnershipGuard.requireCurrentFarm(technicalId, requireFarmId(farmId));
+        if (!Objects.equals(goat.farmId(), farmId)) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
+        goatGenderValidator.requireFemaleAndActive(technicalId);
         //=======================
         // *** VALIDAÇÃO *** //
         //=======================
         
+        if (requestVO == null) {
+            throw new InvalidArgumentException("request", "Dados da produção são obrigatórios");
+        }
         if (requestVO.getDate() == null) {
             throw new InvalidArgumentException("date", "Data da ordenha é obrigatória");
         }
@@ -73,18 +95,17 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
             throw new InvalidArgumentException("date", "Data da ordenha não pode ser futura");
         }
 
-        // Regra 1: Não permitir produção duplicada para a mesma data e turno
-        validateNoDuplicateProduction(farmId, goatId, requestVO.getDate(), requestVO.getShift());
+        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, requestVO.getDate());
+
+        validateNoDuplicateProduction(technicalId, requestVO.getDate(), requestVO.getShift());
+        Lactation lactation = getRequiredActiveLactation(technicalId);
         GoatWithdrawalStatusVO withdrawalStatus = healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(
-                farmId,
-                goatId,
-                requestVO.getDate()
-        );
-        Lactation lactation = getRequiredActiveLactation(farmId, goatId, requestVO.getDate());
+                technicalId, requestVO.getDate());
 
         MilkProduction milkProduction = MilkProduction.record(
                 farmId,
-                goatId,
+                goat.registrationNumber(),
+                technicalId.value(),
                 lactation.getId(),
                 requestVO.getDate(),
                 requestVO.getShift(),
@@ -179,13 +200,11 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
      * Não permitir produção duplicada para a mesma data e turno
      */
     private void validateNoDuplicateProduction(
-            Long farmId,
-            String goatId,
+            GoatId goatId,
             LocalDate date,
             MilkingShift shift
     ) {
-        // implementação futura
-        if (milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(farmId, goatId, date, shift)) {
+        if (milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(goatId, date, shift)) {
             throw new DuplicateMilkProductionException();
         }
     }
@@ -195,13 +214,18 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
      * Produção só pode existir se houver lactação ativa
      */
     private Lactation getRequiredActiveLactation(
-            Long farmId,
-            String goatId,
-            LocalDate productionDate
+            GoatId goatId
     ) {
         return lactationPersistencePort
-                .findActiveByFarmIdAndGoatId(farmId, goatId)
+                .findActiveByGoatTechnicalId(goatId)
                 .orElseThrow(NoActiveLactationException::new);
+    }
+
+    private long requireFarmId(Long farmId) {
+        if (farmId == null || farmId <= 0) {
+            throw new InvalidArgumentException("farmId", "Identificador de fazenda inválido.");
+        }
+        return farmId;
     }
 
     private void applyMilkWithdrawalSnapshot(MilkProduction milkProduction, GoatWithdrawalStatusVO status) {
