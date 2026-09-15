@@ -15,6 +15,10 @@ import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +33,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -67,6 +73,9 @@ class EventOperationalAuthorizationIntegrationTest {
 
     @Autowired
     private EventRepository eventRepository;
+
+    @Autowired
+    private GoatOwnershipPeriodRepository ownershipPeriodRepository;
 
     private User admin;
     private User owner;
@@ -199,6 +208,81 @@ class EventOperationalAuthorizationIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void futureEventDateIsRejectedBeforePersistence() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+
+        mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Future event", LocalDate.now().plusDays(1))))
+                .andExpect(status().isBadRequest());
+
+        org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void formerOwnerCannotCreateEventAfterCanonicalTransfer() throws Exception {
+        LocalDate transferDate = LocalDate.now().minusDays(2);
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
+        String token = loginAndGetToken(owner.getEmail());
+
+        mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Former owner event", transferDate.minusDays(1))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void currentOwnerCannotCreateEventInPreviousOwnersPeriod() throws Exception {
+        LocalDate transferDate = LocalDate.now().minusDays(2);
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Previous owner event", transferDate.minusDays(1))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void currentOwnerCanCreateEventForAnUnambiguousCurrentDate() throws Exception {
+        transferOwnership(managedGoat, managedFarm, otherFarm, true);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Current owner event", LocalDate.now())))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void transferDayIsRejectedForDateOnlyEvent() throws Exception {
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, LocalDate.now().minusDays(2), false);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Transfer day event", LocalDate.now().minusDays(2))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void projectionDriftFailsClosedEvenWhenCanonicalOwnerMatchesRequest() throws Exception {
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, LocalDate.now().minusDays(2), false);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Drifted projection event", LocalDate.now())))
+                .andExpect(status().isForbidden());
+    }
+
     private void assertAdministrativeEventLifecycle(String token, String description) throws Exception {
         long eventId = createEvent(token, managedFarm, managedGoat, description);
 
@@ -255,7 +339,15 @@ class EventOperationalAuthorizationIntegrationTest {
         goat.setBirthDate(LocalDate.now().minusYears(2));
         goat.setStatus(GoatStatus.ATIVO);
         goat.setFarm(farm);
-        return goatRepository.save(goat);
+        GoatEntity saved = goatRepository.save(goat);
+        GoatOwnershipPeriodEntity ownership = new GoatOwnershipPeriodEntity();
+        ownership.setGoatId(saved.getTechnicalId());
+        ownership.setFarmId(farm.getId());
+        ownership.setStartedAt(Instant.parse("2020-01-01T00:00:00Z"));
+        ownership.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownership.setSource("EVENT_TEST");
+        ownershipPeriodRepository.save(ownership);
+        return saved;
     }
 
     private Event createPersistedEvent(GoatEntity goat, String description) {
@@ -284,21 +376,53 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private String eventPayload(GoatEntity goat, String description) {
-        return "{\"goatId\":\"" + goat.getRegistrationNumber() + "\","
-                + "\"eventType\":\"VACINACAO\","
-                + "\"date\":\"" + LocalDate.now().minusDays(1) + "\","
-                + "\"description\":\"" + description + "\","
-                + "\"location\":\"Farm\","
-                + "\"veterinarian\":\"Veterinarian\","
-                + "\"outcome\":\"Completed\"}";
+        return eventPayload(goat, description, LocalDate.now().minusDays(1));
+    }
+
+    private String eventPayload(GoatEntity goat, String description, LocalDate date) {
+        return String.format(
+                "{\"goatId\":\"%s\",\"eventType\":\"VACINACAO\",\"date\":\"%s\","
+                        + "\"description\":\"%s\",\"location\":\"Farm\","
+                        + "\"veterinarian\":\"Veterinarian\",\"outcome\":\"Completed\"}",
+                goat.getRegistrationNumber(), date, description);
     }
 
     private String bearer(String token) {
         return "Bearer " + token;
     }
 
+    private void transferOwnership(GoatEntity goat, GoatFarm source, GoatFarm target, boolean updateProjection) {
+        transferOwnershipOnDate(goat, source, target, LocalDate.now().minusDays(2), updateProjection);
+    }
+
+    private void transferOwnershipOnDate(GoatEntity goat, GoatFarm source, GoatFarm target,
+                                         LocalDate transferDate, boolean updateProjection) {
+        GoatOwnershipPeriodEntity current = ownershipPeriodRepository
+                .findByGoatIdAndEndedAtIsNull(goat.getTechnicalId())
+                .orElseThrow();
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        Instant effectiveAt = transferDate.atStartOfDay(zone).toInstant().plusSeconds(14 * 60 * 60);
+        current.setEndedAt(effectiveAt);
+        current.setExitType(OwnershipExitType.TRANSFER_OUT);
+        ownershipPeriodRepository.saveAndFlush(current);
+
+        GoatOwnershipPeriodEntity targetPeriod = new GoatOwnershipPeriodEntity();
+        targetPeriod.setGoatId(goat.getTechnicalId());
+        targetPeriod.setFarmId(target.getId());
+        targetPeriod.setStartedAt(effectiveAt);
+        targetPeriod.setEntryType(OwnershipEntryType.TRANSFER_IN);
+        targetPeriod.setSource("EVENT_TEST_TRANSFER");
+        ownershipPeriodRepository.saveAndFlush(targetPeriod);
+
+        if (updateProjection) {
+            goat.setFarm(target);
+            goatRepository.saveAndFlush(goat);
+        }
+    }
+
     private void cleanDatabase() {
         eventRepository.deleteAll();
+        ownershipPeriodRepository.deleteAll();
         farmOperatorRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
