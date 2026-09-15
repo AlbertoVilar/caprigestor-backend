@@ -17,6 +17,8 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
@@ -69,13 +71,14 @@ class GoatBusinessBehavioralCoverageTest {
     @Mock private OperationalAuditUseCase audit;
     @Mock private GoatParentagePort parentage;
     @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
+    @Mock private GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
 
     private GoatBusiness business;
     private Goat goat;
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase);
         goat = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
         lenient().when(parentage.resolve(any(), any(), any(), any()))
@@ -101,9 +104,9 @@ class GoatBusinessBehavioralCoverageTest {
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(parentage.resolve(Category.PA, "1643222002", "164321001", "164321002"))
                 .thenReturn(new GoatParentagePort.ResolvedParentage(father, mother));
-        when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
 
-        GoatResponseVO result = business.createGoat(1L, request);
+        GoatResponseVO result = business.createGoat(1L, request, GoatCreationOrigin.MANUAL);
 
         assertThat(result.getRegistrationNumber()).isEqualTo("1643222002");
         ArgumentCaptor<Goat> saved = ArgumentCaptor.forClass(Goat.class);
@@ -183,7 +186,7 @@ class GoatBusinessBehavioralCoverageTest {
         when(goatPort.findByRegistrationNumberAndFarmId("1643222002", 1L)).thenReturn(Optional.of(goat));
         when(goatOwnershipExitUseCase.closeTerminalOwnership(any())).thenReturn(null);
         when(goatPort.findByIdAndFarmId(new GoatId(77L), 1L)).thenReturn(Optional.of(goat));
-        when(goatPort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
 
         GoatExitResponseVO result = business.exitGoat(1L, "1643222002", request);
 

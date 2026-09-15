@@ -14,6 +14,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationHistoryResponseVO
 import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestDTO;
 import com.devmaster.goatfarm.goat.enums.RegistrationRectificationSource;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatRegistrationRectificationUseCase;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
@@ -295,7 +296,7 @@ class GoatControllerTest {
         createdGoatResponseVO.setColor("Marrom");
         createdGoatResponseVO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(createdGoatResponseVO);
+        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.MANUAL))).thenReturn(createdGoatResponseVO);
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/goatfarms/1/goats")
@@ -309,7 +310,7 @@ class GoatControllerTest {
                 .andExpect(jsonPath("$.gender").value("MACHO"))
                 .andExpect(jsonPath("$.status").value("ATIVO"));
 
-        verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class));
+        verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.MANUAL));
     }
 
     @Test
@@ -335,7 +336,7 @@ class GoatControllerTest {
                         .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
                 .andExpect(status().isForbidden());
 
-        verify(goatUseCase, never()).createGoat(eq(2L), any(GoatRequestVO.class));
+        verify(goatUseCase, never()).createGoat(eq(2L), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
     }
 
     @Test
@@ -363,7 +364,7 @@ class GoatControllerTest {
         createdGoatResponseVO.setColor("Branca");
         createdGoatResponseVO.setStatus(com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO);
 
-        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class))).thenReturn(createdGoatResponseVO);
+        when(goatUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.MANUAL))).thenReturn(createdGoatResponseVO);
 
         // Act & Assert
         mockMvc.perform(post("/api/v1/goatfarms/1/goats")
@@ -373,7 +374,7 @@ class GoatControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.registrationNumber").value("005"));
 
-        verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class));
+        verify(goatUseCase).createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.MANUAL));
     }
 
     @Test
@@ -622,7 +623,7 @@ class GoatControllerTest {
                         .content(objectMapper.writeValueAsString(newGoatRequestDTO)))
                 .andExpect(status().isForbidden());
 
-        verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class));
+        verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
     }
 
     @Test
@@ -639,7 +640,7 @@ class GoatControllerTest {
                         .content(objectMapper.writeValueAsString(invalidGoatRequestDTO)))
                 .andExpect(status().isUnprocessableEntity());
 
-        verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class));
+        verify(goatUseCase, never()).createGoat(eq(1L), any(GoatRequestVO.class), any(GoatCreationOrigin.class));
     }
 
     @Test

@@ -12,8 +12,11 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
+import com.devmaster.goatfarm.goatownership.application.model.GoatOwnershipInitializationCommand;
 import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
@@ -52,12 +55,14 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final GoatParentagePort parentagePort;
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
     private final GoatOwnershipExitUseCase goatOwnershipExitUseCase;
+    private final GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
                         FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder,
                         OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort,
                         CurrentPrincipalQueryUseCase currentPrincipalQuery,
-                        GoatOwnershipExitUseCase goatOwnershipExitUseCase) {
+                        GoatOwnershipExitUseCase goatOwnershipExitUseCase,
+                        GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
@@ -66,11 +71,12 @@ public class GoatBusiness implements GoatManagementUseCase {
         this.parentagePort = parentagePort;
         this.currentPrincipalQuery = currentPrincipalQuery;
         this.goatOwnershipExitUseCase = goatOwnershipExitUseCase;
+        this.goatOwnershipInitializationUseCase = goatOwnershipInitializationUseCase;
     }
 
     @Transactional
     @Override
-    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
+    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO, GoatCreationOrigin origin) {
         ownershipService.verifyFarmManagement(farmId);
         RegistrationIdentity identity = identityForCreation(requestVO);
         String registration = identity.registrationNumber();
@@ -82,7 +88,13 @@ public class GoatBusiness implements GoatManagementUseCase {
                 requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(), requestVO.getBirthDate(),
                 requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother(), farmId,
                 currentPrincipalQuery.requireCurrent().id());
-        return toResponse(goatPort.save(goat));
+        Goat saved = goatPort.save(goat);
+        if (saved == null || saved.id() == null) {
+            throw new BusinessRuleException("goat", "A criação da cabra não retornou um GoatId estrutural válido.");
+        }
+        goatOwnershipInitializationUseCase.initialize(
+                new GoatOwnershipInitializationCommand(saved.id(), farmId, origin));
+        return toResponse(saved);
     }
 
     @Transactional
