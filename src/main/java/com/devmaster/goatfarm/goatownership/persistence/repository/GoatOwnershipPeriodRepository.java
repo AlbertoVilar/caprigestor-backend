@@ -20,6 +20,8 @@ public interface GoatOwnershipPeriodRepository extends JpaRepository<GoatOwnersh
     Optional<GoatOwnershipPeriodEntity> findOpenForUpdateByGoatId(Long goatId);
 
     List<GoatOwnershipPeriodEntity> findByGoatIdOrderByStartedAtAscIdAsc(Long goatId);
+    List<GoatOwnershipPeriodEntity> findByFarmIdOrderByGoatIdAscStartedAtAscIdAsc(Long farmId);
+    List<GoatOwnershipPeriodEntity> findByGoatIdInOrderByGoatIdAscStartedAtAscIdAsc(List<Long> goatIds);
 
     @Query("""
             select case when count(p) > 0 then true else false end
