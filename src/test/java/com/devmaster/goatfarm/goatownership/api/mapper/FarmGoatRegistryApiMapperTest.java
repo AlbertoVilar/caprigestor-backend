@@ -72,4 +72,83 @@ class FarmGoatRegistryApiMapperTest {
         assertThat(mapper.toResponseList(null)).isEmpty();
         assertThat(mapper.toResponseList(List.of())).isEmpty();
     }
+
+    @Test
+    @DisplayName("Maps FarmGoatHistoricalDossierBasicItem to FarmGoatHistoricalDossierBasicResponseDTO preserving all 20 fields")
+    void toDossierResponse_mapsAllFieldsCorrectly() {
+        var item = new com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalDossierBasicItem(
+                new GoatId(42L),
+                "RG42",
+                "Estrela",
+                GoatStatus.ATIVO,
+                com.devmaster.goatfarm.goat.enums.Gender.FEMEA,
+                com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN,
+                "Branca",
+                java.time.LocalDate.of(2023, 5, 10),
+                com.devmaster.goatfarm.goat.enums.Category.PA,
+                "TOD-A",
+                "TOE-B",
+                "Pai Alpha",
+                "RG-PAI",
+                "Mae Beta",
+                "RG-MAE",
+                10L,
+                "Capril Bela Vista",
+                Set.of(FarmGoatRegistryRole.CREATOR, FarmGoatRegistryRole.CURRENT_OWNER),
+                FarmGoatRegistryDisposition.CURRENT,
+                10L
+        );
+
+        var dto = mapper.toDossierResponse(item);
+
+        assertThat(dto).isNotNull();
+        assertThat(dto.goatId()).isEqualTo(42L);
+        assertThat(dto.registrationNumber()).isEqualTo("RG42");
+        assertThat(dto.name()).isEqualTo("Estrela");
+        assertThat(dto.globalStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(dto.gender()).isEqualTo(com.devmaster.goatfarm.goat.enums.Gender.FEMEA);
+        assertThat(dto.breed()).isEqualTo(com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN);
+        assertThat(dto.color()).isEqualTo("Branca");
+        assertThat(dto.birthDate()).isEqualTo(java.time.LocalDate.of(2023, 5, 10));
+        assertThat(dto.category()).isEqualTo(com.devmaster.goatfarm.goat.enums.Category.PA);
+        assertThat(dto.tod()).isEqualTo("TOD-A");
+        assertThat(dto.toe()).isEqualTo("TOE-B");
+        assertThat(dto.fatherName()).isEqualTo("Pai Alpha");
+        assertThat(dto.fatherRegistrationNumber()).isEqualTo("RG-PAI");
+        assertThat(dto.motherName()).isEqualTo("Mae Beta");
+        assertThat(dto.motherRegistrationNumber()).isEqualTo("RG-MAE");
+        assertThat(dto.creatorFarmId()).isEqualTo(10L);
+        assertThat(dto.creatorNameSnapshot()).isEqualTo("Capril Bela Vista");
+        assertThat(dto.roles()).containsExactlyInAnyOrder(FarmGoatRegistryRole.CREATOR, FarmGoatRegistryRole.CURRENT_OWNER);
+        assertThat(dto.disposition()).isEqualTo(FarmGoatRegistryDisposition.CURRENT);
+        assertThat(dto.currentOwnerFarmId()).isEqualTo(10L);
+    }
+
+    @Test
+    @DisplayName("Maps null dossier item to null")
+    void toDossierResponse_nullItem_returnsNull() {
+        assertThat(mapper.toDossierResponse(null)).isNull();
+    }
+
+    @Test
+    @DisplayName("Dossier response DTO does NOT contain any forbidden fields")
+    void dossierDto_doesNotContainForbiddenFields() {
+        var fields = java.util.Arrays.stream(com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalDossierBasicResponseDTO.class.getDeclaredFields())
+                .map(java.lang.reflect.Field::getName)
+                .toList();
+
+        assertThat(fields).doesNotContain(
+                "farmId",
+                "farmName",
+                "userName",
+                "exitType",
+                "exitDate",
+                "exitNotes",
+                "currentOwnerName",
+                "currentOwnerFarmName",
+                "buyer",
+                "salePrice",
+                "notes"
+        );
+    }
 }

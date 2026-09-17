@@ -66,4 +66,32 @@ public class FarmGoatRegistryQueryPersistenceAdapter implements FarmGoatRegistry
                 histories.getOrDefault(g.getTechnicalId(), List.of()).stream().map(mapper::toDomain).toList()
         )).toList();
     }
+
+    @Override
+    public Optional<Candidate> findCandidate(long farmId, GoatId goatId) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        long technicalId = goatId.value();
+        Optional<CreatorReferenceEntity> creatorOpt = creators.findByGoatId(technicalId);
+        List<GoatOwnershipPeriodEntity> periodEntities = periods.findByGoatIdOrderByStartedAtAscIdAsc(technicalId);
+
+        boolean createdByFarm = creatorOpt
+                .map(c -> c.getCreatorFarmId() != null && c.getCreatorFarmId() == farmId)
+                .orElse(false);
+        boolean ownedByFarm = periodEntities.stream().anyMatch(p -> p.getFarmId() == farmId);
+
+        if (!createdByFarm && !ownedByFarm) {
+            return Optional.empty();
+        }
+
+        return goats.findById(technicalId).map(g -> new Candidate(
+                new GoatId(g.getTechnicalId()),
+                g.getRegistrationNumber(),
+                g.getName(),
+                g.getStatus(),
+                creatorOpt.map(mapper::toDomain).orElse(null),
+                periodEntities.stream().map(mapper::toDomain).toList()
+        ));
+    }
 }
