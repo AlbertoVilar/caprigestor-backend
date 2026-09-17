@@ -20,4 +20,12 @@ public interface GoatGenealogyReadUseCase {
             String registrationNumber,
             Long farmId
     );
+
+    /**
+     * Loads the structural local family graph by immutable technical GoatId
+     * without farm projection context or breeder/owner metadata.
+     */
+    Optional<GoatGenealogySnapshot> findGenealogyByGoatId(
+            com.devmaster.goatfarm.goat.domain.GoatId goatId
+    );
 }

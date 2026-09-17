@@ -134,6 +134,19 @@ class GoatPersistenceAdapterTest {
 
     }
 
+    @Test
+    void findGenealogyByGoatId_usesTechnicalIdAndSetsBreederAndOwnerNull() {
+        when(repository.findByTechnicalIdWithTechnicalFamilyGraph(10L)).thenReturn(Optional.of(entity));
+
+        var result = adapter.findGenealogyByGoatId(GoatId.of(10L));
+
+        assertThat(result).isPresent();
+        assertThat(result.get().id()).isEqualTo(GoatId.of(10L));
+        assertThat(result.get().registrationNumber()).isEqualTo("RG-10");
+        assertThat(result.get().breederName()).isNull();
+        assertThat(result.get().farmOwnerName()).isNull();
+    }
+
     private GoatEntity entity(Long technicalId, String registration) {
         GoatEntity result = new GoatEntity();
         result.setTechnicalId(technicalId);

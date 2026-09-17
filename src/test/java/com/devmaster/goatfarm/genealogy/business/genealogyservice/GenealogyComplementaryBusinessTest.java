@@ -3,13 +3,13 @@ package com.devmaster.goatfarm.genealogy.business.genealogyservice;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
-import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyNodeSource;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatGenealogyReadUseCase;
 import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import com.devmaster.goatfarm.goat.domain.GoatId;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -29,8 +29,13 @@ class GenealogyComplementaryBusinessTest {
     @Mock
     private GenealogyAbccQueryPort genealogyAbccQueryPort;
 
-    @InjectMocks
     private GenealogyComplementaryBusiness business;
+
+    @BeforeEach
+    void setUp() {
+        GenealogyTreeProjectionBusiness projectionBusiness = new GenealogyTreeProjectionBusiness(genealogyAbccQueryPort);
+        business = new GenealogyComplementaryBusiness(goatGenealogyQueryPort, projectionBusiness);
+    }
 
     @Test
     void shouldReturnFoundAndComplementMissingNodesFromAbcc() {
@@ -46,6 +51,7 @@ class GenealogyComplementaryBusinessTest {
                         .animalName("XEQUE V DO CAPRIL VILAR")
                         .fatherRegistrationNumber("1635717065")
                         .fatherName("C.V.C SIGNOS PETROLEO")
+                        .motherRegistrationNumber("2114517012")
                         .maternalGrandfatherRegistrationNumber("123")
                         .maternalGrandfatherName("AVÔ MAT")
                         .build()));
@@ -54,6 +60,8 @@ class GenealogyComplementaryBusinessTest {
 
         assertThat(response.getIntegration().getStatus()).isEqualTo("FOUND");
         assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(response.getPai().getRegistrationNumber()).isEqualTo("1635717065");
+        assertThat(response.getPai().getName()).isEqualTo("C.V.C SIGNOS PETROLEO");
         assertThat(response.getMae().getSource()).isEqualTo(GenealogyNodeSource.LOCAL);
         assertThat(response.getMae().getLocalTechnicalGoatId()).isEqualTo(21L);
         assertThat(response.getAvoMaterno().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
@@ -120,7 +128,7 @@ class GenealogyComplementaryBusinessTest {
 
         assertThat(response.getPai().getName()).isEqualTo("REPRODUTOR EXTERNO");
         assertThat(response.getPai().getRegistrationNumber()).isEqualTo("1635719026A");
-        assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(response.getPai().getSource()).isEqualTo(GenealogyNodeSource.DECLARADO);
         assertThat(response.getPai().getLocalGoatId()).isNull();
         assertThat(response.getPai().getLocalTechnicalGoatId()).isNull();
     }

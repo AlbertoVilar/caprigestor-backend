@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.genealogy.business.bo;
 
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyNodeSource;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
