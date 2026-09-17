@@ -1,4 +1,4 @@
-package com.devmaster.goatfarm.genealogy.business.bo;
+package com.devmaster.goatfarm.genealogy.application.model;
 
 public enum GenealogyNodeSource {
     LOCAL,
@@ -6,4 +6,3 @@ public enum GenealogyNodeSource {
     DECLARADO,
     AUSENTE
 }
-

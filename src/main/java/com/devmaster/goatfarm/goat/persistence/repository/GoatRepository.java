@@ -83,4 +83,27 @@ public interface GoatRepository extends JpaRepository<GoatEntity, Long> {
             @Param("registrationNumber") String registrationNumber,
             @Param("farmId") Long farmId
     );
+
+    // Loads the structural technical genealogy graph by GoatId without farm or user projection.
+    @Query(
+        "SELECT g FROM GoatEntity g " +
+        "LEFT JOIN FETCH g.technicalFather f " +
+        "LEFT JOIN FETCH f.technicalFather ff " +
+        "LEFT JOIN FETCH ff.technicalFather fff " +
+        "LEFT JOIN FETCH ff.technicalMother ffm " +
+        "LEFT JOIN FETCH f.technicalMother fm " +
+        "LEFT JOIN FETCH fm.technicalFather fmf " +
+        "LEFT JOIN FETCH fm.technicalMother fmm " +
+        "LEFT JOIN FETCH g.technicalMother m " +
+        "LEFT JOIN FETCH m.technicalFather mf " +
+        "LEFT JOIN FETCH mf.technicalFather mff " +
+        "LEFT JOIN FETCH mf.technicalMother mfm " +
+        "LEFT JOIN FETCH m.technicalMother mm " +
+        "LEFT JOIN FETCH mm.technicalFather mmf " +
+        "LEFT JOIN FETCH mm.technicalMother mmm " +
+        "WHERE g.technicalId = :technicalId"
+    )
+    Optional<GoatEntity> findByTechnicalIdWithTechnicalFamilyGraph(
+            @Param("technicalId") Long technicalId
+    );
 }

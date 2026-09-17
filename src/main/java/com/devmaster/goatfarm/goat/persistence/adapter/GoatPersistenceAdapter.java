@@ -194,6 +194,16 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public Optional<GoatGenealogySnapshot> findGenealogyByGoatId(GoatId goatId) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        return goatRepository.findByTechnicalIdWithTechnicalFamilyGraph(goatId.value())
+                .map(goat -> toStructuralGenealogySnapshot(goat, 3));
+    }
+
+
+    @Override
     public boolean existsByRegistrationNumber(String registrationNumber) {
         return goatRepository.existsByRegistrationNumber(registrationNumber);
     }
@@ -268,6 +278,46 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
         }
         return null;
     }
+
+    private GoatGenealogySnapshot toStructuralGenealogySnapshot(GoatEntity goat, int remainingGenerations) {
+        return new GoatGenealogySnapshot(
+                GoatId.of(goat.getTechnicalId()),
+                goat.getRegistrationNumber(),
+                goat.getName(),
+                goat.getBreed(),
+                goat.getColor(),
+                goat.getStatus(),
+                goat.getGender(),
+                goat.getCategory(),
+                goat.getTod(),
+                goat.getToe(),
+                goat.getBirthDate(),
+                null,
+                null,
+                remainingGenerations > 0 ? toStructuralGenealogyParent(goat.getTechnicalFather(),
+                        goat.getExternalFatherRegistrationNumber(), remainingGenerations) : null,
+                remainingGenerations > 0 ? toStructuralGenealogyParent(goat.getTechnicalMother(),
+                        goat.getExternalMotherRegistrationNumber(), remainingGenerations) : null
+        );
+    }
+
+    private GoatGenealogySnapshot.ParentReference toStructuralGenealogyParent(
+            GoatEntity technicalParent,
+            String externalRegistrationNumber,
+            int remainingGenerations
+    ) {
+        GoatEntity localParent = technicalParent;
+        if (localParent != null) {
+            return GoatGenealogySnapshot.ParentReference.local(
+                    toStructuralGenealogySnapshot(localParent, remainingGenerations - 1)
+            );
+        }
+        if (externalRegistrationNumber != null && !externalRegistrationNumber.isBlank()) {
+            return GoatGenealogySnapshot.ParentReference.external(externalRegistrationNumber);
+        }
+        return null;
+    }
+
 
     private GoatReference toReference(GoatEntity goat) {
         return new GoatReference(

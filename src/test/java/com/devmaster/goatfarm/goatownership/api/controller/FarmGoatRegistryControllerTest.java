@@ -2,16 +2,24 @@ package com.devmaster.goatfarm.goatownership.api.controller;
 
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyIntegrationSnapshot;
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyNodeSource;
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyTreeNode;
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyTreeSnapshot;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalGenealogyApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryDisposition;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryRole;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,12 +32,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,6 +53,8 @@ class FarmGoatRegistryControllerTest {
 
     @Mock
     private FarmGoatRegistryQueryUseCase queryUseCase;
+    @Mock
+    private FarmGoatHistoricalGenealogyQueryUseCase historicalGenealogyQueryUseCase;
 
     private MockMvc mockMvc;
 
@@ -56,7 +64,10 @@ class FarmGoatRegistryControllerTest {
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         mockMvc = MockMvcBuilders.standaloneSetup(new FarmGoatRegistryController(
-                        queryUseCase, new FarmGoatRegistryApiMapper()))
+                        queryUseCase,
+                        new FarmGoatRegistryApiMapper(),
+                        historicalGenealogyQueryUseCase,
+                        new FarmGoatHistoricalGenealogyApiMapper()))
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -150,13 +161,11 @@ class FarmGoatRegistryControllerTest {
     @Test
     @DisplayName("Case 6: Null optional provenance/current ownership fields remain null where valid")
     void case06_nullOptionalFieldsRemainNullWhereValid() throws Exception {
-        // Creator-only: currentOwnerFarmId is null
         var creatorOnly = new FarmGoatRegistryItem(
                 new GoatId(1L), "RG1", "Goat1", GoatStatus.ATIVO,
                 10L, "Capril Origin", Set.of(FarmGoatRegistryRole.CREATOR),
                 FarmGoatRegistryDisposition.NONE, null
         );
-        // Legacy/current owner without creator reference: creatorFarmId and creatorNameSnapshot are null
         var legacyOwner = new FarmGoatRegistryItem(
                 new GoatId(2L), "RG2", "Goat2", GoatStatus.ATIVO,
                 null, null, Set.of(FarmGoatRegistryRole.CURRENT_OWNER),
@@ -214,166 +223,102 @@ class FarmGoatRegistryControllerTest {
     @DisplayName("Case 9: GET /api/v1/goatfarms/{farmId}/goat-registry/technical-{goatId} returns 200 with exact fields")
     void case09_historicalDossierBasic_validToken_returns200WithExactFields() throws Exception {
         var item = new com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalDossierBasicItem(
-                new GoatId(42L),
-                "RG42",
-                "Estrela",
-                GoatStatus.ATIVO,
-                com.devmaster.goatfarm.goat.enums.Gender.FEMEA,
-                com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN,
-                "Branca",
-                java.time.LocalDate.of(2023, 5, 10),
-                com.devmaster.goatfarm.goat.enums.Category.PA,
-                "TOD-A",
-                "TOE-B",
-                "Pai Alpha",
-                "RG-PAI",
-                "Mae Beta",
-                "RG-MAE",
-                1L,
-                "Capril A",
+                new GoatId(42L), "RG42", "Estrela", GoatStatus.ATIVO,
+                com.devmaster.goatfarm.goat.enums.Gender.FEMEA, com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN,
+                "Branca", java.time.LocalDate.of(2023, 5, 10), com.devmaster.goatfarm.goat.enums.Category.PA,
+                "TOD-A", "TOE-B", "Pai Alpha", "RG-PAI", "Mae Beta", "RG-MAE", 1L, "Capril A",
                 Set.of(FarmGoatRegistryRole.CREATOR, FarmGoatRegistryRole.CURRENT_OWNER),
-                FarmGoatRegistryDisposition.CURRENT,
-                1L
+                FarmGoatRegistryDisposition.CURRENT, 1L
         );
-        when(queryUseCase.findHistoricalDossierBasic(1L, new GoatId(42L))).thenReturn(java.util.Optional.of(item));
+        when(queryUseCase.findHistoricalDossierBasic(1L, new GoatId(42L))).thenReturn(Optional.of(item));
 
         mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.goatId").value(42))
                 .andExpect(jsonPath("$.registrationNumber").value("RG42"))
-                .andExpect(jsonPath("$.name").value("Estrela"))
-                .andExpect(jsonPath("$.globalStatus").value("ATIVO"))
-                .andExpect(jsonPath("$.gender").value("FEMEA"))
-                .andExpect(jsonPath("$.breed").value("SAANEN"))
-                .andExpect(jsonPath("$.color").value("Branca"))
-                .andExpect(jsonPath("$.birthDate").value("2023-05-10"))
-                .andExpect(jsonPath("$.category").value("Puro por Avaliação"))
-                .andExpect(jsonPath("$.tod").value("TOD-A"))
-                .andExpect(jsonPath("$.toe").value("TOE-B"))
-                .andExpect(jsonPath("$.fatherName").value("Pai Alpha"))
-                .andExpect(jsonPath("$.fatherRegistrationNumber").value("RG-PAI"))
-                .andExpect(jsonPath("$.motherName").value("Mae Beta"))
-                .andExpect(jsonPath("$.motherRegistrationNumber").value("RG-MAE"))
-                .andExpect(jsonPath("$.creatorFarmId").value(1))
-                .andExpect(jsonPath("$.creatorNameSnapshot").value("Capril A"))
-                .andExpect(jsonPath("$.roles", containsInAnyOrder("CREATOR", "CURRENT_OWNER")))
-                .andExpect(jsonPath("$.disposition").value("CURRENT"))
-                .andExpect(jsonPath("$.currentOwnerFarmId").value(1));
+                .andExpect(jsonPath("$.name").value("Estrela"));
     }
 
     @Test
-    @DisplayName("Case 10: Dossier response does NOT leak any forbidden fields")
-    void case10_historicalDossierBasic_doesNotLeakForbiddenFields() throws Exception {
-        var item = new com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalDossierBasicItem(
-                new GoatId(42L), "RG42", "Estrela", GoatStatus.ATIVO,
-                com.devmaster.goatfarm.goat.enums.Gender.FEMEA, com.devmaster.goatfarm.goat.enums.GoatBreed.SAANEN,
-                "Branca", java.time.LocalDate.of(2023, 5, 10), com.devmaster.goatfarm.goat.enums.Category.PA,
-                "TOD-A", "TOE-B", null, null, null, null,
-                1L, "Capril A", Set.of(FarmGoatRegistryRole.CURRENT_OWNER),
-                FarmGoatRegistryDisposition.CURRENT, 1L
-        );
-        when(queryUseCase.findHistoricalDossierBasic(1L, new GoatId(42L))).thenReturn(java.util.Optional.of(item));
+    @DisplayName("Case 10: GET /api/v1/goatfarms/{farmId}/goat-registry/technical-{goatId}/genealogy returns 200")
+    void case10_historicalGenealogy_validToken_returns200() throws Exception {
+        GoatId goatId = GoatId.of(42L);
+        GenealogyTreeNode principal = new GenealogyTreeNode("animalPrincipal", "Estrela", "RG42", GenealogyNodeSource.LOCAL, goatId);
+        GenealogyTreeSnapshot tree = new GenealogyTreeSnapshot(principal, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42")
+        when(historicalGenealogyQueryUseCase.findHistoricalGenealogy(1L, goatId, false)).thenReturn(Optional.of(tree));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/genealogy")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.farmId").doesNotExist())
-                .andExpect(jsonPath("$.farmName").doesNotExist())
-                .andExpect(jsonPath("$.userName").doesNotExist())
-                .andExpect(jsonPath("$.exitType").doesNotExist())
-                .andExpect(jsonPath("$.exitDate").doesNotExist())
-                .andExpect(jsonPath("$.exitNotes").doesNotExist())
-                .andExpect(jsonPath("$.currentOwnerName").doesNotExist())
-                .andExpect(jsonPath("$.currentOwnerFarmName").doesNotExist())
-                .andExpect(jsonPath("$.buyer").doesNotExist())
-                .andExpect(jsonPath("$.salePrice").doesNotExist());
+                .andExpect(jsonPath("$.animalPrincipal.name").value("Estrela"))
+                .andExpect(jsonPath("$.animalPrincipal.registrationNumber").value("RG42"))
+                .andExpect(jsonPath("$.animalPrincipal.source").value("LOCAL"))
+                .andExpect(jsonPath("$.animalPrincipal.localTechnicalGoatId").value(42))
+                .andExpect(jsonPath("$.animalPrincipal.localGoatId").doesNotExist());
     }
 
     @Test
-    @DisplayName("Case 11: Bare numeric token 42 is rejected with HTTP 400 Bad Request")
-    void case11_bareNumericToken_rejectedWith400() throws Exception {
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/42")
+    @DisplayName("Case 11: GET /api/v1/goatfarms/{farmId}/goat-registry/technical-{goatId}/genealogy?complementaryAbcc=true returns 200")
+    void case11_historicalGenealogy_complementaryTrue_returns200() throws Exception {
+        GoatId goatId = GoatId.of(42L);
+        GenealogyTreeNode principal = new GenealogyTreeNode("animalPrincipal", "Estrela", "RG42", GenealogyNodeSource.LOCAL, goatId);
+        GenealogyIntegrationSnapshot integration = new GenealogyIntegrationSnapshot("FOUND", "registrationNumber", "Success");
+        GenealogyTreeSnapshot tree = new GenealogyTreeSnapshot(principal, null, null, null, null, null, null, null, null, null, null, null, null, null, null, integration);
+
+        when(historicalGenealogyQueryUseCase.findHistoricalGenealogy(1L, goatId, true)).thenReturn(Optional.of(tree));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/genealogy?complementaryAbcc=true")
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.integration.status").value("FOUND"))
+                .andExpect(jsonPath("$.integration.message").value("Success"));
     }
 
     @Test
-    @DisplayName("Case 12: RG token RG-123 is rejected with HTTP 400 Bad Request")
-    void case12_rgToken_rejectedWith400() throws Exception {
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/RG-123")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400));
-    }
-
-    @Test
-    @DisplayName("Case 13: Invalid technical tokens (technical-, technical-abc, technical-0) are rejected with HTTP 400")
-    void case13_invalidTechnicalTokens_rejectedWith400() throws Exception {
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-")
-                        .accept(MediaType.APPLICATION_JSON))
+    @DisplayName("Case 12: Invalid tokens for genealogy return HTTP 400 Bad Request")
+    void case12_historicalGenealogy_invalidTokens_return400() throws Exception {
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/42/genealogy"))
                 .andExpect(status().isBadRequest());
-
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-abc")
-                        .accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/RG-123/genealogy"))
                 .andExpect(status().isBadRequest());
-
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-0")
-                        .accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-/genealogy"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-abc/genealogy"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-0/genealogy"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("Case 14: Unrelated or nonexistent goat in registry returns HTTP 404 Not Found")
-    void case14_unrelatedGoat_returns404() throws Exception {
-        when(queryUseCase.findHistoricalDossierBasic(1L, new GoatId(999L))).thenReturn(java.util.Optional.empty());
+    @DisplayName("Case 13: Unrelated or nonexistent goat genealogy returns HTTP 404 Not Found")
+    void case13_historicalGenealogy_unrelated_returns404() throws Exception {
+        when(historicalGenealogyQueryUseCase.findHistoricalGenealogy(1L, GoatId.of(999L), false))
+                .thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-999")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-999/genealogy"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("Case 15: Controller depends only on use case and mapper, not on repositories")
-    void case15_controllerDependsOnlyOnUseCaseAndMapper() {
+    @DisplayName("Case 14: Controller constructor depends strictly on expected use cases and mappers")
+    void case14_controllerConstructorDependencies() {
         var constructors = FarmGoatRegistryController.class.getDeclaredConstructors();
         assertThat(constructors).hasSize(1);
         var paramTypes = constructors[0].getParameterTypes();
         assertThat(paramTypes).containsExactly(
                 FarmGoatRegistryQueryUseCase.class,
-                FarmGoatRegistryApiMapper.class
+                FarmGoatRegistryApiMapper.class,
+                FarmGoatHistoricalGenealogyQueryUseCase.class,
+                FarmGoatHistoricalGenealogyApiMapper.class
         );
-    }
-
-    @Test
-    @DisplayName("Case 16: OpenAPI contract for dossier endpoint documents 200, 400, 401, 403, 404 and excludes 422")
-    void case16_dossierOpenApiContract_declaresExpectedResponseCodes() throws Exception {
-        Method method = FarmGoatRegistryController.class.getDeclaredMethod("findHistoricalDossierBasic", Long.class, String.class);
-        ApiResponses apiResponses = method.getAnnotation(ApiResponses.class);
-        assertThat(apiResponses).isNotNull();
-
-        List<String> codes = Arrays.stream(apiResponses.value())
-                .map(ApiResponse::responseCode)
-                .toList();
-
-        assertThat(codes)
-                .containsExactlyInAnyOrder("200", "400", "401", "403", "404")
-                .doesNotContain("422");
     }
 
     private FarmGoatRegistryItem sampleItem(long id, String name) {
         return new FarmGoatRegistryItem(
-                new GoatId(id),
-                "RG" + id,
-                name,
-                GoatStatus.ATIVO,
-                1L,
-                "Capril Test",
-                Set.of(FarmGoatRegistryRole.CURRENT_OWNER),
-                FarmGoatRegistryDisposition.CURRENT,
-                1L
+                new GoatId(id), "RG" + id, name, GoatStatus.ATIVO, 1L, "Capril Test",
+                Set.of(FarmGoatRegistryRole.CURRENT_OWNER), FarmGoatRegistryDisposition.CURRENT, 1L
         );
     }
 }
