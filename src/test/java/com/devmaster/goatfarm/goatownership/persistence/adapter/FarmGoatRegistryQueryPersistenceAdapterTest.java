@@ -140,4 +140,101 @@ class FarmGoatRegistryQueryPersistenceAdapterTest {
         assertThat(candidate.ownershipHistory().getFirst().farmId()).isEqualTo(1L);
         assertThat(candidate.ownershipHistory().getFirst().isOpen()).isTrue();
     }
+
+    @Test
+    @DisplayName("findCandidate: null goatId returns empty")
+    void findCandidate_nullGoatId_returnsEmpty() {
+        assertThat(adapter.findCandidate(1L, null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findCandidate: finds candidate created by farm")
+    void findCandidate_createdByFarm() {
+        CreatorReferenceEntity creatorEntity = new CreatorReferenceEntity();
+        creatorEntity.setGoatId(10L);
+        creatorEntity.setCreatorTod("TODA");
+        creatorEntity.setCreatorFarmId(1L);
+        creatorEntity.setCreatorNameSnapshot("Capril A");
+        creatorEntity.setSource(CreatorSource.BIRTH);
+        creatorEntity.setRecordedAt(T);
+
+        GoatEntity goatEntity = new GoatEntity();
+        goatEntity.setTechnicalId(10L);
+        goatEntity.setRegistrationNumber("RG10");
+        goatEntity.setName("Goat 10");
+        goatEntity.setStatus(GoatStatus.ATIVO);
+
+        when(creators.findByGoatId(10L)).thenReturn(java.util.Optional.of(creatorEntity));
+        when(periods.findByGoatIdOrderByStartedAtAscIdAsc(10L)).thenReturn(List.of());
+        when(goats.findById(10L)).thenReturn(java.util.Optional.of(goatEntity));
+
+        var candidateOpt = adapter.findCandidate(1L, new GoatId(10L));
+
+        assertThat(candidateOpt).isPresent();
+        var candidate = candidateOpt.get();
+        assertThat(candidate.goatId()).isEqualTo(new GoatId(10L));
+        assertThat(candidate.creatorReference().creatorFarmId()).isEqualTo(1L);
+        assertThat(candidate.ownershipHistory()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findCandidate: finds candidate owned by farm")
+    void findCandidate_ownedByFarm() {
+        GoatOwnershipPeriodEntity periodEntity = new GoatOwnershipPeriodEntity();
+        periodEntity.setId(100L);
+        periodEntity.setGoatId(20L);
+        periodEntity.setFarmId(1L);
+        periodEntity.setStartedAt(T);
+        periodEntity.setEntryType(OwnershipEntryType.TRANSFER_IN);
+        periodEntity.setSource("test");
+
+        GoatEntity goatEntity = new GoatEntity();
+        goatEntity.setTechnicalId(20L);
+        goatEntity.setRegistrationNumber("RG20");
+        goatEntity.setName("Goat 20");
+        goatEntity.setStatus(GoatStatus.ATIVO);
+
+        when(creators.findByGoatId(20L)).thenReturn(java.util.Optional.empty());
+        when(periods.findByGoatIdOrderByStartedAtAscIdAsc(20L)).thenReturn(List.of(periodEntity));
+        when(goats.findById(20L)).thenReturn(java.util.Optional.of(goatEntity));
+
+        var candidateOpt = adapter.findCandidate(1L, new GoatId(20L));
+
+        assertThat(candidateOpt).isPresent();
+        var candidate = candidateOpt.get();
+        assertThat(candidate.goatId()).isEqualTo(new GoatId(20L));
+        assertThat(candidate.creatorReference()).isNull();
+        assertThat(candidate.ownershipHistory()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("findCandidate: unrelated goat returns empty without loading goat")
+    void findCandidate_unrelatedGoat_returnsEmpty() {
+        CreatorReferenceEntity creatorEntity = new CreatorReferenceEntity();
+        creatorEntity.setGoatId(30L);
+        creatorEntity.setCreatorFarmId(2L);
+
+        GoatOwnershipPeriodEntity periodEntity = new GoatOwnershipPeriodEntity();
+        periodEntity.setGoatId(30L);
+        periodEntity.setFarmId(2L);
+
+        when(creators.findByGoatId(30L)).thenReturn(java.util.Optional.of(creatorEntity));
+        when(periods.findByGoatIdOrderByStartedAtAscIdAsc(30L)).thenReturn(List.of(periodEntity));
+
+        var candidateOpt = adapter.findCandidate(1L, new GoatId(30L));
+
+        assertThat(candidateOpt).isEmpty();
+        verify(goats, never()).findById(anyLong());
+    }
+
+    @Test
+    @DisplayName("findCandidate: nonexistent goat returns empty")
+    void findCandidate_nonexistentGoat_returnsEmpty() {
+        when(creators.findByGoatId(99L)).thenReturn(java.util.Optional.empty());
+        when(periods.findByGoatIdOrderByStartedAtAscIdAsc(99L)).thenReturn(List.of());
+
+        var candidateOpt = adapter.findCandidate(1L, new GoatId(99L));
+
+        assertThat(candidateOpt).isEmpty();
+    }
 }
