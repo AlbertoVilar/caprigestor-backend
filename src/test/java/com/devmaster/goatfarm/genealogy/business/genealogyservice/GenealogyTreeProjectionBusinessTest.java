@@ -796,4 +796,181 @@ class GenealogyTreeProjectionBusinessTest {
         assertThat(result.mae().source()).isEqualTo(GenealogyNodeSource.DECLARADO);
         assertThat(result.avoMaterna().source()).isEqualTo(GenealogyNodeSource.AUSENTE);
     }
+
+    @Test
+    void localFather_slashFormattedRootAbccParent_unlocksPaternalAncestry() {
+        GoatGenealogySnapshot father = new GoatGenealogySnapshot(
+                GoatId.of(10L), "1635717065", "Pai Local", null, null, null, null, null, null, null, null, null, null, null, null
+        );
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                GoatGenealogySnapshot.ParentReference.local(father), null
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setFatherRegistrationNumber("16357/17065");
+        rootAbcc.setFatherName("C.V.C SIGNOS PETROLEO");
+        rootAbcc.setPaternalGrandfatherName("AVÔ PATERNO ABCC");
+        rootAbcc.setPaternalGrandfatherRegistrationNumber("15000/10000");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635717065")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.pai().source()).isEqualTo(GenealogyNodeSource.LOCAL);
+        assertThat(result.pai().registrationNumber()).isEqualTo("1635717065");
+        assertThat(result.avoPaterno().source()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(result.avoPaterno().name()).isEqualTo("AVÔ PATERNO ABCC");
+        assertThat(result.avoPaterno().registrationNumber()).isEqualTo("15000/10000");
+    }
+
+    @Test
+    void localMother_hyphenFormattedRootAbccParent_unlocksMaternalAncestry() {
+        GoatGenealogySnapshot mother = new GoatGenealogySnapshot(
+                GoatId.of(20L), "2114517012", "Mãe Local", null, null, null, null, null, null, null, null, null, null, null, null
+        );
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                null, GoatGenealogySnapshot.ParentReference.local(mother)
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setMotherRegistrationNumber("21145-17012");
+        rootAbcc.setMotherName("NAIDE");
+        rootAbcc.setMaternalGrandmotherName("AVÓ MATERNA ABCC");
+        rootAbcc.setMaternalGrandmotherRegistrationNumber("20000-10000");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("2114517012")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.mae().source()).isEqualTo(GenealogyNodeSource.LOCAL);
+        assertThat(result.mae().registrationNumber()).isEqualTo("2114517012");
+        assertThat(result.avoMaterna().source()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(result.avoMaterna().name()).isEqualTo("AVÓ MATERNA ABCC");
+    }
+
+    @Test
+    void declaredFather_slashFormattedRegistration_unlocksPaternalAncestry() {
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                GoatGenealogySnapshot.ParentReference.external("16357/17065"), null
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setFatherRegistrationNumber("1635717065");
+        rootAbcc.setFatherName("C.V.C SIGNOS PETROLEO");
+        rootAbcc.setPaternalGrandfatherName("AVÔ PATERNO ABCC");
+        rootAbcc.setPaternalGrandfatherRegistrationNumber("1500010000");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635717065")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.pai().source()).isEqualTo(GenealogyNodeSource.DECLARADO);
+        assertThat(result.pai().name()).isEqualTo("C.V.C SIGNOS PETROLEO");
+        assertThat(result.pai().registrationNumber()).isEqualTo("16357/17065");
+        assertThat(result.avoPaterno().source()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(result.avoPaterno().name()).isEqualTo("AVÔ PATERNO ABCC");
+    }
+
+    @Test
+    void declaredMother_dotFormattedRegistration_unlocksMaternalAncestry() {
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                null, GoatGenealogySnapshot.ParentReference.external("21145.17012")
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setMotherRegistrationNumber("2114517012");
+        rootAbcc.setMotherName("NAIDE");
+        rootAbcc.setMaternalGrandfatherName("AVÔ MATERNO ABCC");
+        rootAbcc.setMaternalGrandfatherRegistrationNumber("3000010000");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("2114517012")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.mae().source()).isEqualTo(GenealogyNodeSource.DECLARADO);
+        assertThat(result.mae().name()).isEqualTo("NAIDE");
+        assertThat(result.mae().registrationNumber()).isEqualTo("21145.17012");
+        assertThat(result.avoMaterno().source()).isEqualTo(GenealogyNodeSource.ABCC);
+        assertThat(result.avoMaterno().name()).isEqualTo("AVÔ MATERNO ABCC");
+    }
+
+    @Test
+    void declaredFather_whitespaceAndCaseRegistration_unlocksPaternalAncestry() {
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                GoatGenealogySnapshot.ParentReference.external("  ab123-cd456  "), null
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setFatherRegistrationNumber("AB123CD456");
+        rootAbcc.setFatherName("C.V.C SIGNOS PETROLEO");
+        rootAbcc.setPaternalGrandfatherName("AVÔ PATERNO ABCC");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("ab123-cd456")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.pai().source()).isEqualTo(GenealogyNodeSource.DECLARADO);
+        assertThat(result.pai().name()).isEqualTo("C.V.C SIGNOS PETROLEO");
+        assertThat(result.avoPaterno().source()).isEqualTo(GenealogyNodeSource.ABCC);
+    }
+
+    @Test
+    void declaredFather_blankRootAbccParentRegistration_doesNotUnlockPaternalAncestry() {
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                GoatGenealogySnapshot.ParentReference.external("1635717065"), null
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setFatherRegistrationNumber("   ");
+        rootAbcc.setPaternalGrandfatherName("GHOST GRANDPA");
+        rootAbcc.setPaternalGrandfatherRegistrationNumber("1500010000");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1635717065")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.pai().source()).isEqualTo(GenealogyNodeSource.DECLARADO);
+        assertThat(result.avoPaterno().source()).isEqualTo(GenealogyNodeSource.AUSENTE);
+    }
+
+    @Test
+    void conflictingParentRegistration_remainsBlocked() {
+        GoatGenealogySnapshot root = new GoatGenealogySnapshot(
+                GoatId.of(42L), "1643218012", "Cabra Teste", null, null, null, null, null, null, null, null, null, null,
+                GoatGenealogySnapshot.ParentReference.external("9999999999"), null
+        );
+
+        GenealogyAbccSnapshotVO rootAbcc = new GenealogyAbccSnapshotVO();
+        rootAbcc.setAnimalRegistrationNumber("1643218012");
+        rootAbcc.setFatherRegistrationNumber("1635717065");
+        rootAbcc.setFatherName("C.V.C SIGNOS PETROLEO");
+        rootAbcc.setPaternalGrandfatherName("AVÔ PATERNO ABCC");
+
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("1643218012")).thenReturn(Optional.of(rootAbcc));
+        when(genealogyAbccQueryPort.findGenealogyByRegistrationNumber("9999999999")).thenReturn(Optional.empty());
+
+        GenealogyTreeSnapshot result = service.complementWithAbcc(root);
+
+        assertThat(result.pai().source()).isEqualTo(GenealogyNodeSource.DECLARADO);
+        assertThat(result.pai().name()).isNull();
+        assertThat(result.avoPaterno().source()).isEqualTo(GenealogyNodeSource.AUSENTE);
+    }
 }

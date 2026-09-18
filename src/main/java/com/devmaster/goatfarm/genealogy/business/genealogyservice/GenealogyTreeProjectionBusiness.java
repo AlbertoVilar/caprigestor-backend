@@ -537,11 +537,21 @@ public class GenealogyTreeProjectionBusiness implements GenealogyTreeProjectionU
         });
     }
 
+    private String normalizeRegistration(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim().replaceAll("[\\s/.\\-]+", "").toUpperCase(java.util.Locale.ROOT);
+        return normalized.isEmpty() ? null : normalized;
+    }
+
     private boolean isMatchingRegistration(String rg1, String rg2) {
-        if (isBlank(rg1) || isBlank(rg2)) {
+        String norm1 = normalizeRegistration(rg1);
+        String norm2 = normalizeRegistration(rg2);
+        if (norm1 == null || norm2 == null) {
             return false;
         }
-        return rg1.trim().equalsIgnoreCase(rg2.trim());
+        return norm1.equals(norm2);
     }
 
     private boolean isBlank(String value) {
