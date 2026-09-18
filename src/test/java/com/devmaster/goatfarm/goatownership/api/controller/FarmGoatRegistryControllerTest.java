@@ -9,12 +9,20 @@ import com.devmaster.goatfarm.genealogy.application.model.GenealogyTreeSnapshot;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalGenealogyApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalMilkLactationApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalLactationItem;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkLactationSnapshot;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkProductionItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryDisposition;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryRole;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalMilkLactationQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
+import com.devmaster.goatfarm.milk.enums.LactationStatus;
+import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
+import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -33,6 +41,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +65,8 @@ class FarmGoatRegistryControllerTest {
     private FarmGoatRegistryQueryUseCase queryUseCase;
     @Mock
     private FarmGoatHistoricalGenealogyQueryUseCase historicalGenealogyQueryUseCase;
+    @Mock
+    private FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase;
 
     private MockMvc mockMvc;
 
@@ -67,7 +79,9 @@ class FarmGoatRegistryControllerTest {
                         queryUseCase,
                         new FarmGoatRegistryApiMapper(),
                         historicalGenealogyQueryUseCase,
-                        new FarmGoatHistoricalGenealogyApiMapper()))
+                        new FarmGoatHistoricalGenealogyApiMapper(),
+                        historicalMilkLactationQueryUseCase,
+                        new FarmGoatHistoricalMilkLactationApiMapper()))
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -311,8 +325,113 @@ class FarmGoatRegistryControllerTest {
                 FarmGoatRegistryQueryUseCase.class,
                 FarmGoatRegistryApiMapper.class,
                 FarmGoatHistoricalGenealogyQueryUseCase.class,
-                FarmGoatHistoricalGenealogyApiMapper.class
+                FarmGoatHistoricalGenealogyApiMapper.class,
+                FarmGoatHistoricalMilkLactationQueryUseCase.class,
+                FarmGoatHistoricalMilkLactationApiMapper.class
         );
+    }
+
+    @Test
+    @DisplayName("Case 15: Historical milk-lactation returns HTTP 200 with all exact JSON fields")
+    void case15_historicalMilkLactation_returns200WithExactFields() throws Exception {
+        GoatId goatId = new GoatId(42L);
+        var lactationItem = new FarmGoatHistoricalLactationItem(
+                100L,
+                goatId,
+                1L,
+                LactationStatus.ACTIVE,
+                LocalDate.of(2024, 1, 15),
+                null,
+                null,
+                null,
+                90,
+                60,
+                true
+        );
+        var productionItem = new FarmGoatHistoricalMilkProductionItem(
+                200L,
+                goatId,
+                100L,
+                1L,
+                LocalDate.of(2024, 2, 1),
+                MilkingShift.MORNING,
+                new BigDecimal("2.50"),
+                MilkProductionStatus.ACTIVE,
+                "Ordenha normal",
+                null,
+                null,
+                false,
+                null,
+                null,
+                null
+        );
+        var snapshot = new FarmGoatHistoricalMilkLactationSnapshot(
+                goatId,
+                List.of(lactationItem),
+                List.of(productionItem)
+        );
+        when(historicalMilkLactationQueryUseCase.findHistoricalMilkLactation(1L, goatId))
+                .thenReturn(Optional.of(snapshot));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/milk-lactation")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
+                .andExpect(jsonPath("$.lactations", hasSize(1)))
+                .andExpect(jsonPath("$.lactations[0].id").value(100))
+                .andExpect(jsonPath("$.lactations[0].farmId").value(1))
+                .andExpect(jsonPath("$.lactations[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.lactations[0].startDate").value("2024-01-15"))
+                .andExpect(jsonPath("$.lactations[0].active").value(true))
+                .andExpect(jsonPath("$.milkProductions", hasSize(1)))
+                .andExpect(jsonPath("$.milkProductions[0].id").value(200))
+                .andExpect(jsonPath("$.milkProductions[0].lactationId").value(100))
+                .andExpect(jsonPath("$.milkProductions[0].farmId").value(1))
+                .andExpect(jsonPath("$.milkProductions[0].date").value("2024-02-01"))
+                .andExpect(jsonPath("$.milkProductions[0].shift").value("MORNING"))
+                .andExpect(jsonPath("$.milkProductions[0].volumeLiters").value(2.50))
+                .andExpect(jsonPath("$.milkProductions[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.milkProductions[0].notes").value("Ordenha normal"));
+    }
+
+    @Test
+    @DisplayName("Case 16: Invalid tokens for milk-lactation return HTTP 400 Bad Request")
+    void case16_historicalMilkLactation_invalidTokens_return400() throws Exception {
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/42/milk-lactation"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/RG-123/milk-lactation"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-/milk-lactation"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-abc/milk-lactation"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-0/milk-lactation"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Case 17: Unrelated or nonexistent goat milk-lactation returns HTTP 404 Not Found")
+    void case17_historicalMilkLactation_unrelated_returns404() throws Exception {
+        when(historicalMilkLactationQueryUseCase.findHistoricalMilkLactation(1L, GoatId.of(999L)))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-999/milk-lactation"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Case 18: Empty milk-lactation returns HTTP 200 with empty arrays")
+    void case18_historicalMilkLactation_empty_returns200() throws Exception {
+        GoatId goatId = new GoatId(42L);
+        var snapshot = new FarmGoatHistoricalMilkLactationSnapshot(goatId, List.of(), List.of());
+        when(historicalMilkLactationQueryUseCase.findHistoricalMilkLactation(1L, goatId))
+                .thenReturn(Optional.of(snapshot));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/milk-lactation"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
+                .andExpect(jsonPath("$.lactations", hasSize(0)))
+                .andExpect(jsonPath("$.milkProductions", hasSize(0)));
     }
 
     private FarmGoatRegistryItem sampleItem(long id, String name) {

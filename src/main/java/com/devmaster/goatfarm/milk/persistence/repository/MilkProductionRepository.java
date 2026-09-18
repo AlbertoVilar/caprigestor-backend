@@ -126,6 +126,16 @@ public interface MilkProductionRepository extends JpaRepository<MilkProductionEn
             @Param("to") LocalDate to
     );
 
-
-
+    @Query("""
+    select mp from MilkProduction mp
+    where mp.farmId = :farmId
+      and (mp.goatTechnicalId = :goatTechnicalId
+           or (mp.goatTechnicalId is null and :rg is not null and mp.goatId = :rg))
+    order by mp.date desc, mp.id desc
+    """)
+    List<MilkProductionEntity> findHistoricalForDossier(
+            @Param("farmId") Long farmId,
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("rg") String rg
+    );
 }
