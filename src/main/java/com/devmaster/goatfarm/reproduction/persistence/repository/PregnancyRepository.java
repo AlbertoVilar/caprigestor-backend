@@ -56,4 +56,15 @@ public interface PregnancyRepository extends JpaRepository<PregnancyEntity, Long
             @Param("farmId") Long farmId,
             @Param("goatTechnicalId") Long goatTechnicalId
     );
+
+    @Query("""
+            select p from Pregnancy p
+            where p.goatTechnicalId = :goatTechnicalId
+               or (p.goatTechnicalId is null and :rg is not null and p.goatId = :rg)
+            order by p.breedingDate desc nulls last, p.id desc
+            """)
+    List<PregnancyEntity> findHistoricalCandidates(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("rg") String rg
+    );
 }

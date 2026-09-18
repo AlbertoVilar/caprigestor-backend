@@ -18,6 +18,9 @@ import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryDi
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryRole;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalReproductionApiMapper;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalReproductionSnapshot;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalReproductionQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalMilkLactationQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
@@ -67,6 +70,8 @@ class FarmGoatRegistryControllerTest {
     private FarmGoatHistoricalGenealogyQueryUseCase historicalGenealogyQueryUseCase;
     @Mock
     private FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase;
+    @Mock
+    private FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase;
 
     private MockMvc mockMvc;
 
@@ -81,7 +86,9 @@ class FarmGoatRegistryControllerTest {
                         historicalGenealogyQueryUseCase,
                         new FarmGoatHistoricalGenealogyApiMapper(),
                         historicalMilkLactationQueryUseCase,
-                        new FarmGoatHistoricalMilkLactationApiMapper()))
+                        new FarmGoatHistoricalMilkLactationApiMapper(),
+                        historicalReproductionQueryUseCase,
+                        new FarmGoatHistoricalReproductionApiMapper()))
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -327,7 +334,9 @@ class FarmGoatRegistryControllerTest {
                 FarmGoatHistoricalGenealogyQueryUseCase.class,
                 FarmGoatHistoricalGenealogyApiMapper.class,
                 FarmGoatHistoricalMilkLactationQueryUseCase.class,
-                FarmGoatHistoricalMilkLactationApiMapper.class
+                FarmGoatHistoricalMilkLactationApiMapper.class,
+                FarmGoatHistoricalReproductionQueryUseCase.class,
+                FarmGoatHistoricalReproductionApiMapper.class
         );
     }
 
@@ -432,6 +441,46 @@ class FarmGoatRegistryControllerTest {
                 .andExpect(jsonPath("$.goatId").value(42))
                 .andExpect(jsonPath("$.lactations", hasSize(0)))
                 .andExpect(jsonPath("$.milkProductions", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Case 19: Invalid tokens for reproduction return HTTP 400 Bad Request")
+    void case19_historicalReproduction_invalidTokens_return400() throws Exception {
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/42/reproduction"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/RG-123/reproduction"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-/reproduction"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-abc/reproduction"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-0/reproduction"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Case 20: Unrelated or nonexistent goat reproduction returns HTTP 404 Not Found")
+    void case20_historicalReproduction_unrelated_returns404() throws Exception {
+        when(historicalReproductionQueryUseCase.findHistoricalReproduction(1L, GoatId.of(999L)))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-999/reproduction"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Case 21: Empty reproduction returns HTTP 200 with empty arrays")
+    void case21_historicalReproduction_empty_returns200() throws Exception {
+        GoatId goatId = new GoatId(42L);
+        var snapshot = new FarmGoatHistoricalReproductionSnapshot(goatId, List.of(), List.of());
+        when(historicalReproductionQueryUseCase.findHistoricalReproduction(1L, goatId))
+                .thenReturn(Optional.of(snapshot));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/reproduction"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
+                .andExpect(jsonPath("$.processes", hasSize(0)))
+                .andExpect(jsonPath("$.events", hasSize(0)));
     }
 
     private FarmGoatRegistryItem sampleItem(long id, String name) {

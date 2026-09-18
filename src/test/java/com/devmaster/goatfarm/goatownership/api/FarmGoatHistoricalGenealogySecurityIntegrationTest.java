@@ -95,6 +95,12 @@ class FarmGoatHistoricalGenealogySecurityIntegrationTest {
     @MockBean
     private com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalMilkLactationApiMapper historicalMilkLactationMapper;
 
+    @MockBean
+    private com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase;
+
+    @MockBean
+    private com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalReproductionApiMapper historicalReproductionMapper;
+
     @BeforeEach
     void setUp() {
         when(farmOwnerQueryPort.findOwnerId(10L)).thenReturn(Optional.of(100L));

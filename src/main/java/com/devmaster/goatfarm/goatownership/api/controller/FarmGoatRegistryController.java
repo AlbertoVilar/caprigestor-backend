@@ -8,12 +8,15 @@ import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalDossierBasicResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalGenealogyResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalMilkLactationResponseDTO;
+import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalReproductionResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatRegistryResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalGenealogyApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalMilkLactationApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalReproductionApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalMilkLactationQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalReproductionQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,6 +45,8 @@ public class FarmGoatRegistryController {
     private final FarmGoatHistoricalGenealogyApiMapper historicalGenealogyMapper;
     private final FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase;
     private final FarmGoatHistoricalMilkLactationApiMapper historicalMilkLactationMapper;
+    private final FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase;
+    private final FarmGoatHistoricalReproductionApiMapper historicalReproductionMapper;
 
     public FarmGoatRegistryController(
             FarmGoatRegistryQueryUseCase queryUseCase,
@@ -49,7 +54,9 @@ public class FarmGoatRegistryController {
             FarmGoatHistoricalGenealogyQueryUseCase historicalGenealogyQueryUseCase,
             FarmGoatHistoricalGenealogyApiMapper historicalGenealogyMapper,
             FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase,
-            FarmGoatHistoricalMilkLactationApiMapper historicalMilkLactationMapper
+            FarmGoatHistoricalMilkLactationApiMapper historicalMilkLactationMapper,
+            FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase,
+            FarmGoatHistoricalReproductionApiMapper historicalReproductionMapper
     ) {
         this.queryUseCase = queryUseCase;
         this.mapper = mapper;
@@ -57,6 +64,8 @@ public class FarmGoatRegistryController {
         this.historicalGenealogyMapper = historicalGenealogyMapper;
         this.historicalMilkLactationQueryUseCase = historicalMilkLactationQueryUseCase;
         this.historicalMilkLactationMapper = historicalMilkLactationMapper;
+        this.historicalReproductionQueryUseCase = historicalReproductionQueryUseCase;
+        this.historicalReproductionMapper = historicalReproductionMapper;
     }
 
     @GetMapping
@@ -144,6 +153,30 @@ public class FarmGoatRegistryController {
 
         return historicalMilkLactationQueryUseCase.findHistoricalMilkLactation(farmId, goatId)
                 .map(historicalMilkLactationMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado no livro de registro da fazenda"));
+    }
+
+    @GetMapping("/{goatId}/reproduction")
+    @Operation(summary = "Consulta o histórico reprodutivo de uma cabra no livro de registro da fazenda")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Histórico reprodutivo retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Identificador inválido ou inconsistência na propriedade canônica."),
+            @ApiResponse(responseCode = "401", description = "Autenticação obrigatória."),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para administrar a fazenda informada."),
+            @ApiResponse(responseCode = "404", description = "Animal não encontrado no livro de registro da fazenda.")
+    })
+    public ResponseEntity<FarmGoatHistoricalReproductionResponseDTO> findHistoricalReproduction(
+            @Parameter(description = "Identificador da fazenda")
+            @PathVariable("farmId") Long farmId,
+            @Parameter(description = "Identificador estrutural da cabra no formato technical-{id}")
+            @PathVariable("goatId") String goatIdToken
+    ) {
+        GoatId goatId = GoatRouteIdentifier.technicalId(goatIdToken)
+                .orElseThrow(() -> new InvalidArgumentException("goatId", "goatId must use format 'technical-{id}' with a positive number"));
+
+        return historicalReproductionQueryUseCase.findHistoricalReproduction(farmId, goatId)
+                .map(historicalReproductionMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado no livro de registro da fazenda"));
     }

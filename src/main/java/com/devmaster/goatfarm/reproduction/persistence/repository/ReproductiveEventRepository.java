@@ -224,4 +224,14 @@ public interface ReproductiveEventRepository extends JpaRepository<ReproductiveE
             Pageable pageable
     );
 
+    @Query("""
+            select e from ReproductiveEvent e
+            where e.goatTechnicalId = :goatTechnicalId
+               or (e.goatTechnicalId is null and :rg is not null and e.goatId = :rg)
+            order by e.eventDate desc, e.id desc
+            """)
+    List<ReproductiveEventEntity> findHistoricalCandidates(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("rg") String rg
+    );
 }
