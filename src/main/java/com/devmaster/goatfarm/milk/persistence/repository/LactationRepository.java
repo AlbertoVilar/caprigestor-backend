@@ -21,4 +21,15 @@ public interface LactationRepository extends JpaRepository<LactationEntity, Long
     Optional<LactationEntity> findFirstByFarmIdAndGoatTechnicalIdOrderByStartDateDescIdDesc(Long farmId, Long goatTechnicalId);
     Optional<LactationEntity> findFirstByGoatTechnicalIdOrderByStartDateDescIdDesc(Long goatTechnicalId);
     List<LactationEntity> findAllByFarmIdAndStatus(Long farmId, LactationStatus status);
+
+    @org.springframework.data.jpa.repository.Query("""
+    select l from Lactation l
+    where l.goatTechnicalId = :goatTechnicalId
+       or (l.goatTechnicalId is null and :rg is not null and l.goatId = :rg)
+    order by l.startDate desc, l.id desc
+    """)
+    List<LactationEntity> findByGoatTechnicalIdOrRg(
+            @org.springframework.data.repository.query.Param("goatTechnicalId") Long goatTechnicalId,
+            @org.springframework.data.repository.query.Param("rg") String rg
+    );
 }
