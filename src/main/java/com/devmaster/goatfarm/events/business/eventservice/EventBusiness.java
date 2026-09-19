@@ -72,7 +72,7 @@ public class EventBusiness implements EventManagementUseCase {
         goatOwnershipGuard.requireUnambiguousOwnershipOnDate(goat.id(), farmId, request.date());
 
         OperationalEvent saved = eventPersistencePort.save(OperationalEvent.create(
-                toEventReference(goat), request.eventType(), request.date(), request.description(), request.location(),
+                toEventReference(goat), farmId, request.eventType(), request.date(), request.description(), request.location(),
                 request.veterinarian(), request.outcome()));
         eventPublisher.publishEvent(toPublication(saved));
         return toResponse(saved);
@@ -83,8 +83,12 @@ public class EventBusiness implements EventManagementUseCase {
         GoatReference goat = requireGoat(farmId, registrationNumber);
         ownershipService.verifyFarmOwnership(farmId);
         requireRequestMatchesPath(request, registrationNumber);
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
 
-        OperationalEvent existing = findEvent(eventId, goat, farmId);
+        OperationalEvent existing = findEventByStructuralIdentity(eventId, goat);
+        requireMutationProvenance(existing, farmId);
+        requireDateNotInFuture(request.date());
+        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(goat.id(), existing.recordingFarmId(), request.date());
         OperationalEvent updated = eventPersistencePort.save(existing.revise(
                 request.eventType(), request.date(), request.description(), request.location(),
                 request.veterinarian(), request.outcome()));
@@ -96,7 +100,7 @@ public class EventBusiness implements EventManagementUseCase {
     public EventResponseVO findEventById(Long farmId, String registrationNumber, Long eventId) {
         GoatReference goat = requireGoat(farmId, registrationNumber);
         ownershipService.verifyFarmManagement(farmId);
-        return toResponse(findEvent(eventId, goat, farmId));
+        return toResponse(findEventByStructuralIdentity(eventId, goat));
     }
 
     @Override
@@ -128,7 +132,9 @@ public class EventBusiness implements EventManagementUseCase {
     public void deleteEvent(Long farmId, String registrationNumber, Long eventId) {
         GoatReference goat = requireGoat(farmId, registrationNumber);
         ownershipService.verifyFarmOwnership(farmId);
-        findEvent(eventId, goat, farmId);
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        OperationalEvent existing = findEventByStructuralIdentity(eventId, goat);
+        requireMutationProvenance(existing, farmId);
         eventPersistencePort.deleteById(eventId);
     }
 
@@ -161,12 +167,18 @@ public class EventBusiness implements EventManagementUseCase {
     }
 
     private GoatEventReference toEventReference(GoatReference goat) {
-        return new GoatEventReference(goat.id(), goat.farmId(), goat.registrationNumber(), goat.name());
+        return new GoatEventReference(goat.id(), goat.registrationNumber(), goat.name());
     }
 
-    private OperationalEvent findEvent(Long eventId, GoatReference goat, Long farmId) {
-        return eventPersistencePort.findByIdAndGoatIdAndFarmId(eventId, goat.id(), farmId)
+    private OperationalEvent findEventByStructuralIdentity(Long eventId, GoatReference goat) {
+        return eventPersistencePort.findByIdAndGoatId(eventId, goat.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado para a cabra informada."));
+    }
+
+    private void requireMutationProvenance(OperationalEvent event, Long farmId) {
+        if (event.recordingFarmId() == null || !event.recordingFarmId().equals(farmId)) {
+            throw new AuthorizationDeniedException("A fazenda não possui autorização para alterar este evento.");
+        }
     }
 
     private void requireRequestMatchesPath(EventRequestVO request, String registrationNumber) {
@@ -202,7 +214,7 @@ public class EventBusiness implements EventManagementUseCase {
                 event.location(),
                 event.veterinarian(),
                 event.outcome(),
-                event.farmId(),
+                event.recordingFarmId(),
                 OffsetDateTime.now().toString(),
                 "system"
         );

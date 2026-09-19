@@ -37,12 +37,10 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             JOIN FETCH e.goat g
             WHERE e.id = :eventId
               AND g.technicalId = :goatTechnicalId
-              AND g.farm.id = :farmId
             """)
-    Optional<Event> findByIdAndGoatTechnicalIdAndFarmId(
+    Optional<Event> findByIdAndGoatTechnicalId(
             @Param("eventId") Long eventId,
-            @Param("goatTechnicalId") Long goatTechnicalId,
-            @Param("farmId") Long farmId
+            @Param("goatTechnicalId") Long goatTechnicalId
     );
 
 }

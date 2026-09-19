@@ -17,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.Optional;
 
 /** JPA adapter that keeps the Event core independent from persistence types. */
@@ -35,10 +36,20 @@ public class EventPersistenceAdapter implements EventPersistencePort {
     public OperationalEvent save(OperationalEvent event) {
         GoatEntity goat = goatRepository.findByTechnicalId(event.goatId().value())
                 .orElseThrow(() -> new IllegalStateException("Referência técnica da cabra não encontrada."));
-        Event entity = event.id() == null
+        boolean isNew = event.id() == null;
+        Event entity = isNew
                 ? new Event()
                 : eventRepository.findById(event.id())
                         .orElseThrow(() -> new IllegalStateException("Evento não encontrado para atualização."));
+
+        if (isNew) {
+            if (event.recordingFarmId() == null) {
+                throw new IllegalStateException("Novo evento deve ter fazenda de registro.");
+            }
+            entity.setRecordingFarmId(event.recordingFarmId());
+        } else if (!Objects.equals(entity.getRecordingFarmId(), event.recordingFarmId())) {
+            throw new IllegalStateException("A fazenda de registro do evento não pode ser alterada.");
+        }
 
         if (entity.getGoat() == null) {
             // Existing historical rows created before the technical shadow was
@@ -60,11 +71,11 @@ public class EventPersistenceAdapter implements EventPersistencePort {
     }
 
     @Override
-    public Optional<OperationalEvent> findByIdAndGoatIdAndFarmId(Long eventId, GoatId goatId, Long farmId) {
+    public Optional<OperationalEvent> findByIdAndGoatId(Long eventId, GoatId goatId) {
         if (goatId == null) {
             return Optional.empty();
         }
-        return eventRepository.findByIdAndGoatTechnicalIdAndFarmId(eventId, goatId.value(), farmId)
+        return eventRepository.findByIdAndGoatTechnicalId(eventId, goatId.value())
                 .map(this::toDomain);
     }
 
@@ -96,7 +107,7 @@ public class EventPersistenceAdapter implements EventPersistencePort {
         return new OperationalEvent(
                 entity.getId(),
                 GoatId.of(goat.getTechnicalId()),
-                goat.getFarm() == null ? null : goat.getFarm().getId(),
+                entity.getRecordingFarmId(),
                 entity.getGoatRegistrationNumber(),
                 goat.getName(),
                 entity.getEventType(),
