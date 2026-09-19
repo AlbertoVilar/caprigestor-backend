@@ -132,5 +132,16 @@ public interface HealthEventRepository extends JpaRepository<HealthEvent, Long> 
         order by e.performedAt desc, e.id desc
         """)
     List<HealthEvent> findPerformedWithWithdrawalByGoatTechnicalId(@Param("goatTechnicalId") Long goatTechnicalId);
+
+    @Query("""
+        select e from HealthEvent e
+        where e.goatTechnicalId = :goatTechnicalId
+          and e.farmId = :farmId
+        order by e.scheduledDate desc, e.id desc
+        """)
+    List<HealthEvent> findHistoricalHealthEvents(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("farmId") Long farmId
+    );
 }
 
