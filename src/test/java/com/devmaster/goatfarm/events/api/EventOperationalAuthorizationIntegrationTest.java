@@ -77,6 +77,12 @@ class EventOperationalAuthorizationIntegrationTest {
     @Autowired
     private GoatOwnershipPeriodRepository ownershipPeriodRepository;
 
+    private static final ZoneId DOMAIN_ZONE = ZoneId.of("America/Sao_Paulo");
+
+    private LocalDate domainToday() {
+        return LocalDate.now(DOMAIN_ZONE);
+    }
+
     private User admin;
     private User owner;
     private User linkedOperator;
@@ -215,7 +221,7 @@ class EventOperationalAuthorizationIntegrationTest {
         mockMvc.perform(post(eventPath(managedFarm, managedGoat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(eventPayload(managedGoat, "Future event", LocalDate.now().plusDays(1))))
+                        .content(eventPayload(managedGoat, "Future event", domainToday().plusDays(1))))
                 .andExpect(status().isBadRequest());
 
         org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(1);
@@ -223,7 +229,7 @@ class EventOperationalAuthorizationIntegrationTest {
 
     @Test
     void formerOwnerCannotCreateEventAfterCanonicalTransfer() throws Exception {
-        LocalDate transferDate = LocalDate.now().minusDays(2);
+        LocalDate transferDate = domainToday().minusDays(2);
         transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
         String token = loginAndGetToken(owner.getEmail());
 
@@ -236,7 +242,7 @@ class EventOperationalAuthorizationIntegrationTest {
 
     @Test
     void currentOwnerCannotCreateEventInPreviousOwnersPeriod() throws Exception {
-        LocalDate transferDate = LocalDate.now().minusDays(2);
+        LocalDate transferDate = domainToday().minusDays(2);
         transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
         String token = loginAndGetToken(admin.getEmail());
 
@@ -255,31 +261,31 @@ class EventOperationalAuthorizationIntegrationTest {
         mockMvc.perform(post(eventPath(otherFarm, managedGoat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(eventPayload(managedGoat, "Current owner event", LocalDate.now())))
+                        .content(eventPayload(managedGoat, "Current owner event", domainToday())))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void transferDayIsRejectedForDateOnlyEvent() throws Exception {
-        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, LocalDate.now().minusDays(2), false);
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, domainToday().minusDays(2), false);
         String token = loginAndGetToken(admin.getEmail());
 
         mockMvc.perform(post(eventPath(otherFarm, managedGoat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(eventPayload(managedGoat, "Transfer day event", LocalDate.now().minusDays(2))))
+                        .content(eventPayload(managedGoat, "Transfer day event", domainToday().minusDays(2))))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void projectionDriftFailsClosedEvenWhenCanonicalOwnerMatchesRequest() throws Exception {
-        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, LocalDate.now().minusDays(2), false);
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, domainToday().minusDays(2), false);
         String token = loginAndGetToken(admin.getEmail());
 
         mockMvc.perform(post(eventPath(otherFarm, managedGoat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(eventPayload(managedGoat, "Drifted projection event", LocalDate.now())))
+                        .content(eventPayload(managedGoat, "Drifted projection event", domainToday())))
                 .andExpect(status().isForbidden());
     }
 
@@ -336,7 +342,7 @@ class EventOperationalAuthorizationIntegrationTest {
         goat.setRegistrationNumber(registrationNumber);
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
-        goat.setBirthDate(LocalDate.now().minusYears(2));
+        goat.setBirthDate(domainToday().minusYears(2));
         goat.setStatus(GoatStatus.ATIVO);
         goat.setFarm(farm);
         GoatEntity saved = goatRepository.save(goat);
@@ -354,7 +360,7 @@ class EventOperationalAuthorizationIntegrationTest {
         Event event = new Event();
         event.setGoat(goat);
         event.setEventType(EventType.VACINACAO);
-        event.setDate(LocalDate.now().minusDays(1));
+        event.setDate(domainToday().minusDays(1));
         event.setDescription(description);
         event.setLocation("Farm");
         event.setVeterinarian("Veterinarian");
@@ -376,7 +382,7 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private String eventPayload(GoatEntity goat, String description) {
-        return eventPayload(goat, description, LocalDate.now().minusDays(1));
+        return eventPayload(goat, description, domainToday().minusDays(1));
     }
 
     private String eventPayload(GoatEntity goat, String description, LocalDate date) {
@@ -392,7 +398,7 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private void transferOwnership(GoatEntity goat, GoatFarm source, GoatFarm target, boolean updateProjection) {
-        transferOwnershipOnDate(goat, source, target, LocalDate.now().minusDays(2), updateProjection);
+        transferOwnershipOnDate(goat, source, target, domainToday().minusDays(2), updateProjection);
     }
 
     private void transferOwnershipOnDate(GoatEntity goat, GoatFarm source, GoatFarm target,
@@ -400,8 +406,7 @@ class EventOperationalAuthorizationIntegrationTest {
         GoatOwnershipPeriodEntity current = ownershipPeriodRepository
                 .findByGoatIdAndEndedAtIsNull(goat.getTechnicalId())
                 .orElseThrow();
-        ZoneId zone = ZoneId.of("America/Sao_Paulo");
-        Instant effectiveAt = transferDate.atStartOfDay(zone).toInstant().plusSeconds(14 * 60 * 60);
+        Instant effectiveAt = transferDate.atStartOfDay(DOMAIN_ZONE).toInstant().plusSeconds(14 * 60 * 60);
         current.setEndedAt(effectiveAt);
         current.setExitType(OwnershipExitType.TRANSFER_OUT);
         ownershipPeriodRepository.saveAndFlush(current);
