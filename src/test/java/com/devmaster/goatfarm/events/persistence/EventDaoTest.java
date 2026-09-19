@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,7 +58,7 @@ class EventDaoTest {
     @Test
     void saveWritesTechnicalRelationshipAndBusinessRegistrationSnapshot() {
         OperationalEvent event = OperationalEvent.create(
-                new GoatEventReference(new GoatId(42L), 7L, "R-123", "Matriz"),
+                new GoatEventReference(new GoatId(42L), "R-123", "Matriz"), 7L,
                 EventType.VACINACAO, LocalDate.of(2026, 1, 1), "Test Event",
                 "Farm", "Veterinarian", "Completed");
         when(goatRepository.findByTechnicalId(42L)).thenReturn(Optional.of(goat));
@@ -73,25 +74,30 @@ class EventDaoTest {
         verify(eventRepository).save(captor.capture());
         assertThat(captor.getValue().getGoat()).isSameAs(goat);
         assertThat(captor.getValue().getGoatRegistrationNumber()).isEqualTo("R-123");
+        assertThat(captor.getValue().getRecordingFarmId()).isEqualTo(7L);
         assertThat(saved.id()).isEqualTo(1L);
         assertThat(saved.goatId()).isEqualTo(new GoatId(42L));
         assertThat(saved.goatRegistrationNumber()).isEqualTo("R-123");
     }
 
     @Test
-    void findByTechnicalGoatAndFarmReturnsOnlyScopedEvents() {
+    void structuralLookupUsesPersistedProvenanceInsteadOfCurrentGoatFarm() {
         Event entity = entity(10L, "R-123");
-        when(eventRepository.findByIdAndGoatTechnicalIdAndFarmId(10L, 42L, 7L))
+        GoatFarm currentFarm = new GoatFarm();
+        currentFarm.setId(8L);
+        goat.setFarm(currentFarm);
+        when(eventRepository.findByIdAndGoatTechnicalId(10L, 42L))
                 .thenReturn(Optional.of(entity));
 
-        Optional<OperationalEvent> result = adapter.findByIdAndGoatIdAndFarmId(10L, new GoatId(42L), 7L);
+        Optional<OperationalEvent> result = adapter.findByIdAndGoatId(10L, new GoatId(42L));
 
         assertThat(result).get().satisfies(event -> {
             assertThat(event.id()).isEqualTo(10L);
             assertThat(event.goatId()).isEqualTo(new GoatId(42L));
             assertThat(event.goatRegistrationNumber()).isEqualTo("R-123");
+            assertThat(event.recordingFarmId()).isEqualTo(7L);
         });
-        verify(eventRepository).findByIdAndGoatTechnicalIdAndFarmId(10L, 42L, 7L);
+        verify(eventRepository).findByIdAndGoatTechnicalId(10L, 42L);
     }
 
     @Test
@@ -114,10 +120,41 @@ class EventDaoTest {
         });
     }
 
+    @Test
+    void ordinaryUpdatePreservesRecordingFarmProvenance() {
+        Event persisted = entity(10L, "R-123");
+        OperationalEvent update = new OperationalEvent(10L, new GoatId(42L), 7L,
+                "R-123", "Matriz", EventType.OUTRO, LocalDate.of(2026, 1, 2),
+                "Updated", "Farm", "Veterinarian", "Completed");
+        when(goatRepository.findByTechnicalId(42L)).thenReturn(Optional.of(goat));
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(persisted));
+        when(eventRepository.save(persisted)).thenReturn(persisted);
+
+        OperationalEvent saved = adapter.save(update);
+
+        assertThat(saved.recordingFarmId()).isEqualTo(7L);
+        assertThat(persisted.getRecordingFarmId()).isEqualTo(7L);
+    }
+
+    @Test
+    void updateCannotReplaceRecordingFarmProvenance() {
+        Event persisted = entity(10L, "R-123");
+        OperationalEvent attemptedRewrite = new OperationalEvent(10L, new GoatId(42L), 8L,
+                "R-123", "Matriz", EventType.OUTRO, LocalDate.of(2026, 1, 2),
+                "Updated", "Farm", "Veterinarian", "Completed");
+        when(goatRepository.findByTechnicalId(42L)).thenReturn(Optional.of(goat));
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(persisted));
+
+        assertThatThrownBy(() -> adapter.save(attemptedRewrite))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("não pode ser alterada");
+    }
+
     private Event entity(Long id, String registrationNumber) {
         Event entity = new Event();
         entity.setId(id);
         entity.setGoat(goat);
+        entity.setRecordingFarmId(7L);
         entity.setGoatRegistrationNumber(registrationNumber);
         entity.setEventType(EventType.VACINACAO);
         entity.setDate(LocalDate.of(2026, 1, 1));

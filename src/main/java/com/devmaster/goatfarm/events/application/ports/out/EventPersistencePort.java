@@ -17,7 +17,7 @@ public interface EventPersistencePort {
 
     OperationalEvent save(OperationalEvent event);
 
-    Optional<OperationalEvent> findByIdAndGoatIdAndFarmId(Long eventId, GoatId goatId, Long farmId);
+    Optional<OperationalEvent> findByIdAndGoatId(Long eventId, GoatId goatId);
 
     EventPage<OperationalEvent> findByGoatIdWithFilters(
             GoatId goatId,

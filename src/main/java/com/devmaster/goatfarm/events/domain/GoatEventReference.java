@@ -11,7 +11,6 @@ import com.devmaster.goatfarm.goat.domain.GoatId;
  */
 public record GoatEventReference(
         GoatId id,
-        Long farmId,
         String registrationNumber,
         String name
 ) {

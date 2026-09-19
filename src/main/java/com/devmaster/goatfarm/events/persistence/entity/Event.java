@@ -26,6 +26,9 @@ public class Event {
     @Column(name = "goat_technical_id")
     private Long goatTechnicalId;
 
+    @Column(name = "recording_farm_id", nullable = true, updatable = false)
+    private Long recordingFarmId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "goat_technical_id", referencedColumnName = "id", insertable = false, updatable = false)
     private GoatEntity goat;
