@@ -34,5 +34,5 @@ For commit, PR, and lifecycle gates, refer to `$caprigestor-gated-delivery`.
 
 1. **Verify Reality First**: Ground every proposed documentation change in verified source code, migrations, or test execution.
 2. **Targeted Updates**: Update only the active document directly responsible for the changed fact. Avoid redundant parallel documentation.
-3. **Link Integrity**: Ensure relative Markdown links resolve correctly. Update official navigation (`docs/INDEX.md`) only when files are added or removed.
+3. **Link & Navigation Integrity**: Ensure relative Markdown links resolve correctly. Update `docs/INDEX.md` only when official documentation navigation actually changes.
 4. **Language**: Agent-facing governance and Conventional Commits are in English. Domain and product documentation may use Portuguese to serve project stakeholders.

@@ -6,23 +6,26 @@ description: Operate CapriGestor changes through reviewer-controlled implementat
 # CapriGestor gated delivery
 
 This procedure governs any task that modifies or has the potential to modify tracked repository state.
-Every lifecycle transition is guarded by an explicit reviewer gate.
+Repository-changing lifecycle actions are controlled by explicit reviewer authorization. Verification phases remain mandatory but do not require an artificial gate merely to observe or verify state.
 
 ## 1. Reviewer / Executor Contract
 
 - **Role of the Agent**: The agent is an EXECUTOR.
 - **Approval Authority**: The CapriGestor REVIEWER / GATEKEEPER is the sole approval authority.
-- **No Self-Approval**: The executor must NEVER self-approve any lifecycle action. Passing tests, clean diffs, and green CI are evidence for the reviewer, NOT authorization to proceed to the next step.
+- **No Self-Approval**: The executor must NEVER self-approve any lifecycle action. Passing tests, clean diffs, and green CI are evidence for the reviewer, NOT authorization to proceed to mutations.
 - **Reviewer Gate Vocabulary**:
   - `PASS` — Explicitly authorizes the next specific lifecycle action.
   - `CORRECTION` — Requires specific adjustments before re-evaluating the current step.
   - `BLOCKER` — Execution halts immediately; no further changes permitted without direction.
-- **Strict Authorization Boundaries**: A gate authorizes ONLY the explicitly stated action:
-  - `PASS — IMPLEMENTATION AUTHORIZED` does NOT authorize commit.
-  - `PASS — LOCAL COMMIT AUTHORIZED` does NOT authorize push or PR.
-  - `PASS — PUSH + PR AUTHORIZED` does NOT authorize merge.
-  - `PASS — MERGE AUTHORIZED` authorizes only the approved merge operation.
-  - There is NO implicit progression across lifecycle boundaries.
+- **Strict Authorization Boundaries**: Explicit reviewer authorization is required before lifecycle actions such as:
+  - implementation when not already authorized (`PASS — IMPLEMENTATION AUTHORIZED`);
+  - local commit (`PASS — LOCAL COMMIT AUTHORIZED`);
+  - push + PR (`PASS — PUSH + PR AUTHORIZED`);
+  - merge (`PASS — MERGE AUTHORIZED`);
+  - deployment or other separately gated mutations.
+  A gate authorizes ONLY the explicitly stated action (e.g. implementation authorization does NOT authorize commit).
+- **Verification Phases**: Verification steps (such as remote CI observation or post-merge verification explicitly included in the merge authorization) do not require an artificial extra gate merely to observe or verify state.
+- **Formal Closure & Next Wave**: FORMAL CLOSURE remains a reviewer decision. Beginning the NEXT WAVE always requires separate explicit authorization.
 
 ## 2. Canonical Delivery Lifecycle
 
@@ -40,8 +43,6 @@ IMPLEMENTATION
   -> NEXT WAVE
 ```
 
-Each transition requires an explicit reviewer gate. Never collapse or combine transitions.
-
 ## 3. Scope Fingerprint & Working Tree Safety
 
 ### Pre-Implementation Fingerprint
@@ -51,6 +52,13 @@ Before editing files, capture and record:
 - Remote tracking: `git rev-parse origin/<integration-branch>`
 - Working tree state: `git status --short`
 - Explicitly record approved base SHA, target branch, expected files/modules, and out-of-scope boundaries.
+
+### Remote Base Freshness Rule
+Before claiming that a local integration branch matches current remote state:
+- Run `git fetch origin` to synchronize remote tracking references.
+- Compare the local HEAD against the verified remote ref (`origin/<integration-branch>`).
+- If a remote fetch cannot be performed: report remote freshness explicitly as **UNVERIFIED**.
+- Never claim the remote integration branch is current merely because a stale local remote-tracking ref exists. Keep this rule generic to any integration branch.
 
 ### Unrelated Work Stop Rule (General Safety Rule)
 If an agent detects pre-existing unrelated local modifications or untracked files outside the authorized scope:
@@ -63,10 +71,12 @@ After implementation and validation:
 - Compare changed files against the authorized file set.
 - If any unexpected file appears: **STOP IMMEDIATELY**. Do not silently include, delete, reset, restore, stash, format, or clean it up. Report it in the handoff.
 
-### Stash Safety
+### Stash Safety & Preservation
 - Pre-existing stashes may contain user work.
-- Never run `git stash pop`, `git stash drop`, `git stash clear`, apply, rewrite, or reorder stashes without explicit reviewer authorization.
-- Do not use `git stash` as an automatic convenience if another safe path exists.
+- **NEVER** apply, pop, drop, clear, rewrite, or reorder an existing stash without explicit reviewer authorization.
+- **DO NOT** create a stash merely as an automatic convenience.
+- If creating a stash is needed to preserve or move existing work, **obtain explicit reviewer authorization first**.
+- Never silently move, stash, or clean unrelated work.
 
 ## 4. Evidence Integrity
 
@@ -95,7 +105,7 @@ After implementation and validation:
 
 ### Validation Level Truthfulness (H2 vs PostgreSQL/Flyway)
 - State the exact validation level: unit test, mocked adapter test, H2/JPA integration test, PostgreSQL/Testcontainers test, Flyway migration test, or remote GitHub CI.
-- **CapriGestor Fact**: Default test execution (`application-test.properties`) uses in-memory H2 with `ddl-auto=create-drop` and Flyway disabled.
+- **CapriGestor Fact**: Default test execution (`src/test/resources/application-test.properties`) uses in-memory H2 with `ddl-auto=create-drop` and Flyway disabled.
 - An H2 test does NOT validate PostgreSQL syntax, schema constraints, or Flyway migrations.
 - Never claim "PostgreSQL constraint verified" unless a real PostgreSQL/Testcontainers or staging database execution was actually performed.
 
@@ -129,10 +139,10 @@ Before creating or modifying any database migration:
    - Open PR against the approved target branch (e.g. `develop`).
    - Report PR number, URL, base, head branch, and HEAD SHA, then STOP.
 
-### C. Remote CI Gate
+### C. Remote CI Observation
 1. Green local validation does NOT replace remote CI.
-2. Monitor remote GitHub Actions CI for the exact approved HEAD SHA.
-3. Report check status and wait for reviewer evaluation.
+2. Observe remote GitHub Actions CI for the exact approved HEAD SHA.
+3. Report check status and wait for reviewer evaluation. Observation of CI does not require an extra gate.
 
 ### D. Merge Gate
 1. Only upon receiving `PASS — MERGE AUTHORIZED`:
@@ -142,10 +152,11 @@ Before creating or modifying any database migration:
 
 ### E. Post-Merge Verification & Formal Closure
 1. Checkout the target integration branch (e.g. `develop`).
-2. Fetch and synchronize: `git pull --ff-only origin <integration-branch>`.
-3. Verify local HEAD matches `origin/<integration-branch>` and working tree is clean.
-4. Request FORMAL CLOSURE from the reviewer.
-5. The executor must NEVER declare a wave or task closed by itself.
+2. Update remote state: `git fetch origin`. If fetch cannot be performed, report remote freshness as UNVERIFIED.
+3. Synchronize: `git pull --ff-only origin <integration-branch>`.
+4. Verify local HEAD matches `origin/<integration-branch>` and working tree is clean.
+5. Request FORMAL CLOSURE from the reviewer.
+6. The executor must NEVER declare a wave or task closed by itself.
 
 ### F. Next-Wave Isolation
 - Closing a task or wave NEVER authorizes starting the next wave.

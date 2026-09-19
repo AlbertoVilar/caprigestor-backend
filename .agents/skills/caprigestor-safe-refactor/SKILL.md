@@ -25,15 +25,15 @@ For architectural boundary decisions, refer to `$caprigestor-architecture`.
 ## Invariants to Preserve
 
 - **Observable Behavior**: REST contracts, error codes, HTTP status codes, and JSON response shapes must remain unchanged.
-- **Security & Multi-Tenancy**: Farm isolation, `farmId` checks, role permissions (`ADMIN`, `FARM_OWNER`, `OPERATOR`), and token extraction must not be altered.
+- **Security & Multi-Tenancy**: Farm isolation, `farmId` checks, role permissions (`ROLE_ADMIN`, `ROLE_FARM_OWNER`, `ROLE_OPERATOR`), and token extraction must not be altered.
 - **Runtime Semantics**: Preserve transactional boundaries (`@Transactional`), propagation, rollback behavior, Spring proxy contracts, and Jackson serialization semantics.
-- **Architecture Guards**: Architecture baselines and allowlists may only shrink; never expand an allowlist or disable an architecture test to make a refactor pass.
+- **Architecture Guards**: Architecture allowlists and baselines must not be expanded without explicit architectural reviewer approval; they must NEVER be expanded merely to make architecture tests pass. Prefer shrinking and removing architectural debt whenever possible.
 - **Domain Invariants**: Preserve technical `GoatId` structural identity, fail-closed ambiguity handling, and separation between ownership, recording provenance, and visibility.
 
 ## Validation & State-Bound Rigor
 
 - **State-Bound Rule**: Validation belongs strictly to the exact source state that produced it. Any source modification after a test run invalidates that test result. Run the final validation suite after the last edit.
-- **Validation-Level Truthfulness**: Report test execution truthfully (unit, mocked adapter, H2/JPA integration, PostgreSQL/Testcontainers integration). In-memory H2 tests do not validate PostgreSQL dialect or Flyway migrations.
+- **Validation-Level Truthfulness**: Report test execution truthfully (unit, mocked adapter, H2/JPA integration, PostgreSQL/Testcontainers integration). In-memory H2 tests (`src/test/resources/application-test.properties`) do not validate PostgreSQL dialect or Flyway migrations.
 
 ## Prohibited Actions & Stop Conditions
 

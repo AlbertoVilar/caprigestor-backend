@@ -37,7 +37,7 @@ Choose the smallest design that preserves observable behavior and makes the depe
 3. Check whether an existing port, contract, or query already serves the boundary. Prefer neutral ports over ad-hoc cross-module access.
 4. Create or alter an abstraction only for a demonstrated boundary or maintainability benefit. Do not abstract framework usage for academic purity.
 5. Preserve transactions, serialization, Spring proxies, authorization, and external contracts; treat each risk as evidence to verify, not an assumption.
-6. Architecture guards must reflect actual architecture, not desired architecture. Allowlists may only shrink; never expand an allowlist or weaken a guard to make tests pass.
+6. Architecture guards must reflect actual architecture, not desired architecture. Architecture allowlists and baselines must not be expanded without explicit architectural reviewer approval; they must NEVER be expanded merely to make architecture tests pass. Prefer shrinking and removing architectural debt whenever possible.
 7. Update guards and active documentation only after authorized changes have established the real state in code.
 
 ## Containment & legacy debt rules

@@ -24,7 +24,7 @@ If a raw diff or patch is needed for reviewer inspection, generate it directly f
 - **Evidence Contradiction Rule**: If observed repository state contradicts active documentation, commit history, or reported metrics, STOP and reconcile the discrepancy. Report the contradiction explicitly.
 - **Projections vs Provenance**: Mutable entity dates and current owner projections (`cabras.capril_id`) do not constitute immutable historical provenance.
 - **Fail-Closed on Ambiguity**: Never convert absence of evidence into positive provenance or authorization. Unresolved or unknown facts must be explicitly identified as UNKNOWN or UNRESOLVED.
-- **Validation-Level Truthfulness**: Report test execution at its exact fidelity level (unit, mocked adapter, H2/JPA integration, PostgreSQL/Testcontainers integration, Flyway migration, or remote CI). Never represent H2 test runs as validation of PostgreSQL constraints or Flyway schema integrity.
+- **Validation-Level Truthfulness**: Report test execution at its exact fidelity level (unit, mocked adapter, H2/JPA integration, PostgreSQL/Testcontainers integration, Flyway migration, or remote CI). Default test execution (`src/test/resources/application-test.properties`) uses in-memory H2 with `ddl-auto=create-drop` and Flyway disabled; H2 test runs never prove PostgreSQL constraints or Flyway schema integrity.
 
 ## Audit Method
 
