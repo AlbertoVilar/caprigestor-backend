@@ -321,8 +321,9 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     }
 
     private OwnershipTransfer lockAndReloadSale(Long saleId) {
-        OwnershipTransfer snapshot = findSaleTransfer(saleId);
-        lockGoat(snapshot.goatId());
+        GoatId goatId = transferPersistence.findGoatIdBySaleId(saleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ownership sale transfer not found: " + saleId));
+        lockGoat(goatId);
         return findSaleTransfer(saleId);
     }
 

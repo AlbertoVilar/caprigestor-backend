@@ -68,6 +68,7 @@ class GoatOwnershipTransferBusinessTest {
         lenient().when(principalQuery.requireCurrent()).thenReturn(principal("ROLE_FARM_OWNER"));
         lenient().when(farmPersistence.findById(TARGET)).thenReturn(Optional.of(farm(TARGET)));
         lenient().when(transferPersistence.findGoatIdByTransferId(any(Long.class))).thenReturn(Optional.of(GOAT));
+        lenient().when(transferPersistence.findGoatIdBySaleId(any(Long.class))).thenReturn(Optional.of(GOAT));
         lenient().when(transferPersistence.save(any(OwnershipTransfer.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }

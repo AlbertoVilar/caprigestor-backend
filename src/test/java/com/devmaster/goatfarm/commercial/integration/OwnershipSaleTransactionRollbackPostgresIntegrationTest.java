@@ -84,6 +84,8 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
 
     @Test
     void projectionFailureRollsBackSalePaymentPeriodsProjectionAndTransfer() {
+        FailureConfiguration.PROJECTION_FAILURE.set(true);
+        try {
         User seller = user("sale-rollback-seller");
         User buyer = user("sale-rollback-buyer");
         GoatFarm sourceFarm = farm("Sale rollback source", "SRS01", seller);
@@ -125,6 +127,9 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         assertThat(periods.findByGoatIdOrderByStartedAtAscIdAsc(goat.getTechnicalId())).singleElement()
                 .satisfies(period -> assertThat(period.getEndedAt()).isNull());
         assertThat(goats.findById(goat.getTechnicalId()).orElseThrow().getFarm().getId()).isEqualTo(sourceFarm.getId());
+        } finally {
+            FailureConfiguration.PROJECTION_FAILURE.set(false);
+        }
     }
 
     @Test
@@ -188,7 +193,66 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
-        assertNoPaidTerminalTransfer(pending.saleId());
+        assertPaidCompletedTransfer(pending.saleId());
+    }
+
+    @Test
+    void paymentAndAcceptanceCompleteInEitherDeterministicOrder() {
+        SaleFixture acceptanceFirst = fixture("accept-first");
+        var first = request(acceptanceFirst, "accept-first-key");
+        FailureConfiguration.PRINCIPAL_ID.set(acceptanceFirst.target().getUser().getId());
+        ownershipSales.acceptOwnershipSale(acceptanceFirst.source().getId(), first.saleId());
+        ownershipSales.registerOwnershipSalePayment(acceptanceFirst.source().getId(), first.saleId(),
+                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
+        assertPaidCompletedTransfer(first.saleId());
+
+        SaleFixture paymentFirst = fixture("payment-first");
+        var second = request(paymentFirst, "payment-first-key");
+        FailureConfiguration.PRINCIPAL_ID.set(paymentFirst.target().getUser().getId());
+        ownershipSales.registerOwnershipSalePayment(paymentFirst.source().getId(), second.saleId(),
+                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
+        ownershipSales.acceptOwnershipSale(paymentFirst.source().getId(), second.saleId());
+        assertPaidCompletedTransfer(second.saleId());
+    }
+
+    @Test
+    void rejectionOrCancellationBeforePaymentRemainsTerminalAndRejectsPayment() {
+        SaleFixture rejected = fixture("reject-first");
+        var rejectedSale = request(rejected, "reject-first-key");
+        FailureConfiguration.PRINCIPAL_ID.set(rejected.target().getUser().getId());
+        ownershipSales.rejectOwnershipSale(rejected.source().getId(), rejectedSale.saleId());
+        assertThatThrownBy(() -> ownershipSales.registerOwnershipSalePayment(rejected.source().getId(), rejectedSale.saleId(),
+                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))
+                .isInstanceOf(RuntimeException.class);
+        assertOpenTerminalTransfer(rejectedSale.saleId(), com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED);
+
+        SaleFixture cancelled = fixture("cancel-first");
+        var cancelledSale = request(cancelled, "cancel-first-key");
+        FailureConfiguration.PRINCIPAL_ID.set(cancelled.source().getUser().getId());
+        ownershipSales.cancelOwnershipSale(cancelled.source().getId(), cancelledSale.saleId());
+        FailureConfiguration.PRINCIPAL_ID.set(cancelled.target().getUser().getId());
+        assertThatThrownBy(() -> ownershipSales.registerOwnershipSalePayment(cancelled.source().getId(), cancelledSale.saleId(),
+                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))
+                .isInstanceOf(RuntimeException.class);
+        assertOpenTerminalTransfer(cancelledSale.saleId(), com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED);
+    }
+
+    @Test
+    void paymentFirstKeepsSalePaidAndRejectCancelFailClosed() {
+        SaleFixture fixture = fixture("paid-terminal");
+        var pending = request(fixture, "paid-terminal-key");
+        FailureConfiguration.PRINCIPAL_ID.set(fixture.target().getUser().getId());
+        ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), pending.saleId(),
+                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
+        assertThatThrownBy(() -> ownershipSales.rejectOwnershipSale(fixture.source().getId(), pending.saleId()))
+                .isInstanceOf(RuntimeException.class);
+        FailureConfiguration.PRINCIPAL_ID.set(fixture.source().getUser().getId());
+        assertThatThrownBy(() -> ownershipSales.cancelOwnershipSale(fixture.source().getId(), pending.saleId()))
+                .isInstanceOf(RuntimeException.class);
+        var sale = animalSales.findById(pending.saleId()).orElseThrow();
+        var transfer = transfers.findBySaleId(pending.saleId()).orElseThrow();
+        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.PAID);
+        assertThat(transfer.getStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
     }
 
     @Test
@@ -244,6 +308,21 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
                 && (transfer.getStatus() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED
                 || transfer.getStatus() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED))
                 .as("payment and rejection/cancellation must serialize").isFalse();
+    }
+
+    private void assertPaidCompletedTransfer(Long saleId) {
+        var sale = animalSales.findById(saleId).orElseThrow();
+        var transfer = transfers.findBySaleId(saleId).orElseThrow();
+        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.PAID);
+        assertThat(transfer.getStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED);
+    }
+
+    private void assertOpenTerminalTransfer(Long saleId,
+                                            com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus status) {
+        var sale = animalSales.findById(saleId).orElseThrow();
+        var transfer = transfers.findBySaleId(saleId).orElseThrow();
+        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.OPEN);
+        assertThat(transfer.getStatus()).isEqualTo(status);
     }
 
     private SaleFixture fixture(String suffix) {
@@ -314,6 +393,7 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     @TestConfiguration(proxyBeanMethods = false)
     static class FailureConfiguration {
         static final AtomicLong PRINCIPAL_ID = new AtomicLong(1L);
+        static final java.util.concurrent.atomic.AtomicBoolean PROJECTION_FAILURE = new java.util.concurrent.atomic.AtomicBoolean();
 
         @Bean
         @Primary
@@ -346,7 +426,10 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
                 if (updated != 1) {
                     return false;
                 }
-                throw new IllegalStateException("projection failure after write");
+                if (PROJECTION_FAILURE.get()) {
+                    throw new IllegalStateException("projection failure after write");
+                }
+                return true;
             };
         }
     }
