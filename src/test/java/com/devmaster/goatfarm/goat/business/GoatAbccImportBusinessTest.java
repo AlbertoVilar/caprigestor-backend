@@ -448,6 +448,34 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void propagatesAbccCreatorEvidenceWithoutAssigningImporterAsCreator() {
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
+        GoatAbccRawPreviewVO raw = buildRawPreview("A-001", "1643218012", "XEQUE V", "12345", "18012");
+        raw.setCriador("Capril Bocaina");
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(raw);
+
+        GoatRequestVO requestVO = new GoatRequestVO();
+        requestVO.setRegistrationNumber("1643218012");
+        requestVO.setName("XEQUE V DO CAPRIL VILAR");
+        requestVO.setGender(Gender.MACHO);
+        requestVO.setBreed(GoatBreed.ALPINA);
+        requestVO.setColor("CHAMOISEE");
+        requestVO.setBirthDate(LocalDate.of(2018, 6, 27));
+        requestVO.setStatus(GoatStatus.ATIVO);
+        requestVO.setTod("12345");
+        requestVO.setToe("18012");
+        GoatResponseVO expected = new GoatResponseVO();
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.ABCC_IMPORT))).thenReturn(expected);
+
+        business.confirm(1L, "A-001", requestVO);
+
+        assertThat(requestVO.getCreatorProvenance().getCreatorNameSnapshot()).isEqualTo("Capril Bocaina");
+        assertThat(requestVO.getCreatorProvenance().getCreatorTod()).isEqualTo("12345");
+        assertThat(requestVO.getCreatorProvenance().getEvidenceReference()).isEqualTo("ABCC:A-001");
+    }
+
+    @Test
     void shouldBlockConfirmWhenRequestTodDoesNotMatchFarmTod() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));

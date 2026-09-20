@@ -19,6 +19,7 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.out.CreatorReferencePersistencePort;
 import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
@@ -42,6 +43,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -75,18 +78,20 @@ class GoatBusinessBehavioralCoverageTest {
     @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
     @Mock private GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
     @Mock private GoatOwnershipGuardUseCase goatOwnershipGuard;
+    @Mock private CreatorReferencePersistencePort creatorReferencePersistencePort;
 
     private GoatBusiness business;
     private Goat goat;
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard, creatorReferencePersistencePort, Clock.system(ZoneId.of("America/Sao_Paulo")));
         goat = goat(77L, "1643222002", "Xeque", Gender.MACHO, GoatBreed.ALPINA, GoatStatus.ATIVO,
                 null, null, null);
         lenient().when(parentage.resolve(any(), any(), any(), any()))
                 .thenReturn(new GoatParentagePort.ResolvedParentage(null, null));
         lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(), anyLong());
+        lenient().when(creatorReferencePersistencePort.create(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
         lenient().when(entityFinder.findOrThrow(any(), anyString()))
                 .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
     }

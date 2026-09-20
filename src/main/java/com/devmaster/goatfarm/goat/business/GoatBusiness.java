@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goatownership.application.model.GoatOwnershipInitializationCommand;
@@ -17,13 +18,18 @@ import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipE
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.out.CreatorReferencePersistencePort;
+import com.devmaster.goatfarm.goatownership.domain.CreatorReference;
+import com.devmaster.goatfarm.goatownership.domain.CreatorSource;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatCreatorProvenanceVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
@@ -39,6 +45,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -58,6 +66,8 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final GoatOwnershipExitUseCase goatOwnershipExitUseCase;
     private final GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
     private final GoatOwnershipGuardUseCase goatOwnershipGuard;
+    private final CreatorReferencePersistencePort creatorReferencePersistencePort;
+    private final Clock clock;
 
     public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
                         FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder,
@@ -65,7 +75,9 @@ public class GoatBusiness implements GoatManagementUseCase {
                         CurrentPrincipalQueryUseCase currentPrincipalQuery,
                         GoatOwnershipExitUseCase goatOwnershipExitUseCase,
                         GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase,
-                        GoatOwnershipGuardUseCase goatOwnershipGuard) {
+                        GoatOwnershipGuardUseCase goatOwnershipGuard,
+                        CreatorReferencePersistencePort creatorReferencePersistencePort,
+                        Clock clock) {
         this.goatPort = goatPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
@@ -76,6 +88,8 @@ public class GoatBusiness implements GoatManagementUseCase {
         this.goatOwnershipExitUseCase = goatOwnershipExitUseCase;
         this.goatOwnershipInitializationUseCase = goatOwnershipInitializationUseCase;
         this.goatOwnershipGuard = goatOwnershipGuard;
+        this.creatorReferencePersistencePort = creatorReferencePersistencePort;
+        this.clock = clock;
     }
 
     @Transactional
@@ -85,7 +99,8 @@ public class GoatBusiness implements GoatManagementUseCase {
         RegistrationIdentity identity = identityForCreation(requestVO);
         String registration = identity.registrationNumber();
         if (goatPort.existsByRegistrationNumber(registration)) throw new DuplicateEntityException("Número de registro já existe.");
-        if (goatFarmPort.findById(farmId).isEmpty()) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda não encontrada.");
+        FarmRecord farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda não encontrada."));
         GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), registration,
                 requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
         Goat goat = Goat.register(identity,
@@ -96,9 +111,145 @@ public class GoatBusiness implements GoatManagementUseCase {
         if (saved == null || saved.id() == null) {
             throw new BusinessRuleException("goat", "A criação da cabra não retornou um GoatId estrutural válido.");
         }
+        CreatorReference creatorReference = resolveCreatorReference(farm, saved, requestVO, origin);
+        CreatorReference persistedCreator = creatorReferencePersistencePort.create(saved.id(), creatorReference);
+        if (persistedCreator == null) {
+            throw new BusinessRuleException("creatorReference", "A proveniência do criador não foi persistida.");
+        }
         goatOwnershipInitializationUseCase.initialize(
                 new GoatOwnershipInitializationCommand(saved.id(), farmId, origin));
         return toResponse(saved);
+    }
+
+    private CreatorReference resolveCreatorReference(FarmRecord registeringFarm, Goat saved,
+                                                     GoatRequestVO requestVO, GoatCreationOrigin origin) {
+        GoatCreatorProvenanceVO supplied = requestVO.getCreatorProvenance();
+        Instant recordedAt = clock.instant();
+        String evidence = supplied == null ? null : trimToNull(supplied.getEvidenceReference());
+
+        return switch (origin) {
+            case BIRTH -> resolveBirthCreator(registeringFarm, supplied, evidence, recordedAt);
+            case ABCC_IMPORT -> resolveAbccCreator(supplied, evidence, recordedAt);
+            case MANUAL -> resolveManualCreator(supplied, recordedAt);
+        };
+    }
+
+    private CreatorReference resolveBirthCreator(FarmRecord registeringFarm, GoatCreatorProvenanceVO supplied,
+                                                 String evidence, Instant recordedAt) {
+        String canonicalTod = trimToNull(registeringFarm.tod());
+        if (supplied == null || evidence == null || !evidence.startsWith("BIRTH:PREGNANCY:")
+                || supplied.getCreatorFarmId() == null || trimToNull(supplied.getCreatorTod()) == null) {
+            throw new BusinessRuleException("creatorProvenance",
+                    "A birth-created goat requires canonical birth creator evidence.");
+        }
+        if (canonicalTod == null) {
+            throw new BusinessRuleException("creatorProvenance.creatorTod",
+                    "The canonical birth farm must have a TOD.");
+        }
+        if (!registeringFarm.id().equals(supplied.getCreatorFarmId())) {
+            throw new BusinessRuleException("creatorProvenance.creatorFarmId",
+                    "The birth creator farm must match the canonical birth farm.");
+        }
+        if (!canonicalTod.equalsIgnoreCase(trimToNull(supplied.getCreatorTod()))) {
+            throw new BusinessRuleException("creatorProvenance.creatorTod",
+                    "The birth creator TOD must match the canonical birth farm.");
+        }
+        return CreatorReference.farm(canonicalTod, registeringFarm.id(), registeringFarm.name(),
+                CreatorSource.BIRTH, evidence, recordedAt);
+    }
+
+    private CreatorReference resolveAbccCreator(GoatCreatorProvenanceVO supplied, String evidence, Instant recordedAt) {
+        if (supplied == null) {
+            return CreatorReference.unknown(recordedAt);
+        }
+        String snapshot = trimToNull(supplied.getCreatorNameSnapshot());
+        String creatorTod = trimToNull(supplied.getCreatorTod());
+        if (snapshot == null && creatorTod == null) return CreatorReference.unknown(recordedAt);
+        if (evidence == null || !evidence.startsWith("ABCC:")) {
+            throw new BusinessRuleException("creatorProvenance.evidenceReference",
+                    "ABCC creator provenance requires a traceable ABCC evidence reference.");
+        }
+        // A name-only ABCC declaration is external evidence, not sufficient
+        // registral proof to bind an immutable creator farm reference.
+        if (creatorTod == null) {
+            return CreatorReference.external(null, snapshot, CreatorSource.ABCC,
+                    evidence, recordedAt);
+        }
+        List<FarmRecord> matches = findAbccCreatorMatches(snapshot, creatorTod);
+        if (matches.size() == 1) {
+            FarmRecord creatorFarm = matches.getFirst();
+            if (trimToNull(creatorFarm.tod()) == null) {
+                return CreatorReference.external(creatorTod, snapshot, CreatorSource.ABCC,
+                        evidence, recordedAt);
+            }
+            return CreatorReference.farm(creatorFarm.tod(), creatorFarm.id(), creatorFarm.name(), CreatorSource.ABCC,
+                    evidence, recordedAt);
+        }
+        return CreatorReference.external(creatorTod, snapshot, CreatorSource.ABCC,
+                evidence, recordedAt);
+    }
+
+    private List<FarmRecord> findAbccCreatorMatches(String snapshot, String creatorTod) {
+        PageQuery pageQuery = new PageQuery(0, 100, List.of());
+        var firstPage = snapshot != null
+                ? goatFarmPort.searchByName(snapshot, pageQuery)
+                : goatFarmPort.findAll(pageQuery);
+        if (firstPage == null) return List.of();
+
+        List<FarmRecord> all = new ArrayList<>(firstPage.content());
+        long total = firstPage.totalElements();
+        for (int page = 1; !firstPage.content().isEmpty() && all.size() < total; page++) {
+            var nextPage = snapshot != null
+                    ? goatFarmPort.searchByName(snapshot, new PageQuery(page, 100, List.of()))
+                    : goatFarmPort.findAll(new PageQuery(page, 100, List.of()));
+            if (nextPage == null || nextPage.content().isEmpty()) break;
+            all.addAll(nextPage.content());
+        }
+        return all.stream()
+                .filter(farm -> snapshot == null || (farm.name() != null && farm.name().trim().equalsIgnoreCase(snapshot)))
+                .filter(farm -> creatorTod == null || (farm.tod() != null && farm.tod().trim().equalsIgnoreCase(creatorTod)))
+                .toList();
+    }
+
+    private CreatorReference resolveManualCreator(GoatCreatorProvenanceVO supplied, Instant recordedAt) {
+        if (supplied == null) {
+            return CreatorReference.unknown(recordedAt);
+        }
+        String evidence = trimToNull(supplied.getEvidenceReference());
+        if (evidence == null) {
+            throw new BusinessRuleException("creatorProvenance.evidenceReference",
+                    "A declaração manual de criador exige uma referência de evidência.");
+        }
+        Long creatorFarmId = supplied.getCreatorFarmId();
+        String snapshot = trimToNull(supplied.getCreatorNameSnapshot());
+        if (creatorFarmId != null) {
+            FarmRecord creatorFarm = goatFarmPort.findById(creatorFarmId)
+                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(
+                            "Fazenda criadora não encontrada."));
+            String canonicalTod = trimToNull(creatorFarm.tod());
+            if (canonicalTod == null) {
+                throw new BusinessRuleException("creatorProvenance.creatorTod",
+                        "A fazenda criadora vinculada deve possuir TOD.");
+            }
+            String suppliedTod = trimToNull(supplied.getCreatorTod());
+            if (suppliedTod != null && !canonicalTod.equalsIgnoreCase(suppliedTod)) {
+                throw new BusinessRuleException("creatorProvenance.creatorTod",
+                        "O TOD informado diverge do TOD canônico da fazenda criadora.");
+            }
+            return CreatorReference.farm(canonicalTod, creatorFarm.id(), creatorFarm.name(), CreatorSource.MANUAL_DECLARATION,
+                    evidence, recordedAt);
+        }
+        if (snapshot == null && trimToNull(supplied.getCreatorTod()) == null) {
+            return CreatorReference.unknown(recordedAt);
+        }
+        return CreatorReference.external(trimToNull(supplied.getCreatorTod()), snapshot,
+                CreatorSource.MANUAL_DECLARATION, evidence, recordedAt);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Transactional

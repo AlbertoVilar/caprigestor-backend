@@ -103,6 +103,7 @@ public class GoatAbccImportMapper {
         return GoatAbccPreviewResponseDTO.builder()
                 .externalSource(vo.getExternalSource())
                 .externalId(vo.getExternalId())
+                .creatorName(vo.getCreatorName())
                 .registrationNumber(vo.getRegistrationNumber())
                 .name(vo.getName())
                 .gender(vo.getGender())

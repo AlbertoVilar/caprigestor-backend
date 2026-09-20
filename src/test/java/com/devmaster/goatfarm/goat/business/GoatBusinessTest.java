@@ -6,6 +6,8 @@ import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
@@ -16,6 +18,8 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.out.CreatorReferencePersistencePort;
+import com.devmaster.goatfarm.goatownership.domain.CreatorSource;
 import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.business.bo.*;
 import com.devmaster.goatfarm.goat.domain.Goat;
@@ -28,6 +32,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,6 +55,7 @@ class GoatBusinessTest {
     @Mock private GoatOwnershipExitUseCase goatOwnershipExitUseCase;
     @Mock private GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
     @Mock private GoatOwnershipGuardUseCase goatOwnershipGuard;
+    @Mock private CreatorReferencePersistencePort creatorReferencePersistencePort;
 
     private GoatBusiness business;
     private GoatRequestVO request;
@@ -56,7 +63,7 @@ class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard);
+        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard, creatorReferencePersistencePort, Clock.system(ZoneId.of("America/Sao_Paulo")));
         request = new GoatRequestVO();
         request.setRegistrationNumber("1643222002"); request.setName("Xeque"); request.setGender(Gender.MACHO);
         request.setBreed(GoatBreed.ALPINA); request.setBirthDate(LocalDate.of(2025, 1, 1));
@@ -67,6 +74,7 @@ class GoatBusinessTest {
                 null, null, null, request.getCategory(), null, null, 1L, 1L, "Capril", "Alberto");
         lenient().when(parentage.resolve(any(), any(), any(), any())).thenReturn(new GoatParentagePort.ResolvedParentage(null, null));
         lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(), anyLong());
+        lenient().when(creatorReferencePersistencePort.create(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
         lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(inv -> ((java.util.function.Supplier<?>) inv.getArgument(0)).get());
     }
 
@@ -78,6 +86,7 @@ class GoatBusinessTest {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
         when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
         when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        when(creatorReferencePersistencePort.create(any(), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
         GoatResponseVO result = business.createGoat(1L, request, GoatCreationOrigin.MANUAL);
 
@@ -87,6 +96,366 @@ class GoatBusinessTest {
                 command.goatId().equals(new GoatId(77L))
                         && command.farmId() == 1L
                         && command.origin() == GoatCreationOrigin.MANUAL));
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference -> reference.source() == CreatorSource.UNKNOWN));
+    }
+
+    @Test
+    void birthCreationPersistsFarmLinkedCreatorReference() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        FarmRecord birthFarm = new FarmRecord(1L, "Capril", "16432", null, null, null, List.of(), null, null, null);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(birthFarm));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorFarmId(1L).creatorTod("16432")
+                .evidenceReference("BIRTH:PREGNANCY:30:MOTHER:76:DATE:2026-09-20")
+                .build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.BIRTH);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.BIRTH
+                        && reference.creatorFarmId().equals(1L)
+                && reference.creatorTod().equals("16432")
+                && reference.creatorNameSnapshot().equals("Capril")));
+    }
+
+    @Test
+    void birthCreationWithoutCanonicalProvenanceFailsClosed() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(new FarmRecord(1L, "Capril", "16432", null, null, null, List.of(), null, null, null)));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.BIRTH))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("canonical birth creator evidence");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+        verify(goatOwnershipInitializationUseCase, never()).initialize(any());
+    }
+
+    @Test
+    void birthCreationWithMismatchedCreatorFarmFailsClosed() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(new FarmRecord(1L, "Capril", "16432", null, null, null, List.of(), null, null, null)));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorFarmId(19L).creatorTod("14008")
+                .evidenceReference("BIRTH:PREGNANCY:30:MOTHER:76:DATE:2026-09-20")
+                .build());
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.BIRTH))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("birth creator farm");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+        verify(goatOwnershipInitializationUseCase, never()).initialize(any());
+    }
+
+    @Test
+    void abccRegisteredCreatorMatchPersistsFarmLinkedReference() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        FarmRecord registeringFarm = new FarmRecord(1L, "Importadora", "16432", null, null, null, List.of(), null, null, null);
+        FarmRecord creatorFarm = new FarmRecord(19L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(registeringFarm));
+        when(goatFarmPort.searchByName(eq("Capril Bocaina"), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(creatorFarm), 1, 0, 100));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina").creatorTod("14008").evidenceReference("ABCC:A-001").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC
+                        && reference.creatorFarmId().equals(19L)
+                        && reference.creatorTod().equals("14008")));
+    }
+
+    @Test
+    void abccAmbiguousCreatorMatchRemainsExternalAndDoesNotGuessFarm() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        FarmRecord first = new FarmRecord(19L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null);
+        FarmRecord second = new FarmRecord(20L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null);
+        when(goatFarmPort.searchByName(eq("Capril Bocaina"), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(first, second), 2, 0, 100));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina").creatorTod("14008").evidenceReference("ABCC:A-002").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC
+                        && reference.creatorFarmId() == null
+                        && reference.creatorTod().equals("14008")
+                && reference.creatorNameSnapshot().equals("Capril Bocaina")));
+    }
+
+    @Test
+    void abccNameCollisionWithDifferentTodBindsOnlyMatchingFarm() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        FarmRecord matchingFarm = new FarmRecord(19L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null);
+        FarmRecord sameNameDifferentTod = new FarmRecord(20L, "Capril Bocaina", "14009", null, null, null, List.of(), null, null, null);
+        when(goatFarmPort.searchByName(eq("Capril Bocaina"), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(matchingFarm, sameNameDifferentTod), 2, 0, 100));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina").creatorTod("14008").evidenceReference("ABCC:A-003").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC
+                        && reference.creatorFarmId().equals(19L)
+                        && reference.creatorTod().equals("14008")));
+    }
+
+    @Test
+    void manualExternalDeclarationPersistsExternalCreatorReference() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Criador Externo").creatorTod("99887").evidenceReference("DOC:EXT-1").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.MANUAL);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.MANUAL_DECLARATION
+                        && reference.creatorFarmId() == null
+                        && reference.creatorTod().equals("99887")));
+    }
+
+    @Test
+    void manualExplicitDeclarationPersistsDeclaredCreator() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        FarmRecord registeringFarm = new FarmRecord(1L, "Importadora", "16432", null, null, null, List.of(), null, null, null);
+        FarmRecord creatorFarm = new FarmRecord(19L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(registeringFarm));
+        when(goatFarmPort.findById(19L)).thenReturn(Optional.of(creatorFarm));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorFarmId(19L).creatorNameSnapshot("Capril Bocaina").evidenceReference("OFFICIAL:QA-76").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.MANUAL);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.MANUAL_DECLARATION && reference.creatorFarmId().equals(19L)
+                        && reference.creatorTod().equals("14008")
+                        && reference.creatorNameSnapshot().equals("Capril Bocaina")));
+        verify(goatOwnershipInitializationUseCase).initialize(any());
+    }
+
+    @Test
+    void manualFarmLinkedCreatorRejectsMismatchedTod() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(goatFarmPort.findById(19L)).thenReturn(Optional.of(
+                new FarmRecord(19L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null)));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorFarmId(19L).creatorTod("99999").creatorNameSnapshot("Arbitrary")
+                .evidenceReference("OFFICIAL:QA-77").build());
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.MANUAL))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("TOD informado diverge");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+        verify(goatOwnershipInitializationUseCase, never()).initialize(any());
+    }
+
+    @Test
+    void manualFarmLinkedCreatorWithoutTodFailsWithControlledBusinessError() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(goatFarmPort.findById(19L)).thenReturn(Optional.of(
+                new FarmRecord(19L, "Capril Bocaina", null, null, null, null, List.of(), null, null, null)));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorFarmId(19L).creatorNameSnapshot("Arbitrary")
+                .evidenceReference("OFFICIAL:QA-78").build());
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.MANUAL))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("deve possuir TOD");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+    }
+
+    @Test
+    void abccCreatorEvidenceMustBeTraceableWhenCreatorDataIsSupplied() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina").creatorTod("14008").build());
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("traceable ABCC evidence");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+        verify(goatOwnershipInitializationUseCase, never()).initialize(any());
+    }
+
+    @Test
+    void abccCreatorEvidenceMustUseCanonicalPrefix() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina").creatorTod("14008")
+                .evidenceReference("DOC:NOT-ABCC").build());
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("traceable ABCC evidence");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+    }
+
+    @Test
+    void abccCreatorNameOnlyRemainsExternalEvenWhenFarmNameIsUnique() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina")
+                .evidenceReference("ABCC:NAME-ONLY")
+                .build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC
+                        && reference.creatorFarmId() == null
+                        && reference.creatorNameSnapshot().equals("Capril Bocaina")));
+        verify(goatFarmPort, never()).searchByName(anyString(), any(PageQuery.class));
+    }
+
+    @Test
+    void abccNameOnlyNeverSelectsRegisteredFarmWithoutTod() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Sem TOD")
+                .evidenceReference("ABCC:NAME-ONLY-NO-TOD")
+                .build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC && reference.creatorFarmId() == null));
+        verify(goatFarmPort, never()).searchByName(anyString(), any(PageQuery.class));
+    }
+
+    @Test
+    void abccCreatorTodDoesNotLinkRegisteredFarmWithoutTod() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(goatFarmPort.searchByName(eq("Capril Sem TOD"), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(
+                        new FarmRecord(19L, "Capril Sem TOD", null, null, null, null, List.of(), null, null, null)),
+                        1, 0, 100));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Sem TOD").creatorTod("14008")
+                .evidenceReference("ABCC:NULL-TOD-REGISTERED").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC && reference.creatorFarmId() == null));
+    }
+
+    @Test
+    void abccPaginationFindsCompatibleCreatorAfterFirstPage() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        List<FarmRecord> firstPage = java.util.stream.IntStream.range(0, 100)
+                .mapToObj(i -> new FarmRecord(100L + i, "Other Farm " + i, "70000", null, null, null, List.of(), null, null, null))
+                .toList();
+        FarmRecord matchingFarm = new FarmRecord(19L, "Capril Bocaina", "14008", null, null, null, List.of(), null, null, null);
+        when(goatFarmPort.searchByName(eq("Capril Bocaina"), any(PageQuery.class)))
+                .thenAnswer(invocation -> {
+                    PageQuery query = invocation.getArgument(1);
+                    return query.page() == 0
+                            ? new PageResult<>(firstPage, 101, 0, 100)
+                            : new PageResult<>(List.of(matchingFarm), 101, 1, 100);
+                });
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot("Capril Bocaina").creatorTod("14008").evidenceReference("ABCC:A-PAGE-2").build());
+
+        business.createGoat(1L, request, GoatCreationOrigin.ABCC_IMPORT);
+
+        verify(creatorReferencePersistencePort).create(eq(new GoatId(77L)), argThat(reference ->
+                reference.source() == CreatorSource.ABCC && reference.creatorFarmId().equals(19L)));
+        verify(goatFarmPort, times(2)).searchByName(eq("Capril Bocaina"), any(PageQuery.class));
+    }
+
+    @Test
+    void birthCreatorWithCanonicalFarmWithoutTodFailsWithBusinessRule() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(
+                new FarmRecord(1L, "Capril", null, null, null, null, List.of(), null, null, null)));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        request.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorFarmId(1L).creatorTod("16432")
+                .evidenceReference("BIRTH:PREGNANCY:30:MOTHER:76:DATE:2026-09-20").build());
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.BIRTH))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("canonical birth farm must have a TOD");
+        verify(creatorReferencePersistencePort, never()).create(any(), any());
+        verify(goatOwnershipInitializationUseCase, never()).initialize(any());
+    }
+
+    @Test
+    void creatorPersistenceFailureStopsOwnershipInitialization() {
+        doNothing().when(ownershipService).verifyFarmManagement(1L);
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farmRecord()));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(principal(1L));
+        when(goatPort.existsByRegistrationNumber("1643222002")).thenReturn(false);
+        when(goatPort.save(any(Goat.class))).thenReturn(goat);
+        when(creatorReferencePersistencePort.create(any(), any()))
+                .thenThrow(new IllegalStateException("creator persistence failure"));
+
+        assertThatThrownBy(() -> business.createGoat(1L, request, GoatCreationOrigin.MANUAL))
+                .isInstanceOf(IllegalStateException.class);
+        verify(goatOwnershipInitializationUseCase, never()).initialize(any());
     }
 
     @Test

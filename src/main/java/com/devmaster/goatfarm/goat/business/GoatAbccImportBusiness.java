@@ -14,6 +14,7 @@ import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatCreatorProvenanceVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
@@ -177,6 +178,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         return GoatAbccPreviewResponseVO.builder()
                 .externalSource(ABCC_SOURCE)
                 .externalId(raw.getExternalId())
+                .creatorName(trimOrNull(raw.getCriador()))
                 .registrationNumber(trimOrNull(raw.getRegistro()))
                 .name(trimOrNull(raw.getNome()))
                 .gender(gender)
@@ -295,6 +297,11 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
             throw new BusinessRuleException(FIELD_TOD, MSG_REQUEST_TOD_MISMATCH);
         }
 
+        goatRequestVO.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot(trimOrNull(abccPreview.getCreatorName()))
+                .creatorTod(trimOrNull(abccPreview.getTod()))
+                .evidenceReference("ABCC:" + externalId.trim())
+                .build());
         return goatManagementUseCase.createGoat(farmId, goatRequestVO, GoatCreationOrigin.ABCC_IMPORT);
     }
 
