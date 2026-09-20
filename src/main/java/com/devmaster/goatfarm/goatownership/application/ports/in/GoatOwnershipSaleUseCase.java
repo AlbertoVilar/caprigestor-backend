@@ -10,7 +10,7 @@ public interface GoatOwnershipSaleUseCase {
     OwnershipTransfer requestInternalSale(InternalOwnershipSaleRequest request);
     OwnershipTransfer findSaleTransfer(Long saleId);
     Optional<OwnershipTransfer> findByRequesterAndIdempotencyKey(Long requesterId, String idempotencyKey);
-    OwnershipTransfer acceptInternalSale(Long saleId, boolean paymentConfirmed);
+    OwnershipTransfer acceptInternalSale(Long saleId);
     OwnershipTransfer completeInternalSaleAfterPayment(Long saleId);
     OwnershipTransfer rejectInternalSale(Long saleId);
     OwnershipTransfer cancelInternalSale(Long saleId);

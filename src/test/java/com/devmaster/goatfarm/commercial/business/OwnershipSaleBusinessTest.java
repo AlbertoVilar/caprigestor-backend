@@ -83,19 +83,19 @@ class OwnershipSaleBusinessTest {
     @Test
     void paymentAndAcceptanceAreIndependentPrerequisites() {
         OwnershipTransfer accepted = transfer(700L, OwnershipTransferStatus.ACCEPTED);
-        when(ownership.acceptInternalSale(501L, false)).thenReturn(accepted);
+        when(ownership.acceptInternalSale(501L)).thenReturn(accepted);
         AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
         when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
         var result = business.acceptOwnershipSale(SOURCE, 501L);
         assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.ACCEPTED);
         assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.OPEN);
-        verify(ownership).acceptInternalSale(501L, false);
+        verify(ownership).acceptInternalSale(501L);
     }
 
     @Test
     void acceptanceReadsSaleOnlyAfterCanonicalLock() {
         OwnershipTransfer accepted = transfer(700L, OwnershipTransferStatus.ACCEPTED);
-        when(ownership.acceptInternalSale(501L, false)).thenReturn(accepted);
+        when(ownership.acceptInternalSale(501L)).thenReturn(accepted);
         AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
         when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
 
@@ -108,14 +108,12 @@ class OwnershipSaleBusinessTest {
 
     @Test
     void paymentFirstDoesNotCompleteUntilAcceptance() {
-        OwnershipTransfer requested = transfer(700L, OwnershipTransferStatus.REQUESTED);
-        when(ownership.completeInternalSaleAfterPayment(501L)).thenReturn(requested);
         AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
         when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
         var result = business.registerOwnershipSalePayment(SOURCE, 501L, new SalePaymentRequestVO(date().plusDays(1)));
         assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.PAID);
         assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.REQUESTED);
-        verify(ownership).completeInternalSaleAfterPayment(501L);
+        verify(ownership, never()).completeInternalSaleAfterPayment(501L);
     }
 
     @Test

@@ -88,6 +88,30 @@ class CommercialBusinessTest {
         assertEquals(new BigDecimal("10.00"), result.totalAmount()); verify(milkSales).save(any(MilkSaleCommand.class));
     }
 
+    @Test void externalSaleIsBlockedWhenInternalSaleIsRequested() {
+        CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G-INTERNAL-REQUESTED", GoatStatus.ATIVO);
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(goats.findGoatById(1L, "G-INTERNAL-REQUESTED")).thenReturn(goat);
+        when(ownershipTransfers.hasActiveInternalSale(1L, com.devmaster.goatfarm.goat.domain.GoatId.of(5L))).thenReturn(true);
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class, () -> business.createAnimalSale(1L,
+                new AnimalSaleRequestVO("G-INTERNAL-REQUESTED", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null)));
+        verify(goats, never()).exitGoat(anyLong(), anyString(), any());
+        verify(animalSales, never()).save(any(AnimalSaleCommand.class));
+    }
+
+    @Test void externalSaleIsBlockedWhenInternalSaleIsAccepted() {
+        CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G-INTERNAL-ACCEPTED", GoatStatus.ATIVO);
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(goats.findGoatById(1L, "G-INTERNAL-ACCEPTED")).thenReturn(goat);
+        when(ownershipTransfers.hasActiveInternalSale(1L, com.devmaster.goatfarm.goat.domain.GoatId.of(5L))).thenReturn(true);
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class, () -> business.createAnimalSale(1L,
+                new AnimalSaleRequestVO("G-INTERNAL-ACCEPTED", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null)));
+        verify(goats, never()).exitGoat(anyLong(), anyString(), any());
+        verify(animalSales, never()).save(any(AnimalSaleCommand.class));
+    }
+
     @Test void sensitiveMutationsAuthorizeBeforePersistence() {
         doThrow(new AccessDeniedException("denied")).when(authorization).verifyFarmOwnership(1L);
         assertThrows(AccessDeniedException.class, () -> business.createMilkSale(1L, null));

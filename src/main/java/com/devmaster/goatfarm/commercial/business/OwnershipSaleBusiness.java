@@ -122,17 +122,10 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     public OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId) {
         ownershipSales.lockAndReloadInternalSale(saleId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
-        OwnershipTransfer transfer = ownershipSales.acceptInternalSale(saleId, sale.paymentStatus() == SalePaymentStatus.PAID);
+        OwnershipTransfer transfer = ownershipSales.acceptInternalSale(saleId);
+        transfer = completeOwnershipIfReady(saleId, sale, transfer);
         sale = requireSale(sourceFarmId, saleId);
         return response(sale, transfer);
-    }
-
-    /** Backwards-compatible combined command: records payment, then acceptance. */
-    @Override
-    @Transactional
-    public OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId, SalePaymentRequestVO payment) {
-        OwnershipSaleResponseVO paid = registerOwnershipSalePayment(sourceFarmId, saleId, payment);
-        return acceptOwnershipSale(sourceFarmId, saleId);
     }
 
     @Override
@@ -154,18 +147,26 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
             if (payment != null && payment.paymentDate() != null && !Objects.equals(payment.paymentDate(), sale.paymentDate())) {
                 throw new BusinessRuleException("payment is already recorded with a different date");
             }
-            ownershipSales.completeInternalSaleAfterPayment(saleId);
-            return response(requireSale(sourceFarmId, saleId), ownershipSales.findSaleTransfer(saleId));
+            OwnershipTransfer ready = completeOwnershipIfReady(saleId, sale, transfer);
+            return response(requireSale(sourceFarmId, saleId), ready);
         }
         LocalDate paidOn = requirePaymentDate(sale.saleDate(), payment == null ? null : payment.paymentDate());
         AnimalSaleRecord paidSale = sales.save(new AnimalSaleCommand(sale.id(), sale.farmId(), sale.customerId(),
                 sale.goatTechnicalId(), sale.goatRegistrationNumber(), sale.goatName(), sale.saleDate(), sale.amount(),
                 sale.dueDate(), SalePaymentStatus.PAID, paidOn, sale.notes(), sale.targetFarmId()));
-        OwnershipTransfer afterPayment = ownershipSales.completeInternalSaleAfterPayment(saleId);
+        OwnershipTransfer afterPayment = completeOwnershipIfReady(saleId, paidSale, transfer);
         audit.record(new OperationalAuditRecordVO(sourceFarmId, paidSale.goatTechnicalId(), paidSale.goatRegistrationNumber(),
                 OperationalAuditActionType.ANIMAL_SALE_PAYMENT_REGISTERED, String.valueOf(paidSale.id()),
                 "Recebimento da venda com transferencia registrado em " + paidOn + "."));
         return response(paidSale, afterPayment);
+    }
+
+    private OwnershipTransfer completeOwnershipIfReady(Long saleId, AnimalSaleRecord sale, OwnershipTransfer transfer) {
+        if (sale.paymentStatus() != SalePaymentStatus.PAID
+                || transfer.status() != com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.ACCEPTED) {
+            return transfer;
+        }
+        return ownershipSales.completeInternalSaleAfterPayment(saleId);
     }
 
     @Override

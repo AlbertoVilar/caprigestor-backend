@@ -10,7 +10,6 @@ import java.util.List;
 public interface OwnershipSaleUseCase {
     OwnershipSaleResponseVO requestOwnershipSale(Long sourceFarmId, OwnershipSaleRequestVO request);
     OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId);
-    OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId, SalePaymentRequestVO payment);
     OwnershipSaleResponseVO registerOwnershipSalePayment(Long sourceFarmId, Long saleId, SalePaymentRequestVO payment);
     OwnershipSaleResponseVO rejectOwnershipSale(Long sourceFarmId, Long saleId);
     OwnershipSaleResponseVO cancelOwnershipSale(Long sourceFarmId, Long saleId);

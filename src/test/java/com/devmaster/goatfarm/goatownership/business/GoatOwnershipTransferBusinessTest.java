@@ -35,6 +35,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
@@ -217,6 +218,21 @@ class GoatOwnershipTransferBusinessTest {
     }
 
     @Test
+    void activeInternalSaleIncludesRequestedAndAcceptedStatuses() {
+        when(transferPersistence.existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(
+                eq(GOAT), eq(SOURCE), eq(OwnershipTransferKind.INTERNAL_SALE), any()))
+                .thenReturn(true);
+
+        assertThat(business.hasActiveInternalSale(SOURCE, GOAT)).isTrue();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<OwnershipTransferStatus>> statuses = ArgumentCaptor.forClass(List.class);
+        verify(transferPersistence).existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(
+                eq(GOAT), eq(SOURCE), eq(OwnershipTransferKind.INTERNAL_SALE), statuses.capture());
+        assertThat(statuses.getValue()).containsExactly(OwnershipTransferStatus.REQUESTED, OwnershipTransferStatus.ACCEPTED);
+    }
+
+    @Test
     void paymentFirstLeavesSaleRequestedUntilBuyerAccepts() {
         OwnershipTransfer sale = saleTransfer(501L, OwnershipTransferStatus.REQUESTED);
         when(transferPersistence.findBySaleId(501L)).thenReturn(Optional.of(sale));
@@ -238,7 +254,7 @@ class GoatOwnershipTransferBusinessTest {
         when(periodPersistence.findByGoatIdOrderByStartedAt(GOAT)).thenReturn(List.of(openPeriod(1L, SOURCE, START)));
         when(projection.moveFromTo(GOAT, SOURCE, TARGET)).thenReturn(true);
 
-        assertThat(business.acceptInternalSale(501L, false).status()).isEqualTo(OwnershipTransferStatus.ACCEPTED);
+        assertThat(business.acceptInternalSale(501L).status()).isEqualTo(OwnershipTransferStatus.ACCEPTED);
         assertThat(business.completeInternalSaleAfterPayment(501L).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         assertThat(business.completeInternalSaleAfterPayment(501L).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         verify(projection, times(1)).moveFromTo(GOAT, SOURCE, TARGET);

@@ -262,20 +262,17 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
 
     @Override
     @Transactional
-    public OwnershipTransfer acceptInternalSale(Long saleId, boolean paymentConfirmed) {
+    public OwnershipTransfer acceptInternalSale(Long saleId) {
         OwnershipTransfer transfer = lockAndReloadSale(saleId);
         requireCanAdminister(transfer.targetFarmId());
         if (transfer.status() == OwnershipTransferStatus.COMPLETED) return transfer;
-        if (transfer.status() == OwnershipTransferStatus.ACCEPTED) {
-            return paymentConfirmed ? completeSaleAfterAcceptance(transfer) : transfer;
-        }
+        if (transfer.status() == OwnershipTransferStatus.ACCEPTED) return transfer;
         if (transfer.status() != OwnershipTransferStatus.REQUESTED) {
             throw new BusinessRuleException("only a requested ownership sale can be accepted");
         }
         AuthenticatedPrincipal principal = currentPrincipalQuery.requireCurrent();
         transfer.markAccepted(Instant.now(clock), requirePrincipalId(principal));
-        transfer = transferPersistence.save(transfer);
-        return paymentConfirmed ? completeSaleAfterAcceptance(transfer) : transfer;
+        return transferPersistence.save(transfer);
     }
 
     @Override

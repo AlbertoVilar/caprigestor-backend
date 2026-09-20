@@ -116,12 +116,15 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         var pending = ownershipSales.requestOwnershipSale(sourceFarm.getId(), request);
         assertThat(pending.ownershipTransferStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
 
-        assertThatThrownBy(() -> ownershipSales.acceptOwnershipSale(sourceFarm.getId(), pending.saleId(),
-                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))
+        assertThatThrownBy(() -> {
+            ownershipSales.registerOwnershipSalePayment(sourceFarm.getId(), pending.saleId(),
+                    new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
+            ownershipSales.acceptOwnershipSale(sourceFarm.getId(), pending.saleId());
+        })
                 .isInstanceOf(RuntimeException.class);
 
         var sale = animalSales.findById(pending.saleId()).orElseThrow();
-        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.OPEN);
+        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.PAID);
         OwnershipTransferEntity transfer = transfers.findBySaleId(pending.saleId()).orElseThrow();
         assertThat(transfer.getStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
         assertThat(periods.findByGoatIdOrderByStartedAtAscIdAsc(goat.getTechnicalId())).singleElement()

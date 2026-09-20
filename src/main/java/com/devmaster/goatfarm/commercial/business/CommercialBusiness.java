@@ -25,6 +25,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,6 +101,11 @@ public class CommercialBusiness implements CommercialUseCase {
         LocalDate paymentDate = paymentDate(saleDate, request.paymentDate());
         BigDecimal amount = positive("amount", request.amount(), "Valor da venda deve ser maior que zero");
         String goatId = required("goatId", request.goatId(), "Cabra e obrigatoria");
+        GoatResponseVO candidate = goatManagementUseCase.findGoatById(farmId, goatId);
+        if (candidate.getTechnicalId() != null
+                && ownershipSales.hasActiveInternalSale(farmId, GoatId.of(candidate.getTechnicalId()))) {
+            throw new BusinessRuleException("goatId", "A cabra possui uma venda com transferencia de propriedade em andamento.");
+        }
         GoatResponseVO goat = ensureGoatReadyForSale(farmId, goatId, saleDate, optional(request.notes()));
         if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsExternalSaleByGoatTechnicalId(goat.getTechnicalId()))
                 || (goat.getTechnicalId() == null && animalSalePersistencePort.existsByLegacyRegistrationNumber(goat.getRegistrationNumber()))) {
