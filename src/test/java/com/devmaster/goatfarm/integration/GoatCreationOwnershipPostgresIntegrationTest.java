@@ -63,7 +63,7 @@ class GoatCreationOwnershipPostgresIntegrationTest {
 
     @Test
     void manualRuntimeCreationPersistsOneCanonicalOpenOwnershipPeriod() {
-        long farmId = createFarm();
+        long farmId = createFarm("12345");
         doNothing().when(farmAuthorization).verifyFarmManagement(farmId);
         when(farmAuthorization.canAdministerFarm(farmId)).thenReturn(true);
         when(currentPrincipalQuery.requireCurrent()).thenReturn(
@@ -116,7 +116,7 @@ class GoatCreationOwnershipPostgresIntegrationTest {
 
     @Test
     void ownershipInitializationFailureRollsBackGoatCreatorReferenceAndOwnership() {
-        long farmId = createFarm();
+        long farmId = createFarm("98765");
         doNothing().when(farmAuthorization).verifyFarmManagement(farmId);
         when(farmAuthorization.canAdministerFarm(farmId)).thenReturn(true);
         when(currentPrincipalQuery.requireCurrent()).thenReturn(
@@ -147,11 +147,11 @@ class GoatCreationOwnershipPostgresIntegrationTest {
                 Integer.class, registration)).isZero();
     }
 
-    private long createFarm() {
+    private long createFarm(String tod) {
         long userId = jdbcTemplate.queryForObject(
                 "insert into users (name, email, password, cpf) values ('Creation User', ?, 'password', ?) returning id",
                 Long.class, "creation-" + System.nanoTime() + "@example.com", String.valueOf(Math.abs(System.nanoTime())).substring(0, 11));
-        return jdbcTemplate.queryForObject("insert into capril (name, user_id, tod) values (?, ?, '12345') returning id",
-                Long.class, "Creation Farm " + System.nanoTime(), userId);
+        return jdbcTemplate.queryForObject("insert into capril (name, user_id, tod) values (?, ?, ?) returning id",
+                Long.class, "Creation Farm " + System.nanoTime(), userId, tod);
     }
 }
