@@ -109,9 +109,9 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     }
 
     @Override
-    public boolean existsExternalSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId) {
+    public boolean existsExternalSaleByGoatTechnicalId(Long goatTechnicalId) {
         return goatTechnicalId != null
-                && animalSaleRepository.existsByFarm_IdAndGoatTechnicalIdAndTargetFarmIsNull(farmId, goatTechnicalId);
+                && animalSaleRepository.existsByGoatTechnicalIdAndTargetFarmIsNull(goatTechnicalId);
     }
 
     @Override

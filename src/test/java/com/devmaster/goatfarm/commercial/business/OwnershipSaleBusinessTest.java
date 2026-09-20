@@ -62,6 +62,7 @@ class OwnershipSaleBusinessTest {
         lenient().when(goats.findGoatById(SOURCE, "technical-42")).thenReturn(goat(42L, "42"));
         lenient().when(sales.save(any(AnimalSaleCommand.class))).thenAnswer(invocation -> sale((AnimalSaleCommand) invocation.getArgument(0)));
         lenient().when(ownership.requestInternalSale(any())).thenAnswer(invocation -> transfer(700L, OwnershipTransferStatus.REQUESTED));
+        lenient().when(ownership.lockAndReloadInternalSale(501L)).thenAnswer(invocation -> transfer(700L, OwnershipTransferStatus.REQUESTED));
         lenient().when(ownership.findSaleTransfer(501L)).thenAnswer(invocation -> transfer(700L, OwnershipTransferStatus.REQUESTED));
     }
 
@@ -89,6 +90,20 @@ class OwnershipSaleBusinessTest {
         assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.ACCEPTED);
         assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.OPEN);
         verify(ownership).acceptInternalSale(501L, false);
+    }
+
+    @Test
+    void acceptanceReadsSaleOnlyAfterCanonicalLock() {
+        OwnershipTransfer accepted = transfer(700L, OwnershipTransferStatus.ACCEPTED);
+        when(ownership.acceptInternalSale(501L, false)).thenReturn(accepted);
+        AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
+        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
+
+        business.acceptOwnershipSale(SOURCE, 501L);
+
+        var order = inOrder(ownership, sales);
+        order.verify(ownership).lockAndReloadInternalSale(501L);
+        order.verify(sales).findAnimalSaleByIdAndFarmId(501L, SOURCE);
     }
 
     @Test

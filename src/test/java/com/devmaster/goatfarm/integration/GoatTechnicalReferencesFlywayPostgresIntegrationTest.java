@@ -44,6 +44,10 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(hasConstraint(connection, "uk_cabras_farm_id", "UNIQUE")).isTrue();
             assertThat(hasConstraint(connection, "uk_lactation_farm_goat_technical_id", "UNIQUE")).isTrue();
             assertThat(hasIndex(connection, "ux_lactation_single_active_per_goat_technical")).isTrue();
+            assertThat(indexDefinition(connection, "uk_animal_sale_external_goat_technical"))
+                    .containsIgnoringCase("unique")
+                    .containsIgnoringCase("goat_technical_id")
+                    .containsIgnoringCase("target_farm_id IS NULL");
             assertThat(hasConstraint(connection, "fk_goat_registration_history_goat", "FOREIGN KEY")).isTrue();
             // farm_id is the historical context at rectification time. It is
             // intentionally independent from the goat's current farm so a
@@ -166,6 +170,31 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
                     .isInstanceOf(SQLException.class);
             assertThatThrownBy(() -> execute(connection, "insert into operational_audit_entry (id, farm_id, goat_registration_number, action_type, actor_user_id, actor_name, actor_email, description) values (101, 101, 'G-OLD', 'TEST', 1, 'Legacy', 'legacy@example.test', 'legacy')"))
                     .isInstanceOf(SQLException.class);
+        }
+    }
+
+    @Test
+    void externalSalesAreStructurallyUniqueByGoatIdButInternalHistoryIsNot() throws SQLException {
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "SALE-GOAT", "Sale Goat", "FEMEA", 101);
+            execute(connection, "insert into commercial_customer (id, farm_id, name) values (901, 101, 'Sale customer')");
+            long goatId = queryLong(connection, "select id from cabras where num_registro = 'SALE-GOAT'");
+
+            execute(connection, "insert into animal_sale (id, farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (901, 101, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-01', 10, date '2026-01-01', 'PENDING')");
+            assertThatThrownBy(() -> execute(connection, "insert into animal_sale (id, farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (902, 101, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-02', 10, date '2026-01-02', 'PENDING')"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("uk_animal_sale_external_goat_technical");
+
+            execute(connection, "insert into animal_sale (id, farm_id, target_farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (903, 101, 102, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-03', 10, date '2026-01-03', 'PENDING')");
+            execute(connection, "insert into animal_sale (id, farm_id, target_farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (904, 101, 102, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-04', 10, date '2026-01-04', 'PENDING')");
+            assertThat(queryLong(connection, "select count(*) from animal_sale where goat_technical_id = " + goatId + " and target_farm_id is not null")).isEqualTo(2L);
         }
     }
 
@@ -356,6 +385,17 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             statement.setString(1, name);
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
+            }
+        }
+    }
+
+    private String indexDefinition(Connection connection, String name) throws SQLException {
+        String sql = "select indexdef from pg_indexes where schemaname = 'public' and indexname = ?";
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, name);
+            try (var resultSet = statement.executeQuery()) {
+                assertThat(resultSet.next()).isTrue();
+                return resultSet.getString(1);
             }
         }
     }

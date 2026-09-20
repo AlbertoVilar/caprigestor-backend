@@ -14,6 +14,8 @@ public interface GoatOwnershipSaleUseCase {
     OwnershipTransfer completeInternalSaleAfterPayment(Long saleId);
     OwnershipTransfer rejectInternalSale(Long saleId);
     OwnershipTransfer cancelInternalSale(Long saleId);
+    /** Acquires the canonical GoatId lock and returns a fresh transfer snapshot for a mutation. */
+    OwnershipTransfer lockAndReloadInternalSale(Long saleId);
     boolean hasActiveInternalSale(Long sourceFarmId, GoatId goatId);
     void prepareInternalSale(Long sourceFarmId, GoatId goatId);
 }

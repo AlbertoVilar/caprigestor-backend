@@ -314,6 +314,12 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         return transferPersistence.save(transfer);
     }
 
+    @Override
+    @Transactional
+    public OwnershipTransfer lockAndReloadInternalSale(Long saleId) {
+        return lockAndReloadSale(saleId);
+    }
+
     private OwnershipTransfer lockAndReloadSale(Long saleId) {
         OwnershipTransfer snapshot = findSaleTransfer(saleId);
         lockGoat(snapshot.goatId());

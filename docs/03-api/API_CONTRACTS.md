@@ -212,7 +212,8 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - A autorização das mutações sensíveis é aplicada no controller e validada novamente no caso de uso antes da persistência.
 - `POST /api/v1/goatfarms/{farmId}/commercial/ownership-sales` exige
   `targetFarmId`, GoatId técnico e `idempotencyKey`; cria somente uma solicitação
-  pendente. A propriedade continua no ledger atual até a aceitação.
+  pendente. A propriedade continua no ledger atual até que aceitação e pagamento
+  estejam ambos satisfeitos e o handoff seja concluído atomicamente.
 - `POST .../ownership-sales/{saleId}/accept` e `PATCH .../ownership-sales/{saleId}/payment`
   são pré-requisitos independentes. A operação que completar o segundo requisito
   conclui o handoff canônico na mesma transação; enquanto apenas um requisito

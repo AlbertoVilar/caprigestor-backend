@@ -101,7 +101,7 @@ public class CommercialBusiness implements CommercialUseCase {
         BigDecimal amount = positive("amount", request.amount(), "Valor da venda deve ser maior que zero");
         String goatId = required("goatId", request.goatId(), "Cabra e obrigatoria");
         GoatResponseVO goat = ensureGoatReadyForSale(farmId, goatId, saleDate, optional(request.notes()));
-        if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsExternalSaleByFarmIdAndGoatTechnicalId(farmId, goat.getTechnicalId()))
+        if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsExternalSaleByGoatTechnicalId(goat.getTechnicalId()))
                 || (goat.getTechnicalId() == null && animalSalePersistencePort.existsByLegacyRegistrationNumber(goat.getRegistrationNumber()))) {
             throw new DuplicateEntityException("goatId", "Ja existe uma venda registrada para esta cabra.");
         }

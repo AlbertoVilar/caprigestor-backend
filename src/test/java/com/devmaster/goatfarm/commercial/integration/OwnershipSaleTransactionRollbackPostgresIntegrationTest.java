@@ -46,6 +46,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -172,7 +173,117 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         assertThat(transfers.findByRequestedByAndIdempotencyKey(seller.getId(), "concurrent-sale-1")).isPresent();
     }
 
-    private Long getUnchecked(Future<Long> future) {
+    @Test
+    void concurrentPaymentAndAcceptanceNeverLeavesPaidTerminalTransfer() throws Exception {
+        SaleFixture fixture = fixture("payment-accept");
+        var pending = request(fixture, "payment-accept-key");
+        CyclicBarrier start = new CyclicBarrier(2);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Throwable>> results = executor.invokeAll(List.of(
+                    () -> attempt(start, () -> ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), pending.saleId(),
+                            new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)))),
+                    () -> attempt(start, () -> ownershipSales.acceptOwnershipSale(fixture.source().getId(), pending.saleId()))));
+            results.forEach(this::getUnchecked);
+        } finally {
+            executor.shutdownNow();
+        }
+        assertNoPaidTerminalTransfer(pending.saleId());
+    }
+
+    @Test
+    void concurrentPaymentAndRejectionNeverLeavesPaidRejectedTransfer() throws Exception {
+        SaleFixture fixture = fixture("payment-reject");
+        var pending = request(fixture, "payment-reject-key");
+        runConcurrentPaymentAndTerminalAction(fixture, pending.saleId(), false);
+        assertNoPaidTerminalTransfer(pending.saleId());
+    }
+
+    @Test
+    void concurrentPaymentAndCancellationNeverLeavesPaidCancelledTransfer() throws Exception {
+        SaleFixture fixture = fixture("payment-cancel");
+        var pending = request(fixture, "payment-cancel-key");
+        runConcurrentPaymentAndTerminalAction(fixture, pending.saleId(), true);
+        assertNoPaidTerminalTransfer(pending.saleId());
+    }
+
+    private void runConcurrentPaymentAndTerminalAction(SaleFixture fixture, Long saleId, boolean cancel) throws Exception {
+        CyclicBarrier start = new CyclicBarrier(2);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<Throwable>> results = executor.invokeAll(List.of(
+                    () -> attempt(start, () -> ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), saleId,
+                            new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)))),
+                    () -> attempt(start, () -> {
+                        if (cancel) {
+                            ownershipSales.cancelOwnershipSale(fixture.source().getId(), saleId);
+                        } else {
+                            ownershipSales.rejectOwnershipSale(fixture.source().getId(), saleId);
+                        }
+                    })));
+            results.forEach(this::getUnchecked);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private Throwable attempt(CyclicBarrier start, Runnable action) {
+        try {
+            start.await();
+            action.run();
+            return null;
+        } catch (Throwable exception) {
+            return exception;
+        }
+    }
+
+    private void assertNoPaidTerminalTransfer(Long saleId) {
+        var sale = animalSales.findById(saleId).orElseThrow();
+        var transfer = transfers.findBySaleId(saleId).orElseThrow();
+        assertThat(sale.getPaymentStatus() == com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.PAID
+                && (transfer.getStatus() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED
+                || transfer.getStatus() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED))
+                .as("payment and rejection/cancellation must serialize").isFalse();
+    }
+
+    private SaleFixture fixture(String suffix) {
+        User seller = user("sale-" + suffix + "-seller");
+        User buyer = user("sale-" + suffix + "-buyer");
+        String code = Integer.toHexString(Math.abs(suffix.hashCode())).toUpperCase().substring(0, 2);
+        GoatFarm sourceFarm = farm("Sale " + suffix + " source", ("S" + code + "01"), seller);
+        GoatFarm targetFarm = farm("Sale " + suffix + " target", ("T" + code + "01"), buyer);
+        GoatEntity goat = new GoatEntity();
+        goat.setRegistrationNumber("S" + code + "0001");
+        goat.setName("Concurrent " + suffix + " goat");
+        goat.setGender(Gender.FEMEA);
+        goat.setBirthDate(LocalDate.of(2024, 1, 1));
+        goat.setStatus(GoatStatus.ATIVO);
+        goat.setTod("S" + code);
+        goat.setToe("0001");
+        goat.setFarm(sourceFarm);
+        goat.setUser(seller);
+        goat = goats.saveAndFlush(goat);
+        Customer customer = customers.saveAndFlush(Customer.builder().farm(sourceFarm).name("Buyer " + suffix).active(true).build());
+        GoatOwnershipPeriodEntity sourcePeriod = new GoatOwnershipPeriodEntity();
+        sourcePeriod.setGoatId(goat.getTechnicalId());
+        sourcePeriod.setFarmId(sourceFarm.getId());
+        sourcePeriod.setStartedAt(Instant.parse("2024-01-01T00:00:00Z"));
+        sourcePeriod.setEntryType(com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType.MANUAL_IMPORT);
+        sourcePeriod.setSource("TEST_FIXTURE");
+        periods.saveAndFlush(sourcePeriod);
+        FailureConfiguration.PRINCIPAL_ID.set(seller.getId());
+        return new SaleFixture(sourceFarm, targetFarm, customer, goat.getTechnicalId());
+    }
+
+    private com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleResponseVO request(SaleFixture fixture, String key) {
+        return ownershipSales.requestOwnershipSale(fixture.source().getId(), new OwnershipSaleRequestVO(
+                "technical-" + fixture.goatId(), fixture.customer().getId(), fixture.target().getId(),
+                LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25), "concurrent", key));
+    }
+
+    private record SaleFixture(GoatFarm source, GoatFarm target, Customer customer, Long goatId) { }
+
+    private <T> T getUnchecked(Future<T> future) {
         try {
             return future.get();
         } catch (InterruptedException exception) {

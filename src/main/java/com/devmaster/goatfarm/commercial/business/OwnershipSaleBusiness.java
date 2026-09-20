@@ -120,6 +120,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Override
     @Transactional
     public OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId) {
+        ownershipSales.lockAndReloadInternalSale(saleId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = ownershipSales.acceptInternalSale(saleId, sale.paymentStatus() == SalePaymentStatus.PAID);
         sale = requireSale(sourceFarmId, saleId);
@@ -137,6 +138,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Override
     @Transactional
     public OwnershipSaleResponseVO registerOwnershipSalePayment(Long sourceFarmId, Long saleId, SalePaymentRequestVO payment) {
+        ownershipSales.lockAndReloadInternalSale(saleId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = requireSaleTransfer(sale);
         requireTargetAdministrator(transfer.targetFarmId());
@@ -169,6 +171,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Override
     @Transactional
     public OwnershipSaleResponseVO rejectOwnershipSale(Long sourceFarmId, Long saleId) {
+        ownershipSales.lockAndReloadInternalSale(saleId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         if (sale.paymentStatus() == SalePaymentStatus.PAID) {
             throw new BusinessRuleException("paid ownership sale cannot be rejected");
@@ -180,6 +183,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Transactional
     public OwnershipSaleResponseVO cancelOwnershipSale(Long sourceFarmId, Long saleId) {
         requireSeller(sourceFarmId);
+        ownershipSales.lockAndReloadInternalSale(saleId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         if (sale.paymentStatus() == SalePaymentStatus.PAID) {
             throw new BusinessRuleException("paid ownership sale cannot be cancelled");

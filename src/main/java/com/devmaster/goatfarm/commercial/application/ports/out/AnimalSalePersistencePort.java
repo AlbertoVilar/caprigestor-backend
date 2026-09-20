@@ -12,8 +12,8 @@ public interface AnimalSalePersistencePort {
         throw new UnsupportedOperationException("sale deletion is not supported");
     }
     boolean existsByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
-    default boolean existsExternalSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId) {
-        return existsByFarmIdAndGoatTechnicalId(farmId, goatTechnicalId);
+    default boolean existsExternalSaleByGoatTechnicalId(Long goatTechnicalId) {
+        return existsByFarmIdAndGoatTechnicalId(null, goatTechnicalId);
     }
     boolean existsByLegacyRegistrationNumber(String registrationNumber);
     default Optional<AnimalSaleRecord> findAnimalSaleById(Long saleId) {

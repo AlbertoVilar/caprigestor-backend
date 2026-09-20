@@ -76,7 +76,7 @@ class CommercialBusinessTest {
         CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G1", GoatStatus.ATIVO);
         when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
         when(goats.findGoatById(1L, "G1")).thenReturn(goat); when(goats.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
-        lenient().when(animalSales.existsExternalSaleByFarmIdAndGoatTechnicalId(1L, 5L)).thenReturn(false); when(animalSales.save(any())).thenAnswer(i -> animalRecord((AnimalSaleCommand) i.getArgument(0)));
+        lenient().when(animalSales.existsExternalSaleByGoatTechnicalId(5L)).thenReturn(false); when(animalSales.save(any())).thenAnswer(i -> animalRecord((AnimalSaleCommand) i.getArgument(0)));
         AnimalSaleResponseVO result = business.createAnimalSale(1L, new AnimalSaleRequestVO("G1", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null));
         assertEquals(5L, result.goatTechnicalId()); verify(goats).exitGoat(eq(1L), eq("G1"), any()); verify(animalSales).save(any(AnimalSaleCommand.class));
     }
@@ -100,7 +100,7 @@ class CommercialBusinessTest {
         when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
         when(goats.findGoatById(1L, "G-ROLLBACK")).thenReturn(goat);
         when(goats.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
-        lenient().when(animalSales.existsExternalSaleByFarmIdAndGoatTechnicalId(1L, 5L)).thenReturn(false);
+        lenient().when(animalSales.existsExternalSaleByGoatTechnicalId(5L)).thenReturn(false);
         when(animalSales.save(any())).thenThrow(new IllegalStateException("sale persistence failure"));
 
         assertThrows(IllegalStateException.class, () -> business.createAnimalSale(1L,

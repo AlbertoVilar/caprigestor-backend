@@ -16,7 +16,7 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
     boolean existsByGoatRegistrationNumber(String goatRegistrationNumber);
     boolean existsByFarm_IdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
 
-    boolean existsByFarm_IdAndGoatTechnicalIdAndTargetFarmIsNull(Long farmId, Long goatTechnicalId);
+    boolean existsByGoatTechnicalIdAndTargetFarmIsNull(Long goatTechnicalId);
 
     Optional<AnimalSale> findByIdAndFarm_Id(Long id, Long farmId);
 
