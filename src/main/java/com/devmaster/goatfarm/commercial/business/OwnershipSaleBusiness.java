@@ -100,15 +100,21 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         requireSeller(sourceFarmId);
         validateRequest(request);
         long requesterId = requirePrincipalId(principalQuery.requireCurrent());
-        OwnershipTransfer duplicate = transfers.findByRequesterAndIdempotencyKey(requesterId, request.idempotencyKey().trim()).orElse(null);
+        String idempotencyKey = request.idempotencyKey().trim();
+        String technicalToken = technicalToken(request.goatId());
+        OwnershipTransfer duplicate = transfers.findByRequesterAndIdempotencyKey(requesterId, idempotencyKey).orElse(null);
         if (duplicate != null) {
-            return resolveIdempotentSale(duplicate, sourceFarmId, request);
+            return resolveIdempotentSale(duplicate, sourceFarmId, request, technicalToken);
         }
         requireTargetFarm(sourceFarmId, request.targetFarmId());
         CustomerRecord customer = activeCustomer(sourceFarmId, request.customerId());
-        GoatResponseVO goat = goats.findGoatById(sourceFarmId, request.goatId().trim());
+        GoatResponseVO goat = goats.findGoatById(sourceFarmId, technicalToken);
         GoatId goatId = GoatId.of(requireTechnicalId(goat));
         GoatOwnershipLockState lock = lock(goatId);
+        duplicate = transfers.findByRequesterAndIdempotencyKey(requesterId, idempotencyKey).orElse(null);
+        if (duplicate != null) {
+            return resolveIdempotentSale(duplicate, sourceFarmId, request, technicalToken);
+        }
         GoatOwnershipPeriod source = requireSource(lock, sourceFarmId);
         transfers.findPendingByGoatId(goatId).ifPresent(pending -> {
             throw new BusinessRuleException("another ownership process is already pending for this GoatId");
@@ -122,7 +128,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
                 goat.getRegistrationNumber(), goat.getName(), saleDate, currency(requirePositive(request.amount())), dueDate,
                 SalePaymentStatus.OPEN, null, optional(request.notes()), request.targetFarmId()));
         OwnershipTransfer transfer = OwnershipTransfer.request(goatId, source.farmId(), request.targetFarmId(),
-                OwnershipTransferKind.INTERNAL_SALE, "OWNERSHIP_SALE:" + sale.id(), request.idempotencyKey().trim(),
+                OwnershipTransferKind.INTERNAL_SALE, "OWNERSHIP_SALE:" + sale.id(), idempotencyKey,
                 Instant.now(clock), requesterId, sale.id());
         transfer = transfers.save(transfer);
         audit.record(new OperationalAuditRecordVO(sourceFarmId, goatId.value(), goat.getRegistrationNumber(),
@@ -136,8 +142,13 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     public OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId, SalePaymentRequestVO payment) {
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = requireSaleTransfer(sale);
-        requireTargetAdministrator(transfer.targetFarmId());
         GoatOwnershipLockState lock = lock(transfer.goatId());
+        // The first lookup only identifies the GoatId to lock. Every mutable
+        // record is reloaded after that canonical lock so a stale snapshot can
+        // never regress a terminal or concurrently completed workflow.
+        sale = requireSale(sourceFarmId, saleId);
+        transfer = requireSaleTransfer(sale);
+        requireTargetAdministrator(transfer.targetFarmId());
         if (transfer.status() == OwnershipTransferStatus.COMPLETED) {
             validateCompleted(sale, transfer, lock);
             return response(sale, transfer);
@@ -152,9 +163,9 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
                 sale.goatTechnicalId(), sale.goatRegistrationNumber(), sale.goatName(), sale.saleDate(), sale.amount(),
                 sale.dueDate(), SalePaymentStatus.PAID, paidOn, sale.notes(), sale.targetFarmId()));
         Instant effectiveAt = Instant.now(clock);
-        source.close(effectiveAt, OwnershipExitType.TRANSFER_OUT);
+        source.close(effectiveAt, OwnershipExitType.EXTERNAL_SALE);
         GoatOwnershipPeriod target = GoatOwnershipPeriod.open(transfer.goatId(), transfer.targetFarmId(), effectiveAt,
-                OwnershipEntryType.TRANSFER_IN, "OWNERSHIP_SALE:" + sale.id());
+                OwnershipEntryType.PURCHASE, "OWNERSHIP_SALE:" + sale.id());
         List<GoatOwnershipPeriod> history = new ArrayList<>(periods.findByGoatIdOrderByStartedAt(transfer.goatId()));
         replacePeriod(history, source);
         history.add(target);
@@ -176,8 +187,10 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     public OwnershipSaleResponseVO rejectOwnershipSale(Long sourceFarmId, Long saleId) {
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = requireSaleTransfer(sale);
-        requireTargetAdministrator(transfer.targetFarmId());
         lock(transfer.goatId());
+        sale = requireSale(sourceFarmId, saleId);
+        transfer = requireSaleTransfer(sale);
+        requireTargetAdministrator(transfer.targetFarmId());
         if (transfer.status() == OwnershipTransferStatus.REJECTED) return response(sale, transfer);
         if (transfer.status() != OwnershipTransferStatus.REQUESTED) throw new BusinessRuleException("only a requested ownership sale can be rejected");
         transfer.reject();
@@ -191,6 +204,8 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = requireSaleTransfer(sale);
         lock(transfer.goatId());
+        sale = requireSale(sourceFarmId, saleId);
+        transfer = requireSaleTransfer(sale);
         if (transfer.status() == OwnershipTransferStatus.CANCELLED) return response(sale, transfer);
         if (transfer.status() != OwnershipTransferStatus.REQUESTED) throw new BusinessRuleException("only a requested ownership sale can be cancelled");
         transfer.cancel(Instant.now(clock));
@@ -212,14 +227,22 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
                 .map(sale -> response(sale, requireSaleTransfer(sale))).toList();
     }
 
-    private OwnershipSaleResponseVO resolveIdempotentSale(OwnershipTransfer transfer, Long sourceFarmId, OwnershipSaleRequestVO request) {
+    private OwnershipSaleResponseVO resolveIdempotentSale(OwnershipTransfer transfer, Long sourceFarmId,
+                                                           OwnershipSaleRequestVO request, String technicalToken) {
         if (transfer.kind() != OwnershipTransferKind.INTERNAL_SALE || !Objects.equals(transfer.sourceFarmId(), sourceFarmId)
-                || transfer.targetFarmId() != request.targetFarmId() || !transfer.goatId().equals(GoatId.of(parseTechnicalId(request.goatId())))
+                || transfer.targetFarmId() != request.targetFarmId() || !transfer.goatId().equals(GoatId.of(parseTechnicalId(technicalToken)))
                 || transfer.saleId() == null) {
             throw new BusinessRuleException("idempotency key already represents a different ownership process");
         }
         AnimalSaleRecord sale = sales.findAnimalSaleById(transfer.saleId())
                 .orElseThrow(() -> new BusinessRuleException("ownership sale transfer has no sale record"));
+        if (!Objects.equals(sale.customerId(), request.customerId())
+                || sale.amount().compareTo(currency(requirePositive(request.amount()))) != 0
+                || !Objects.equals(sale.saleDate(), requireSaleDate(request.saleDate()))
+                || !Objects.equals(sale.dueDate(), requireDueDate(request.saleDate(), request.dueDate()))
+                || !Objects.equals(sale.notes(), optional(request.notes()))) {
+            throw new BusinessRuleException("idempotency key already represents a different ownership sale");
+        }
         return response(sale, transfer);
     }
 
@@ -307,8 +330,18 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     }
 
     private long parseTechnicalId(String value) {
-        try { long id = Long.parseLong(value.trim()); if (id <= 0) throw new NumberFormatException(); return id; }
+        try {
+            String normalized = value.trim();
+            String numeric = normalized.startsWith("technical-") ? normalized.substring("technical-".length()) : normalized;
+            long id = Long.parseLong(numeric);
+            if (id <= 0) throw new NumberFormatException();
+            return id;
+        }
         catch (RuntimeException exception) { throw new InvalidArgumentException("goatId must be a positive technical identifier"); }
+    }
+
+    private String technicalToken(String value) {
+        return "technical-" + parseTechnicalId(value);
     }
 
     private long requirePrincipalId(AuthenticatedPrincipal principal) {

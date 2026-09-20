@@ -16,6 +16,8 @@ import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalLactationItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkLactationSnapshot;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkProductionItem;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalHealthSnapshot;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalEventsSnapshot;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryDisposition;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryRole;
@@ -496,6 +498,46 @@ class FarmGoatRegistryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.goatId").value(42))
                 .andExpect(jsonPath("$.processes", hasSize(0)))
+                .andExpect(jsonPath("$.events", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Health endpoint delegates technical identity and returns an empty contract")
+    void historicalHealth_endpointReturns200AndDelegatesTechnicalGoatId() throws Exception {
+        GoatId goatId = GoatId.of(42L);
+        when(historicalHealthQueryUseCase.findHistoricalHealth(1L, goatId))
+                .thenReturn(Optional.of(new FarmGoatHistoricalHealthSnapshot(goatId, List.of())));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/health")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
+                .andExpect(jsonPath("$.events", hasSize(0)));
+
+        verify(historicalHealthQueryUseCase).findHistoricalHealth(1L, goatId);
+    }
+
+    @Test
+    @DisplayName("Events endpoint returns 404 for an unrelated or nonexistent goat")
+    void historicalEvents_unrelated_returns404() throws Exception {
+        when(historicalEventsQueryUseCase.findHistoricalEvents(1L, GoatId.of(999L)))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-999/events"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Events endpoint maps a related empty result to HTTP 200")
+    void historicalEvents_empty_returns200() throws Exception {
+        GoatId goatId = GoatId.of(42L);
+        when(historicalEventsQueryUseCase.findHistoricalEvents(1L, goatId))
+                .thenReturn(Optional.of(new FarmGoatHistoricalEventsSnapshot(goatId, List.of())));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/events")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
                 .andExpect(jsonPath("$.events", hasSize(0)));
     }
 

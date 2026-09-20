@@ -15,6 +15,9 @@ import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +27,8 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,10 +46,12 @@ class CommercialBusinessTest {
     @Mock FarmAuthorizationUseCase authorization;
     @Mock EntityFinder finder;
     @Mock OperationalAuditUseCase audit;
+    @Mock OwnershipTransferPersistencePort ownershipTransfers;
     private CommercialBusiness business;
 
     @BeforeEach void setUp() {
-        business = new CommercialBusiness(customers, animalSales, milkSales, farms, goats, authorization, finder, audit);
+        business = new CommercialBusiness(customers, animalSales, milkSales, farms, goats, authorization, finder, audit,
+                ownershipTransfers, Clock.system(ZoneId.of("America/Sao_Paulo")));
         lenient().when(authorization.canManageFarm(anyLong())).thenReturn(true);
         lenient().when(farms.findById(anyLong())).thenReturn(Optional.of(farmRecord(1L)));
         lenient().when(finder.findOrThrow(any(), anyString())).thenAnswer(i -> ((Optional<?>) ((java.util.function.Supplier<?>) i.getArgument(0)).get()).orElseThrow());
@@ -102,9 +109,23 @@ class CommercialBusinessTest {
         verify(animalSales).save(any(AnimalSaleCommand.class));
     }
 
+    @Test void pendingOrRejectedOwnershipSalesDoNotEnterReceivablesOrSummary() {
+        AnimalSaleRecord pending = animalRecord(new AnimalSaleCommand(2L, 1L, 10L, 5L, "G1", "Cabra", LocalDate.now().minusDays(2),
+                new BigDecimal("100.00"), LocalDate.now().plusDays(5), SalePaymentStatus.OPEN, null, null, 20L));
+        when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(pending));
+        var transfer = mock(com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer.class);
+        when(transfer.kind()).thenReturn(OwnershipTransferKind.INTERNAL_SALE);
+        when(transfer.status()).thenReturn(OwnershipTransferStatus.REQUESTED);
+        when(ownershipTransfers.findBySaleId(2L)).thenReturn(Optional.of(transfer));
+
+        assertTrue(business.listReceivables(1L).isEmpty());
+        assertEquals(0, business.getSummary(1L).animalSalesCount());
+        assertEquals(BigDecimal.ZERO.setScale(2), business.getSummary(1L).animalSalesTotal());
+    }
+
     private CustomerRecord customer(Long id) { return new CustomerRecord(id, 1L, "Cliente", null, null, null, null, true, null, null); }
     private FarmRecord farmRecord(Long id) { return new FarmRecord(id, "Fazenda", null, null, null, null, List.of(), null, null, null); }
     private GoatResponseVO goat(Long id, String rg, GoatStatus status) { GoatResponseVO g = new GoatResponseVO(); g.setTechnicalId(id); g.setRegistrationNumber(rg); g.setName("Cabra"); g.setStatus(status); g.setBirthDate(LocalDate.now().minusYears(2)); return g; }
-    private AnimalSaleRecord animalRecord(AnimalSaleCommand c) { return new AnimalSaleRecord(1L, c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Cliente", true), c.goatTechnicalId(), c.goatRegistrationNumber(), c.goatName(), c.saleDate(), c.amount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null); }
+    private AnimalSaleRecord animalRecord(AnimalSaleCommand c) { return new AnimalSaleRecord(c.id() == null ? 1L : c.id(), c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Cliente", true), c.goatTechnicalId(), c.goatRegistrationNumber(), c.goatName(), c.saleDate(), c.amount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null, c.targetFarmId()); }
     private MilkSaleRecord milkRecord(MilkSaleCommand c) { return new MilkSaleRecord(1L, c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Cliente", true), c.saleDate(), c.quantityLiters(), c.unitPrice(), c.totalAmount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null); }
 }

@@ -82,8 +82,9 @@ class OwnershipSaleBusinessTest {
         when(farms.findById(SOURCE)).thenReturn(Optional.of(farm(SOURCE)));
         when(farms.findById(TARGET)).thenReturn(Optional.of(farm(TARGET)));
         when(customers.findCustomerByIdAndFarmId(7L, SOURCE)).thenReturn(Optional.of(customer()));
+        when(customers.findCustomerByIdAndFarmId(8L, SOURCE)).thenReturn(Optional.of(new CustomerRecord(8L, SOURCE, "Other buyer", null, null, null, null, true, null, null)));
         when(principals.requireCurrent()).thenReturn(new AuthenticatedPrincipal(99L, "seller@test", "Seller", Set.of("ROLE_FARM_OWNER")));
-        when(goats.findGoatById(SOURCE, "42")).thenReturn(goat());
+        when(goats.findGoatById(SOURCE, "technical-42")).thenReturn(goat());
         when(ownershipLock.lockGoatOwnership(GOAT)).thenAnswer(invocation -> Optional.of(lockState()));
         when(transfers.findPendingByGoatId(GOAT)).thenReturn(Optional.empty());
         when(sales.existsByFarmIdAndGoatTechnicalId(SOURCE, GOAT.value())).thenReturn(false);
@@ -104,6 +105,30 @@ class OwnershipSaleBusinessTest {
         assertThat(transfer.getValue().saleId()).isEqualTo(501L);
         verify(periods, never()).handoff(any(), any());
         verify(goats, never()).exitGoat(anyLong(), any(), any());
+    }
+
+    @Test
+    void requestResolvesNumericCompatibilityTokenAsStructuralTechnicalGoatId() {
+        business.requestOwnershipSale(SOURCE, request());
+
+        verify(goats).findGoatById(SOURCE, "technical-42");
+        verify(sales).save(argThat(command -> command.goatTechnicalId().equals(GOAT.value())));
+    }
+
+    @Test
+    void requestRechecksIdempotencyAfterGoatLockAndRejectsMaterialPayloadChange() {
+        OwnershipTransfer duplicate = transfer(700L, OwnershipTransferStatus.REQUESTED);
+        when(transfers.findByRequesterAndIdempotencyKey(99L, "sale-42"))
+                .thenReturn(Optional.empty(), Optional.of(duplicate));
+        when(sales.findAnimalSaleById(501L)).thenReturn(Optional.of(sale(new AnimalSaleCommand(501L, SOURCE, 7L,
+                GOAT.value(), "RG-42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, "sale", TARGET))));
+        OwnershipSaleRequestVO changed = new OwnershipSaleRequestVO("42", 8L, TARGET, date(), amount(), date().plusDays(2), "sale", "sale-42");
+
+        assertThatThrownBy(() -> business.requestOwnershipSale(SOURCE, changed))
+                .isInstanceOf(BusinessRuleException.class);
+
+        verify(ownershipLock).lockGoatOwnership(GOAT);
+        verify(sales, never()).save(any());
     }
 
     @Test
@@ -132,7 +157,11 @@ class OwnershipSaleBusinessTest {
 
         assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.PAID);
-        verify(periods).handoff(any(GoatOwnershipPeriod.class), any(GoatOwnershipPeriod.class));
+        ArgumentCaptor<GoatOwnershipPeriod> closed = ArgumentCaptor.forClass(GoatOwnershipPeriod.class);
+        ArgumentCaptor<GoatOwnershipPeriod> opened = ArgumentCaptor.forClass(GoatOwnershipPeriod.class);
+        verify(periods).handoff(closed.capture(), opened.capture());
+        assertThat(closed.getValue().exitType()).isEqualTo(OwnershipExitType.EXTERNAL_SALE);
+        assertThat(opened.getValue().entryType()).isEqualTo(OwnershipEntryType.PURCHASE);
         verify(projection).moveFromTo(GOAT, SOURCE, TARGET);
         verify(transfers, times(1)).save(argThat(value -> value.status() == OwnershipTransferStatus.COMPLETED));
     }
@@ -151,6 +180,27 @@ class OwnershipSaleBusinessTest {
 
         verify(projection, never()).moveFromTo(any(), anyLong(), anyLong());
         verify(periods, never()).handoff(any(), any());
+    }
+
+    @Test
+    void acceptReloadsTerminalStateAfterLockInsteadOfRegressingIt() {
+        AnimalSaleRecord openSale = sale(new AnimalSaleCommand(501L, SOURCE, 7L, GOAT.value(), "RG-42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
+        AnimalSaleRecord paidSale = sale(new AnimalSaleCommand(501L, SOURCE, 7L, GOAT.value(), "RG-42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.PAID, date().plusDays(1), null, TARGET));
+        OwnershipTransfer requested = transfer(700L, OwnershipTransferStatus.REQUESTED);
+        OwnershipTransfer completed = transfer(700L, OwnershipTransferStatus.COMPLETED);
+        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(openSale), Optional.of(paidSale));
+        when(transfers.findBySaleId(501L)).thenReturn(Optional.of(requested), Optional.of(completed));
+        when(authorization.canAdministerFarm(TARGET)).thenReturn(true);
+        when(ownershipLock.lockGoatOwnership(GOAT)).thenReturn(Optional.of(new GoatOwnershipLockState(GOAT, Optional.of(
+                GoatOwnershipPeriod.rehydrate(101L, GOAT, TARGET, Instant.parse("2026-09-19T12:00:00Z"), null,
+                        OwnershipEntryType.PURCHASE, null, "OWNERSHIP_SALE:501")))));
+
+        var result = business.acceptOwnershipSale(SOURCE, 501L, new SalePaymentRequestVO(date().plusDays(1)));
+
+        assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        verify(periods, never()).handoff(any(), any());
+        verify(projection, never()).moveFromTo(any(), anyLong(), anyLong());
+        verify(transfers, never()).save(any());
     }
 
     private OwnershipSaleRequestVO request() {
