@@ -24,15 +24,20 @@ import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -47,7 +52,10 @@ public class CommercialBusiness implements CommercialUseCase {
     private final FarmAuthorizationUseCase authorization;
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase audit;
+    private final GoatOwnershipSaleUseCase ownershipSales;
+    private final Clock clock;
 
+    @Autowired
     public CommercialBusiness(CustomerPersistencePort customerPersistencePort,
                               AnimalSalePersistencePort animalSalePersistencePort,
                               MilkSalePersistencePort milkSalePersistencePort,
@@ -55,7 +63,9 @@ public class CommercialBusiness implements CommercialUseCase {
                               GoatManagementUseCase goatManagementUseCase,
                               FarmAuthorizationUseCase authorization,
                               EntityFinder entityFinder,
-                              OperationalAuditUseCase audit) {
+                              OperationalAuditUseCase audit,
+                               GoatOwnershipSaleUseCase ownershipSales,
+                              Clock clock) {
         this.customerPersistencePort = customerPersistencePort;
         this.animalSalePersistencePort = animalSalePersistencePort;
         this.milkSalePersistencePort = milkSalePersistencePort;
@@ -64,6 +74,8 @@ public class CommercialBusiness implements CommercialUseCase {
         this.authorization = authorization;
         this.entityFinder = entityFinder;
         this.audit = audit;
+        this.ownershipSales = ownershipSales;
+        this.clock = clock;
     }
 
     @Override @Transactional
@@ -89,8 +101,13 @@ public class CommercialBusiness implements CommercialUseCase {
         LocalDate paymentDate = paymentDate(saleDate, request.paymentDate());
         BigDecimal amount = positive("amount", request.amount(), "Valor da venda deve ser maior que zero");
         String goatId = required("goatId", request.goatId(), "Cabra e obrigatoria");
+        GoatResponseVO candidate = goatManagementUseCase.findGoatById(farmId, goatId);
+        if (candidate.getTechnicalId() != null
+                && ownershipSales.hasActiveInternalSale(farmId, GoatId.of(candidate.getTechnicalId()))) {
+            throw new BusinessRuleException("goatId", "A cabra possui uma venda com transferencia de propriedade em andamento.");
+        }
         GoatResponseVO goat = ensureGoatReadyForSale(farmId, goatId, saleDate, optional(request.notes()));
-        if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsByFarmIdAndGoatTechnicalId(farmId, goat.getTechnicalId()))
+        if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsExternalSaleByGoatTechnicalId(goat.getTechnicalId()))
                 || (goat.getTechnicalId() == null && animalSalePersistencePort.existsByLegacyRegistrationNumber(goat.getRegistrationNumber()))) {
             throw new DuplicateEntityException("goatId", "Ja existe uma venda registrada para esta cabra.");
         }
@@ -108,6 +125,9 @@ public class CommercialBusiness implements CommercialUseCase {
     public AnimalSaleResponseVO registerAnimalSalePayment(Long farmId, Long saleId, SalePaymentRequestVO request) {
         authorization.verifyFarmOwnership(farmId); requireFarm(farmId);
         AnimalSaleRecord sale = entityFinder.findOrThrow(() -> animalSalePersistencePort.findAnimalSaleByIdAndFarmId(saleId, farmId), "Venda de animal nao encontrada.");
+        if (sale.targetFarmId() != null) {
+            throw new BusinessRuleException("ownership sale payment must use the ownership-sales workflow");
+        }
         validatePayment(sale.saleDate(), sale.paymentStatus(), request.paymentDate());
         AnimalSaleRecord saved = animalSalePersistencePort.save(new AnimalSaleCommand(sale.id(), sale.farmId(), sale.customerId(), sale.goatTechnicalId(), sale.goatRegistrationNumber(), sale.goatName(), sale.saleDate(), sale.amount(), sale.dueDate(), SalePaymentStatus.PAID, request.paymentDate(), sale.notes()));
         audit.record(new OperationalAuditRecordVO(farmId, saved.goatTechnicalId(), saved.goatRegistrationNumber(), OperationalAuditActionType.ANIMAL_SALE_PAYMENT_REGISTERED, String.valueOf(saved.id()), "Recebimento da venda do animal " + saved.goatRegistrationNumber() + " registrado em " + request.paymentDate() + "."));
@@ -141,13 +161,15 @@ public class CommercialBusiness implements CommercialUseCase {
 
     @Override public List<ReceivableResponseVO> listReceivables(Long farmId) {
         requireFarm(farmId); List<ReceivableResponseVO> result = new ArrayList<>();
-        animalSalePersistencePort.findAnimalSalesByFarmId(farmId).forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.ANIMAL_SALE, s.id(), "Venda do animal " + s.goatRegistrationNumber(), s.customer().id(), s.customer().name(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
+        animalSalePersistencePort.findAnimalSalesByFarmId(farmId).stream()
+                .filter(this::isRealizedAnimalSale)
+                .forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.ANIMAL_SALE, s.id(), "Venda do animal " + s.goatRegistrationNumber(), s.customer().id(), s.customer().name(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
         milkSalePersistencePort.findMilkSalesByFarmId(farmId).forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.MILK_SALE, s.id(), "Venda de leite de " + s.saleDate(), s.customer().id(), s.customer().name(), currency(s.totalAmount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
         return result.stream().sorted(Comparator.comparing(ReceivableResponseVO::paymentStatus).thenComparing(ReceivableResponseVO::dueDate, Comparator.nullsLast(LocalDate::compareTo)).thenComparing(ReceivableResponseVO::sourceId)).toList();
     }
 
     @Override public CommercialSummaryVO getSummary(Long farmId) {
-        requireFarm(farmId); List<AnimalSaleRecord> animals = animalSalePersistencePort.findAnimalSalesByFarmId(farmId); List<MilkSaleRecord> milk = milkSalePersistencePort.findMilkSalesByFarmId(farmId); List<ReceivableResponseVO> rec = listReceivables(farmId);
+        requireFarm(farmId); List<AnimalSaleRecord> animals = animalSalePersistencePort.findAnimalSalesByFarmId(farmId).stream().filter(this::isRealizedAnimalSale).toList(); List<MilkSaleRecord> milk = milkSalePersistencePort.findMilkSalesByFarmId(farmId); List<ReceivableResponseVO> rec = listReceivables(farmId);
         BigDecimal animalTotal = animals.stream().map(AnimalSaleRecord::amount).reduce(BigDecimal.ZERO, BigDecimal::add); BigDecimal milkQty = milk.stream().map(MilkSaleRecord::quantityLiters).reduce(BigDecimal.ZERO, BigDecimal::add); BigDecimal milkTotal = milk.stream().map(MilkSaleRecord::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new CommercialSummaryVO(customerPersistencePort.countCustomersByFarmId(farmId), animals.size(), currency(animalTotal), milk.size(), measure(milkQty), currency(milkTotal), rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.OPEN).count(), currency(rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.OPEN).map(ReceivableResponseVO::amount).reduce(BigDecimal.ZERO, BigDecimal::add)), rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.PAID).count(), currency(rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.PAID).map(ReceivableResponseVO::amount).reduce(BigDecimal.ZERO, BigDecimal::add)));
     }
@@ -155,10 +177,15 @@ public class CommercialBusiness implements CommercialUseCase {
     private FarmRecord requireFarm(Long farmId) { if (!authorization.canManageFarm(farmId)) throw new AuthorizationDeniedException("Usuario nao pode gerenciar esta fazenda."); return goatFarmPersistencePort.findById(farmId).orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda nao encontrada.")); }
     private CustomerRecord activeCustomer(Long farmId, Long id) { if (id == null) throw new InvalidArgumentException("customerId", "Cliente e obrigatorio"); CustomerRecord c = entityFinder.findOrThrow(() -> customerPersistencePort.findCustomerByIdAndFarmId(id, farmId), "Cliente nao encontrado."); if (!c.active()) throw new BusinessRuleException("customerId", "Cliente esta inativo e nao pode ser utilizado."); return c; }
     private GoatResponseVO ensureGoatReadyForSale(Long farmId, String id, LocalDate date, String notes) { GoatResponseVO goat = goatManagementUseCase.findGoatById(farmId, id); if (goat.getBirthDate() != null && date.isBefore(goat.getBirthDate())) throw new BusinessRuleException("saleDate", "Data da venda nao pode ser anterior ao nascimento da cabra."); if (goat.getStatus() == GoatStatus.ATIVO) { goatManagementUseCase.exitGoat(farmId, id, GoatExitRequestVO.builder().exitType(GoatExitType.VENDA).exitDate(date).notes(notes).build()); return goat; } if (goat.getStatus() != GoatStatus.VENDIDO) throw new BusinessRuleException("goatId", "A cabra informada nao esta em estado compativel com venda."); if (goat.getExitType() != GoatExitType.VENDA) throw new BusinessRuleException("goatId", "A cabra ja possui saida registrada com tipo diferente de venda."); if (!date.equals(goat.getExitDate())) throw new BusinessRuleException("saleDate", "A data da venda deve coincidir com a saida comercial ja registrada para a cabra."); return goat; }
-    private void validatePayment(LocalDate saleDate, SalePaymentStatus status, LocalDate date) { if (status == SalePaymentStatus.PAID) throw new BusinessRuleException("paymentDate", "Esta venda ja esta marcada como paga."); if (date == null) throw new InvalidArgumentException("paymentDate", "Data de pagamento e obrigatoria"); if (date.isBefore(saleDate)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (date.isAfter(LocalDate.now())) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); }
-    private LocalDate saleDate(LocalDate d) { if (d == null) throw new InvalidArgumentException("saleDate", "Data da venda e obrigatoria"); if (d.isAfter(LocalDate.now())) throw new InvalidArgumentException("saleDate", "Data da venda nao pode estar no futuro."); return d; }
+    private void validatePayment(LocalDate saleDate, SalePaymentStatus status, LocalDate date) { if (status == SalePaymentStatus.PAID) throw new BusinessRuleException("paymentDate", "Esta venda ja esta marcada como paga."); if (date == null) throw new InvalidArgumentException("paymentDate", "Data de pagamento e obrigatoria"); if (date.isBefore(saleDate)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (date.isAfter(LocalDate.now(clock))) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); }
+    private LocalDate saleDate(LocalDate d) { if (d == null) throw new InvalidArgumentException("saleDate", "Data da venda e obrigatoria"); if (d.isAfter(LocalDate.now(clock))) throw new InvalidArgumentException("saleDate", "Data da venda nao pode estar no futuro."); return d; }
     private LocalDate dueDate(LocalDate sale, LocalDate due) { if (due == null) throw new InvalidArgumentException("dueDate", "Data de vencimento e obrigatoria"); if (due.isBefore(sale)) throw new BusinessRuleException("dueDate", "Data de vencimento nao pode ser anterior a data da venda."); return due; }
-    private LocalDate paymentDate(LocalDate sale, LocalDate payment) { if (payment == null) return null; if (payment.isBefore(sale)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (payment.isAfter(LocalDate.now())) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); return payment; }
+    private LocalDate paymentDate(LocalDate sale, LocalDate payment) { if (payment == null) return null; if (payment.isBefore(sale)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (payment.isAfter(LocalDate.now(clock))) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); return payment; }
+    private boolean isRealizedAnimalSale(AnimalSaleRecord sale) {
+        if (sale.targetFarmId() == null) return true;
+        return ownershipSales.findSaleTransfer(sale.id()).status()
+                == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED;
+    }
     private String required(String field, String value, String msg) { String v = optional(value); if (v == null) throw new InvalidArgumentException(field, msg); return v; }
     private String optional(String value) { if (value == null) return null; String v = value.trim(); return v.isEmpty() ? null : v; }
     private BigDecimal positive(String field, BigDecimal value, String msg) { if (value == null) throw new InvalidArgumentException(field, msg); if (value.compareTo(BigDecimal.ZERO) <= 0) throw new BusinessRuleException(field, msg); return value; }

@@ -7,8 +7,8 @@ import java.util.Objects;
 
 /**
  * Explicit, consented transfer of one existing biological goat between farms.
- * Normal buyer acceptance atomically moves the transfer through ACCEPTED to
- * COMPLETED; there is no separate user-facing completion step.
+ * Normal transfers may complete on acceptance. Internal sales may remain
+ * ACCEPTED until the independent payment prerequisite is recorded.
  */
 public final class OwnershipTransfer {
     private final Long id;

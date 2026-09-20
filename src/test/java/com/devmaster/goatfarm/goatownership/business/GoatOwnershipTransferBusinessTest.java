@@ -35,8 +35,10 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +69,7 @@ class GoatOwnershipTransferBusinessTest {
         lenient().when(principalQuery.requireCurrent()).thenReturn(principal("ROLE_FARM_OWNER"));
         lenient().when(farmPersistence.findById(TARGET)).thenReturn(Optional.of(farm(TARGET)));
         lenient().when(transferPersistence.findGoatIdByTransferId(any(Long.class))).thenReturn(Optional.of(GOAT));
+        lenient().when(transferPersistence.findGoatIdBySaleId(any(Long.class))).thenReturn(Optional.of(GOAT));
         lenient().when(transferPersistence.save(any(OwnershipTransfer.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
@@ -214,6 +217,61 @@ class GoatOwnershipTransferBusinessTest {
         verify(projection, never()).moveFromTo(any(), any(Long.class), any(Long.class));
     }
 
+    @Test
+    void activeInternalSaleIncludesRequestedAndAcceptedStatuses() {
+        when(transferPersistence.existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(
+                eq(GOAT), eq(SOURCE), eq(OwnershipTransferKind.INTERNAL_SALE), any()))
+                .thenReturn(true);
+
+        assertThat(business.hasActiveInternalSale(SOURCE, GOAT)).isTrue();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<OwnershipTransferStatus>> statuses = ArgumentCaptor.forClass(List.class);
+        verify(transferPersistence).existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(
+                eq(GOAT), eq(SOURCE), eq(OwnershipTransferKind.INTERNAL_SALE), statuses.capture());
+        assertThat(statuses.getValue()).containsExactly(OwnershipTransferStatus.REQUESTED, OwnershipTransferStatus.ACCEPTED);
+    }
+
+    @Test
+    void paymentFirstLeavesSaleRequestedUntilBuyerAccepts() {
+        OwnershipTransfer sale = saleTransfer(501L, OwnershipTransferStatus.REQUESTED);
+        when(transferPersistence.findBySaleId(501L)).thenReturn(Optional.of(sale));
+        when(ownershipLock.lockGoatOwnership(GOAT)).thenReturn(Optional.of(
+                new GoatOwnershipLockState(GOAT, Optional.of(openPeriod(1L, SOURCE, START)))));
+
+        assertThat(business.completeInternalSaleAfterPayment(501L)).isSameAs(sale);
+        assertThat(sale.status()).isEqualTo(OwnershipTransferStatus.REQUESTED);
+        verify(projection, never()).moveFromTo(any(), any(Long.class), any(Long.class));
+    }
+
+    @Test
+    void acceptanceThenPaymentCompletesSaleExactlyOnce() {
+        OwnershipTransfer sale = saleTransfer(501L, OwnershipTransferStatus.REQUESTED);
+        when(transferPersistence.findBySaleId(501L)).thenReturn(Optional.of(sale));
+        when(ownershipLock.lockGoatOwnership(GOAT)).thenReturn(Optional.of(
+                new GoatOwnershipLockState(GOAT, Optional.of(openPeriod(1L, SOURCE, START)))));
+        when(authorization.canAdministerFarm(TARGET)).thenReturn(true);
+        when(periodPersistence.findByGoatIdOrderByStartedAt(GOAT)).thenReturn(List.of(openPeriod(1L, SOURCE, START)));
+        when(projection.moveFromTo(GOAT, SOURCE, TARGET)).thenReturn(true);
+
+        assertThat(business.acceptInternalSale(501L).status()).isEqualTo(OwnershipTransferStatus.ACCEPTED);
+        assertThat(business.completeInternalSaleAfterPayment(501L).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        assertThat(business.completeInternalSaleAfterPayment(501L).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        verify(projection, times(1)).moveFromTo(GOAT, SOURCE, TARGET);
+    }
+
+    @Test
+    void terminalSaleDoesNotBlockALaterSaleRequest() {
+        when(authorization.canAdministerFarm(SOURCE)).thenReturn(true);
+        when(ownershipLock.lockGoatOwnership(GOAT)).thenReturn(Optional.of(
+                new GoatOwnershipLockState(GOAT, Optional.of(openPeriod(1L, SOURCE, START)))));
+        when(transferPersistence.findPendingByGoatId(GOAT)).thenReturn(Optional.empty());
+        OwnershipTransfer result = business.requestInternalSale(new com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipSaleRequest(
+                GOAT, SOURCE, TARGET, 502L, "OWNERSHIP_SALE:502", "sale-502"));
+        assertThat(result.status()).isEqualTo(OwnershipTransferStatus.REQUESTED);
+        verify(transferPersistence).save(any(OwnershipTransfer.class));
+    }
+
     private AuthenticatedPrincipal principal(String role) {
         return new AuthenticatedPrincipal(ACTOR, "actor@example.com", "Actor", Set.of(role));
     }
@@ -241,5 +299,13 @@ class GoatOwnershipTransferBusinessTest {
         return OwnershipTransfer.rehydrate(id, GOAT, SOURCE, TARGET, OwnershipTransferKind.INTERNAL_TRANSFER,
                 OwnershipTransferStatus.COMPLETED, "move", "key-completed", START, NOW, NOW, NOW, null,
                 ACTOR, ACTOR, ACTOR, null);
+    }
+
+    private OwnershipTransfer saleTransfer(long saleId, OwnershipTransferStatus status) {
+        Instant acceptedAt = status == OwnershipTransferStatus.ACCEPTED || status == OwnershipTransferStatus.COMPLETED ? NOW : null;
+        Instant completedAt = status == OwnershipTransferStatus.COMPLETED ? NOW : null;
+        return OwnershipTransfer.rehydrate(501L, GOAT, SOURCE, TARGET, OwnershipTransferKind.INTERNAL_SALE,
+                status, "OWNERSHIP_SALE:" + saleId, "sale-" + saleId, START, acceptedAt, completedAt, completedAt,
+                null, ACTOR, acceptedAt == null ? null : ACTOR, completedAt == null ? null : ACTOR, saleId);
     }
 }

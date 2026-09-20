@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.commercial.api.dto.CustomerRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.SalePaymentRequestDTO;
 import com.devmaster.goatfarm.commercial.api.mapper.CommercialApiMapper;
 import com.devmaster.goatfarm.commercial.application.ports.in.CommercialUseCase;
+import com.devmaster.goatfarm.commercial.application.ports.in.OwnershipSaleUseCase;
 import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleResponseVO;
 import com.devmaster.goatfarm.commercial.business.bo.CommercialSummaryVO;
 import com.devmaster.goatfarm.commercial.business.bo.CustomerResponseVO;
@@ -47,10 +48,13 @@ class CommercialControllerTest {
     @Mock
     private CommercialUseCase commercialUseCase;
 
+    @Mock
+    private OwnershipSaleUseCase ownershipSaleUseCase;
+
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().findAndRegisterModules();
-        CommercialController controller = new CommercialController(commercialUseCase, new CommercialApiMapper());
+        CommercialController controller = new CommercialController(commercialUseCase, ownershipSaleUseCase, new CommercialApiMapper());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();

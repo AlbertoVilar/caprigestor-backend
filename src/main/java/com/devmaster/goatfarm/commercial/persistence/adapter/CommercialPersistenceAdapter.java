@@ -77,6 +77,7 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
         AnimalSale entity = command.id() == null ? new AnimalSale() : animalSaleRepository.findById(command.id()).orElseGet(AnimalSale::new);
         entity.setFarm(goatFarmRepository.getReferenceById(command.farmId()));
         entity.setCustomer(customerRepository.findByIdAndFarm_Id(command.customerId(), command.farmId()).orElseThrow());
+        entity.setTargetFarm(command.targetFarmId() == null ? null : goatFarmRepository.getReferenceById(command.targetFarmId()));
         entity.setGoatTechnicalId(command.goatTechnicalId());
         entity.setGoatRegistrationNumber(command.goatRegistrationNumber());
         entity.setGoatName(command.goatName());
@@ -101,6 +102,19 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     }
 
     @Override
+    public void deleteById(Long saleId) {
+        if (saleId != null) {
+            animalSaleRepository.deleteById(saleId);
+        }
+    }
+
+    @Override
+    public boolean existsExternalSaleByGoatTechnicalId(Long goatTechnicalId) {
+        return goatTechnicalId != null
+                && animalSaleRepository.existsByGoatTechnicalIdAndTargetFarmIsNull(goatTechnicalId);
+    }
+
+    @Override
     public boolean existsByLegacyRegistrationNumber(String registrationNumber) {
         return animalSaleRepository.existsByGoatRegistrationNumber(registrationNumber);
     }
@@ -111,8 +125,18 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     }
 
     @Override
+    public Optional<AnimalSaleRecord> findAnimalSaleById(Long saleId) {
+        return saleId == null ? Optional.empty() : animalSaleRepository.findById(saleId).map(this::toRecord);
+    }
+
+    @Override
     public List<AnimalSaleRecord> findAnimalSalesByFarmId(Long farmId) {
         return animalSaleRepository.findByFarm_IdOrderBySaleDateDescIdDesc(farmId).stream().map(this::toRecord).toList();
+    }
+
+    @Override
+    public List<AnimalSaleRecord> findOwnershipSalesByTargetFarmId(Long targetFarmId) {
+        return animalSaleRepository.findByTargetFarm_IdOrderBySaleDateDescIdDesc(targetFarmId).stream().map(this::toRecord).toList();
     }
 
     @Override
@@ -147,7 +171,7 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
 
     private AnimalSaleRecord toRecord(AnimalSale entity) {
         Customer customer = entity.getCustomer();
-        return new AnimalSaleRecord(entity.getId(), entity.getFarm().getId(), customer.getId(), new CustomerReference(customer.getId(), customer.getName(), customer.isActive()), entity.getGoatTechnicalId(), entity.getGoatRegistrationNumber(), entity.getGoatName(), entity.getSaleDate(), entity.getAmount(), entity.getDueDate(), entity.getPaymentStatus(), entity.getPaymentDate(), entity.getNotes(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return new AnimalSaleRecord(entity.getId(), entity.getFarm().getId(), customer.getId(), new CustomerReference(customer.getId(), customer.getName(), customer.isActive()), entity.getGoatTechnicalId(), entity.getGoatRegistrationNumber(), entity.getGoatName(), entity.getSaleDate(), entity.getAmount(), entity.getDueDate(), entity.getPaymentStatus(), entity.getPaymentDate(), entity.getNotes(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getTargetFarm() == null ? null : entity.getTargetFarm().getId());
     }
 
     private MilkSaleRecord toRecord(MilkSale entity) {

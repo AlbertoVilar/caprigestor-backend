@@ -11,7 +11,9 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.model.GoatOwnershipLockState;
 import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipTransferRequest;
+import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipSaleRequest;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipTransferUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatCurrentOwnerProjectionPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipLockPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipPeriodPersistencePort;
@@ -30,6 +32,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Transactional application core for consented local ownership transfers.
@@ -37,7 +40,7 @@ import java.util.Objects;
  * application ports.
  */
 @Service
-public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCase {
+public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCase, GoatOwnershipSaleUseCase {
     private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
     private final FarmAuthorizationUseCase farmAuthorization;
     private final GoatFarmPersistencePort farmPersistence;
@@ -189,6 +192,178 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         requireOpenPeriod(lock);
         transfer.cancel(Instant.now(clock));
         return transferPersistence.save(transfer);
+    }
+
+    @Override
+    @Transactional
+    public OwnershipTransfer requestInternalSale(InternalOwnershipSaleRequest request) {
+        validateSaleRequest(request);
+        AuthenticatedPrincipal principal = currentPrincipalQuery.requireCurrent();
+        long requesterId = requirePrincipalId(principal);
+        String key = normalizeKey(request.idempotencyKey());
+        OwnershipTransfer existing = transferPersistence.findByRequesterAndIdempotencyKey(requesterId, key).orElse(null);
+        if (existing != null) return resolveSaleIdempotent(existing, request);
+
+        GoatOwnershipLockState lock = lockGoat(request.goatId());
+        existing = transferPersistence.findByRequesterAndIdempotencyKey(requesterId, key).orElse(null);
+        if (existing != null) return resolveSaleIdempotent(existing, request);
+        GoatOwnershipPeriod source = requireOpenPeriod(lock);
+        if (!Objects.equals(source.farmId(), request.sourceFarmId())) {
+            throw new BusinessRuleException("canonical source ownership no longer matches the sale");
+        }
+        validateTargetFarm(source.farmId(), request.targetFarmId());
+        requireCanAdminister(source.farmId());
+        farmPersistence.findById(request.targetFarmId())
+                .orElseThrow(() -> new ResourceNotFoundException("Target farm not found: " + request.targetFarmId()));
+        transferPersistence.findPendingByGoatId(request.goatId()).ifPresent(pending -> {
+            throw new BusinessRuleException("another ownership process is already pending for this GoatId");
+        });
+        OwnershipTransfer transfer = OwnershipTransfer.request(request.goatId(), request.sourceFarmId(), request.targetFarmId(),
+                OwnershipTransferKind.INTERNAL_SALE, request.reason(), key, Instant.now(clock), requesterId, request.saleId());
+        return transferPersistence.save(transfer);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OwnershipTransfer findSaleTransfer(Long saleId) {
+        OwnershipTransfer transfer = transferPersistence.findBySaleId(saleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ownership sale transfer not found: " + saleId));
+        if (transfer.kind() != OwnershipTransferKind.INTERNAL_SALE) {
+            throw new ResourceNotFoundException("Ownership sale transfer not found: " + saleId);
+        }
+        return transfer;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OwnershipTransfer> findByRequesterAndIdempotencyKey(Long requesterId, String idempotencyKey) {
+        return transferPersistence.findByRequesterAndIdempotencyKey(requesterId, normalizeKey(idempotencyKey))
+                .filter(transfer -> transfer.kind() == OwnershipTransferKind.INTERNAL_SALE);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveInternalSale(Long sourceFarmId, GoatId goatId) {
+        return transferPersistence.existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(
+                goatId, sourceFarmId, OwnershipTransferKind.INTERNAL_SALE,
+                List.of(OwnershipTransferStatus.REQUESTED, OwnershipTransferStatus.ACCEPTED));
+    }
+
+    @Override
+    @Transactional
+    public void prepareInternalSale(Long sourceFarmId, GoatId goatId) {
+        GoatOwnershipLockState lock = lockGoat(goatId);
+        GoatOwnershipPeriod source = requireOpenPeriod(lock);
+        if (!Objects.equals((long) source.farmId(), sourceFarmId)) {
+            throw new BusinessRuleException("canonical source ownership no longer matches the sale");
+        }
+        requireCanAdminister(sourceFarmId);
+    }
+
+    @Override
+    @Transactional
+    public OwnershipTransfer acceptInternalSale(Long saleId) {
+        OwnershipTransfer transfer = lockAndReloadSale(saleId);
+        requireCanAdminister(transfer.targetFarmId());
+        if (transfer.status() == OwnershipTransferStatus.COMPLETED) return transfer;
+        if (transfer.status() == OwnershipTransferStatus.ACCEPTED) return transfer;
+        if (transfer.status() != OwnershipTransferStatus.REQUESTED) {
+            throw new BusinessRuleException("only a requested ownership sale can be accepted");
+        }
+        AuthenticatedPrincipal principal = currentPrincipalQuery.requireCurrent();
+        transfer.markAccepted(Instant.now(clock), requirePrincipalId(principal));
+        return transferPersistence.save(transfer);
+    }
+
+    @Override
+    @Transactional
+    public OwnershipTransfer completeInternalSaleAfterPayment(Long saleId) {
+        OwnershipTransfer transfer = lockAndReloadSale(saleId);
+        if (transfer.status() == OwnershipTransferStatus.COMPLETED) return transfer;
+        if (transfer.status() != OwnershipTransferStatus.ACCEPTED) return transfer;
+        requireCanAdminister(transfer.targetFarmId());
+        return completeSaleAfterAcceptance(transfer);
+    }
+
+    @Override
+    @Transactional
+    public OwnershipTransfer rejectInternalSale(Long saleId) {
+        OwnershipTransfer transfer = lockAndReloadSale(saleId);
+        requireCanAdminister(transfer.targetFarmId());
+        if (transfer.status() == OwnershipTransferStatus.REJECTED) return transfer;
+        if (transfer.status() != OwnershipTransferStatus.REQUESTED) {
+            throw new BusinessRuleException("only a requested ownership sale can be rejected");
+        }
+        transfer.reject();
+        return transferPersistence.save(transfer);
+    }
+
+    @Override
+    @Transactional
+    public OwnershipTransfer cancelInternalSale(Long saleId) {
+        OwnershipTransfer transfer = lockAndReloadSale(saleId);
+        requireCanAdminister(transfer.sourceFarmId());
+        if (transfer.status() == OwnershipTransferStatus.CANCELLED) return transfer;
+        if (transfer.status() != OwnershipTransferStatus.REQUESTED) {
+            throw new BusinessRuleException("only a requested ownership sale can be cancelled");
+        }
+        transfer.cancel(Instant.now(clock));
+        return transferPersistence.save(transfer);
+    }
+
+    @Override
+    @Transactional
+    public OwnershipTransfer lockAndReloadInternalSale(Long saleId) {
+        return lockAndReloadSale(saleId);
+    }
+
+    private OwnershipTransfer lockAndReloadSale(Long saleId) {
+        GoatId goatId = transferPersistence.findGoatIdBySaleId(saleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ownership sale transfer not found: " + saleId));
+        lockGoat(goatId);
+        return findSaleTransfer(saleId);
+    }
+
+    private OwnershipTransfer completeSaleAfterAcceptance(OwnershipTransfer transfer) {
+        GoatOwnershipLockState lock = lockGoat(transfer.goatId());
+        GoatOwnershipPeriod source = requireOpenPeriod(lock);
+        if (!Objects.equals((long) source.farmId(), transfer.sourceFarmId())) {
+            throw new BusinessRuleException("canonical source ownership no longer matches the sale");
+        }
+        long actorId = requirePrincipalId(currentPrincipalQuery.requireCurrent());
+        Instant effectiveAt = Instant.now(clock);
+        source.close(effectiveAt, OwnershipExitType.EXTERNAL_SALE);
+        GoatOwnershipPeriod target = GoatOwnershipPeriod.open(transfer.goatId(), transfer.targetFarmId(), effectiveAt,
+                OwnershipEntryType.PURCHASE, "OWNERSHIP_SALE:" + transfer.saleId());
+        List<GoatOwnershipPeriod> history = new ArrayList<>(periodPersistence.findByGoatIdOrderByStartedAt(transfer.goatId()));
+        replacePeriod(history, source);
+        history.add(target);
+        GoatOwnershipPeriod.ensureConsistent(history);
+        periodPersistence.handoff(source, target);
+        if (!projection.moveFromTo(transfer.goatId(), source.farmId(), transfer.targetFarmId())) {
+            throw new BusinessRuleException("current-owner projection drift detected; ownership sale rolled back");
+        }
+        transfer.completeAfterAcceptance(effectiveAt, actorId, effectiveAt);
+        return transferPersistence.save(transfer);
+    }
+
+    private OwnershipTransfer resolveSaleIdempotent(OwnershipTransfer existing, InternalOwnershipSaleRequest request) {
+        if (existing.kind() != OwnershipTransferKind.INTERNAL_SALE
+                || !Objects.equals(existing.sourceFarmId(), request.sourceFarmId())
+                || existing.targetFarmId() != request.targetFarmId()
+                || !existing.goatId().equals(request.goatId())) {
+            throw new BusinessRuleException("idempotency key already represents a different ownership sale");
+        }
+        return existing;
+    }
+
+    private void validateSaleRequest(InternalOwnershipSaleRequest request) {
+        if (request == null || request.goatId() == null) throw new InvalidArgumentException("goatId is required");
+        if (request.sourceFarmId() == null || request.sourceFarmId() <= 0) throw new InvalidArgumentException("sourceFarmId must be positive");
+        if (request.targetFarmId() == null || request.targetFarmId() <= 0) throw new InvalidArgumentException("targetFarmId must be positive");
+        if (request.saleId() == null || request.saleId() <= 0) throw new InvalidArgumentException("saleId must be positive");
+        if (request.reason() == null || request.reason().trim().isEmpty()) throw new InvalidArgumentException("reason must not be blank");
+        if (request.idempotencyKey() == null || request.idempotencyKey().trim().isEmpty()) throw new InvalidArgumentException("idempotencyKey must not be blank");
     }
 
     private GoatOwnershipLockState lockGoat(GoatId goatId) {

@@ -7,10 +7,13 @@ import com.devmaster.goatfarm.commercial.api.dto.CustomerRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.CustomerResponseDTO;
 import com.devmaster.goatfarm.commercial.api.dto.MilkSaleRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.MilkSaleResponseDTO;
+import com.devmaster.goatfarm.commercial.api.dto.OwnershipSaleRequestDTO;
+import com.devmaster.goatfarm.commercial.api.dto.OwnershipSaleResponseDTO;
 import com.devmaster.goatfarm.commercial.api.dto.ReceivableResponseDTO;
 import com.devmaster.goatfarm.commercial.api.dto.SalePaymentRequestDTO;
 import com.devmaster.goatfarm.commercial.api.mapper.CommercialApiMapper;
 import com.devmaster.goatfarm.commercial.application.ports.in.CommercialUseCase;
+import com.devmaster.goatfarm.commercial.application.ports.in.OwnershipSaleUseCase;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,10 +34,14 @@ import java.util.List;
 public class CommercialController {
 
     private final CommercialUseCase commercialUseCase;
+    private final OwnershipSaleUseCase ownershipSaleUseCase;
     private final CommercialApiMapper commercialApiMapper;
 
-    public CommercialController(CommercialUseCase commercialUseCase, CommercialApiMapper commercialApiMapper) {
+    public CommercialController(CommercialUseCase commercialUseCase,
+                                OwnershipSaleUseCase ownershipSaleUseCase,
+                                CommercialApiMapper commercialApiMapper) {
         this.commercialUseCase = commercialUseCase;
+        this.ownershipSaleUseCase = ownershipSaleUseCase;
         this.commercialApiMapper = commercialApiMapper;
     }
 
@@ -62,6 +70,58 @@ public class CommercialController {
     public ResponseEntity<AnimalSaleResponseDTO> createAnimalSale(@PathVariable Long farmId, @Valid @RequestBody AnimalSaleRequestDTO requestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(commercialApiMapper.toDTO(commercialUseCase.createAnimalSale(farmId, commercialApiMapper.toVO(requestDTO))));
+    }
+
+    @FarmOwnerOnly
+    @PostMapping("/ownership-sales")
+    @Operation(summary = "Solicitar venda com transferencia de propriedade")
+    public ResponseEntity<OwnershipSaleResponseDTO> requestOwnershipSale(@PathVariable Long farmId,
+                                                                           @Valid @RequestBody OwnershipSaleRequestDTO requestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(commercialApiMapper.toDTO(ownershipSaleUseCase.requestOwnershipSale(farmId, commercialApiMapper.toVO(requestDTO))));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
+    @PostMapping("/ownership-sales/{saleId}/accept")
+    @Operation(summary = "Aceitar venda; pagamento permanece uma etapa independente")
+    public ResponseEntity<OwnershipSaleResponseDTO> acceptOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.acceptOwnershipSale(farmId, saleId)));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
+    @PatchMapping("/ownership-sales/{saleId}/payment")
+    @Operation(summary = "Registrar pagamento da venda de propriedade")
+    public ResponseEntity<OwnershipSaleResponseDTO> registerOwnershipSalePayment(@PathVariable Long farmId, @PathVariable Long saleId,
+                                                                                    @Valid @RequestBody SalePaymentRequestDTO requestDTO) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.registerOwnershipSalePayment(farmId, saleId, commercialApiMapper.toVO(requestDTO))));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
+    @PostMapping("/ownership-sales/{saleId}/reject")
+    @Operation(summary = "Rejeitar venda com transferencia de propriedade")
+    public ResponseEntity<OwnershipSaleResponseDTO> rejectOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.rejectOwnershipSale(farmId, saleId)));
+    }
+
+    @FarmOwnerOnly
+    @PostMapping("/ownership-sales/{saleId}/cancel")
+    @Operation(summary = "Cancelar venda com transferencia de propriedade")
+    public ResponseEntity<OwnershipSaleResponseDTO> cancelOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.cancelOwnershipSale(farmId, saleId)));
+    }
+
+    @CanManageFarm
+    @GetMapping("/ownership-sales/incoming")
+    @Operation(summary = "Listar vendas de propriedade recebidas pela fazenda")
+    public ResponseEntity<List<OwnershipSaleResponseDTO>> listIncomingOwnershipSales(@PathVariable Long farmId) {
+        return ResponseEntity.ok(ownershipSaleUseCase.listIncomingOwnershipSales(farmId).stream().map(commercialApiMapper::toDTO).toList());
+    }
+
+    @CanManageFarm
+    @GetMapping("/ownership-sales/outgoing")
+    @Operation(summary = "Listar vendas de propriedade iniciadas pela fazenda")
+    public ResponseEntity<List<OwnershipSaleResponseDTO>> listOutgoingOwnershipSales(@PathVariable Long farmId) {
+        return ResponseEntity.ok(ownershipSaleUseCase.listOutgoingOwnershipSales(farmId).stream().map(commercialApiMapper::toDTO).toList());
     }
 
     @CanManageFarm

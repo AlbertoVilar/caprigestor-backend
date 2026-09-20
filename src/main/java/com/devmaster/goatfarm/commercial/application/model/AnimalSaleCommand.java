@@ -17,6 +17,14 @@ public record AnimalSaleCommand(
         LocalDate dueDate,
         SalePaymentStatus paymentStatus,
         LocalDate paymentDate,
-        String notes
+        String notes,
+        Long targetFarmId
 ) {
+    public AnimalSaleCommand(Long id, Long farmId, Long customerId, Long goatTechnicalId,
+                             String goatRegistrationNumber, String goatName, LocalDate saleDate,
+                             BigDecimal amount, LocalDate dueDate, SalePaymentStatus paymentStatus,
+                             LocalDate paymentDate, String notes) {
+        this(id, farmId, customerId, goatTechnicalId, goatRegistrationNumber, goatName, saleDate,
+                amount, dueDate, paymentStatus, paymentDate, notes, null);
+    }
 }

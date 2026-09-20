@@ -19,7 +19,16 @@ public interface OwnershipTransferRepository extends JpaRepository<OwnershipTran
     Optional<OwnershipTransferEntity> findByGoatIdAndStatusIn(Long goatId,
                                                                Collection<OwnershipTransferStatus> statuses);
 
+    boolean existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(Long goatId, Long sourceFarmId,
+                                                              OwnershipTransferKind kind,
+                                                              Collection<OwnershipTransferStatus> statuses);
+
     Optional<OwnershipTransferEntity> findByRequestedByAndIdempotencyKey(Long requestedBy, String idempotencyKey);
+
+    Optional<OwnershipTransferEntity> findBySaleId(Long saleId);
+
+    @Query("select transfer.goatId from OwnershipTransferEntity transfer where transfer.saleId = :saleId")
+    Optional<Long> findGoatIdBySaleId(@Param("saleId") Long saleId);
 
     @Query("select transfer from OwnershipTransferEntity transfer "
             + "where transfer.kind = :kind and transfer.targetFarmId = :farmId "

@@ -9,19 +9,25 @@ import com.devmaster.goatfarm.genealogy.application.model.GenealogyTreeSnapshot;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalGenealogyApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalHealthApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalMilkLactationApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalEventsApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalLactationItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkLactationSnapshot;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkProductionItem;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalHealthSnapshot;
+import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalEventsSnapshot;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryDisposition;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryRole;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalHealthQueryUseCase;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalReproductionApiMapper;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalReproductionSnapshot;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalReproductionQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalMilkLactationQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalEventsQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
@@ -72,6 +78,10 @@ class FarmGoatRegistryControllerTest {
     private FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase;
     @Mock
     private FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase;
+    @Mock
+    private FarmGoatHistoricalHealthQueryUseCase historicalHealthQueryUseCase;
+    @Mock
+    private FarmGoatHistoricalEventsQueryUseCase historicalEventsQueryUseCase;
 
     private MockMvc mockMvc;
 
@@ -88,7 +98,11 @@ class FarmGoatRegistryControllerTest {
                         historicalMilkLactationQueryUseCase,
                         new FarmGoatHistoricalMilkLactationApiMapper(),
                         historicalReproductionQueryUseCase,
-                        new FarmGoatHistoricalReproductionApiMapper()))
+                        new FarmGoatHistoricalReproductionApiMapper(),
+                        historicalHealthQueryUseCase,
+                        new FarmGoatHistoricalHealthApiMapper(),
+                        historicalEventsQueryUseCase,
+                        new FarmGoatHistoricalEventsApiMapper()))
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -336,7 +350,11 @@ class FarmGoatRegistryControllerTest {
                 FarmGoatHistoricalMilkLactationQueryUseCase.class,
                 FarmGoatHistoricalMilkLactationApiMapper.class,
                 FarmGoatHistoricalReproductionQueryUseCase.class,
-                FarmGoatHistoricalReproductionApiMapper.class
+                FarmGoatHistoricalReproductionApiMapper.class,
+                FarmGoatHistoricalHealthQueryUseCase.class,
+                FarmGoatHistoricalHealthApiMapper.class,
+                FarmGoatHistoricalEventsQueryUseCase.class,
+                FarmGoatHistoricalEventsApiMapper.class
         );
     }
 
@@ -480,6 +498,46 @@ class FarmGoatRegistryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.goatId").value(42))
                 .andExpect(jsonPath("$.processes", hasSize(0)))
+                .andExpect(jsonPath("$.events", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Health endpoint delegates technical identity and returns an empty contract")
+    void historicalHealth_endpointReturns200AndDelegatesTechnicalGoatId() throws Exception {
+        GoatId goatId = GoatId.of(42L);
+        when(historicalHealthQueryUseCase.findHistoricalHealth(1L, goatId))
+                .thenReturn(Optional.of(new FarmGoatHistoricalHealthSnapshot(goatId, List.of())));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/health")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
+                .andExpect(jsonPath("$.events", hasSize(0)));
+
+        verify(historicalHealthQueryUseCase).findHistoricalHealth(1L, goatId);
+    }
+
+    @Test
+    @DisplayName("Events endpoint returns 404 for an unrelated or nonexistent goat")
+    void historicalEvents_unrelated_returns404() throws Exception {
+        when(historicalEventsQueryUseCase.findHistoricalEvents(1L, GoatId.of(999L)))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-999/events"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Events endpoint maps a related empty result to HTTP 200")
+    void historicalEvents_empty_returns200() throws Exception {
+        GoatId goatId = GoatId.of(42L);
+        when(historicalEventsQueryUseCase.findHistoricalEvents(1L, goatId))
+                .thenReturn(Optional.of(new FarmGoatHistoricalEventsSnapshot(goatId, List.of())));
+
+        mockMvc.perform(get("/api/v1/goatfarms/1/goat-registry/technical-42/events")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.goatId").value(42))
                 .andExpect(jsonPath("$.events", hasSize(0)));
     }
 
