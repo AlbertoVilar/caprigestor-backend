@@ -72,7 +72,7 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
         ensureDistinctKidRegistrations(vo.getKids());
         List<BirthKidResponseVO> createdKids = new ArrayList<>();
         for (BirthKidRequestVO kid : vo.getKids()) {
-            GoatRequestVO request = buildKidRequestVO(farmId, goatId, pregnancyId, mother, vo.getFatherRegistrationNumber(), birthFarmTod, vo.getBirthDate(), kid);
+            GoatRequestVO request = buildKidRequestVO(farmId, pregnancyId, mother, vo.getFatherRegistrationNumber(), birthFarmTod, vo.getBirthDate(), kid);
             GoatResponseVO saved = goatManagementUseCase.createGoat(farmId, request, GoatCreationOrigin.BIRTH); createdKids.add(mapper.toBirthKidResponseVO(saved));
         }
         pregnancy.close(PregnancyCloseReason.BIRTH, vo.getBirthDate());
@@ -87,7 +87,7 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
         GoatReference reference = goatReferenceResolver.resolve(routeToken, farmId).orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
         return goatPersistencePort.findByIdAndFarmId(reference.id(), farmId).orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para a fazenda informada."));
     }
-    private GoatRequestVO buildKidRequestVO(Long farmId, String motherGoatId, Long pregnancyId, Goat mother, String fatherRegistrationNumber, String birthFarmTod, LocalDate defaultBirthDate, BirthKidRequestVO kid) {
+    private GoatRequestVO buildKidRequestVO(Long farmId, Long pregnancyId, Goat mother, String fatherRegistrationNumber, String birthFarmTod, LocalDate defaultBirthDate, BirthKidRequestVO kid) {
         String registration = normalizeBirthRegistration(kid.getRegistrationNumber());
         if (registration == null) throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria e obrigatorio");
         if (!BIRTH_REGISTRATION_PATTERN.matcher(registration).matches()) throw new InvalidArgumentException("kids.registrationNumber", "Registro da cria deve ter entre 10 e 12 caracteres: numeros e, opcionalmente, uma letra final");
@@ -103,7 +103,7 @@ public class BirthCommandBusiness implements BirthCommandUseCase {
         if (breed == null) throw new InvalidArgumentException("kids.breed", "Raca da cria e obrigatoria quando a matriz nao possui raca cadastrada");
         return GoatRequestVO.builder().registrationNumber(registration).name(name).gender(kid.getGender()).breed(breed).color(normalizeText(kid.getColor())).birthDate(birthDate)
                 .status(GoatStatus.ATIVO).tod(birthFarmTod).toe(toe).category(kid.getCategory() != null ? kid.getCategory() : Category.PA)
-                .fatherRegistrationNumber(normalizeRegistration(fatherRegistrationNumber)).motherRegistrationNumber(motherGoatId).farmId(farmId)
+                .fatherRegistrationNumber(normalizeRegistration(fatherRegistrationNumber)).motherRegistrationNumber(mother.registrationNumber()).farmId(farmId)
                 .creatorProvenance(GoatCreatorProvenanceVO.builder()
                         .creatorFarmId(farmId)
                         .creatorTod(birthFarmTod)

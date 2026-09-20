@@ -1001,7 +1001,7 @@ class ReproductionUseCasesBehaviorTest {
         verify(goatManagementUseCase).createGoat(eq(FARM_ID), goatRequestCaptor.capture(), eq(GoatCreationOrigin.BIRTH));
 
         GoatRequestVO createdKidRequest = goatRequestCaptor.getValue();
-        assertThat(createdKidRequest.getMotherRegistrationNumber()).isEqualTo(GOAT_ID);
+        assertThat(createdKidRequest.getMotherRegistrationNumber()).isEqualTo(motherFromAnotherFarm.registrationNumber());
         assertThat(createdKidRequest.getFatherRegistrationNumber()).isEqualTo(requestVO.getFatherRegistrationNumber());
         assertThat(createdKidRequest.getCategory()).isEqualTo(com.devmaster.goatfarm.goat.enums.Category.PA);
         assertThat(createdKidRequest.getBirthDate()).isEqualTo(requestVO.getBirthDate());
@@ -1015,6 +1015,56 @@ class ReproductionUseCasesBehaviorTest {
         verify(pregnancyPersistencePort).save(any(Pregnancy.class));
         verify(reproductiveEventPersistencePort).save(any(ReproductiveEvent.class));
         verify(goatPersistencePort).findByIdAndFarmId(new GoatId(10L), FARM_ID);
+    }
+
+    @Test
+    void registerBirth_shouldDeriveMotherRegistrationFromResolvedGoat_whenRouteUsesTechnicalToken() {
+        String routeToken = "technical-79";
+        String motherRegistration = "1400819006";
+        String fatherRegistration = "1643218012";
+        Long pregnancyId = 31L;
+        BirthRequestVO request = validBirthRequestVO();
+        request.setFatherRegistrationNumber(fatherRegistration);
+        request.getKids().get(0).setCategory(Category.PO);
+        Pregnancy activePregnancy = Pregnancy.builder()
+                .id(pregnancyId)
+                .farmId(FARM_ID)
+                .goatId(routeToken)
+                .status(PregnancyStatus.ACTIVE)
+                .breedingDate(LocalDate.now(clock).minusDays(60))
+                .confirmDate(LocalDate.now(clock))
+                .expectedDueDate(LocalDate.now(clock).plusDays(90))
+                .build();
+        Goat mother = motherGoat(79L, motherRegistration, "14008", "19006");
+
+        when(goatReferenceResolver.resolve(routeToken, FARM_ID))
+                .thenReturn(Optional.of(new com.devmaster.goatfarm.goat.application.ports.out.GoatReference(
+                        new GoatId(79L), FARM_ID, motherRegistration, "ZÉLIA DA BOCAÍNA", Gender.FEMEA)));
+        when(goatPersistencePort.findByIdAndFarmId(new GoatId(79L), FARM_ID)).thenReturn(Optional.of(mother));
+        when(pregnancyPersistencePort.findByIdAndFarmIdAndGoatId(pregnancyId, FARM_ID, routeToken))
+                .thenReturn(Optional.of(activePregnancy));
+        when(goatManagementUseCase.createGoat(eq(FARM_ID), any(GoatRequestVO.class), eq(GoatCreationOrigin.BIRTH)))
+                .thenReturn(createdKidResponse("1643200001"));
+        when(reproductionBusinessMapper.toBirthKidResponseVO(any(GoatResponseVO.class)))
+                .thenReturn(birthKidResponse("1643200001"));
+        when(pregnancyPersistencePort.save(any(Pregnancy.class))).thenReturn(closedPregnancyEntity());
+        when(reproductiveEventPersistencePort.save(any(ReproductiveEvent.class))).thenReturn(closeEventEntity(pregnancyId));
+        when(reproductionBusinessMapper.toPregnancyResponseVO(any(Pregnancy.class))).thenReturn(pregnancyResponseVO());
+        when(reproductionBusinessMapper.toReproductiveEventResponseVO(any(ReproductiveEvent.class))).thenReturn(reproductiveEventResponseVO());
+
+        reproductionBusiness.registerBirth(FARM_ID, routeToken, pregnancyId, request);
+
+        ArgumentCaptor<GoatRequestVO> captor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(FARM_ID), captor.capture(), eq(GoatCreationOrigin.BIRTH));
+        GoatRequestVO kidRequest = captor.getValue();
+        assertThat(kidRequest.getMotherRegistrationNumber()).isEqualTo(motherRegistration);
+        assertThat(kidRequest.getMotherRegistrationNumber()).isNotEqualTo(routeToken);
+        assertThat(kidRequest.getFatherRegistrationNumber()).isEqualTo(fatherRegistration);
+        assertThat(kidRequest.getCategory()).isEqualTo(Category.PO);
+        assertThat(kidRequest.getCreatorProvenance().getEvidenceReference())
+                .contains(":MOTHER:79:");
+        assertThat(kidRequest.getCreatorProvenance().getEvidenceReference())
+                .doesNotContain(":MOTHER:" + motherRegistration + ":");
     }
 
     @ParameterizedTest
@@ -1575,6 +1625,17 @@ class ReproductionUseCasesBehaviorTest {
                 com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO,
                 null, null, null, Category.PA, null, null,
                 FARM_ID, 2L, "Capril", "Alberto"
+        );
+    }
+
+    private Goat motherGoat(Long technicalId, String registration, String tod, String toe) {
+        return Goat.rehydrate(
+                new GoatId(technicalId),
+                RegistrationIdentity.of(registration, tod, toe),
+                "ZÉLIA DA BOCAÍNA", Gender.FEMEA, GoatBreed.SAANEN, "Branca", LocalDate.of(2024, 1, 1),
+                com.devmaster.goatfarm.goat.enums.GoatStatus.ATIVO,
+                null, null, null, Category.PO, null, null,
+                FARM_ID, 2L, "Capril Bocaina", "Alberto"
         );
     }
 
