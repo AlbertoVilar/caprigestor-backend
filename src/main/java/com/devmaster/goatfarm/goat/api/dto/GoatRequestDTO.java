@@ -56,8 +56,9 @@ public class GoatRequestDTO {
     @Size(min = 10, max = 12, message = "O número de registro da mãe deve ter entre {min} e {max} caracteres.")
     private String motherRegistrationNumber;
 
-        private Long farmId;
+    private Long farmId;
     private Long userId;
+    private GoatCreatorProvenanceDTO creatorProvenance;
 
     public GoatRequestDTO() {
     }

@@ -1008,6 +1008,8 @@ class ReproductionUseCasesBehaviorTest {
         assertThat(createdKidRequest.getRegistrationNumber()).isEqualTo("1643200001");
         assertThat(createdKidRequest.getTod()).isEqualTo(FARM_TOD);
         assertThat(createdKidRequest.getToe()).isEqualTo("00001");
+        assertThat(createdKidRequest.getCreatorProvenance().getEvidenceReference())
+                .isEqualTo("BIRTH:PREGNANCY:10:MOTHER:10:DATE:" + requestVO.getBirthDate());
 
         assertThat(result.getKids()).hasSize(1);
         verify(pregnancyPersistencePort).save(any(Pregnancy.class));

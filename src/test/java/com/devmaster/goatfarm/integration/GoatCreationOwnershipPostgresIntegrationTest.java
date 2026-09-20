@@ -14,11 +14,13 @@ import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -30,7 +32,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -52,6 +56,7 @@ class GoatCreationOwnershipPostgresIntegrationTest {
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired GoatManagementUseCase goatManagementUseCase;
     @Autowired GoatOwnershipQueryPort ownershipQuery;
+    @SpyBean GoatOwnershipInitializationUseCase ownershipInitialization;
 
     @MockBean FarmAuthorizationUseCase farmAuthorization;
     @MockBean CurrentPrincipalQueryUseCase currentPrincipalQuery;
@@ -88,6 +93,12 @@ class GoatCreationOwnershipPostgresIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "select source from goat_ownership_period where goat_id = ?", String.class, created.getTechnicalId()))
                 .isEqualTo("GOAT_CREATE:MANUAL");
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from goat_creator_reference where goat_id = ?", Integer.class,
+                created.getTechnicalId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "select source from goat_creator_reference where goat_id = ?", String.class,
+                created.getTechnicalId())).isEqualTo("UNKNOWN");
         assertThat(ownershipQuery.findCurrentOwnerFarmId(com.devmaster.goatfarm.goat.domain.GoatId.of(created.getTechnicalId())))
                 .contains(farmId);
 
@@ -101,6 +112,39 @@ class GoatCreationOwnershipPostgresIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from goat_ownership_period where goat_id = ? and ended_at is not null and exit_type = ?",
                 Integer.class, created.getTechnicalId(), "DEATH")).isEqualTo(1);
+    }
+
+    @Test
+    void ownershipInitializationFailureRollsBackGoatCreatorReferenceAndOwnership() {
+        long farmId = createFarm();
+        doNothing().when(farmAuthorization).verifyFarmManagement(farmId);
+        when(farmAuthorization.canAdministerFarm(farmId)).thenReturn(true);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(
+                new AuthenticatedPrincipal(1L, "rollback@example.com", "Rollback", Set.of("ROLE_OPERATOR")));
+        doThrow(new IllegalStateException("forced ownership initialization failure"))
+                .when(ownershipInitialization).initialize(org.mockito.ArgumentMatchers.any());
+
+        String registration = "9876500001";
+        GoatRequestVO request = GoatRequestVO.builder()
+                .registrationNumber(registration)
+                .tod("98765").toe("00001")
+                .name("Rollback Integration Goat")
+                .gender(Gender.FEMEA).breed(GoatBreed.SAANEN).color("Branca")
+                .birthDate(java.time.LocalDate.of(2025, 1, 1))
+                .status(GoatStatus.ATIVO).category(Category.PA).farmId(farmId).build();
+
+        assertThatThrownBy(() -> goatManagementUseCase.createGoat(farmId, request, GoatCreationOrigin.MANUAL))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("forced ownership initialization failure");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from cabras where num_registro = ?", Integer.class, registration)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from goat_creator_reference r join cabras g on g.id = r.goat_id where g.num_registro = ?",
+                Integer.class, registration)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from goat_ownership_period p join cabras g on g.id = p.goat_id where g.num_registro = ?",
+                Integer.class, registration)).isZero();
     }
 
     private long createFarm() {

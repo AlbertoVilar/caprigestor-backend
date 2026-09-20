@@ -22,6 +22,7 @@ public class GoatAbccPreviewResponseDTO {
 
     private String externalSource;
     private String externalId;
+    private String creatorName;
     private String registrationNumber;
     private String name;
     private Gender gender;
