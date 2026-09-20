@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 @Component
 public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPersistencePort, OwnershipTransferQueryPort {
@@ -75,6 +76,14 @@ public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPer
     public Optional<OwnershipTransfer> findByRequesterAndIdempotencyKey(Long requestedBy, String idempotencyKey) {
         return requestedBy == null || idempotencyKey == null ? Optional.empty()
                 : repository.findByRequestedByAndIdempotencyKey(requestedBy, idempotencyKey).map(mapper::toDomain);
+    }
+
+    @Override
+    public boolean existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(GoatId goatId, Long sourceFarmId,
+                                                                    OwnershipTransferKind kind,
+                                                                    Collection<OwnershipTransferStatus> statuses) {
+        return goatId != null && sourceFarmId != null && kind != null && statuses != null
+                && repository.existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(goatId.value(), sourceFarmId, kind, statuses);
     }
 
     @Override

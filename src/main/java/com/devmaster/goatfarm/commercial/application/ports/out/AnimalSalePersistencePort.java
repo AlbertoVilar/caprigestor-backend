@@ -8,8 +8,11 @@ import java.util.Optional;
 
 public interface AnimalSalePersistencePort {
     AnimalSaleRecord save(AnimalSaleCommand sale);
+    default void deleteById(Long saleId) {
+        throw new UnsupportedOperationException("sale deletion is not supported");
+    }
     boolean existsByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
-    default boolean existsActiveOwnershipSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId) {
+    default boolean existsExternalSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId) {
         return existsByFarmIdAndGoatTechnicalId(farmId, goatTechnicalId);
     }
     boolean existsByLegacyRegistrationNumber(String registrationNumber);

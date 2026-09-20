@@ -76,7 +76,7 @@ class CommercialBusinessTest {
         CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G1", GoatStatus.ATIVO);
         when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
         when(goats.findGoatById(1L, "G1")).thenReturn(goat); when(goats.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
-        when(animalSales.existsByFarmIdAndGoatTechnicalId(1L, 5L)).thenReturn(false); when(animalSales.save(any())).thenAnswer(i -> animalRecord((AnimalSaleCommand) i.getArgument(0)));
+        lenient().when(animalSales.existsExternalSaleByFarmIdAndGoatTechnicalId(1L, 5L)).thenReturn(false); when(animalSales.save(any())).thenAnswer(i -> animalRecord((AnimalSaleCommand) i.getArgument(0)));
         AnimalSaleResponseVO result = business.createAnimalSale(1L, new AnimalSaleRequestVO("G1", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null));
         assertEquals(5L, result.goatTechnicalId()); verify(goats).exitGoat(eq(1L), eq("G1"), any()); verify(animalSales).save(any(AnimalSaleCommand.class));
     }
@@ -100,7 +100,7 @@ class CommercialBusinessTest {
         when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
         when(goats.findGoatById(1L, "G-ROLLBACK")).thenReturn(goat);
         when(goats.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
-        when(animalSales.existsByFarmIdAndGoatTechnicalId(1L, 5L)).thenReturn(false);
+        lenient().when(animalSales.existsExternalSaleByFarmIdAndGoatTechnicalId(1L, 5L)).thenReturn(false);
         when(animalSales.save(any())).thenThrow(new IllegalStateException("sale persistence failure"));
 
         assertThrows(IllegalStateException.class, () -> business.createAnimalSale(1L,
@@ -120,6 +120,18 @@ class CommercialBusinessTest {
         assertTrue(business.listReceivables(1L).isEmpty());
         assertEquals(0, business.getSummary(1L).animalSalesCount());
         assertEquals(BigDecimal.ZERO.setScale(2), business.getSummary(1L).animalSalesTotal());
+    }
+
+    @Test void legacyAnimalSalePaymentCannotBypassOwnershipSaleWorkflow() {
+        AnimalSaleRecord ownershipSale = animalRecord(new AnimalSaleCommand(77L, 1L, 10L, 5L, "G1", "Cabra",
+                LocalDate.now().minusDays(2), new BigDecimal("100.00"), LocalDate.now().plusDays(5),
+                SalePaymentStatus.OPEN, null, null, 20L));
+        when(animalSales.findAnimalSaleByIdAndFarmId(77L, 1L)).thenReturn(Optional.of(ownershipSale));
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class,
+                () -> business.registerAnimalSalePayment(1L, 77L,
+                        new SalePaymentRequestVO(LocalDate.now().minusDays(1))));
+        verify(animalSales, never()).save(any(AnimalSaleCommand.class));
     }
 
     private CustomerRecord customer(Long id) { return new CustomerRecord(id, 1L, "Cliente", null, null, null, null, true, null, null); }

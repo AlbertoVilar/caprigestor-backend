@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.goatownership.application.ports.in;
 
 import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipSaleRequest;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import java.util.Optional;
 
 /** Canonical ownership boundary for the commercial internal-sale workflow. */
@@ -13,4 +14,6 @@ public interface GoatOwnershipSaleUseCase {
     OwnershipTransfer completeInternalSaleAfterPayment(Long saleId);
     OwnershipTransfer rejectInternalSale(Long saleId);
     OwnershipTransfer cancelInternalSale(Long saleId);
+    boolean hasActiveInternalSale(Long sourceFarmId, GoatId goatId);
+    void prepareInternalSale(Long sourceFarmId, GoatId goatId);
 }

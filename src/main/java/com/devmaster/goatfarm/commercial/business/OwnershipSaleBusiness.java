@@ -92,7 +92,12 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         CustomerRecord customer = activeCustomer(sourceFarmId, request.customerId());
         GoatResponseVO goat = goats.findGoatById(sourceFarmId, technicalToken);
         GoatId goatId = GoatId.of(requireTechnicalId(goat));
-        if (sales.existsActiveOwnershipSaleByFarmIdAndGoatTechnicalId(sourceFarmId, goatId.value())) {
+        ownershipSales.prepareInternalSale(sourceFarmId, goatId);
+        OwnershipTransfer afterLockDuplicate = ownershipSales.findByRequesterAndIdempotencyKey(requesterId, idempotencyKey).orElse(null);
+        if (afterLockDuplicate != null) {
+            return resolveIdempotentSale(afterLockDuplicate, sourceFarmId, request);
+        }
+        if (ownershipSales.hasActiveInternalSale(sourceFarmId, goatId)) {
             throw new DuplicateEntityException("goatId", "Ja existe uma venda registrada para esta cabra nesta fazenda.");
         }
         LocalDate saleDate = requireSaleDate(request.saleDate());
@@ -103,6 +108,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         OwnershipTransfer transfer = ownershipSales.requestInternalSale(new InternalOwnershipSaleRequest(
                 goatId, sourceFarmId, request.targetFarmId(), sale.id(), "OWNERSHIP_SALE:" + sale.id(), idempotencyKey));
         if (!Objects.equals(transfer.saleId(), sale.id())) {
+            sales.deleteById(sale.id());
             return resolveIdempotentSale(transfer, sourceFarmId, request);
         }
         audit.record(new OperationalAuditRecordVO(sourceFarmId, goatId.value(), goat.getRegistrationNumber(),

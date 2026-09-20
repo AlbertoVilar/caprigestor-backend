@@ -142,9 +142,10 @@ Campos principais expostos:
 - a venda de animal nao duplica a logica do ciclo do rebanho;
 - a venda W13 entre fazendas exige `targetFarmId`, cria um `INTERNAL_SALE`
   pendente no ledger canônico e não chama a saída controlada do animal;
-- a aceitação pela fazenda compradora registra o pagamento interno, conclui o
-  `INTERNAL_SALE`, fecha/abre os períodos canônicos e atualiza a projeção na
-  mesma transação; falha em qualquer etapa faz rollback de todo o processo;
+- a aceitação pela fazenda compradora e o pagamento interno são pré-requisitos
+  independentes do `INTERNAL_SALE`; a segunda etapa concluída fecha/abre os
+  períodos canônicos e atualiza a projeção na mesma transação; falha em
+  qualquer etapa faz rollback de todo o processo;
 - vendas externas legadas permanecem no contrato original de `animal-sales` e
   não são reinterpretadas como propriedade sem evidência de uma fazenda alvo;
 - recebiveis continuam minimos e derivados das vendas;

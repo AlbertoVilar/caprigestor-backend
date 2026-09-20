@@ -41,6 +41,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Set;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -119,6 +124,63 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         assertThat(periods.findByGoatIdOrderByStartedAtAscIdAsc(goat.getTechnicalId())).singleElement()
                 .satisfies(period -> assertThat(period.getEndedAt()).isNull());
         assertThat(goats.findById(goat.getTechnicalId()).orElseThrow().getFarm().getId()).isEqualTo(sourceFarm.getId());
+    }
+
+    @Test
+    void concurrentEquivalentRequestLeavesExactlyOneSaleAndTransfer() throws Exception {
+        User seller = user("sale-concurrency-seller");
+        User buyer = user("sale-concurrency-buyer");
+        GoatFarm sourceFarm = farm("Sale concurrency source", "SCS01", seller);
+        GoatFarm targetFarm = farm("Sale concurrency target", "SCT01", buyer);
+        GoatEntity goat = new GoatEntity();
+        goat.setRegistrationNumber("SCS010001");
+        goat.setName("Concurrent sale goat");
+        goat.setGender(Gender.FEMEA);
+        goat.setBirthDate(LocalDate.of(2024, 1, 1));
+        goat.setStatus(GoatStatus.ATIVO);
+        goat.setTod("SCS01");
+        goat.setToe("0001");
+        goat.setFarm(sourceFarm);
+        goat.setUser(seller);
+        goat = goats.saveAndFlush(goat);
+        Customer customer = customers.saveAndFlush(Customer.builder().farm(sourceFarm).name("Concurrent buyer").active(true).build());
+        GoatOwnershipPeriodEntity sourcePeriod = new GoatOwnershipPeriodEntity();
+        sourcePeriod.setGoatId(goat.getTechnicalId());
+        sourcePeriod.setFarmId(sourceFarm.getId());
+        sourcePeriod.setStartedAt(Instant.parse("2024-01-01T00:00:00Z"));
+        sourcePeriod.setEntryType(com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType.MANUAL_IMPORT);
+        sourcePeriod.setSource("TEST_FIXTURE");
+        periods.saveAndFlush(sourcePeriod);
+        FailureConfiguration.PRINCIPAL_ID.set(seller.getId());
+        OwnershipSaleRequestVO request = new OwnershipSaleRequestVO("technical-" + goat.getTechnicalId(), customer.getId(),
+                targetFarm.getId(), LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25),
+                "concurrent", "concurrent-sale-1");
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        Long technicalId = goat.getTechnicalId();
+        try {
+            List<Future<Long>> results = executor.invokeAll(List.of(
+                    () -> ownershipSales.requestOwnershipSale(sourceFarm.getId(), request).saleId(),
+                    () -> ownershipSales.requestOwnershipSale(sourceFarm.getId(), request).saleId()));
+            assertThat(results.stream().map(this::getUnchecked).distinct()).hasSize(1);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(animalSales.findByFarm_IdOrderBySaleDateDescIdDesc(sourceFarm.getId()).stream()
+                .filter(sale -> technicalId.equals(sale.getGoatTechnicalId())).toList()).hasSize(1);
+        assertThat(transfers.findByRequestedByAndIdempotencyKey(seller.getId(), "concurrent-sale-1")).isPresent();
+    }
+
+    private Long getUnchecked(Future<Long> future) {
+        try {
+            return future.get();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError(exception);
+        } catch (ExecutionException exception) {
+            throw new AssertionError(exception.getCause());
+        }
     }
 
     private User user(String suffix) {

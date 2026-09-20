@@ -101,7 +101,7 @@ public class CommercialBusiness implements CommercialUseCase {
         BigDecimal amount = positive("amount", request.amount(), "Valor da venda deve ser maior que zero");
         String goatId = required("goatId", request.goatId(), "Cabra e obrigatoria");
         GoatResponseVO goat = ensureGoatReadyForSale(farmId, goatId, saleDate, optional(request.notes()));
-        if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsByFarmIdAndGoatTechnicalId(farmId, goat.getTechnicalId()))
+        if ((goat.getTechnicalId() != null && animalSalePersistencePort.existsExternalSaleByFarmIdAndGoatTechnicalId(farmId, goat.getTechnicalId()))
                 || (goat.getTechnicalId() == null && animalSalePersistencePort.existsByLegacyRegistrationNumber(goat.getRegistrationNumber()))) {
             throw new DuplicateEntityException("goatId", "Ja existe uma venda registrada para esta cabra.");
         }
@@ -119,6 +119,9 @@ public class CommercialBusiness implements CommercialUseCase {
     public AnimalSaleResponseVO registerAnimalSalePayment(Long farmId, Long saleId, SalePaymentRequestVO request) {
         authorization.verifyFarmOwnership(farmId); requireFarm(farmId);
         AnimalSaleRecord sale = entityFinder.findOrThrow(() -> animalSalePersistencePort.findAnimalSaleByIdAndFarmId(saleId, farmId), "Venda de animal nao encontrada.");
+        if (sale.targetFarmId() != null) {
+            throw new BusinessRuleException("ownership sale payment must use the ownership-sales workflow");
+        }
         validatePayment(sale.saleDate(), sale.paymentStatus(), request.paymentDate());
         AnimalSaleRecord saved = animalSalePersistencePort.save(new AnimalSaleCommand(sale.id(), sale.farmId(), sale.customerId(), sale.goatTechnicalId(), sale.goatRegistrationNumber(), sale.goatName(), sale.saleDate(), sale.amount(), sale.dueDate(), SalePaymentStatus.PAID, request.paymentDate(), sale.notes()));
         audit.record(new OperationalAuditRecordVO(farmId, saved.goatTechnicalId(), saved.goatRegistrationNumber(), OperationalAuditActionType.ANIMAL_SALE_PAYMENT_REGISTERED, String.valueOf(saved.id()), "Recebimento da venda do animal " + saved.goatRegistrationNumber() + " registrado em " + request.paymentDate() + "."));

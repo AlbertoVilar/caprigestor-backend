@@ -146,6 +146,7 @@ class OwnershipSaleBusinessTest {
 
         assertThat(result.saleId()).isEqualTo(900L);
         assertThat(result.ownershipTransferId()).isEqualTo(900L);
+        verify(sales).deleteById(501L);
     }
 
     private OwnershipTransfer transfer(long id, OwnershipTransferStatus status) {

@@ -16,13 +16,7 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
     boolean existsByGoatRegistrationNumber(String goatRegistrationNumber);
     boolean existsByFarm_IdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
 
-    @Query("select case when count(a) > 0 then true else false end from AnimalSale a "
-            + "where a.farm.id = :farmId and a.goatTechnicalId = :goatTechnicalId "
-            + "and a.targetFarm is not null and exists (select t.id from OwnershipTransferEntity t "
-            + "where t.saleId = a.id and t.status in (com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED, "
-            + "com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.ACCEPTED))")
-    boolean existsActiveOwnershipSaleByFarmIdAndGoatTechnicalId(@Param("farmId") Long farmId,
-                                                                  @Param("goatTechnicalId") Long goatTechnicalId);
+    boolean existsByFarm_IdAndGoatTechnicalIdAndTargetFarmIsNull(Long farmId, Long goatTechnicalId);
 
     Optional<AnimalSale> findByIdAndFarm_Id(Long id, Long farmId);
 

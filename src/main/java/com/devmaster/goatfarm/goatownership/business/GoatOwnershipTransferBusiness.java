@@ -242,6 +242,25 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean hasActiveInternalSale(Long sourceFarmId, GoatId goatId) {
+        return transferPersistence.existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(
+                goatId, sourceFarmId, OwnershipTransferKind.INTERNAL_SALE,
+                List.of(OwnershipTransferStatus.REQUESTED, OwnershipTransferStatus.ACCEPTED));
+    }
+
+    @Override
+    @Transactional
+    public void prepareInternalSale(Long sourceFarmId, GoatId goatId) {
+        GoatOwnershipLockState lock = lockGoat(goatId);
+        GoatOwnershipPeriod source = requireOpenPeriod(lock);
+        if (!Objects.equals((long) source.farmId(), sourceFarmId)) {
+            throw new BusinessRuleException("canonical source ownership no longer matches the sale");
+        }
+        requireCanAdminister(sourceFarmId);
+    }
+
+    @Override
     @Transactional
     public OwnershipTransfer acceptInternalSale(Long saleId, boolean paymentConfirmed) {
         OwnershipTransfer transfer = lockAndReloadSale(saleId);
