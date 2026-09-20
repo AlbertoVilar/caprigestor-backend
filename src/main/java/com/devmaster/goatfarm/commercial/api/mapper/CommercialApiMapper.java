@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.commercial.api.dto.CustomerRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.CustomerResponseDTO;
 import com.devmaster.goatfarm.commercial.api.dto.MilkSaleRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.MilkSaleResponseDTO;
+import com.devmaster.goatfarm.commercial.api.dto.OwnershipSaleRequestDTO;
+import com.devmaster.goatfarm.commercial.api.dto.OwnershipSaleResponseDTO;
 import com.devmaster.goatfarm.commercial.api.dto.ReceivableResponseDTO;
 import com.devmaster.goatfarm.commercial.api.dto.SalePaymentRequestDTO;
 import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleRequestVO;
@@ -16,6 +18,8 @@ import com.devmaster.goatfarm.commercial.business.bo.CustomerRequestVO;
 import com.devmaster.goatfarm.commercial.business.bo.CustomerResponseVO;
 import com.devmaster.goatfarm.commercial.business.bo.MilkSaleRequestVO;
 import com.devmaster.goatfarm.commercial.business.bo.MilkSaleResponseVO;
+import com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleRequestVO;
+import com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleResponseVO;
 import com.devmaster.goatfarm.commercial.business.bo.ReceivableResponseVO;
 import com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO;
 import org.springframework.stereotype.Component;
@@ -37,6 +41,18 @@ public class CommercialApiMapper {
 
     public AnimalSaleResponseDTO toDTO(AnimalSaleResponseVO vo) {
         return new AnimalSaleResponseDTO(vo.id(), vo.goatTechnicalId(), vo.goatRegistrationNumber(), vo.goatName(), vo.customerId(), vo.customerName(), vo.saleDate(), vo.amount(), vo.dueDate(), vo.paymentStatus(), vo.paymentDate(), vo.notes());
+    }
+
+    public OwnershipSaleRequestVO toVO(OwnershipSaleRequestDTO dto) {
+        return new OwnershipSaleRequestVO(dto.goatId(), dto.customerId(), dto.targetFarmId(), dto.saleDate(),
+                dto.amount(), dto.dueDate(), dto.notes(), dto.idempotencyKey());
+    }
+
+    public OwnershipSaleResponseDTO toDTO(OwnershipSaleResponseVO vo) {
+        return new OwnershipSaleResponseDTO(vo.saleId(), vo.sourceFarmId(), vo.targetFarmId(), vo.goatTechnicalId(),
+                vo.goatRegistrationNumber(), vo.goatName(), vo.customerId(), vo.customerName(), vo.saleDate(),
+                vo.amount(), vo.dueDate(), vo.paymentStatus(), vo.paymentDate(), vo.notes(),
+                vo.ownershipTransferId(), vo.ownershipTransferStatus());
     }
 
     public MilkSaleRequestVO toVO(MilkSaleRequestDTO dto) {

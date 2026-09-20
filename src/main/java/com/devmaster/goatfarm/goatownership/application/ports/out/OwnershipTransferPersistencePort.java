@@ -12,6 +12,8 @@ public interface OwnershipTransferPersistencePort {
 
     Optional<OwnershipTransfer> findById(Long transferId);
 
+    Optional<OwnershipTransfer> findBySaleId(Long saleId);
+
     Optional<OwnershipTransfer> findPendingByGoatId(GoatId goatId);
 
     Optional<OwnershipTransfer> findByRequesterAndIdempotencyKey(Long requestedBy, String idempotencyKey);

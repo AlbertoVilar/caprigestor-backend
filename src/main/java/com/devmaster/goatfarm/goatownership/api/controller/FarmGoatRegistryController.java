@@ -7,15 +7,21 @@ import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalDossierBasicResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalGenealogyResponseDTO;
+import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalHealthResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalMilkLactationResponseDTO;
+import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalEventsResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatHistoricalReproductionResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.dto.FarmGoatRegistryResponseDTO;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalGenealogyApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalHealthApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalMilkLactationApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalEventsApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalReproductionApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalHealthQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalMilkLactationQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalEventsQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalReproductionQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,6 +53,10 @@ public class FarmGoatRegistryController {
     private final FarmGoatHistoricalMilkLactationApiMapper historicalMilkLactationMapper;
     private final FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase;
     private final FarmGoatHistoricalReproductionApiMapper historicalReproductionMapper;
+    private final FarmGoatHistoricalHealthQueryUseCase historicalHealthQueryUseCase;
+    private final FarmGoatHistoricalHealthApiMapper historicalHealthMapper;
+    private final FarmGoatHistoricalEventsQueryUseCase historicalEventsQueryUseCase;
+    private final FarmGoatHistoricalEventsApiMapper historicalEventsMapper;
 
     public FarmGoatRegistryController(
             FarmGoatRegistryQueryUseCase queryUseCase,
@@ -56,7 +66,11 @@ public class FarmGoatRegistryController {
             FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase,
             FarmGoatHistoricalMilkLactationApiMapper historicalMilkLactationMapper,
             FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase,
-            FarmGoatHistoricalReproductionApiMapper historicalReproductionMapper
+            FarmGoatHistoricalReproductionApiMapper historicalReproductionMapper,
+            FarmGoatHistoricalHealthQueryUseCase historicalHealthQueryUseCase,
+            FarmGoatHistoricalHealthApiMapper historicalHealthMapper,
+            FarmGoatHistoricalEventsQueryUseCase historicalEventsQueryUseCase,
+            FarmGoatHistoricalEventsApiMapper historicalEventsMapper
     ) {
         this.queryUseCase = queryUseCase;
         this.mapper = mapper;
@@ -66,6 +80,10 @@ public class FarmGoatRegistryController {
         this.historicalMilkLactationMapper = historicalMilkLactationMapper;
         this.historicalReproductionQueryUseCase = historicalReproductionQueryUseCase;
         this.historicalReproductionMapper = historicalReproductionMapper;
+        this.historicalHealthQueryUseCase = historicalHealthQueryUseCase;
+        this.historicalHealthMapper = historicalHealthMapper;
+        this.historicalEventsQueryUseCase = historicalEventsQueryUseCase;
+        this.historicalEventsMapper = historicalEventsMapper;
     }
 
     @GetMapping
@@ -179,5 +197,36 @@ public class FarmGoatRegistryController {
                 .map(historicalReproductionMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado no livro de registro da fazenda"));
+    }
+
+    @GetMapping("/{goatId}/health")
+    @Operation(summary = "Consulta o histórico sanitário de uma cabra no livro de registro da fazenda")
+    public ResponseEntity<FarmGoatHistoricalHealthResponseDTO> findHistoricalHealth(
+            @PathVariable("farmId") Long farmId,
+            @PathVariable("goatId") String goatIdToken
+    ) {
+        GoatId goatId = parseTechnicalGoatId(goatIdToken);
+        return historicalHealthQueryUseCase.findHistoricalHealth(farmId, goatId)
+                .map(historicalHealthMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado no livro de registro da fazenda"));
+    }
+
+    @GetMapping("/{goatId}/events")
+    @Operation(summary = "Consulta o histórico de eventos de uma cabra no livro de registro da fazenda")
+    public ResponseEntity<FarmGoatHistoricalEventsResponseDTO> findHistoricalEvents(
+            @PathVariable("farmId") Long farmId,
+            @PathVariable("goatId") String goatIdToken
+    ) {
+        GoatId goatId = parseTechnicalGoatId(goatIdToken);
+        return historicalEventsQueryUseCase.findHistoricalEvents(farmId, goatId)
+                .map(historicalEventsMapper::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseThrow(() -> new ResourceNotFoundException("Animal não encontrado no livro de registro da fazenda"));
+    }
+
+    private GoatId parseTechnicalGoatId(String goatIdToken) {
+        return GoatRouteIdentifier.technicalId(goatIdToken)
+                .orElseThrow(() -> new InvalidArgumentException("goatId", "goatId must use format 'technical-{id}' with a positive number"));
     }
 }

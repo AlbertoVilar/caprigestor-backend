@@ -21,6 +21,8 @@ public interface OwnershipTransferRepository extends JpaRepository<OwnershipTran
 
     Optional<OwnershipTransferEntity> findByRequestedByAndIdempotencyKey(Long requestedBy, String idempotencyKey);
 
+    Optional<OwnershipTransferEntity> findBySaleId(Long saleId);
+
     @Query("select transfer from OwnershipTransferEntity transfer "
             + "where transfer.kind = :kind and transfer.targetFarmId = :farmId "
             + "and (:status is null or transfer.status = :status) "

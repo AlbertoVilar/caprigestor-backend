@@ -10,6 +10,12 @@ public interface AnimalSalePersistencePort {
     AnimalSaleRecord save(AnimalSaleCommand sale);
     boolean existsByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
     boolean existsByLegacyRegistrationNumber(String registrationNumber);
+    default Optional<AnimalSaleRecord> findAnimalSaleById(Long saleId) {
+        return Optional.empty();
+    }
     Optional<AnimalSaleRecord> findAnimalSaleByIdAndFarmId(Long saleId, Long farmId);
     List<AnimalSaleRecord> findAnimalSalesByFarmId(Long farmId);
+    default List<AnimalSaleRecord> findOwnershipSalesByTargetFarmId(Long targetFarmId) {
+        return List.of();
+    }
 }

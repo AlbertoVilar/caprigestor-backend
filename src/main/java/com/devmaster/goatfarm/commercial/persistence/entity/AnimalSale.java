@@ -37,6 +37,14 @@ public class AnimalSale {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    /**
+     * Optional only for legacy external sales. A W13 ownership sale names the
+     * receiving farm explicitly; ownership itself remains in the ledger.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_farm_id")
+    private GoatFarm targetFarm;
+
     @Column(name = "goat_registration_number", nullable = false, length = 20)
     private String goatRegistrationNumber;
 

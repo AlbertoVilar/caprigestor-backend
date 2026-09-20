@@ -9,7 +9,9 @@ import com.devmaster.goatfarm.genealogy.application.model.GenealogyTreeSnapshot;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalGenealogyApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalHealthApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalMilkLactationApiMapper;
+import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalEventsApiMapper;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatRegistryApiMapper;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalLactationItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalMilkLactationSnapshot;
@@ -18,10 +20,12 @@ import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryDi
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryItem;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatRegistryRole;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalGenealogyQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalHealthQueryUseCase;
 import com.devmaster.goatfarm.goatownership.api.mapper.FarmGoatHistoricalReproductionApiMapper;
 import com.devmaster.goatfarm.goatownership.application.model.FarmGoatHistoricalReproductionSnapshot;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalReproductionQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalMilkLactationQueryUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatHistoricalEventsQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.FarmGoatRegistryQueryUseCase;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
@@ -72,6 +76,10 @@ class FarmGoatRegistryControllerTest {
     private FarmGoatHistoricalMilkLactationQueryUseCase historicalMilkLactationQueryUseCase;
     @Mock
     private FarmGoatHistoricalReproductionQueryUseCase historicalReproductionQueryUseCase;
+    @Mock
+    private FarmGoatHistoricalHealthQueryUseCase historicalHealthQueryUseCase;
+    @Mock
+    private FarmGoatHistoricalEventsQueryUseCase historicalEventsQueryUseCase;
 
     private MockMvc mockMvc;
 
@@ -88,7 +96,11 @@ class FarmGoatRegistryControllerTest {
                         historicalMilkLactationQueryUseCase,
                         new FarmGoatHistoricalMilkLactationApiMapper(),
                         historicalReproductionQueryUseCase,
-                        new FarmGoatHistoricalReproductionApiMapper()))
+                        new FarmGoatHistoricalReproductionApiMapper(),
+                        historicalHealthQueryUseCase,
+                        new FarmGoatHistoricalHealthApiMapper(),
+                        historicalEventsQueryUseCase,
+                        new FarmGoatHistoricalEventsApiMapper()))
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -336,7 +348,11 @@ class FarmGoatRegistryControllerTest {
                 FarmGoatHistoricalMilkLactationQueryUseCase.class,
                 FarmGoatHistoricalMilkLactationApiMapper.class,
                 FarmGoatHistoricalReproductionQueryUseCase.class,
-                FarmGoatHistoricalReproductionApiMapper.class
+                FarmGoatHistoricalReproductionApiMapper.class,
+                FarmGoatHistoricalHealthQueryUseCase.class,
+                FarmGoatHistoricalHealthApiMapper.class,
+                FarmGoatHistoricalEventsQueryUseCase.class,
+                FarmGoatHistoricalEventsApiMapper.class
         );
     }
 

@@ -20,6 +20,8 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
 
     List<AnimalSale> findByFarm_IdOrderBySaleDateDescIdDesc(Long farmId);
 
+    List<AnimalSale> findByTargetFarm_IdOrderBySaleDateDescIdDesc(Long targetFarmId);
+
     @Query("""
             select coalesce(sum(a.amount), 0)
             from AnimalSale a

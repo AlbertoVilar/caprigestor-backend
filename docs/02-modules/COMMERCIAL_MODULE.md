@@ -55,6 +55,12 @@ Base canonica: `/api/v1/goatfarms/{farmId}/commercial`
 | `POST` | `/animal-sales` | registrar venda de animal com saida coerente |
 | `GET` | `/animal-sales` | listar vendas de animal |
 | `PATCH` | `/animal-sales/{saleId}/payment` | registrar pagamento da venda de animal |
+| `POST` | `/ownership-sales` | solicitar venda entre fazendas sem transferir a propriedade ainda |
+| `GET` | `/ownership-sales/incoming` | listar solicitações recebidas pela fazenda compradora |
+| `GET` | `/ownership-sales/outgoing` | listar solicitações iniciadas pela fazenda vendedora |
+| `POST` | `/ownership-sales/{saleId}/accept` | aceitar, registrar pagamento interno e transferir a propriedade atomicamente |
+| `POST` | `/ownership-sales/{saleId}/reject` | rejeitar sem mudar a propriedade |
+| `POST` | `/ownership-sales/{saleId}/cancel` | cancelar sem mudar a propriedade |
 | `POST` | `/milk-sales` | registrar venda de leite |
 | `GET` | `/milk-sales` | listar vendas de leite |
 | `PATCH` | `/milk-sales/{saleId}/payment` | registrar pagamento da venda de leite |
@@ -133,6 +139,13 @@ Campos principais expostos:
 - as mutacoes sensiveis validam ownership no controller e novamente no business antes de carregar ou persistir dados;
 - OPERATOR sem vinculo, FARM_OWNER de outra fazenda e acesso cruzado recebem `403`; endpoint autenticado sem credencial responde `401`;
 - a venda de animal nao duplica a logica do ciclo do rebanho;
+- a venda W13 entre fazendas exige `targetFarmId`, cria um `INTERNAL_SALE`
+  pendente no ledger canônico e não chama a saída controlada do animal;
+- a aceitação pela fazenda compradora registra o pagamento interno, conclui o
+  `INTERNAL_SALE`, fecha/abre os períodos canônicos e atualiza a projeção na
+  mesma transação; falha em qualquer etapa faz rollback de todo o processo;
+- vendas externas legadas permanecem no contrato original de `animal-sales` e
+  não são reinterpretadas como propriedade sem evidência de uma fazenda alvo;
 - recebiveis continuam minimos e derivados das vendas;
 - o resumo mensal usa dados reais persistidos, sem agregador paralelo ou BI.
 

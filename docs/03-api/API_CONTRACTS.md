@@ -210,6 +210,12 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - Consultas, resumos e cadastro de cliente exigem usuário autorizado a operar a fazenda: ADMIN, FARM_OWNER próprio ou OPERATOR formalmente vinculado.
 - Registro de venda de animal ou leite, baixa de pagamento e lançamento de despesa operacional são mutações financeiras ou patrimoniais definitivas e exigem ADMIN ou FARM_OWNER da própria fazenda.
 - A autorização das mutações sensíveis é aplicada no controller e validada novamente no caso de uso antes da persistência.
+- `POST /api/v1/goatfarms/{farmId}/commercial/ownership-sales` exige
+  `targetFarmId`, GoatId técnico e `idempotencyKey`; cria somente uma solicitação
+  pendente. A propriedade continua no ledger atual até a aceitação.
+- Aceitar/rejeitar uma venda de propriedade é autorizado pela fazenda alvo; o
+  cancelamento é autorizado pela fazenda de origem. A aceitação recebe a data de
+  pagamento interna e conclui pagamento e handoff canônico na mesma transação.
 
 ### Articles
 

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /** JPA implementation detail for event persistence. */
@@ -41,6 +42,17 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     Optional<Event> findByIdAndGoatTechnicalId(
             @Param("eventId") Long eventId,
             @Param("goatTechnicalId") Long goatTechnicalId
+    );
+
+    @Query("""
+            SELECT e FROM Event e
+            WHERE e.goatTechnicalId = :goatTechnicalId
+              AND e.recordingFarmId = :recordingFarmId
+            ORDER BY e.date DESC, e.id DESC
+            """)
+    List<Event> findHistoricalEventsByGoatTechnicalIdAndRecordingFarmId(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("recordingFarmId") Long recordingFarmId
     );
 
 }
