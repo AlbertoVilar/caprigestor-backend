@@ -83,10 +83,17 @@ public class CommercialController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping("/ownership-sales/{saleId}/accept")
-    @Operation(summary = "Aceitar venda e concluir transferencia de propriedade")
-    public ResponseEntity<OwnershipSaleResponseDTO> acceptOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId,
-                                                                          @Valid @RequestBody SalePaymentRequestDTO requestDTO) {
-        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.acceptOwnershipSale(farmId, saleId, commercialApiMapper.toVO(requestDTO))));
+    @Operation(summary = "Aceitar venda; pagamento permanece uma etapa independente")
+    public ResponseEntity<OwnershipSaleResponseDTO> acceptOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.acceptOwnershipSale(farmId, saleId)));
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
+    @PatchMapping("/ownership-sales/{saleId}/payment")
+    @Operation(summary = "Registrar pagamento da venda de propriedade")
+    public ResponseEntity<OwnershipSaleResponseDTO> registerOwnershipSalePayment(@PathVariable Long farmId, @PathVariable Long saleId,
+                                                                                    @Valid @RequestBody SalePaymentRequestDTO requestDTO) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.registerOwnershipSalePayment(farmId, saleId, commercialApiMapper.toVO(requestDTO))));
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")

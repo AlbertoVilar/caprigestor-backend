@@ -9,6 +9,9 @@ import java.util.Optional;
 public interface AnimalSalePersistencePort {
     AnimalSaleRecord save(AnimalSaleCommand sale);
     boolean existsByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
+    default boolean existsActiveOwnershipSaleByFarmIdAndGoatTechnicalId(Long farmId, Long goatTechnicalId) {
+        return existsByFarmIdAndGoatTechnicalId(farmId, goatTechnicalId);
+    }
     boolean existsByLegacyRegistrationNumber(String registrationNumber);
     default Optional<AnimalSaleRecord> findAnimalSaleById(Long saleId) {
         return Optional.empty();

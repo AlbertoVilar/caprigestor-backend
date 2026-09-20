@@ -24,7 +24,9 @@ import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -34,6 +36,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -48,9 +51,10 @@ public class CommercialBusiness implements CommercialUseCase {
     private final FarmAuthorizationUseCase authorization;
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase audit;
-    private final com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort ownershipTransfers;
+    private final GoatOwnershipSaleUseCase ownershipSales;
     private final Clock clock;
 
+    @Autowired
     public CommercialBusiness(CustomerPersistencePort customerPersistencePort,
                               AnimalSalePersistencePort animalSalePersistencePort,
                               MilkSalePersistencePort milkSalePersistencePort,
@@ -59,7 +63,7 @@ public class CommercialBusiness implements CommercialUseCase {
                               FarmAuthorizationUseCase authorization,
                               EntityFinder entityFinder,
                               OperationalAuditUseCase audit,
-                              com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort ownershipTransfers,
+                               GoatOwnershipSaleUseCase ownershipSales,
                               Clock clock) {
         this.customerPersistencePort = customerPersistencePort;
         this.animalSalePersistencePort = animalSalePersistencePort;
@@ -69,7 +73,7 @@ public class CommercialBusiness implements CommercialUseCase {
         this.authorization = authorization;
         this.entityFinder = entityFinder;
         this.audit = audit;
-        this.ownershipTransfers = ownershipTransfers;
+        this.ownershipSales = ownershipSales;
         this.clock = clock;
     }
 
@@ -170,10 +174,8 @@ public class CommercialBusiness implements CommercialUseCase {
     private LocalDate paymentDate(LocalDate sale, LocalDate payment) { if (payment == null) return null; if (payment.isBefore(sale)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (payment.isAfter(LocalDate.now(clock))) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); return payment; }
     private boolean isRealizedAnimalSale(AnimalSaleRecord sale) {
         if (sale.targetFarmId() == null) return true;
-        return ownershipTransfers.findBySaleId(sale.id())
-                .map(transfer -> transfer.kind() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE
-                        && transfer.status() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED)
-                .orElse(false);
+        return ownershipSales.findSaleTransfer(sale.id()).status()
+                == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED;
     }
     private String required(String field, String value, String msg) { String v = optional(value); if (v == null) throw new InvalidArgumentException(field, msg); return v; }
     private String optional(String value) { if (value == null) return null; String v = value.trim(); return v.isEmpty() ? null : v; }

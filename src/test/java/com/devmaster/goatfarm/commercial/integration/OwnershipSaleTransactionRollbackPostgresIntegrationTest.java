@@ -21,6 +21,7 @@ import com.devmaster.goatfarm.goatownership.application.ports.out.GoatCurrentOwn
 import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
 import com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransferEntity;
 import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatCurrentOwnerProjectionRepository;
 import com.devmaster.goatfarm.goatownership.persistence.repository.OwnershipTransferRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -166,8 +167,14 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
 
         @Bean
         @Primary
-        GoatCurrentOwnerProjectionPort failingProjection() {
-            return (goatId, expectedSourceFarmId, targetFarmId) -> false;
+        GoatCurrentOwnerProjectionPort failingProjection(GoatCurrentOwnerProjectionRepository repository) {
+            return (goatId, expectedSourceFarmId, targetFarmId) -> {
+                int updated = repository.moveFromTo(goatId.value(), expectedSourceFarmId, targetFarmId);
+                if (updated != 1) {
+                    return false;
+                }
+                throw new IllegalStateException("projection failure after write");
+            };
         }
     }
 }

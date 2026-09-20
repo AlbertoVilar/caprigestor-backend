@@ -14,10 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "animal_sale",
-        uniqueConstraints = @UniqueConstraint(name = "uk_animal_sale_goat_registration", columnNames = "goat_registration_number")
-)
+@Table(name = "animal_sale")
 @Getter
 @Setter
 @NoArgsConstructor

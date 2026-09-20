@@ -15,7 +15,7 @@ import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +46,7 @@ class CommercialBusinessTest {
     @Mock FarmAuthorizationUseCase authorization;
     @Mock EntityFinder finder;
     @Mock OperationalAuditUseCase audit;
-    @Mock OwnershipTransferPersistencePort ownershipTransfers;
+    @Mock GoatOwnershipSaleUseCase ownershipTransfers;
     private CommercialBusiness business;
 
     @BeforeEach void setUp() {
@@ -114,9 +114,8 @@ class CommercialBusinessTest {
                 new BigDecimal("100.00"), LocalDate.now().plusDays(5), SalePaymentStatus.OPEN, null, null, 20L));
         when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(pending));
         var transfer = mock(com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer.class);
-        when(transfer.kind()).thenReturn(OwnershipTransferKind.INTERNAL_SALE);
         when(transfer.status()).thenReturn(OwnershipTransferStatus.REQUESTED);
-        when(ownershipTransfers.findBySaleId(2L)).thenReturn(Optional.of(transfer));
+        when(ownershipTransfers.findSaleTransfer(2L)).thenReturn(transfer);
 
         assertTrue(business.listReceivables(1L).isEmpty());
         assertEquals(0, business.getSummary(1L).animalSalesCount());
