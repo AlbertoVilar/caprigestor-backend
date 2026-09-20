@@ -103,14 +103,63 @@ class OwnershipSaleBusinessTest {
         verify(ownership).completeInternalSaleAfterPayment(501L);
     }
 
+    @Test
+    void paidSaleCannotBeRejectedOrCancelled() {
+        AnimalSaleRecord paid = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(),
+                date().plusDays(2), SalePaymentStatus.PAID, date().plusDays(1), null, TARGET));
+        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(paid));
+
+        assertThatThrownBy(() -> business.rejectOwnershipSale(SOURCE, 501L))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+        assertThatThrownBy(() -> business.cancelOwnershipSale(SOURCE, 501L))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+        verify(ownership, never()).rejectInternalSale(501L);
+        verify(ownership, never()).cancelInternalSale(501L);
+    }
+
+    @Test
+    void paymentCannotBeRecordedAfterRejectedOrCancelledTransfer() {
+        AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(),
+                date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
+        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
+        when(ownership.findSaleTransfer(501L)).thenReturn(transfer(700L, OwnershipTransferStatus.REJECTED),
+                transfer(700L, OwnershipTransferStatus.CANCELLED));
+
+        assertThatThrownBy(() -> business.registerOwnershipSalePayment(SOURCE, 501L,
+                new SalePaymentRequestVO(date().plusDays(1))))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+        assertThatThrownBy(() -> business.registerOwnershipSalePayment(SOURCE, 501L,
+                new SalePaymentRequestVO(date().plusDays(1))))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+        verify(sales, never()).save(any(AnimalSaleCommand.class));
+    }
+
+    @Test
+    void concurrentEquivalentRetryReturnsOriginalSale() {
+        when(ownership.requestInternalSale(any())).thenReturn(transfer(900L, OwnershipTransferStatus.REQUESTED, 900L));
+        AnimalSaleRecord original = sale(new AnimalSaleCommand(900L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(),
+                date().plusDays(2), SalePaymentStatus.OPEN, null, "sale", TARGET));
+        when(sales.findAnimalSaleById(900L)).thenReturn(Optional.of(original));
+
+        var result = business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO(
+                "technical-42", 7L, TARGET, date(), amount(), date().plusDays(2), "sale", "sale-42"));
+
+        assertThat(result.saleId()).isEqualTo(900L);
+        assertThat(result.ownershipTransferId()).isEqualTo(900L);
+    }
+
     private OwnershipTransfer transfer(long id, OwnershipTransferStatus status) {
+        return transfer(id, status, 501L);
+    }
+    private OwnershipTransfer transfer(long id, OwnershipTransferStatus status, long saleId) {
         Instant requested = Instant.parse("2026-09-18T12:00:00Z");
         boolean accepted = status == OwnershipTransferStatus.ACCEPTED || status == OwnershipTransferStatus.COMPLETED;
+        Instant cancelled = status == OwnershipTransferStatus.CANCELLED ? requested.plusSeconds(1) : null;
         return OwnershipTransfer.rehydrate(id, GoatId.of(42L), SOURCE, TARGET, OwnershipTransferKind.INTERNAL_SALE, status,
                 "OWNERSHIP_SALE:501", "sale-42", requested, accepted ? requested.plusSeconds(1) : null,
                 status == OwnershipTransferStatus.COMPLETED ? requested.plusSeconds(1) : null,
-                status == OwnershipTransferStatus.COMPLETED ? requested.plusSeconds(1) : null, null, 99L,
-                accepted ? 77L : null, status == OwnershipTransferStatus.COMPLETED ? 77L : null, 501L);
+                status == OwnershipTransferStatus.COMPLETED ? requested.plusSeconds(1) : null, cancelled, 99L,
+                accepted ? 77L : null, status == OwnershipTransferStatus.COMPLETED ? 77L : null, saleId);
     }
     private AnimalSaleRecord sale(AnimalSaleCommand c) { return new AnimalSaleRecord(c.id() == null ? 501L : c.id(), c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Buyer", true), c.goatTechnicalId(), c.goatRegistrationNumber(), c.goatName(), c.saleDate(), c.amount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null, c.targetFarmId()); }
     private GoatResponseVO goat(long id, String rg) { GoatResponseVO goat = new GoatResponseVO(); goat.setTechnicalId(id); goat.setRegistrationNumber(rg); goat.setName("Goat"); return goat; }

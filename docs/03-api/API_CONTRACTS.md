@@ -213,9 +213,13 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - `POST /api/v1/goatfarms/{farmId}/commercial/ownership-sales` exige
   `targetFarmId`, GoatId técnico e `idempotencyKey`; cria somente uma solicitação
   pendente. A propriedade continua no ledger atual até a aceitação.
-- Aceitar/rejeitar uma venda de propriedade é autorizado pela fazenda alvo; o
-  cancelamento é autorizado pela fazenda de origem. A aceitação recebe a data de
-  pagamento interna e conclui pagamento e handoff canônico na mesma transação.
+- `POST .../ownership-sales/{saleId}/accept` e `PATCH .../ownership-sales/{saleId}/payment`
+  são pré-requisitos independentes. A operação que completar o segundo requisito
+  conclui o handoff canônico na mesma transação; enquanto apenas um requisito
+  estiver presente, a solicitação permanece em estado intermediário.
+- Rejeição é autorizada pela fazenda alvo e cancelamento pela fazenda de origem;
+  ambos falham depois de pagamento registrado, e pagamento também falha após
+  rejeição ou cancelamento.
 
 ### Articles
 

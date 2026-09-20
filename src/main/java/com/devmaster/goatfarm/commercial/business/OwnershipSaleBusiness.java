@@ -103,7 +103,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         OwnershipTransfer transfer = ownershipSales.requestInternalSale(new InternalOwnershipSaleRequest(
                 goatId, sourceFarmId, request.targetFarmId(), sale.id(), "OWNERSHIP_SALE:" + sale.id(), idempotencyKey));
         if (!Objects.equals(transfer.saleId(), sale.id())) {
-            throw new BusinessRuleException("idempotency key already represents a different ownership sale");
+            return resolveIdempotentSale(transfer, sourceFarmId, request);
         }
         audit.record(new OperationalAuditRecordVO(sourceFarmId, goatId.value(), goat.getRegistrationNumber(),
                 OperationalAuditActionType.ANIMAL_SALE_CREATED, String.valueOf(sale.id()),
@@ -134,6 +134,14 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = requireSaleTransfer(sale);
         requireTargetAdministrator(transfer.targetFarmId());
+        if (transfer.status() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED
+                || transfer.status() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED) {
+            throw new BusinessRuleException("payment cannot be registered after ownership sale termination");
+        }
+        if (transfer.status() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED
+                && sale.paymentStatus() != SalePaymentStatus.PAID) {
+            throw new BusinessRuleException("completed ownership sale has inconsistent payment state");
+        }
         if (sale.paymentStatus() == SalePaymentStatus.PAID) {
             if (payment != null && payment.paymentDate() != null && !Objects.equals(payment.paymentDate(), sale.paymentDate())) {
                 throw new BusinessRuleException("payment is already recorded with a different date");
@@ -156,6 +164,9 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Transactional
     public OwnershipSaleResponseVO rejectOwnershipSale(Long sourceFarmId, Long saleId) {
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
+        if (sale.paymentStatus() == SalePaymentStatus.PAID) {
+            throw new BusinessRuleException("paid ownership sale cannot be rejected");
+        }
         return response(sale, ownershipSales.rejectInternalSale(saleId));
     }
 
@@ -164,6 +175,9 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     public OwnershipSaleResponseVO cancelOwnershipSale(Long sourceFarmId, Long saleId) {
         requireSeller(sourceFarmId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
+        if (sale.paymentStatus() == SalePaymentStatus.PAID) {
+            throw new BusinessRuleException("paid ownership sale cannot be cancelled");
+        }
         return response(sale, ownershipSales.cancelInternalSale(saleId));
     }
 

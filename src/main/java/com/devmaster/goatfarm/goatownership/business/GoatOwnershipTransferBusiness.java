@@ -328,8 +328,7 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         if (existing.kind() != OwnershipTransferKind.INTERNAL_SALE
                 || !Objects.equals(existing.sourceFarmId(), request.sourceFarmId())
                 || existing.targetFarmId() != request.targetFarmId()
-                || !existing.goatId().equals(request.goatId())
-                || !Objects.equals(existing.saleId(), request.saleId()) && request.saleId() != null) {
+                || !existing.goatId().equals(request.goatId())) {
             throw new BusinessRuleException("idempotency key already represents a different ownership sale");
         }
         return existing;

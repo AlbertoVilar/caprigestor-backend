@@ -58,7 +58,8 @@ Base canonica: `/api/v1/goatfarms/{farmId}/commercial`
 | `POST` | `/ownership-sales` | solicitar venda entre fazendas sem transferir a propriedade ainda |
 | `GET` | `/ownership-sales/incoming` | listar solicitações recebidas pela fazenda compradora |
 | `GET` | `/ownership-sales/outgoing` | listar solicitações iniciadas pela fazenda vendedora |
-| `POST` | `/ownership-sales/{saleId}/accept` | aceitar, registrar pagamento interno e transferir a propriedade atomicamente |
+| `POST` | `/ownership-sales/{saleId}/accept` | registrar a aceitação do comprador; conclui a propriedade somente quando o pagamento também estiver confirmado |
+| `PATCH` | `/ownership-sales/{saleId}/payment` | registrar o pagamento interno; conclui a propriedade somente quando a aceitação também estiver confirmada |
 | `POST` | `/ownership-sales/{saleId}/reject` | rejeitar sem mudar a propriedade |
 | `POST` | `/ownership-sales/{saleId}/cancel` | cancelar sem mudar a propriedade |
 | `POST` | `/milk-sales` | registrar venda de leite |
