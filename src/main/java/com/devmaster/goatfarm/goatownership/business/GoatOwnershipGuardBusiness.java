@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
 import com.devmaster.goatfarm.goatownership.domain.GoatOwnershipPeriod;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +71,16 @@ public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
         Instant dayStart = date.atStartOfDay(OWNERSHIP_CALENDAR_ZONE).toInstant();
         Instant nextDayStart = date.plusDays(1).atStartOfDay(OWNERSHIP_CALENDAR_ZONE).toInstant();
 
+        // A first canonical creation/import may start after the civil day has
+        // begun.  There is no prior owner whose provenance could be confused,
+        // so the same-day fact is unambiguous as long as the initial period is
+        // still open and belongs to the requested farm.  Transfers retain the
+        // strict complete-day rule below because a LocalDate cannot identify
+        // which side of an intra-day handoff recorded the fact.
+        if (isSameDayInitialOwnership(periods, expectedFarmId, date, dayStart, nextDayStart)) {
+            return;
+        }
+
         List<GoatOwnershipPeriod> periodsCoveringWholeDay = periods.stream()
                 .filter(period -> !period.startedAt().isAfter(dayStart))
                 .filter(period -> period.endedAt() == null || !period.endedAt().isBefore(nextDayStart))
@@ -80,6 +91,30 @@ public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
             throw new AuthorizationDeniedException(
                     "A fazenda não possui ownership canônico inequívoco durante todo o dia informado.");
         }
+    }
+
+    private boolean isSameDayInitialOwnership(
+            List<GoatOwnershipPeriod> periods,
+            long expectedFarmId,
+            LocalDate date,
+            Instant dayStart,
+            Instant nextDayStart
+    ) {
+        if (periods.size() != 1) return false;
+
+        GoatOwnershipPeriod initial = periods.get(0);
+        return initial.isOpen()
+                && initial.farmId() == expectedFarmId
+                && initial.startedAt().isAfter(dayStart)
+                && initial.startedAt().isBefore(nextDayStart)
+                && isInitialEntryType(initial.entryType())
+                && initial.startedAt().atZone(OWNERSHIP_CALENDAR_ZONE).toLocalDate().equals(date);
+    }
+
+    private boolean isInitialEntryType(OwnershipEntryType entryType) {
+        return entryType == OwnershipEntryType.BIRTH
+                || entryType == OwnershipEntryType.ABCC_IMPORT
+                || entryType == OwnershipEntryType.MANUAL_IMPORT;
     }
 
     private List<GoatOwnershipPeriod> loadConsistentHistory(GoatId goatId) {
