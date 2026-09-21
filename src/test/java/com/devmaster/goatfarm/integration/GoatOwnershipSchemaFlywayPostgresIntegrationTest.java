@@ -73,13 +73,73 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
     }
 
     @Test
-    void latestMigrationCreatesAuditableSaleReversalTableWithUniqueSaleConstraint() throws SQLException {
-        flyway("53").migrate();
+    void latestMigrationCreatesAuditableSaleReversalTableAndCorrectionReentryConstraint() throws SQLException {
+        flyway("54").migrate();
 
         try (Connection connection = openConnection()) {
             assertThat(tableExists(connection, "animal_sale_reversal")).isTrue();
             assertThat(uniqueConstraintExists(connection, "uk_animal_sale_reversal_sale")).isTrue();
             assertThat(columnExists(connection, "animal_sale_reversal", "reversed_by")).isTrue();
+            assertThat(queryString(connection,
+                    "select version from flyway_schema_history order by installed_rank desc limit 1"))
+                    .isEqualTo("54");
+            assertThat(constraintDefinition(connection, "ck_goat_ownership_period_entry_type"))
+                    .contains("CORRECTION_REENTRY");
+        }
+    }
+
+    @Test
+    void upgradeFromV53ToV54PreservesRowsAndAcceptsOnlyKnownOwnershipEntryTypes() throws SQLException {
+        flyway("53").migrate();
+
+        long[] goats;
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            for (int i = 1; i <= 9; i++) {
+                insertGoat(connection, "W54-GOAT-" + i, 1, 101);
+            }
+            goats = new long[9];
+            for (int i = 0; i < goats.length; i++) {
+                goats[i] = goatId(connection, "W54-GOAT-" + (i + 1));
+            }
+            insertOwnershipPeriod(connection, goats[0], "2026-01-01", "2026-02-01", "BIRTH", "TRANSFER_OUT");
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isEqualTo(1L);
+        }
+
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            assertThat(queryString(connection,
+                    "select version from flyway_schema_history order by installed_rank desc limit 1"))
+                    .isEqualTo("54");
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isEqualTo(1L);
+
+            String[] allowed = {
+                    "MANUAL_IMPORT", "ABCC_IMPORT", "PURCHASE", "TRANSFER_IN",
+                    "RETURN", "EXTERNAL_CLAIM", "CORRECTION_REENTRY"
+            };
+            for (int i = 0; i < allowed.length; i++) {
+                insertOwnershipPeriod(connection, goats[i + 1], "2026-03-01", null, allowed[i], null);
+            }
+            assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isEqualTo(8L);
+            assertSqlFails(connection, """
+                    insert into goat_ownership_period
+                        (goat_id, farm_id, started_at, entry_type, source)
+                    values (%d, 101, timestamptz '2026-03-01 00:00:00+00', 'NOT_A_REAL_ENTRY', 'invalid')
+                    """.formatted(goats[0]));
+            assertThat(queryString(connection,
+                    "select entry_type from goat_ownership_period where goat_id = %d"
+                            .formatted(goats[7])))
+                    .isEqualTo("CORRECTION_REENTRY");
+            assertThat(constraintDefinition(connection, "ck_goat_ownership_period_entry_type"))
+                    .contains("BIRTH")
+                    .contains("MANUAL_IMPORT")
+                    .contains("ABCC_IMPORT")
+                    .contains("PURCHASE")
+                    .contains("TRANSFER_IN")
+                    .contains("RETURN")
+                    .contains("EXTERNAL_CLAIM")
+                    .contains("CORRECTION_REENTRY");
         }
     }
 
@@ -417,6 +477,17 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
         return queryLong(connection, "select id from cabras where num_registro = '%s'".formatted(registration));
     }
 
+    private void insertOwnershipPeriod(Connection connection, long goatId, String startedAt, String endedAt,
+                                       String entryType, String exitType) throws SQLException {
+        String endedAtSql = endedAt == null ? "null" : "timestamptz '%s 00:00:00+00'".formatted(endedAt);
+        String exitTypeSql = exitType == null ? "null" : "'%s'".formatted(exitType);
+        execute(connection, """
+                insert into goat_ownership_period
+                    (goat_id, farm_id, started_at, ended_at, entry_type, exit_type, source)
+                values (%d, 101, timestamptz '%s 00:00:00+00', %s, '%s', %s, 'w54-test')
+                """.formatted(goatId, startedAt, endedAtSql, entryType, exitTypeSql));
+    }
+
     private Flyway flyway() {
         return flyway(null);
     }
@@ -496,6 +567,19 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                 where schemaname = 'public' and indexname = ?
                 """)) {
             statement.setString(1, indexName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? rs.getString(1) : "";
+            }
+        }
+    }
+
+    private String constraintDefinition(Connection connection, String constraintName) throws SQLException {
+        try (var statement = connection.prepareStatement("""
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where connamespace = 'public'::regnamespace and conname = ?
+                """)) {
+            statement.setString(1, constraintName);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next() ? rs.getString(1) : "";
             }
