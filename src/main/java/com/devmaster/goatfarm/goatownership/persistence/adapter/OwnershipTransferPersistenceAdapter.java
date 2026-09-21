@@ -85,6 +85,11 @@ public class OwnershipTransferPersistenceAdapter implements OwnershipTransferPer
     }
 
     @Override
+    public boolean existsByGoatId(GoatId goatId) {
+        return goatId != null && repository.existsByGoatId(goatId.value());
+    }
+
+    @Override
     public boolean existsByGoatIdAndSourceFarmIdAndKindAndStatusIn(GoatId goatId, Long sourceFarmId,
                                                                     OwnershipTransferKind kind,
                                                                     Collection<OwnershipTransferStatus> statuses) {

@@ -8,5 +8,6 @@ public enum OwnershipEntryType {
     PURCHASE,
     TRANSFER_IN,
     RETURN,
-    EXTERNAL_CLAIM
+    EXTERNAL_CLAIM,
+    CORRECTION_REENTRY
 }

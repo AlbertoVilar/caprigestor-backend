@@ -27,4 +27,5 @@ public record AnimalSaleCommand(
         this(id, farmId, customerId, goatTechnicalId, goatRegistrationNumber, goatName, saleDate,
                 amount, dueDate, paymentStatus, paymentDate, notes, null);
     }
+
 }

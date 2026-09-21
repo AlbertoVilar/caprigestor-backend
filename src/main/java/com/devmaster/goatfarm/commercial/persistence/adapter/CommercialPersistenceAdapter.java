@@ -9,12 +9,16 @@ import com.devmaster.goatfarm.commercial.application.model.MilkSaleRecord;
 import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSalePersistencePort;
 import com.devmaster.goatfarm.commercial.application.ports.out.CustomerPersistencePort;
 import com.devmaster.goatfarm.commercial.application.ports.out.MilkSalePersistencePort;
+import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSaleReversalPersistencePort;
+import com.devmaster.goatfarm.commercial.application.model.AnimalSaleReversalRecord;
 import com.devmaster.goatfarm.commercial.persistence.entity.AnimalSale;
 import com.devmaster.goatfarm.commercial.persistence.entity.Customer;
 import com.devmaster.goatfarm.commercial.persistence.entity.MilkSale;
+import com.devmaster.goatfarm.commercial.persistence.entity.AnimalSaleReversal;
 import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleRepository;
 import com.devmaster.goatfarm.commercial.persistence.repository.CustomerRepository;
 import com.devmaster.goatfarm.commercial.persistence.repository.MilkSaleRepository;
+import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleReversalRepository;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
@@ -24,24 +28,27 @@ import java.util.List;
 import java.util.Optional;
 
 @Component
-public class CommercialPersistenceAdapter implements CustomerPersistencePort, AnimalSalePersistencePort, MilkSalePersistencePort {
+public class CommercialPersistenceAdapter implements CustomerPersistencePort, AnimalSalePersistencePort, MilkSalePersistencePort, AnimalSaleReversalPersistencePort {
 
     private final CustomerRepository customerRepository;
     private final AnimalSaleRepository animalSaleRepository;
     private final MilkSaleRepository milkSaleRepository;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
     private final GoatFarmRepository goatFarmRepository;
+    private final AnimalSaleReversalRepository animalSaleReversalRepository;
 
     public CommercialPersistenceAdapter(CustomerRepository customerRepository,
                                         AnimalSaleRepository animalSaleRepository,
                                         MilkSaleRepository milkSaleRepository,
                                         GoatReferenceQueryPort goatReferenceQueryPort,
-                                        GoatFarmRepository goatFarmRepository) {
+                                        GoatFarmRepository goatFarmRepository,
+                                        AnimalSaleReversalRepository animalSaleReversalRepository) {
         this.customerRepository = customerRepository;
         this.animalSaleRepository = animalSaleRepository;
         this.milkSaleRepository = milkSaleRepository;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
         this.goatFarmRepository = goatFarmRepository;
+        this.animalSaleReversalRepository = animalSaleReversalRepository;
     }
 
     @Override
@@ -140,6 +147,21 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     }
 
     @Override
+    public AnimalSaleReversalRecord save(Long saleId, String reason, java.time.LocalDateTime reversedAt, Long reversedBy) {
+        AnimalSaleReversal entity = new AnimalSaleReversal();
+        entity.setSale(animalSaleRepository.findById(saleId).orElseThrow());
+        entity.setReason(reason);
+        entity.setReversedAt(reversedAt);
+        entity.setReversedBy(reversedBy);
+        return toRecord(animalSaleReversalRepository.save(entity));
+    }
+
+    @Override
+    public Optional<AnimalSaleReversalRecord> findBySaleId(Long saleId) {
+        return animalSaleReversalRepository.findBySale_Id(saleId).map(this::toRecord);
+    }
+
+    @Override
     public MilkSaleRecord save(MilkSaleCommand command) {
         MilkSale entity = command.id() == null ? new MilkSale() : milkSaleRepository.findById(command.id()).orElseGet(MilkSale::new);
         entity.setFarm(goatFarmRepository.getReferenceById(command.farmId()));
@@ -172,6 +194,10 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     private AnimalSaleRecord toRecord(AnimalSale entity) {
         Customer customer = entity.getCustomer();
         return new AnimalSaleRecord(entity.getId(), entity.getFarm().getId(), customer.getId(), new CustomerReference(customer.getId(), customer.getName(), customer.isActive()), entity.getGoatTechnicalId(), entity.getGoatRegistrationNumber(), entity.getGoatName(), entity.getSaleDate(), entity.getAmount(), entity.getDueDate(), entity.getPaymentStatus(), entity.getPaymentDate(), entity.getNotes(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getTargetFarm() == null ? null : entity.getTargetFarm().getId());
+    }
+
+    private AnimalSaleReversalRecord toRecord(AnimalSaleReversal entity) {
+        return new AnimalSaleReversalRecord(entity.getId(), entity.getSale().getId(), entity.getReason(), entity.getReversedAt(), entity.getReversedBy());
     }
 
     private MilkSaleRecord toRecord(MilkSale entity) {

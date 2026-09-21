@@ -36,6 +36,7 @@ import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.domain.Goat;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
 import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
@@ -307,6 +308,21 @@ public class GoatBusiness implements GoatManagementUseCase {
                 .goatTechnicalId(saved.id() == null ? null : saved.id().value()).exitType(saved.exitType())
                 .exitDate(saved.exitDate()).notes(saved.exitNotes()).previousStatus(previousStatus)
                 .currentStatus(saved.status()).build();
+    }
+
+    @Transactional
+    @Override
+    public GoatResponseVO restoreAfterSaleReversal(Long farmId, String goatId) {
+        ownershipService.verifyFarmManagement(farmId);
+        GoatId technicalId = GoatRouteIdentifier.technicalId(goatId)
+                .orElseThrow(() -> new InvalidArgumentException("goatId", "A reversão exige o GoatId técnico."));
+        Goat goat = goatPort.findByIdAndFarmId(technicalId, farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        if (goat.status() != GoatStatus.VENDIDO || goat.exitType() != GoatExitType.VENDA) {
+            throw new BusinessRuleException("goatId", "A projeção atual não representa uma venda externa reversível.");
+        }
+        goat.markExit(null, null, null, GoatStatus.ATIVO);
+        return toResponse(goatPort.save(goat));
     }
 
     @Transactional
