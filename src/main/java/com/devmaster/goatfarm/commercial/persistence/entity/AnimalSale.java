@@ -71,6 +71,7 @@ public class AnimalSale {
     @Column(name = "notes", length = 500)
     private String notes;
 
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

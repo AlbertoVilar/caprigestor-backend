@@ -23,6 +23,9 @@ public interface GoatManagementUseCase {
 
     GoatExitResponseVO exitGoat(Long farmId, String goatId, GoatExitRequestVO requestVO);
 
+    /** Restores the current projection after an authorized sale reversal. */
+    GoatResponseVO restoreAfterSaleReversal(Long farmId, String goatId);
+
     void deleteGoat(Long farmId, String goatId);
 
     GoatResponseVO findGoatById(Long farmId, String goatId);

@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.commercial.api.controller;
 
 import com.devmaster.goatfarm.commercial.api.dto.AnimalSaleRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.AnimalSaleResponseDTO;
+import com.devmaster.goatfarm.commercial.api.dto.AnimalSaleReversalRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.CommercialSummaryDTO;
 import com.devmaster.goatfarm.commercial.api.dto.CustomerRequestDTO;
 import com.devmaster.goatfarm.commercial.api.dto.CustomerResponseDTO;
@@ -16,6 +17,7 @@ import com.devmaster.goatfarm.commercial.application.ports.in.CommercialUseCase;
 import com.devmaster.goatfarm.commercial.application.ports.in.OwnershipSaleUseCase;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
+import com.devmaster.goatfarm.config.security.authorization.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -136,6 +138,15 @@ public class CommercialController {
     @Operation(summary = "Marcar venda de animal como paga")
     public ResponseEntity<AnimalSaleResponseDTO> registerAnimalSalePayment(@PathVariable Long farmId, @PathVariable Long saleId, @Valid @RequestBody SalePaymentRequestDTO requestDTO) {
         return ResponseEntity.ok(commercialApiMapper.toDTO(commercialUseCase.registerAnimalSalePayment(farmId, saleId, commercialApiMapper.toVO(requestDTO))));
+    }
+
+    @AdminOnly
+    @PostMapping("/animal-sales/{saleId}/reverse")
+    @Operation(summary = "Reverter venda externa por correção auditável")
+    public ResponseEntity<AnimalSaleResponseDTO> reverseExternalAnimalSale(@PathVariable Long farmId,
+                                                                            @PathVariable Long saleId,
+                                                                            @Valid @RequestBody AnimalSaleReversalRequestDTO requestDTO) {
+        return ResponseEntity.ok(commercialApiMapper.toDTO(commercialUseCase.reverseExternalAnimalSale(farmId, saleId, requestDTO.reason())));
     }
 
     @FarmOwnerOnly

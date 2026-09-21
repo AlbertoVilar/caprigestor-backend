@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Collection;
 
 public interface OwnershipTransferRepository extends JpaRepository<OwnershipTransferEntity, Long> {
+    boolean existsByGoatId(Long goatId);
     @Query("select transfer.goatId from OwnershipTransferEntity transfer where transfer.id = :transferId")
     Optional<Long> findGoatIdByTransferId(@Param("transferId") Long transferId);
 

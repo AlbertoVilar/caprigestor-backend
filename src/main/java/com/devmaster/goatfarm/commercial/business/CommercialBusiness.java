@@ -6,11 +6,13 @@ import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase
 import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
 import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.commercial.application.model.*;
 import com.devmaster.goatfarm.commercial.application.ports.in.CommercialUseCase;
 import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSalePersistencePort;
 import com.devmaster.goatfarm.commercial.application.ports.out.CustomerPersistencePort;
 import com.devmaster.goatfarm.commercial.application.ports.out.MilkSalePersistencePort;
+import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSaleReversalPersistencePort;
 import com.devmaster.goatfarm.commercial.business.bo.*;
 import com.devmaster.goatfarm.commercial.enums.ReceivableSourceType;
 import com.devmaster.goatfarm.commercial.enums.SalePaymentStatus;
@@ -25,6 +27,12 @@ import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipPeriodPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort;
+import com.devmaster.goatfarm.goatownership.domain.GoatOwnershipPeriod;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +42,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -53,6 +62,11 @@ public class CommercialBusiness implements CommercialUseCase {
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase audit;
     private final GoatOwnershipSaleUseCase ownershipSales;
+    private final AnimalSaleReversalPersistencePort reversals;
+    private final GoatOwnershipQueryPort ownershipQuery;
+    private final GoatOwnershipPeriodPersistencePort ownershipPeriods;
+    private final OwnershipTransferPersistencePort ownershipTransfers;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
     private final Clock clock;
 
     @Autowired
@@ -63,9 +77,14 @@ public class CommercialBusiness implements CommercialUseCase {
                               GoatManagementUseCase goatManagementUseCase,
                               FarmAuthorizationUseCase authorization,
                               EntityFinder entityFinder,
-                              OperationalAuditUseCase audit,
+                               OperationalAuditUseCase audit,
                                GoatOwnershipSaleUseCase ownershipSales,
-                              Clock clock) {
+                               AnimalSaleReversalPersistencePort reversals,
+                               GoatOwnershipQueryPort ownershipQuery,
+                               GoatOwnershipPeriodPersistencePort ownershipPeriods,
+                               OwnershipTransferPersistencePort ownershipTransfers,
+                               CurrentPrincipalQueryUseCase currentPrincipalQuery,
+                               Clock clock) {
         this.customerPersistencePort = customerPersistencePort;
         this.animalSalePersistencePort = animalSalePersistencePort;
         this.milkSalePersistencePort = milkSalePersistencePort;
@@ -75,6 +94,11 @@ public class CommercialBusiness implements CommercialUseCase {
         this.entityFinder = entityFinder;
         this.audit = audit;
         this.ownershipSales = ownershipSales;
+        this.reversals = reversals;
+        this.ownershipQuery = ownershipQuery;
+        this.ownershipPeriods = ownershipPeriods;
+        this.ownershipTransfers = ownershipTransfers;
+        this.currentPrincipalQuery = currentPrincipalQuery;
         this.clock = clock;
     }
 
@@ -185,6 +209,52 @@ public class CommercialBusiness implements CommercialUseCase {
         if (sale.targetFarmId() == null) return true;
         return ownershipSales.findSaleTransfer(sale.id()).status()
                 == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED;
+    }
+
+    @Override @Transactional
+    public AnimalSaleResponseVO reverseExternalAnimalSale(Long farmId, Long saleId, String reason) {
+        var principal = currentPrincipalQuery.requireCurrent();
+        if (!principal.hasAuthority("ROLE_ADMIN")) {
+            throw new AuthorizationDeniedException("Somente administradores podem reverter vendas concluídas.");
+        }
+        authorization.verifyFarmManagement(farmId);
+        requireFarm(farmId);
+        String normalizedReason = required("reason", reason, "Motivo da reversão é obrigatório");
+        AnimalSaleRecord sale = entityFinder.findOrThrow(() -> animalSalePersistencePort.findAnimalSaleByIdAndFarmId(saleId, farmId), "Venda de animal não encontrada.");
+        if (sale.targetFarmId() != null) throw new BusinessRuleException("saleId", "A reversão aplica-se apenas a vendas externas.");
+        if (sale.paymentStatus() != SalePaymentStatus.PAID) throw new BusinessRuleException("saleId", "Somente vendas concluídas podem ser revertidas.");
+        if (reversals.findBySaleId(sale.id()).isPresent()) throw new BusinessRuleException("saleId", "A venda já foi revertida.");
+        if (sale.goatTechnicalId() == null) throw new BusinessRuleException("saleId", "A venda não possui GoatId estrutural.");
+
+        GoatId goatId = GoatId.of(sale.goatTechnicalId());
+        if (ownershipTransfers.existsByGoatId(goatId) || ownershipTransfers.findPendingByGoatId(goatId).isPresent()) {
+            throw new BusinessRuleException("saleId", "Há movimentação de propriedade incompatível posterior à venda.");
+        }
+        List<GoatOwnershipPeriod> history = ownershipQuery.findOwnershipHistory(goatId);
+        if (history == null || history.isEmpty()) throw new BusinessRuleException("saleId", "O histórico canônico de ownership não existe.");
+        GoatOwnershipPeriod last = history.get(history.size() - 1);
+        if (last.farmId() != farmId || last.isOpen() || last.exitType() != OwnershipExitType.EXTERNAL_SALE) {
+            throw new BusinessRuleException("saleId", "A última posse canônica não corresponde à venda externa.");
+        }
+        Instant reversedAt = Instant.now(clock);
+        if (!reversedAt.isAfter(last.endedAt())) throw new BusinessRuleException("saleId", "A reversão deve ocorrer após o encerramento da venda.");
+        GoatResponseVO goat = goatManagementUseCase.findGoatById(farmId, "technical-" + goatId.value());
+        if (goat.getStatus() != GoatStatus.VENDIDO || goat.getExitType() != GoatExitType.VENDA) {
+            throw new BusinessRuleException("saleId", "A projeção atual não representa a saída externa desta venda.");
+        }
+
+        GoatOwnershipPeriod reentry = GoatOwnershipPeriod.open(goatId, farmId, reversedAt,
+                OwnershipEntryType.CORRECTION_REENTRY, "ANIMAL_SALE_REVERSAL:" + sale.id());
+        List<GoatOwnershipPeriod> correctedHistory = new ArrayList<>(history);
+        correctedHistory.add(reentry);
+        GoatOwnershipPeriod.ensureConsistent(correctedHistory);
+        ownershipPeriods.save(reentry);
+        goatManagementUseCase.restoreAfterSaleReversal(farmId, "technical-" + goatId.value());
+        reversals.save(sale.id(), normalizedReason, java.time.LocalDateTime.now(clock), principal.id());
+        audit.record(new OperationalAuditRecordVO(farmId, sale.goatTechnicalId(), sale.goatRegistrationNumber(),
+                OperationalAuditActionType.ANIMAL_SALE_REVERSED, String.valueOf(sale.id()),
+                "Venda externa revertida por correção: " + normalizedReason));
+        return animalResponse(sale);
     }
     private String required(String field, String value, String msg) { String v = optional(value); if (v == null) throw new InvalidArgumentException(field, msg); return v; }
     private String optional(String value) { if (value == null) return null; String v = value.trim(); return v.isEmpty() ? null : v; }

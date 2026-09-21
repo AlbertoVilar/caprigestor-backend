@@ -73,6 +73,17 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
     }
 
     @Test
+    void latestMigrationCreatesAuditableSaleReversalTableWithUniqueSaleConstraint() throws SQLException {
+        flyway("53").migrate();
+
+        try (Connection connection = openConnection()) {
+            assertThat(tableExists(connection, "animal_sale_reversal")).isTrue();
+            assertThat(uniqueConstraintExists(connection, "uk_animal_sale_reversal_sale")).isTrue();
+            assertThat(columnExists(connection, "animal_sale_reversal", "reversed_by")).isTrue();
+        }
+    }
+
+    @Test
     void upgradeFromV44PreservesExistingRowsAndLeavesOwnershipTablesEmpty() throws SQLException {
         flyway("44").migrate();
 
@@ -460,6 +471,19 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                 where table_schema = 'public' and table_name = ?
                 """)) {
             statement.setString(1, tableName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private boolean columnExists(Connection connection, String tableName, String columnName) throws SQLException {
+        try (var statement = connection.prepareStatement("""
+                select 1 from information_schema.columns
+                where table_schema = 'public' and table_name = ? and column_name = ?
+                """)) {
+            statement.setString(1, tableName);
+            statement.setString(2, columnName);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next();
             }

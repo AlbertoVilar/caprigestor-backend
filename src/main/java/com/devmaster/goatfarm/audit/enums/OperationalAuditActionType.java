@@ -5,6 +5,7 @@ public enum OperationalAuditActionType {
     GOAT_EXIT("Saida do rebanho"),
     GOAT_REGISTRATION_RECTIFIED("Retificacao de RG do animal"),
     ANIMAL_SALE_CREATED("Venda de animal"),
+    ANIMAL_SALE_REVERSED("Reversao administrativa de venda de animal"),
     ANIMAL_SALE_PAYMENT_REGISTERED("Recebimento de venda de animal"),
     MILK_SALE_CREATED("Venda de leite"),
     MILK_SALE_PAYMENT_REGISTERED("Recebimento de venda de leite");
