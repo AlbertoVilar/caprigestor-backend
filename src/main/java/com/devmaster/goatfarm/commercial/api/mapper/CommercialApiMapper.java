@@ -44,12 +44,12 @@ public class CommercialApiMapper {
     }
 
     public OwnershipSaleRequestVO toVO(OwnershipSaleRequestDTO dto) {
-        return new OwnershipSaleRequestVO(dto.goatId(), dto.customerId(), dto.targetFarmId(), dto.saleDate(),
-                dto.amount(), dto.dueDate(), dto.notes(), dto.idempotencyKey());
+        return new OwnershipSaleRequestVO(dto.goatId(), dto.targetFarmId(), dto.saleDate(),
+                dto.amount(), dto.dueDate(), dto.paymentDate(), dto.notes(), dto.idempotencyKey());
     }
 
     public OwnershipSaleResponseDTO toDTO(OwnershipSaleResponseVO vo) {
-        return new OwnershipSaleResponseDTO(vo.saleId(), vo.sourceFarmId(), vo.targetFarmId(), vo.goatTechnicalId(),
+        return new OwnershipSaleResponseDTO(vo.saleId(), vo.sourceFarmId(), vo.targetFarmId(), vo.targetFarmName(), vo.targetFarmTod(), vo.goatTechnicalId(),
                 vo.goatRegistrationNumber(), vo.goatName(), vo.customerId(), vo.customerName(), vo.saleDate(),
                 vo.amount(), vo.dueDate(), vo.paymentStatus(), vo.paymentDate(), vo.notes(),
                 vo.ownershipTransferId(), vo.ownershipTransferStatus());

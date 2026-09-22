@@ -31,7 +31,7 @@ public class AnimalSale {
     private GoatFarm farm;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id")
     private Customer customer;
 
     /**

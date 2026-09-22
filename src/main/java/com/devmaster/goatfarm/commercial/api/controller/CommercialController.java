@@ -85,7 +85,7 @@ public class CommercialController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping("/ownership-sales/{saleId}/accept")
-    @Operation(summary = "Aceitar venda; pagamento permanece uma etapa independente")
+    @Operation(summary = "Compatibilidade legada: aceite não é suportado para venda interna canônica")
     public ResponseEntity<OwnershipSaleResponseDTO> acceptOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId) {
         return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.acceptOwnershipSale(farmId, saleId)));
     }
@@ -100,7 +100,7 @@ public class CommercialController {
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_FARM_OWNER')")
     @PostMapping("/ownership-sales/{saleId}/reject")
-    @Operation(summary = "Rejeitar venda com transferencia de propriedade")
+    @Operation(summary = "Compatibilidade legada: rejeição não é suportada para venda interna canônica")
     public ResponseEntity<OwnershipSaleResponseDTO> rejectOwnershipSale(@PathVariable Long farmId, @PathVariable Long saleId) {
         return ResponseEntity.ok(commercialApiMapper.toDTO(ownershipSaleUseCase.rejectOwnershipSale(farmId, saleId)));
     }

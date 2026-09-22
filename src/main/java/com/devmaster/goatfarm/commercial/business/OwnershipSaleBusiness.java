@@ -9,10 +9,8 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.commercial.application.model.AnimalSaleCommand;
 import com.devmaster.goatfarm.commercial.application.model.AnimalSaleRecord;
-import com.devmaster.goatfarm.commercial.application.model.CustomerRecord;
 import com.devmaster.goatfarm.commercial.application.ports.in.OwnershipSaleUseCase;
 import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSalePersistencePort;
-import com.devmaster.goatfarm.commercial.application.ports.out.CustomerPersistencePort;
 import com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleRequestVO;
 import com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleResponseVO;
 import com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO;
@@ -46,7 +44,6 @@ import java.util.Objects;
 @Service
 @Transactional(readOnly = true)
 public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
-    private final CustomerPersistencePort customers;
     private final AnimalSalePersistencePort sales;
     private final GoatFarmPersistencePort farms;
     private final GoatManagementUseCase goats;
@@ -56,8 +53,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     private final OperationalAuditUseCase audit;
     private final Clock clock;
 
-    public OwnershipSaleBusiness(CustomerPersistencePort customers,
-                                 AnimalSalePersistencePort sales,
+    public OwnershipSaleBusiness(AnimalSalePersistencePort sales,
                                  GoatFarmPersistencePort farms,
                                  GoatManagementUseCase goats,
                                  FarmAuthorizationUseCase authorization,
@@ -65,7 +61,6 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
                                  GoatOwnershipSaleUseCase ownershipSales,
                                  OperationalAuditUseCase audit,
                                  Clock clock) {
-        this.customers = customers;
         this.sales = sales;
         this.farms = farms;
         this.goats = goats;
@@ -89,7 +84,6 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
             return resolveIdempotentSale(duplicate, sourceFarmId, request);
         }
         requireTargetFarm(sourceFarmId, request.targetFarmId());
-        CustomerRecord customer = activeCustomer(sourceFarmId, request.customerId());
         GoatResponseVO goat = goats.findGoatById(sourceFarmId, technicalToken);
         GoatId goatId = GoatId.of(requireTechnicalId(goat));
         ownershipSales.prepareInternalSale(sourceFarmId, goatId);
@@ -102,15 +96,17 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         }
         LocalDate saleDate = requireSaleDate(request.saleDate());
         LocalDate dueDate = requireDueDate(saleDate, request.dueDate());
-        AnimalSaleRecord sale = sales.save(new AnimalSaleCommand(null, sourceFarmId, customer.id(), goatId.value(),
+        LocalDate paymentDate = request.paymentDate() == null ? null : requirePaymentDate(saleDate, request.paymentDate());
+        AnimalSaleRecord sale = sales.save(new AnimalSaleCommand(null, sourceFarmId, null, goatId.value(),
                 goat.getRegistrationNumber(), goat.getName(), saleDate, currency(requirePositive(request.amount())), dueDate,
-                SalePaymentStatus.OPEN, null, optional(request.notes()), request.targetFarmId()));
+                paymentDate == null ? SalePaymentStatus.OPEN : SalePaymentStatus.PAID, paymentDate, optional(request.notes()), request.targetFarmId()));
         OwnershipTransfer transfer = ownershipSales.requestInternalSale(new InternalOwnershipSaleRequest(
                 goatId, sourceFarmId, request.targetFarmId(), sale.id(), "OWNERSHIP_SALE:" + sale.id(), idempotencyKey));
         if (!Objects.equals(transfer.saleId(), sale.id())) {
             sales.deleteById(sale.id());
             return resolveIdempotentSale(transfer, sourceFarmId, request);
         }
+        transfer = completeOwnershipIfReady(sale.id(), sale, transfer);
         audit.record(new OperationalAuditRecordVO(sourceFarmId, goatId.value(), goat.getRegistrationNumber(),
                 OperationalAuditActionType.ANIMAL_SALE_CREATED, String.valueOf(sale.id()),
                 "Venda com transferencia de propriedade solicitada para a fazenda " + request.targetFarmId() + "."));
@@ -120,12 +116,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Override
     @Transactional
     public OwnershipSaleResponseVO acceptOwnershipSale(Long sourceFarmId, Long saleId) {
-        ownershipSales.lockAndReloadInternalSale(saleId);
-        AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
-        OwnershipTransfer transfer = ownershipSales.acceptInternalSale(saleId);
-        transfer = completeOwnershipIfReady(saleId, sale, transfer);
-        sale = requireSale(sourceFarmId, saleId);
-        return response(sale, transfer);
+        throw new BusinessRuleException("buyer acceptance is not supported for canonical internal sales; payment by the seller completes the sale");
     }
 
     @Override
@@ -173,12 +164,7 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Override
     @Transactional
     public OwnershipSaleResponseVO rejectOwnershipSale(Long sourceFarmId, Long saleId) {
-        ownershipSales.lockAndReloadInternalSale(saleId);
-        AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
-        if (sale.paymentStatus() == SalePaymentStatus.PAID) {
-            throw new BusinessRuleException("paid ownership sale cannot be rejected");
-        }
-        return response(sale, ownershipSales.rejectInternalSale(saleId));
+        throw new BusinessRuleException("buyer rejection is not supported for canonical internal sales; cancel before payment from the source farm");
     }
 
     @Override
@@ -217,11 +203,12 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         }
         AnimalSaleRecord sale = sales.findAnimalSaleById(transfer.saleId())
                 .orElseThrow(() -> new BusinessRuleException("ownership sale transfer has no sale record"));
-        if (!Objects.equals(sale.customerId(), request.customerId())
-                || sale.amount().compareTo(currency(requirePositive(request.amount()))) != 0
+        LocalDate requestedPaymentDate = request.paymentDate() == null ? null : requirePaymentDate(requireSaleDate(request.saleDate()), request.paymentDate());
+        if (sale.amount().compareTo(currency(requirePositive(request.amount()))) != 0
                 || !Objects.equals(sale.saleDate(), requireSaleDate(request.saleDate()))
                 || !Objects.equals(sale.dueDate(), requireDueDate(request.saleDate(), request.dueDate()))
-                || !Objects.equals(sale.notes(), optional(request.notes()))) {
+                || !Objects.equals(sale.notes(), optional(request.notes()))
+                || !Objects.equals(sale.paymentDate(), requestedPaymentDate)) {
             throw new BusinessRuleException("idempotency key already represents a different ownership sale");
         }
         return response(sale, transfer);
@@ -264,15 +251,6 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
         if (sourceFarmId == targetFarmId) throw new BusinessRuleException("source and target farms must differ");
         if (farms.findById(targetFarmId).isEmpty()) throw new ResourceNotFoundException("Target farm not found: " + targetFarmId);
     }
-
-    private CustomerRecord activeCustomer(Long farmId, Long customerId) {
-        if (customerId == null) throw new InvalidArgumentException("customerId is required");
-        CustomerRecord customer = customers.findCustomerByIdAndFarmId(customerId, farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + customerId));
-        if (!customer.active()) throw new BusinessRuleException("customer is inactive");
-        return customer;
-    }
-
 
     private void validateRequest(OwnershipSaleRequestVO request) {
         if (request == null) throw new InvalidArgumentException("ownership sale request is required");
@@ -338,8 +316,11 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     private String optional(String value) { if (value == null) return null; String normalized = value.trim(); return normalized.isEmpty() ? null : normalized; }
 
     private OwnershipSaleResponseVO response(AnimalSaleRecord sale, OwnershipTransfer transfer) {
-        return new OwnershipSaleResponseVO(sale.id(), sale.farmId(), sale.targetFarmId(), sale.goatTechnicalId(),
-                sale.goatRegistrationNumber(), sale.goatName(), sale.customerId(), sale.customer().name(), sale.saleDate(),
+        var targetFarm = sale.targetFarmId() == null ? null : farms.findById(sale.targetFarmId()).orElse(null);
+        return new OwnershipSaleResponseVO(sale.id(), sale.farmId(), sale.targetFarmId(),
+                targetFarm == null ? null : targetFarm.name(), targetFarm == null ? null : targetFarm.tod(),
+                sale.goatTechnicalId(),
+                sale.goatRegistrationNumber(), sale.goatName(), sale.customerId(), sale.customer() == null ? null : sale.customer().name(), sale.saleDate(),
                 sale.amount(), sale.dueDate(), sale.paymentStatus(), sale.paymentDate(), sale.notes(), transfer.id(), transfer.status());
     }
 }

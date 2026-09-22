@@ -87,7 +87,9 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     public AnimalSaleRecord save(AnimalSaleCommand command) {
         AnimalSale entity = command.id() == null ? new AnimalSale() : animalSaleRepository.findById(command.id()).orElseGet(AnimalSale::new);
         entity.setFarm(goatFarmRepository.getReferenceById(command.farmId()));
-        entity.setCustomer(customerRepository.findByIdAndFarm_Id(command.customerId(), command.farmId()).orElseThrow());
+        entity.setCustomer(command.customerId() == null
+                ? null
+                : customerRepository.findByIdAndFarm_Id(command.customerId(), command.farmId()).orElseThrow());
         entity.setTargetFarm(command.targetFarmId() == null ? null : goatFarmRepository.getReferenceById(command.targetFarmId()));
         entity.setGoatTechnicalId(command.goatTechnicalId());
         entity.setGoatRegistrationNumber(command.goatRegistrationNumber());
@@ -207,7 +209,8 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
 
     private AnimalSaleRecord toRecord(AnimalSale entity) {
         Customer customer = entity.getCustomer();
-        return new AnimalSaleRecord(entity.getId(), entity.getFarm().getId(), customer.getId(), new CustomerReference(customer.getId(), customer.getName(), customer.isActive()), entity.getGoatTechnicalId(), entity.getGoatRegistrationNumber(), entity.getGoatName(), entity.getSaleDate(), entity.getAmount(), entity.getDueDate(), entity.getPaymentStatus(), entity.getPaymentDate(), entity.getNotes(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getTargetFarm() == null ? null : entity.getTargetFarm().getId());
+        CustomerReference reference = customer == null ? null : new CustomerReference(customer.getId(), customer.getName(), customer.isActive());
+        return new AnimalSaleRecord(entity.getId(), entity.getFarm().getId(), customer == null ? null : customer.getId(), reference, entity.getGoatTechnicalId(), entity.getGoatRegistrationNumber(), entity.getGoatName(), entity.getSaleDate(), entity.getAmount(), entity.getDueDate(), entity.getPaymentStatus(), entity.getPaymentDate(), entity.getNotes(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getTargetFarm() == null ? null : entity.getTargetFarm().getId());
     }
 
     private AnimalSaleReversalRecord toRecord(AnimalSaleReversal entity) {

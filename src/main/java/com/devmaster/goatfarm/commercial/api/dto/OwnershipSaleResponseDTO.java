@@ -10,6 +10,8 @@ public record OwnershipSaleResponseDTO(
         Long saleId,
         Long sourceFarmId,
         Long targetFarmId,
+        String targetFarmName,
+        String targetFarmTod,
         Long goatTechnicalId,
         String goatRegistrationNumber,
         String goatName,

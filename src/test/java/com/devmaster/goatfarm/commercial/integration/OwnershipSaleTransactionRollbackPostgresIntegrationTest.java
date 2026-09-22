@@ -116,8 +116,8 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         periods.saveAndFlush(sourcePeriod);
 
         FailureConfiguration.PRINCIPAL_ID.set(seller.getId());
-        var request = new OwnershipSaleRequestVO("technical-" + goat.getTechnicalId(), customer.getId(), targetFarm.getId(),
-                LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25), "rollback", "rollback-sale-1");
+        var request = new OwnershipSaleRequestVO("technical-" + goat.getTechnicalId(), targetFarm.getId(),
+                LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25), null, "rollback", "rollback-sale-1");
         var pending = ownershipSales.requestOwnershipSale(sourceFarm.getId(), request);
         assertThat(pending.ownershipTransferStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
 
@@ -135,6 +135,34 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         } finally {
             FailureConfiguration.PROJECTION_FAILURE.set(false);
         }
+    }
+
+    @Test
+    void paidAtCreationProjectionFailureRollsBackSalePaymentAndOwnership() {
+        SaleFixture fixture = fixture("paid-creation-rollback");
+        FailureConfiguration.PROJECTION_FAILURE.set(true);
+        try {
+            assertThatThrownBy(() -> ownershipSales.requestOwnershipSale(fixture.source().getId(),
+                    new OwnershipSaleRequestVO("technical-" + fixture.goatId(), fixture.target().getId(),
+                            LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25),
+                            LocalDate.of(2026, 9, 19), "paid at creation rollback", "paid-creation-rollback")))
+                    .isInstanceOf(RuntimeException.class);
+        } finally {
+            FailureConfiguration.PROJECTION_FAILURE.set(false);
+        }
+
+        assertThat(animalSales.findByFarm_IdOrderBySaleDateDescIdDesc(fixture.source().getId()).stream()
+                .filter(sale -> fixture.goatId().equals(sale.getGoatTechnicalId())).toList()).isEmpty();
+        assertThat(transfers.findByGoatIdAndStatusIn(fixture.goatId(),
+                java.util.List.of(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED,
+                        com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.ACCEPTED,
+                        com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED))).isEmpty();
+        assertThat(periods.findByGoatIdOrderByStartedAtAscIdAsc(fixture.goatId())).singleElement()
+                .satisfies(period -> {
+                    assertThat(period.getFarmId()).isEqualTo(fixture.source().getId());
+                    assertThat(period.getEndedAt()).isNull();
+                });
+        assertThat(goats.findById(fixture.goatId()).orElseThrow().getFarm().getId()).isEqualTo(fixture.source().getId());
     }
 
     @Test
@@ -192,9 +220,9 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         sourcePeriod.setSource("TEST_FIXTURE");
         periods.saveAndFlush(sourcePeriod);
         FailureConfiguration.PRINCIPAL_ID.set(seller.getId());
-        OwnershipSaleRequestVO request = new OwnershipSaleRequestVO("technical-" + goat.getTechnicalId(), customer.getId(),
+        OwnershipSaleRequestVO request = new OwnershipSaleRequestVO("technical-" + goat.getTechnicalId(),
                 targetFarm.getId(), LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25),
-                "concurrent", "concurrent-sale-1");
+                null, "concurrent", "concurrent-sale-1");
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
         Long technicalId = goat.getTechnicalId();
@@ -361,8 +389,8 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
 
     private com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleResponseVO request(SaleFixture fixture, String key) {
         return ownershipSales.requestOwnershipSale(fixture.source().getId(), new OwnershipSaleRequestVO(
-                "technical-" + fixture.goatId(), fixture.customer().getId(), fixture.target().getId(),
-                LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25), "concurrent", key));
+                "technical-" + fixture.goatId(), fixture.target().getId(),
+                LocalDate.of(2026, 9, 19), new BigDecimal("100.00"), LocalDate.of(2026, 9, 25), null, "concurrent", key));
     }
 
     private record SaleFixture(GoatFarm source, GoatFarm target, Customer customer, Long goatId) { }

@@ -195,7 +195,7 @@ public class CommercialBusiness implements CommercialUseCase {
         Map<Long, AnimalSaleReversalRecord> reversalBySaleId = loadReversals(animalSales);
         animalSales.stream()
                 .filter(sale -> isRealizedAnimalSale(sale, reversalBySaleId))
-                .forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.ANIMAL_SALE, s.id(), "Venda do animal " + s.goatRegistrationNumber(), s.customer().id(), s.customer().name(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
+                .forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.ANIMAL_SALE, s.id(), "Venda do animal " + s.goatRegistrationNumber(), s.customer() == null ? null : s.customer().id(), s.customer() == null ? null : s.customer().name(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
         milkSalePersistencePort.findMilkSalesByFarmId(farmId).forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.MILK_SALE, s.id(), "Venda de leite de " + s.saleDate(), s.customer().id(), s.customer().name(), currency(s.totalAmount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
         return result.stream().sorted(Comparator.comparing(ReceivableResponseVO::paymentStatus).thenComparing(ReceivableResponseVO::dueDate, Comparator.nullsLast(LocalDate::compareTo)).thenComparing(ReceivableResponseVO::sourceId)).toList();
     }
@@ -287,7 +287,7 @@ public class CommercialBusiness implements CommercialUseCase {
     private BigDecimal measure(BigDecimal v) { return v.setScale(MEASURE_SCALE, RoundingMode.HALF_UP); }
     private CustomerResponseVO customerResponse(CustomerRecord c) { return new CustomerResponseVO(c.id(), c.name(), c.document(), c.phone(), c.email(), c.notes(), c.active()); }
     private AnimalSaleResponseVO animalResponse(AnimalSaleRecord s, AnimalSaleReversalRecord reversal) {
-        return new AnimalSaleResponseVO(s.id(), s.goatTechnicalId(), s.goatRegistrationNumber(), s.goatName(), s.customer().id(), s.customer().name(), s.saleDate(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes(), reversal != null, reversal == null ? null : reversal.reversedAt(), reversal == null ? null : reversal.reason());
+        return new AnimalSaleResponseVO(s.id(), s.goatTechnicalId(), s.goatRegistrationNumber(), s.goatName(), s.customer() == null ? null : s.customer().id(), s.customer() == null ? null : s.customer().name(), s.saleDate(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes(), reversal != null, reversal == null ? null : reversal.reversedAt(), reversal == null ? null : reversal.reason());
     }
     private MilkSaleResponseVO milkResponse(MilkSaleRecord s) { return new MilkSaleResponseVO(s.id(), s.customer().id(), s.customer().name(), s.saleDate(), measure(s.quantityLiters()), currency(s.unitPrice()), currency(s.totalAmount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes()); }
 }

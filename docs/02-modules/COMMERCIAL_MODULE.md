@@ -55,7 +55,7 @@ Base canonica: `/api/v1/goatfarms/{farmId}/commercial`
 | `POST` | `/animal-sales` | registrar venda de animal com saida coerente |
 | `GET` | `/animal-sales` | listar vendas de animal |
 | `PATCH` | `/animal-sales/{saleId}/payment` | registrar pagamento da venda de animal |
-| `POST` | `/ownership-sales` | solicitar venda entre fazendas sem transferir a propriedade ainda |
+| `POST` | `/ownership-sales` | criar venda entre fazendas; a fazenda destino é o comprador canônico |
 | `GET` | `/ownership-sales/incoming` | listar solicitações recebidas pela fazenda compradora |
 | `GET` | `/ownership-sales/outgoing` | listar solicitações iniciadas pela fazenda vendedora |
 | `PATCH` | `/ownership-sales/{saleId}/payment` | vendedor confirma o pagamento; conclui atomicamente a venda e a transferência |
@@ -139,12 +139,23 @@ Campos principais expostos:
 - OPERATOR sem vinculo, FARM_OWNER de outra fazenda e acesso cruzado recebem `403`; endpoint autenticado sem credencial responde `401`;
 - a venda de animal nao duplica a logica do ciclo do rebanho;
 - a venda W13 entre fazendas exige `targetFarmId`, cria um `INTERNAL_SALE`
-  pendente no ledger canônico e não chama a saída controlada do animal;
+  no ledger canônico e não usa cliente comercial como comprador;
+- o request aceita `goatId`, `targetFarmId`, `saleDate`, `amount`, `dueDate`,
+  `paymentDate` opcional, `notes` e `idempotencyKey`; `customerId` não faz parte
+  do novo contrato de venda interna;
+- sem `paymentDate`, a venda fica `OPEN` e a transferência `REQUESTED`, mantendo
+  a propriedade na fazenda de origem;
+- com `paymentDate`, a venda nasce `PAID` e a transferência é concluída na mesma
+  transação; falha em qualquer etapa faz rollback de venda, pagamento e ownership;
 - a fazenda vendedora confirma o pagamento; essa confirmação fecha/abre os
   períodos canônicos, atualiza a projeção e conclui o `INTERNAL_SALE` na mesma
   transação; falha em qualquer etapa faz rollback de todo o processo;
 - aceite/rejeição do comprador não fazem parte do fluxo de `INTERNAL_SALE`;
-  continuam válidos apenas para `INTERNAL_TRANSFER` sem venda;
+  as rotas legadas retornam erro de regra; continuam válidos apenas para
+  `INTERNAL_TRANSFER` sem venda;
+- a resposta de venda interna expõe `targetFarmId`, `targetFarmName` e
+  `targetFarmTod`; registros históricos podem manter `customerId/customerName`,
+  mas novas vendas internas não inventam cliente comercial;
 - vendas externas legadas permanecem no contrato original de `animal-sales` e
   não são reinterpretadas como propriedade sem evidência de uma fazenda alvo;
 - recebiveis continuam minimos e derivados das vendas;
