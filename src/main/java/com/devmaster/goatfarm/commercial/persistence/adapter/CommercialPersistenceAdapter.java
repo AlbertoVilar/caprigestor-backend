@@ -25,7 +25,11 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class CommercialPersistenceAdapter implements CustomerPersistencePort, AnimalSalePersistencePort, MilkSalePersistencePort, AnimalSaleReversalPersistencePort {
@@ -159,6 +163,16 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     @Override
     public Optional<AnimalSaleReversalRecord> findBySaleId(Long saleId) {
         return animalSaleReversalRepository.findBySale_Id(saleId).map(this::toRecord);
+    }
+
+    @Override
+    public Map<Long, AnimalSaleReversalRecord> findBySaleIds(Collection<Long> saleIds) {
+        if (saleIds == null || saleIds.isEmpty()) {
+            return Map.of();
+        }
+        return animalSaleReversalRepository.findBySale_IdIn(saleIds).stream()
+                .map(this::toRecord)
+                .collect(Collectors.toMap(AnimalSaleReversalRecord::saleId, Function.identity()));
     }
 
     @Override
