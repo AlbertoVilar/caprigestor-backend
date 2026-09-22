@@ -7,8 +7,9 @@ import java.util.Objects;
 
 /**
  * Explicit, consented transfer of one existing biological goat between farms.
- * Normal transfers may complete on acceptance. Internal sales may remain
- * ACCEPTED until the independent payment prerequisite is recorded.
+ * Normal transfers may complete on acceptance. Internal sales complete from
+ * the seller's payment confirmation; legacy rows may still carry acceptance
+ * metadata from the previous workflow.
  */
 public final class OwnershipTransfer {
     private final Long id;
@@ -177,6 +178,36 @@ public final class OwnershipTransfer {
         this.status = OwnershipTransferStatus.COMPLETED;
     }
 
+    /**
+     * Completes an internal sale from the seller's payment confirmation.
+     * New sales may complete directly from REQUESTED without fabricating buyer
+     * acceptance; legacy ACCEPTED sales remain supported for rehydration and
+     * retries.
+     */
+    public void completeFromPayment(Instant completedAt, long completedBy, Instant effectiveAt) {
+        if (status != OwnershipTransferStatus.REQUESTED && status != OwnershipTransferStatus.ACCEPTED) {
+            throw new IllegalStateException("internal sale must be requested or accepted before payment completion");
+        }
+        Objects.requireNonNull(completedAt, "completedAt must not be null");
+        Objects.requireNonNull(effectiveAt, "effectiveAt must not be null");
+        if (completedBy <= 0) {
+            throw new IllegalArgumentException("completedBy must be positive");
+        }
+        if (completedAt.isBefore(requestedAt)) {
+            throw new IllegalArgumentException("completedAt must not precede requestedAt");
+        }
+        if (acceptedAt != null && completedAt.isBefore(acceptedAt)) {
+            throw new IllegalArgumentException("completedAt must not precede acceptedAt");
+        }
+        if (!effectiveAt.equals(completedAt)) {
+            throw new IllegalArgumentException("effectiveAt must equal completedAt in V1");
+        }
+        this.completedAt = completedAt;
+        this.completedBy = completedBy;
+        this.effectiveAt = completedAt;
+        this.status = OwnershipTransferStatus.COMPLETED;
+    }
+
     public void markAccepted(Instant acceptedAt, long acceptedBy) {
         requireStatus(OwnershipTransferStatus.REQUESTED);
         Objects.requireNonNull(acceptedAt, "acceptedAt must not be null");
@@ -266,8 +297,9 @@ public final class OwnershipTransfer {
                 }
             }
             case COMPLETED -> {
-                if (acceptedAt == null || acceptedBy == null || effectiveAt == null || completedAt == null
-                        || completedBy == null || cancelledAt != null || !effectiveAt.equals(completedAt)) {
+                if (effectiveAt == null || completedAt == null || completedBy == null || cancelledAt != null
+                        || !effectiveAt.equals(completedAt)
+                        || (acceptedAt == null) != (acceptedBy == null)) {
                     throw new IllegalArgumentException("completed transfer has inconsistent lifecycle fields");
                 }
             }

@@ -121,15 +121,12 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         var pending = ownershipSales.requestOwnershipSale(sourceFarm.getId(), request);
         assertThat(pending.ownershipTransferStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
 
-        assertThatThrownBy(() -> {
-            ownershipSales.registerOwnershipSalePayment(sourceFarm.getId(), pending.saleId(),
-                    new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
-            ownershipSales.acceptOwnershipSale(sourceFarm.getId(), pending.saleId());
-        })
+        assertThatThrownBy(() -> ownershipSales.registerOwnershipSalePayment(sourceFarm.getId(), pending.saleId(),
+                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))
                 .isInstanceOf(RuntimeException.class);
 
         var sale = animalSales.findById(pending.saleId()).orElseThrow();
-        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.PAID);
+        assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.OPEN);
         OwnershipTransferEntity transfer = transfers.findBySaleId(pending.saleId()).orElseThrow();
         assertThat(transfer.getStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
         assertThat(periods.findByGoatIdOrderByStartedAtAscIdAsc(goat.getTechnicalId())).singleElement()
@@ -216,16 +213,17 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     }
 
     @Test
-    void concurrentPaymentAndAcceptanceNeverLeavesPaidTerminalTransfer() throws Exception {
-        SaleFixture fixture = fixture("payment-accept");
-        var pending = request(fixture, "payment-accept-key");
+    void concurrentPaymentRetriesNeverDuplicateHandoff() throws Exception {
+        SaleFixture fixture = fixture("payment-retry");
+        var pending = request(fixture, "payment-retry-key");
         CyclicBarrier start = new CyclicBarrier(2);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
             List<Future<Throwable>> results = executor.invokeAll(List.of(
                     () -> attempt(start, () -> ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), pending.saleId(),
                             new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)))),
-                    () -> attempt(start, () -> ownershipSales.acceptOwnershipSale(fixture.source().getId(), pending.saleId()))));
+                    () -> attempt(start, () -> ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), pending.saleId(),
+                            new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))));
             results.forEach(this::getUnchecked);
         } finally {
             executor.shutdownNow();
@@ -234,40 +232,24 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     }
 
     @Test
-    void paymentAndAcceptanceCompleteInEitherDeterministicOrder() {
-        SaleFixture acceptanceFirst = fixture("accept-first");
-        var first = request(acceptanceFirst, "accept-first-key");
-        FailureConfiguration.PRINCIPAL_ID.set(acceptanceFirst.target().getUser().getId());
-        ownershipSales.acceptOwnershipSale(acceptanceFirst.source().getId(), first.saleId());
-        ownershipSales.registerOwnershipSalePayment(acceptanceFirst.source().getId(), first.saleId(),
+    void paymentCompletesWithoutTargetAcceptanceAndRetryIsIdempotent() {
+        SaleFixture fixture = fixture("payment-first");
+        var sale = request(fixture, "payment-first-key");
+        FailureConfiguration.PRINCIPAL_ID.set(fixture.source().getUser().getId());
+        ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), sale.saleId(),
                 new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
-        assertPaidCompletedTransfer(first.saleId());
-
-        SaleFixture paymentFirst = fixture("payment-first");
-        var second = request(paymentFirst, "payment-first-key");
-        FailureConfiguration.PRINCIPAL_ID.set(paymentFirst.target().getUser().getId());
-        ownershipSales.registerOwnershipSalePayment(paymentFirst.source().getId(), second.saleId(),
+        ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), sale.saleId(),
                 new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
-        ownershipSales.acceptOwnershipSale(paymentFirst.source().getId(), second.saleId());
-        assertPaidCompletedTransfer(second.saleId());
+        assertPaidCompletedTransfer(sale.saleId());
     }
 
     @Test
-    void rejectionOrCancellationBeforePaymentRemainsTerminalAndRejectsPayment() {
-        SaleFixture rejected = fixture("reject-first");
-        var rejectedSale = request(rejected, "reject-first-key");
-        FailureConfiguration.PRINCIPAL_ID.set(rejected.target().getUser().getId());
-        ownershipSales.rejectOwnershipSale(rejected.source().getId(), rejectedSale.saleId());
-        assertThatThrownBy(() -> ownershipSales.registerOwnershipSalePayment(rejected.source().getId(), rejectedSale.saleId(),
-                new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))
-                .isInstanceOf(RuntimeException.class);
-        assertOpenTerminalTransfer(rejectedSale.saleId(), com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED);
-
+    void cancellationBeforePaymentRemainsTerminalAndRejectsPayment() {
         SaleFixture cancelled = fixture("cancel-first");
         var cancelledSale = request(cancelled, "cancel-first-key");
         FailureConfiguration.PRINCIPAL_ID.set(cancelled.source().getUser().getId());
         ownershipSales.cancelOwnershipSale(cancelled.source().getId(), cancelledSale.saleId());
-        FailureConfiguration.PRINCIPAL_ID.set(cancelled.target().getUser().getId());
+        FailureConfiguration.PRINCIPAL_ID.set(cancelled.source().getUser().getId());
         assertThatThrownBy(() -> ownershipSales.registerOwnershipSalePayment(cancelled.source().getId(), cancelledSale.saleId(),
                 new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19))))
                 .isInstanceOf(RuntimeException.class);
@@ -278,7 +260,7 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     void paymentFirstKeepsSalePaidAndRejectCancelFailClosed() {
         SaleFixture fixture = fixture("paid-terminal");
         var pending = request(fixture, "paid-terminal-key");
-        FailureConfiguration.PRINCIPAL_ID.set(fixture.target().getUser().getId());
+        FailureConfiguration.PRINCIPAL_ID.set(fixture.source().getUser().getId());
         ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), pending.saleId(),
                 new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)));
         assertThatThrownBy(() -> ownershipSales.rejectOwnershipSale(fixture.source().getId(), pending.saleId()))
@@ -289,15 +271,7 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         var sale = animalSales.findById(pending.saleId()).orElseThrow();
         var transfer = transfers.findBySaleId(pending.saleId()).orElseThrow();
         assertThat(sale.getPaymentStatus()).isEqualTo(com.devmaster.goatfarm.commercial.enums.SalePaymentStatus.PAID);
-        assertThat(transfer.getStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
-    }
-
-    @Test
-    void concurrentPaymentAndRejectionNeverLeavesPaidRejectedTransfer() throws Exception {
-        SaleFixture fixture = fixture("payment-reject");
-        var pending = request(fixture, "payment-reject-key");
-        runConcurrentPaymentAndTerminalAction(fixture, pending.saleId(), false);
-        assertNoPaidTerminalTransfer(pending.saleId());
+        assertThat(transfer.getStatus()).isEqualTo(com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED);
     }
 
     @Test
@@ -315,13 +289,7 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
             List<Future<Throwable>> results = executor.invokeAll(List.of(
                     () -> attempt(start, () -> ownershipSales.registerOwnershipSalePayment(fixture.source().getId(), saleId,
                             new com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO(LocalDate.of(2026, 9, 19)))),
-                    () -> attempt(start, () -> {
-                        if (cancel) {
-                            ownershipSales.cancelOwnershipSale(fixture.source().getId(), saleId);
-                        } else {
-                            ownershipSales.rejectOwnershipSale(fixture.source().getId(), saleId);
-                        }
-                    })));
+                    () -> attempt(start, () -> ownershipSales.cancelOwnershipSale(fixture.source().getId(), saleId))));
             results.forEach(this::getUnchecked);
         } finally {
             executor.shutdownNow();

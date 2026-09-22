@@ -280,9 +280,9 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     public OwnershipTransfer completeInternalSaleAfterPayment(Long saleId) {
         OwnershipTransfer transfer = lockAndReloadSale(saleId);
         if (transfer.status() == OwnershipTransferStatus.COMPLETED) return transfer;
-        if (transfer.status() != OwnershipTransferStatus.ACCEPTED) return transfer;
-        requireCanAdminister(transfer.targetFarmId());
-        return completeSaleAfterAcceptance(transfer);
+        if (transfer.status() != OwnershipTransferStatus.REQUESTED
+                && transfer.status() != OwnershipTransferStatus.ACCEPTED) return transfer;
+        return completeSaleAfterPayment(transfer);
     }
 
     @Override
@@ -324,7 +324,7 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         return findSaleTransfer(saleId);
     }
 
-    private OwnershipTransfer completeSaleAfterAcceptance(OwnershipTransfer transfer) {
+    private OwnershipTransfer completeSaleAfterPayment(OwnershipTransfer transfer) {
         GoatOwnershipLockState lock = lockGoat(transfer.goatId());
         GoatOwnershipPeriod source = requireOpenPeriod(lock);
         if (!Objects.equals((long) source.farmId(), transfer.sourceFarmId())) {
@@ -343,7 +343,7 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         if (!projection.moveFromTo(transfer.goatId(), source.farmId(), transfer.targetFarmId())) {
             throw new BusinessRuleException("current-owner projection drift detected; ownership sale rolled back");
         }
-        transfer.completeAfterAcceptance(effectiveAt, actorId, effectiveAt);
+        transfer.completeFromPayment(effectiveAt, actorId, effectiveAt);
         return transferPersistence.save(transfer);
     }
 
