@@ -45,8 +45,12 @@ import java.time.LocalDate;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -137,12 +141,14 @@ public class CommercialBusiness implements CommercialUseCase {
         }
         AnimalSaleRecord saved = animalSalePersistencePort.save(new AnimalSaleCommand(null, farmId, customer.id(), goat.getTechnicalId(), goat.getRegistrationNumber(), goat.getName(), saleDate, currency(amount), dueDate, status(paymentDate), paymentDate, optional(request.notes())));
         audit.record(new OperationalAuditRecordVO(farmId, saved.goatTechnicalId(), saved.goatRegistrationNumber(), OperationalAuditActionType.ANIMAL_SALE_CREATED, String.valueOf(saved.id()), "Venda do animal " + saved.goatRegistrationNumber() + " registrada para " + saved.customer().name() + " no valor de R$ " + saved.amount().toPlainString() + "."));
-        return animalResponse(saved);
+        return animalResponse(saved, null);
     }
 
     @Override public List<AnimalSaleResponseVO> listAnimalSales(Long farmId) {
         requireFarm(farmId);
-        return animalSalePersistencePort.findAnimalSalesByFarmId(farmId).stream().map(this::animalResponse).toList();
+        List<AnimalSaleRecord> sales = animalSalePersistencePort.findAnimalSalesByFarmId(farmId);
+        Map<Long, AnimalSaleReversalRecord> reversalBySaleId = loadReversals(sales);
+        return sales.stream().map(sale -> animalResponse(sale, reversalBySaleId.get(sale.id()))).toList();
     }
 
     @Override @Transactional
@@ -155,7 +161,7 @@ public class CommercialBusiness implements CommercialUseCase {
         validatePayment(sale.saleDate(), sale.paymentStatus(), request.paymentDate());
         AnimalSaleRecord saved = animalSalePersistencePort.save(new AnimalSaleCommand(sale.id(), sale.farmId(), sale.customerId(), sale.goatTechnicalId(), sale.goatRegistrationNumber(), sale.goatName(), sale.saleDate(), sale.amount(), sale.dueDate(), SalePaymentStatus.PAID, request.paymentDate(), sale.notes()));
         audit.record(new OperationalAuditRecordVO(farmId, saved.goatTechnicalId(), saved.goatRegistrationNumber(), OperationalAuditActionType.ANIMAL_SALE_PAYMENT_REGISTERED, String.valueOf(saved.id()), "Recebimento da venda do animal " + saved.goatRegistrationNumber() + " registrado em " + request.paymentDate() + "."));
-        return animalResponse(saved);
+        return animalResponse(saved, null);
     }
 
     @Override @Transactional
@@ -185,15 +191,17 @@ public class CommercialBusiness implements CommercialUseCase {
 
     @Override public List<ReceivableResponseVO> listReceivables(Long farmId) {
         requireFarm(farmId); List<ReceivableResponseVO> result = new ArrayList<>();
-        animalSalePersistencePort.findAnimalSalesByFarmId(farmId).stream()
-                .filter(this::isRealizedAnimalSale)
+        List<AnimalSaleRecord> animalSales = animalSalePersistencePort.findAnimalSalesByFarmId(farmId);
+        Map<Long, AnimalSaleReversalRecord> reversalBySaleId = loadReversals(animalSales);
+        animalSales.stream()
+                .filter(sale -> isRealizedAnimalSale(sale, reversalBySaleId))
                 .forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.ANIMAL_SALE, s.id(), "Venda do animal " + s.goatRegistrationNumber(), s.customer().id(), s.customer().name(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
         milkSalePersistencePort.findMilkSalesByFarmId(farmId).forEach(s -> result.add(new ReceivableResponseVO(ReceivableSourceType.MILK_SALE, s.id(), "Venda de leite de " + s.saleDate(), s.customer().id(), s.customer().name(), currency(s.totalAmount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes())));
         return result.stream().sorted(Comparator.comparing(ReceivableResponseVO::paymentStatus).thenComparing(ReceivableResponseVO::dueDate, Comparator.nullsLast(LocalDate::compareTo)).thenComparing(ReceivableResponseVO::sourceId)).toList();
     }
 
     @Override public CommercialSummaryVO getSummary(Long farmId) {
-        requireFarm(farmId); List<AnimalSaleRecord> animals = animalSalePersistencePort.findAnimalSalesByFarmId(farmId).stream().filter(this::isRealizedAnimalSale).toList(); List<MilkSaleRecord> milk = milkSalePersistencePort.findMilkSalesByFarmId(farmId); List<ReceivableResponseVO> rec = listReceivables(farmId);
+        requireFarm(farmId); List<AnimalSaleRecord> animals = effectiveAnimalSales(farmId); List<MilkSaleRecord> milk = milkSalePersistencePort.findMilkSalesByFarmId(farmId); List<ReceivableResponseVO> rec = listReceivables(farmId);
         BigDecimal animalTotal = animals.stream().map(AnimalSaleRecord::amount).reduce(BigDecimal.ZERO, BigDecimal::add); BigDecimal milkQty = milk.stream().map(MilkSaleRecord::quantityLiters).reduce(BigDecimal.ZERO, BigDecimal::add); BigDecimal milkTotal = milk.stream().map(MilkSaleRecord::totalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         return new CommercialSummaryVO(customerPersistencePort.countCustomersByFarmId(farmId), animals.size(), currency(animalTotal), milk.size(), measure(milkQty), currency(milkTotal), rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.OPEN).count(), currency(rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.OPEN).map(ReceivableResponseVO::amount).reduce(BigDecimal.ZERO, BigDecimal::add)), rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.PAID).count(), currency(rec.stream().filter(r -> r.paymentStatus() == SalePaymentStatus.PAID).map(ReceivableResponseVO::amount).reduce(BigDecimal.ZERO, BigDecimal::add)));
     }
@@ -205,10 +213,25 @@ public class CommercialBusiness implements CommercialUseCase {
     private LocalDate saleDate(LocalDate d) { if (d == null) throw new InvalidArgumentException("saleDate", "Data da venda e obrigatoria"); if (d.isAfter(LocalDate.now(clock))) throw new InvalidArgumentException("saleDate", "Data da venda nao pode estar no futuro."); return d; }
     private LocalDate dueDate(LocalDate sale, LocalDate due) { if (due == null) throw new InvalidArgumentException("dueDate", "Data de vencimento e obrigatoria"); if (due.isBefore(sale)) throw new BusinessRuleException("dueDate", "Data de vencimento nao pode ser anterior a data da venda."); return due; }
     private LocalDate paymentDate(LocalDate sale, LocalDate payment) { if (payment == null) return null; if (payment.isBefore(sale)) throw new BusinessRuleException("paymentDate", "Data de pagamento nao pode ser anterior a data da venda."); if (payment.isAfter(LocalDate.now(clock))) throw new InvalidArgumentException("paymentDate", "Data de pagamento nao pode estar no futuro."); return payment; }
-    private boolean isRealizedAnimalSale(AnimalSaleRecord sale) {
+    private boolean isRealizedAnimalSale(AnimalSaleRecord sale, Map<Long, AnimalSaleReversalRecord> reversalBySaleId) {
+        if (reversalBySaleId.containsKey(sale.id())) return false;
         if (sale.targetFarmId() == null) return true;
         return ownershipSales.findSaleTransfer(sale.id()).status()
                 == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED;
+    }
+
+    private List<AnimalSaleRecord> effectiveAnimalSales(Long farmId) {
+        List<AnimalSaleRecord> sales = animalSalePersistencePort.findAnimalSalesByFarmId(farmId);
+        Map<Long, AnimalSaleReversalRecord> reversalBySaleId = loadReversals(sales);
+        return sales.stream().filter(sale -> isRealizedAnimalSale(sale, reversalBySaleId)).toList();
+    }
+
+    private Map<Long, AnimalSaleReversalRecord> loadReversals(List<AnimalSaleRecord> sales) {
+        if (sales == null || sales.isEmpty()) return Collections.emptyMap();
+        Set<Long> saleIds = sales.stream().map(AnimalSaleRecord::id).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        if (saleIds.isEmpty()) return Collections.emptyMap();
+        Map<Long, AnimalSaleReversalRecord> result = reversals.findBySaleIds(saleIds);
+        return result == null ? Collections.emptyMap() : result;
     }
 
     @Override @Transactional
@@ -250,11 +273,11 @@ public class CommercialBusiness implements CommercialUseCase {
         GoatOwnershipPeriod.ensureConsistent(correctedHistory);
         ownershipPeriods.save(reentry);
         goatManagementUseCase.restoreAfterSaleReversal(farmId, "technical-" + goatId.value());
-        reversals.save(sale.id(), normalizedReason, java.time.LocalDateTime.now(clock), principal.id());
+        AnimalSaleReversalRecord reversal = reversals.save(sale.id(), normalizedReason, java.time.LocalDateTime.now(clock), principal.id());
         audit.record(new OperationalAuditRecordVO(farmId, sale.goatTechnicalId(), sale.goatRegistrationNumber(),
                 OperationalAuditActionType.ANIMAL_SALE_REVERSED, String.valueOf(sale.id()),
                 "Venda externa revertida por correção: " + normalizedReason));
-        return animalResponse(sale);
+        return animalResponse(sale, reversal);
     }
     private String required(String field, String value, String msg) { String v = optional(value); if (v == null) throw new InvalidArgumentException(field, msg); return v; }
     private String optional(String value) { if (value == null) return null; String v = value.trim(); return v.isEmpty() ? null : v; }
@@ -263,6 +286,8 @@ public class CommercialBusiness implements CommercialUseCase {
     private BigDecimal currency(BigDecimal v) { return v.setScale(CURRENCY_SCALE, RoundingMode.HALF_UP); }
     private BigDecimal measure(BigDecimal v) { return v.setScale(MEASURE_SCALE, RoundingMode.HALF_UP); }
     private CustomerResponseVO customerResponse(CustomerRecord c) { return new CustomerResponseVO(c.id(), c.name(), c.document(), c.phone(), c.email(), c.notes(), c.active()); }
-    private AnimalSaleResponseVO animalResponse(AnimalSaleRecord s) { return new AnimalSaleResponseVO(s.id(), s.goatTechnicalId(), s.goatRegistrationNumber(), s.goatName(), s.customer().id(), s.customer().name(), s.saleDate(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes()); }
+    private AnimalSaleResponseVO animalResponse(AnimalSaleRecord s, AnimalSaleReversalRecord reversal) {
+        return new AnimalSaleResponseVO(s.id(), s.goatTechnicalId(), s.goatRegistrationNumber(), s.goatName(), s.customer().id(), s.customer().name(), s.saleDate(), currency(s.amount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes(), reversal != null, reversal == null ? null : reversal.reversedAt(), reversal == null ? null : reversal.reason());
+    }
     private MilkSaleResponseVO milkResponse(MilkSaleRecord s) { return new MilkSaleResponseVO(s.id(), s.customer().id(), s.customer().name(), s.saleDate(), measure(s.quantityLiters()), currency(s.unitPrice()), currency(s.totalAmount()), s.dueDate(), s.paymentStatus(), s.paymentDate(), s.notes()); }
 }

@@ -9,7 +9,11 @@ import com.devmaster.goatfarm.commercial.api.dto.SalePaymentRequestDTO;
 import com.devmaster.goatfarm.commercial.application.ports.in.OwnershipSaleUseCase;
 import com.devmaster.goatfarm.commercial.business.bo.OwnershipSaleRequestVO;
 import com.devmaster.goatfarm.commercial.persistence.entity.Customer;
+import com.devmaster.goatfarm.commercial.persistence.entity.AnimalSale;
+import com.devmaster.goatfarm.commercial.persistence.entity.AnimalSaleReversal;
+import com.devmaster.goatfarm.commercial.enums.SalePaymentStatus;
 import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleRepository;
+import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleReversalRepository;
 import com.devmaster.goatfarm.commercial.persistence.repository.CustomerRepository;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
@@ -79,6 +83,7 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     @Autowired private GoatRepository goats;
     @Autowired private CustomerRepository customers;
     @Autowired private AnimalSaleRepository animalSales;
+    @Autowired private AnimalSaleReversalRepository reversals;
     @Autowired private OwnershipTransferRepository transfers;
     @Autowired private GoatOwnershipPeriodRepository periods;
 
@@ -130,6 +135,35 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         } finally {
             FailureConfiguration.PROJECTION_FAILURE.set(false);
         }
+    }
+
+    @Test
+    void paidAnimalRevenueExcludesReversedSaleAtRepositoryBoundary() {
+        User seller = user("reversal-revenue-seller");
+        GoatFarm farm = farm("Reversal revenue farm", "RVR01", seller);
+        Customer customer = customers.saveAndFlush(Customer.builder().farm(farm).name("Revenue customer").active(true).build());
+        LocalDate paymentDate = LocalDate.of(2026, 9, 20);
+        GoatEntity validGoat = goat(farm, seller, "RVR0001", "Valid sale");
+        GoatEntity reversedGoat = goat(farm, seller, "RVR0002", "Reversed sale");
+
+        AnimalSale valid = animalSale(farm, customer, validGoat.getTechnicalId(), "RVR0001", "Valid sale", new BigDecimal("5000.00"), paymentDate);
+        AnimalSale reversed = animalSale(farm, customer, reversedGoat.getTechnicalId(), "RVR0002", "Reversed sale", new BigDecimal("5000.00"), paymentDate);
+        valid = animalSales.saveAndFlush(valid);
+        reversed = animalSales.saveAndFlush(reversed);
+
+        AnimalSaleReversal reversal = new AnimalSaleReversal();
+        reversal.setSale(reversed);
+        reversal.setReason("Correction");
+        reversal.setReversedAt(java.time.LocalDateTime.of(2026, 9, 21, 10, 0));
+        reversal.setReversedBy(seller.getId());
+        reversals.saveAndFlush(reversal);
+
+        BigDecimal effectiveRevenue = animalSales.sumPaidAmountByFarmIdAndPaymentDateBetween(
+                farm.getId(), SalePaymentStatus.PAID, paymentDate, paymentDate);
+
+        assertThat(effectiveRevenue).isEqualByComparingTo("5000.00");
+        assertThat(animalSales.findById(valid.getId())).isPresent();
+        assertThat(animalSales.findById(reversed.getId())).isPresent();
     }
 
     @Test
@@ -351,6 +385,36 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         user.setCpf(String.format("%011d", Math.abs((long) suffix.hashCode())));
         user.setPassword("password");
         return users.saveAndFlush(user);
+    }
+
+    private GoatEntity goat(GoatFarm farm, User user, String registration, String name) {
+        GoatEntity goat = new GoatEntity();
+        goat.setRegistrationNumber(registration);
+        goat.setName(name);
+        goat.setGender(Gender.FEMEA);
+        goat.setBirthDate(LocalDate.of(2024, 1, 1));
+        goat.setStatus(GoatStatus.ATIVO);
+        goat.setTod(farm.getTod());
+        goat.setToe(registration.substring(Math.max(0, registration.length() - 4)));
+        goat.setFarm(farm);
+        goat.setUser(user);
+        return goats.saveAndFlush(goat);
+    }
+
+    private AnimalSale animalSale(GoatFarm farm, Customer customer, Long goatTechnicalId, String registration, String name,
+                                  BigDecimal amount, LocalDate paymentDate) {
+        AnimalSale sale = new AnimalSale();
+        sale.setFarm(farm);
+        sale.setCustomer(customer);
+        sale.setGoatTechnicalId(goatTechnicalId);
+        sale.setGoatRegistrationNumber(registration);
+        sale.setGoatName(name);
+        sale.setSaleDate(paymentDate);
+        sale.setAmount(amount);
+        sale.setDueDate(paymentDate);
+        sale.setPaymentStatus(SalePaymentStatus.PAID);
+        sale.setPaymentDate(paymentDate);
+        return sale;
     }
 
     private GoatFarm farm(String name, String tod, User user) {

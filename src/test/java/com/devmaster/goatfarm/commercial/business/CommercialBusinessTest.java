@@ -41,6 +41,7 @@ import java.time.Clock;
 import java.time.ZoneId;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -165,6 +166,52 @@ class CommercialBusinessTest {
         assertEquals(BigDecimal.ZERO.setScale(2), business.getSummary(1L).animalSalesTotal());
     }
 
+    @Test void reversedAnimalSaleRemainsInHistoryButHasNoEffectiveFinancialImpact() {
+        AnimalSaleRecord reversed = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("5000.00"), LocalDate.of(2026, 9, 20), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        AnimalSaleRecord valid = animalRecord(new AnimalSaleCommand(10L, 1L, 10L, 80L, "1400819007", "Substituta",
+                LocalDate.of(2026, 9, 21), new BigDecimal("5000.00"), LocalDate.of(2026, 9, 21), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 21), null));
+        AnimalSaleReversalRecord reversal = new AnimalSaleReversalRecord(1L, 9L, "Correção da venda", java.time.LocalDateTime.of(2026, 9, 22, 10, 0), 42L);
+        when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(reversed, valid));
+        when(reversals.findBySaleIds(anyCollection())).thenReturn(Map.of(9L, reversal));
+
+        List<AnimalSaleResponseVO> history = business.listAnimalSales(1L);
+        AnimalSaleResponseVO reversedResponse = history.stream().filter(item -> item.id().equals(9L)).findFirst().orElseThrow();
+        AnimalSaleResponseVO validResponse = history.stream().filter(item -> item.id().equals(10L)).findFirst().orElseThrow();
+        assertTrue(reversedResponse.reversed());
+        assertEquals(reversal.reversedAt(), reversedResponse.reversedAt());
+        assertEquals(reversal.reason(), reversedResponse.reversalReason());
+        assertFalse(validResponse.reversed());
+        assertNull(validResponse.reversedAt());
+        assertNull(validResponse.reversalReason());
+
+        assertTrue(business.listReceivables(1L).stream().noneMatch(item -> item.sourceId().equals(9L)));
+        CommercialSummaryVO summary = business.getSummary(1L);
+        assertEquals(1, summary.animalSalesCount());
+        assertEquals(new BigDecimal("5000.00"), summary.animalSalesTotal());
+        assertEquals(1, summary.paidReceivablesCount());
+        assertEquals(new BigDecimal("5000.00"), summary.paidReceivablesTotal());
+    }
+
+    @Test void completedInternalSaleRemainsEffectiveWhenNotReversed() {
+        AnimalSaleRecord completed = animalRecord(new AnimalSaleCommand(77L, 1L, 10L, 5L, "G-INTERNAL-COMPLETED", "Cabra interna",
+                LocalDate.of(2026, 9, 20), new BigDecimal("750.00"), LocalDate.of(2026, 9, 20), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null, 20L));
+        var transfer = mock(com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer.class);
+        when(transfer.status()).thenReturn(OwnershipTransferStatus.COMPLETED);
+        when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(completed));
+        when(ownershipTransfers.findSaleTransfer(77L)).thenReturn(transfer);
+        when(reversals.findBySaleIds(anyCollection())).thenReturn(Map.of());
+
+        CommercialSummaryVO summary = business.getSummary(1L);
+
+        assertEquals(1, summary.animalSalesCount());
+        assertEquals(new BigDecimal("750.00"), summary.animalSalesTotal());
+        assertEquals(1, summary.paidReceivablesCount());
+    }
+
     @Test void legacyAnimalSalePaymentCannotBypassOwnershipSaleWorkflow() {
         AnimalSaleRecord ownershipSale = animalRecord(new AnimalSaleCommand(77L, 1L, 10L, 5L, "G1", "Cabra",
                 LocalDate.now().minusDays(2), new BigDecimal("100.00"), LocalDate.now().plusDays(5),
@@ -192,7 +239,12 @@ class CommercialBusinessTest {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(42L, "admin@test", "Admin", Set.of("ROLE_ADMIN")));
         when(ownershipPeriods.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        assertDoesNotThrow(() -> business.reverseExternalAnimalSale(1L, 9L, "Destino correto: Capril Vilar"));
+        AnimalSaleReversalRecord reversal = new AnimalSaleReversalRecord(1L, 9L, "Destino correto: Capril Vilar", java.time.LocalDateTime.of(2026, 9, 21, 10, 0), 42L);
+        when(reversals.save(eq(9L), eq("Destino correto: Capril Vilar"), any(), eq(42L))).thenReturn(reversal);
+        AnimalSaleResponseVO response = business.reverseExternalAnimalSale(1L, 9L, "Destino correto: Capril Vilar");
+        assertTrue(response.reversed());
+        assertEquals(reversal.reversedAt(), response.reversedAt());
+        assertEquals(reversal.reason(), response.reversalReason());
         verify(ownershipPeriods).save(argThat(p -> p.entryType() == OwnershipEntryType.CORRECTION_REENTRY
                 && p.source().equals("ANIMAL_SALE_REVERSAL:9") && p.farmId() == 1L));
         verify(goats).restoreAfterSaleReversal(1L, "technical-79");

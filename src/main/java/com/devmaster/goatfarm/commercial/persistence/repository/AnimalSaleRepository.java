@@ -31,6 +31,21 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
               and a.paymentStatus = :paymentStatus
               and a.paymentDate >= :fromDate
               and a.paymentDate <= :toDate
+              and not exists (
+                  select reversal.id
+                  from AnimalSaleReversal reversal
+                  where reversal.sale.id = a.id
+              )
+              and (
+                  a.targetFarm is null
+                  or exists (
+                      select transfer.id
+                      from com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransferEntity transfer
+                      where transfer.saleId = a.id
+                        and transfer.kind = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE
+                        and transfer.status = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED
+                  )
+              )
             """)
     BigDecimal sumPaidAmountByFarmIdAndPaymentDateBetween(
             @Param("farmId") Long farmId,
