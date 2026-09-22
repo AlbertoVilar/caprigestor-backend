@@ -211,16 +211,24 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - Registro de venda de animal ou leite, baixa de pagamento e lançamento de despesa operacional são mutações financeiras ou patrimoniais definitivas e exigem ADMIN ou FARM_OWNER da própria fazenda.
 - A autorização das mutações sensíveis é aplicada no controller e validada novamente no caso de uso antes da persistência.
 - `POST /api/v1/goatfarms/{farmId}/commercial/ownership-sales` exige
-  `targetFarmId`, GoatId técnico e `idempotencyKey`; cria somente uma solicitação
-  pendente. A propriedade continua no ledger atual até a confirmação do pagamento
-  pelo vendedor.
+  `targetFarmId`, GoatId técnico e `idempotencyKey`; o novo request não contém
+  `customerId`. A fazenda destino é o comprador canônico. Sem `paymentDate`, cria
+  venda `OPEN` e transferência `REQUESTED`, mantendo a propriedade no ledger
+  atual.
+- Quando `paymentDate` é informado, deve ser maior ou igual a `saleDate` e não
+  pode estar no futuro. A venda nasce `PAID` e a transferência é concluída
+  atomicamente no mesmo comando.
+- A resposta expõe `targetFarmId`, `targetFarmName` e `targetFarmTod`. Campos
+  `customerId/customerName` são nulos em novas vendas internas e permanecem
+  apenas para leitura compatível de registros históricos.
 - `PATCH .../ownership-sales/{saleId}/payment` é uma mutação da fazenda de
   origem. Quando o pagamento é confirmado, o backend marca a venda como `PAID`,
   fecha/abre os períodos canônicos, move a projeção atual e conclui o handoff na
   mesma transação. O comprador não precisa aceitar nem rejeitar a venda.
 - Cancelamento de uma venda interna não paga continua autorizado pela fazenda de
   origem; vendas pagas/concluídas não podem ser canceladas. Aceite/rejeição
-  permanecem exclusivos do fluxo `INTERNAL_TRANSFER`.
+  de `INTERNAL_SALE` retornam erro de regra; permanecem exclusivos do fluxo
+  `INTERNAL_TRANSFER`.
 
 ### Articles
 

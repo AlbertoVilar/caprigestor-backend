@@ -9,11 +9,11 @@ import java.time.LocalDate;
 
 public record OwnershipSaleRequestDTO(
         @NotBlank String goatId,
-        @NotNull Long customerId,
         @NotNull Long targetFarmId,
         @NotNull LocalDate saleDate,
         @NotNull @DecimalMin(value = "0.01") BigDecimal amount,
         @NotNull LocalDate dueDate,
+        LocalDate paymentDate,
         String notes,
         @NotBlank String idempotencyKey
 ) {

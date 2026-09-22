@@ -52,7 +52,7 @@ class OwnershipSaleBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new OwnershipSaleBusiness(customers, sales, farms, goats, authorization, principals, ownership, audit,
+        business = new OwnershipSaleBusiness(sales, farms, goats, authorization, principals, ownership, audit,
                 Clock.fixed(Instant.parse("2026-09-19T12:00:00Z"), ZoneOffset.UTC));
         lenient().when(farms.findById(SOURCE)).thenReturn(Optional.of(farm(SOURCE)));
         lenient().when(farms.findById(TARGET)).thenReturn(Optional.of(farm(TARGET)));
@@ -68,42 +68,30 @@ class OwnershipSaleBusinessTest {
 
     @Test
     void requestRequiresUnambiguousStructuralTechnicalToken() {
-        assertThatThrownBy(() -> business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO("42", 7L, TARGET, date(), amount(), date().plusDays(2), "sale", "sale-42")))
+        assertThatThrownBy(() -> business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO("42", TARGET, date(), amount(), date().plusDays(2), null, "sale", "sale-42")))
                 .isInstanceOf(InvalidArgumentException.class);
     }
 
     @Test
     void sameRegistrationDifferentTechnicalIdsRemainStructurallyAddressable() {
         when(goats.findGoatById(SOURCE, "technical-84")).thenReturn(goat(84L, "42"));
-        business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO("technical-84", 7L, TARGET, date(), amount(), date().plusDays(2), "sale", "sale-84"));
+        business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO("technical-84", TARGET, date(), amount(), date().plusDays(2), null, "sale", "sale-84"));
         verify(goats).findGoatById(SOURCE, "technical-84");
         verify(ownership).requestInternalSale(any());
     }
 
     @Test
-    void paymentAndAcceptanceAreIndependentPrerequisites() {
-        OwnershipTransfer accepted = transfer(700L, OwnershipTransferStatus.ACCEPTED);
-        when(ownership.acceptInternalSale(501L)).thenReturn(accepted);
-        AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
-        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
-        var result = business.acceptOwnershipSale(SOURCE, 501L);
-        assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.ACCEPTED);
-        assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.OPEN);
-        verify(ownership).acceptInternalSale(501L);
+    void buyerAcceptanceIsNotSupportedForCanonicalInternalSale() {
+        assertThatThrownBy(() -> business.acceptOwnershipSale(SOURCE, 501L))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+        verifyNoInteractions(ownership);
     }
 
     @Test
-    void acceptanceReadsSaleOnlyAfterCanonicalLock() {
-        OwnershipTransfer accepted = transfer(700L, OwnershipTransferStatus.ACCEPTED);
-        when(ownership.acceptInternalSale(501L)).thenReturn(accepted);
-        AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
-        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
-
-        business.acceptOwnershipSale(SOURCE, 501L);
-
-        var order = inOrder(ownership, sales);
-        order.verify(ownership).lockAndReloadInternalSale(501L);
-        order.verify(sales).findAnimalSaleByIdAndFarmId(501L, SOURCE);
+    void buyerRejectionIsNotSupportedForCanonicalInternalSale() {
+        assertThatThrownBy(() -> business.rejectOwnershipSale(SOURCE, 501L))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+        verifyNoInteractions(ownership);
     }
 
     @Test
@@ -114,6 +102,51 @@ class OwnershipSaleBusinessTest {
         when(ownership.completeInternalSaleAfterPayment(501L)).thenReturn(paymentCompletedTransfer(700L));
         var result = business.registerOwnershipSalePayment(SOURCE, 501L, new SalePaymentRequestVO(date().plusDays(1)));
         assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.PAID);
+        assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        verify(ownership).completeInternalSaleAfterPayment(501L);
+    }
+
+    @Test
+    void paidAtCreationUsesFarmAsBuyerAndCompletesAtomically() {
+        when(ownership.completeInternalSaleAfterPayment(501L)).thenReturn(paymentCompletedTransfer(700L));
+
+        var result = business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO(
+                "technical-42", TARGET, date(), amount(), date().plusDays(2), date().plusDays(1), "sale", "paid-sale-42"));
+
+        assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.PAID);
+        assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        var command = org.mockito.ArgumentCaptor.forClass(AnimalSaleCommand.class);
+        verify(sales).save(command.capture());
+        assertThat(command.getValue().customerId()).isNull();
+        assertThat(command.getValue().paymentStatus()).isEqualTo(SalePaymentStatus.PAID);
+        assertThat(command.getValue().paymentDate()).isEqualTo(date().plusDays(1));
+        verify(ownership).completeInternalSaleAfterPayment(501L);
+    }
+
+    @Test
+    void idempotentReplayWithDifferentPaymentDateIsRejected() {
+        when(ownership.findByRequesterAndIdempotencyKey(99L, "sale-42"))
+                .thenReturn(Optional.of(transfer(900L, OwnershipTransferStatus.REQUESTED, 900L)));
+        AnimalSaleRecord original = sale(new AnimalSaleCommand(900L, SOURCE, null, 42L, "42", "Goat", date(), amount(),
+                date().plusDays(2), SalePaymentStatus.OPEN, null, "sale", TARGET));
+        when(sales.findAnimalSaleById(900L)).thenReturn(Optional.of(original));
+
+        assertThatThrownBy(() -> business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO(
+                "technical-42", TARGET, date(), amount(), date().plusDays(2), date().plusDays(1), "sale", "sale-42")))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class);
+    }
+
+    @Test
+    void legacyAcceptedInternalSaleRemainsPayable() {
+        AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, null, 42L, "42", "Goat", date(), amount(),
+                date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
+        when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
+        when(ownership.findSaleTransfer(501L)).thenReturn(transfer(700L, OwnershipTransferStatus.ACCEPTED));
+        when(ownership.completeInternalSaleAfterPayment(501L)).thenReturn(paymentCompletedTransfer(700L));
+
+        var result = business.registerOwnershipSalePayment(SOURCE, 501L,
+                new SalePaymentRequestVO(date().plusDays(1)));
+
         assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         verify(ownership).completeInternalSaleAfterPayment(501L);
     }
@@ -157,7 +190,7 @@ class OwnershipSaleBusinessTest {
         when(sales.findAnimalSaleById(900L)).thenReturn(Optional.of(original));
 
         var result = business.requestOwnershipSale(SOURCE, new OwnershipSaleRequestVO(
-                "technical-42", 7L, TARGET, date(), amount(), date().plusDays(2), "sale", "sale-42"));
+                "technical-42", TARGET, date(), amount(), date().plusDays(2), null, "sale", "sale-42"));
 
         assertThat(result.saleId()).isEqualTo(900L);
         assertThat(result.ownershipTransferId()).isEqualTo(900L);

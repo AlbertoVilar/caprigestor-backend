@@ -111,7 +111,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("55");
+                    .isEqualTo("56");
             assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isEqualTo(1L);
 
             String[] allowed = {
@@ -192,6 +192,39 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection,
                     "select count(*) from ownership_transfer where state = 'COMPLETED'"))
                     .isEqualTo(2L);
+        }
+    }
+
+    @Test
+    void v56AllowsCanonicalInternalSaleWithoutCustomerAndPreservesExternalCustomerRows() throws SQLException {
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W56-INTERNAL", 1, 101);
+            insertGoat(connection, "W56-EXTERNAL", 1, 101);
+            long internalGoat = goatId(connection, "W56-INTERNAL");
+            long externalGoat = goatId(connection, "W56-EXTERNAL");
+            execute(connection, "insert into commercial_customer (id, farm_id, name, active) values (7001, 101, 'Legacy external customer', true)");
+
+            execute(connection, """
+                    insert into animal_sale
+                        (farm_id, customer_id, target_farm_id, goat_registration_number, goat_technical_id,
+                         goat_name, sale_date, amount, due_date, payment_status)
+                    values (101, null, 102, 'W56-INTERNAL', %d, 'Internal goat', date '2026-09-19',
+                            100.00, date '2026-09-25', 'OPEN')
+                    """.formatted(internalGoat));
+            execute(connection, """
+                    insert into animal_sale
+                        (farm_id, customer_id, target_farm_id, goat_registration_number, goat_technical_id,
+                         goat_name, sale_date, amount, due_date, payment_status)
+                    values (101, 7001, null, 'W56-EXTERNAL', %d, 'External goat', date '2026-09-19',
+                            100.00, date '2026-09-25', 'OPEN')
+                    """.formatted(externalGoat));
+
+            assertThat(columnIsNullable(connection, "animal_sale", "customer_id")).isTrue();
+            assertThat(queryLong(connection, "select count(*) from animal_sale where target_farm_id = 102 and customer_id is null")).isEqualTo(1L);
+            assertThat(queryLong(connection, "select count(*) from animal_sale where target_farm_id is null and customer_id = 7001")).isEqualTo(1L);
         }
     }
 
@@ -609,6 +642,20 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
             statement.setString(2, columnName);
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next();
+            }
+        }
+    }
+
+    private boolean columnIsNullable(Connection connection, String tableName, String columnName) throws SQLException {
+        try (var statement = connection.prepareStatement("""
+                select is_nullable = 'YES'
+                from information_schema.columns
+                where table_schema = 'public' and table_name = ? and column_name = ?
+                """)) {
+            statement.setString(1, tableName);
+            statement.setString(2, columnName);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() && rs.getBoolean(1);
             }
         }
     }
