@@ -131,10 +131,10 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
     @Override
     @Transactional
     public OwnershipSaleResponseVO registerOwnershipSalePayment(Long sourceFarmId, Long saleId, SalePaymentRequestVO payment) {
+        requireSeller(sourceFarmId);
         ownershipSales.lockAndReloadInternalSale(saleId);
         AnimalSaleRecord sale = requireSale(sourceFarmId, saleId);
         OwnershipTransfer transfer = requireSaleTransfer(sale);
-        requireTargetAdministrator(transfer.targetFarmId());
         if (transfer.status() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED
                 || transfer.status() == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED) {
             throw new BusinessRuleException("payment cannot be registered after ownership sale termination");
@@ -163,7 +163,8 @@ public class OwnershipSaleBusiness implements OwnershipSaleUseCase {
 
     private OwnershipTransfer completeOwnershipIfReady(Long saleId, AnimalSaleRecord sale, OwnershipTransfer transfer) {
         if (sale.paymentStatus() != SalePaymentStatus.PAID
-                || transfer.status() != com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.ACCEPTED) {
+                || (transfer.status() != com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED
+                && transfer.status() != com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.ACCEPTED)) {
             return transfer;
         }
         return ownershipSales.completeInternalSaleAfterPayment(saleId);

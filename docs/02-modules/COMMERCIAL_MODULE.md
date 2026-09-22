@@ -58,9 +58,7 @@ Base canonica: `/api/v1/goatfarms/{farmId}/commercial`
 | `POST` | `/ownership-sales` | solicitar venda entre fazendas sem transferir a propriedade ainda |
 | `GET` | `/ownership-sales/incoming` | listar solicitações recebidas pela fazenda compradora |
 | `GET` | `/ownership-sales/outgoing` | listar solicitações iniciadas pela fazenda vendedora |
-| `POST` | `/ownership-sales/{saleId}/accept` | registrar a aceitação do comprador; conclui a propriedade somente quando o pagamento também estiver confirmado |
-| `PATCH` | `/ownership-sales/{saleId}/payment` | registrar o pagamento interno; conclui a propriedade somente quando a aceitação também estiver confirmada |
-| `POST` | `/ownership-sales/{saleId}/reject` | rejeitar sem mudar a propriedade |
+| `PATCH` | `/ownership-sales/{saleId}/payment` | vendedor confirma o pagamento; conclui atomicamente a venda e a transferência |
 | `POST` | `/ownership-sales/{saleId}/cancel` | cancelar sem mudar a propriedade |
 | `POST` | `/milk-sales` | registrar venda de leite |
 | `GET` | `/milk-sales` | listar vendas de leite |
@@ -142,10 +140,11 @@ Campos principais expostos:
 - a venda de animal nao duplica a logica do ciclo do rebanho;
 - a venda W13 entre fazendas exige `targetFarmId`, cria um `INTERNAL_SALE`
   pendente no ledger canônico e não chama a saída controlada do animal;
-- a aceitação pela fazenda compradora e o pagamento interno são pré-requisitos
-  independentes do `INTERNAL_SALE`; a segunda etapa concluída fecha/abre os
-  períodos canônicos e atualiza a projeção na mesma transação; falha em
-  qualquer etapa faz rollback de todo o processo;
+- a fazenda vendedora confirma o pagamento; essa confirmação fecha/abre os
+  períodos canônicos, atualiza a projeção e conclui o `INTERNAL_SALE` na mesma
+  transação; falha em qualquer etapa faz rollback de todo o processo;
+- aceite/rejeição do comprador não fazem parte do fluxo de `INTERNAL_SALE`;
+  continuam válidos apenas para `INTERNAL_TRANSFER` sem venda;
 - vendas externas legadas permanecem no contrato original de `animal-sales` e
   não são reinterpretadas como propriedade sem evidência de uma fazenda alvo;
 - recebiveis continuam minimos e derivados das vendas;

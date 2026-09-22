@@ -31,6 +31,32 @@ class OwnershipTransferTest {
     }
 
     @Test
+    void internalSaleCanCompleteDirectlyFromPaymentWithoutBuyerAcceptance() {
+        OwnershipTransfer transfer = OwnershipTransfer.request(
+                GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_SALE,
+                "sale", "request-payment-1", REQUESTED_AT, 100L, 77L);
+
+        transfer.completeFromPayment(ACCEPTED_AT, 100L, ACCEPTED_AT);
+
+        assertEquals(OwnershipTransferStatus.COMPLETED, transfer.status());
+        assertNull(transfer.acceptedAt());
+        assertNull(transfer.acceptedBy());
+        assertEquals(ACCEPTED_AT, transfer.effectiveAt());
+        assertEquals(100L, transfer.completedBy());
+    }
+
+    @Test
+    void legacyCompletedInternalSaleWithAcceptanceStillRehydrates() {
+        OwnershipTransfer transfer = OwnershipTransfer.rehydrate(
+                42L, GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_SALE,
+                OwnershipTransferStatus.COMPLETED, "sale", "legacy-sale", REQUESTED_AT,
+                ACCEPTED_AT, ACCEPTED_AT, ACCEPTED_AT, null, 100L, 200L, 200L, 77L);
+
+        assertEquals(OwnershipTransferStatus.COMPLETED, transfer.status());
+        assertEquals(200L, transfer.acceptedBy());
+    }
+
+    @Test
     void normalAcceptanceCannotBeRepeatedAfterCompletion() {
         OwnershipTransfer transfer = OwnershipTransfer.request(
                 GOAT, 1L, 2L, OwnershipTransferKind.INTERNAL_TRANSFER,

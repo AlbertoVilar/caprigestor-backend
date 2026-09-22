@@ -233,15 +233,17 @@ class GoatOwnershipTransferBusinessTest {
     }
 
     @Test
-    void paymentFirstLeavesSaleRequestedUntilBuyerAccepts() {
+    void paymentFirstCompletesSaleWithoutBuyerAcceptance() {
         OwnershipTransfer sale = saleTransfer(501L, OwnershipTransferStatus.REQUESTED);
         when(transferPersistence.findBySaleId(501L)).thenReturn(Optional.of(sale));
         when(ownershipLock.lockGoatOwnership(GOAT)).thenReturn(Optional.of(
                 new GoatOwnershipLockState(GOAT, Optional.of(openPeriod(1L, SOURCE, START)))));
+        when(periodPersistence.findByGoatIdOrderByStartedAt(GOAT)).thenReturn(List.of(openPeriod(1L, SOURCE, START)));
+        when(projection.moveFromTo(GOAT, SOURCE, TARGET)).thenReturn(true);
 
         assertThat(business.completeInternalSaleAfterPayment(501L)).isSameAs(sale);
-        assertThat(sale.status()).isEqualTo(OwnershipTransferStatus.REQUESTED);
-        verify(projection, never()).moveFromTo(any(), any(Long.class), any(Long.class));
+        assertThat(sale.status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        verify(projection).moveFromTo(GOAT, SOURCE, TARGET);
     }
 
     @Test

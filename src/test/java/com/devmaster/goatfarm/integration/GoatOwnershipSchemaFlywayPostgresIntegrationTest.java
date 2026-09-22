@@ -89,7 +89,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
     }
 
     @Test
-    void upgradeFromV53ToV54PreservesRowsAndAcceptsOnlyKnownOwnershipEntryTypes() throws SQLException {
+    void upgradeFromV53ToLatestPreservesRowsAndAcceptsOnlyKnownOwnershipEntryTypes() throws SQLException {
         flyway("53").migrate();
 
         long[] goats;
@@ -111,7 +111,7 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
         try (Connection connection = openConnection()) {
             assertThat(queryString(connection,
                     "select version from flyway_schema_history order by installed_rank desc limit 1"))
-                    .isEqualTo("54");
+                    .isEqualTo("55");
             assertThat(queryLong(connection, "select count(*) from goat_ownership_period")).isEqualTo(1L);
 
             String[] allowed = {
@@ -140,6 +140,58 @@ class GoatOwnershipSchemaFlywayPostgresIntegrationTest {
                     .contains("RETURN")
                     .contains("EXTERNAL_CLAIM")
                     .contains("CORRECTION_REENTRY");
+        }
+    }
+
+    @Test
+    void paymentDrivenInternalSaleCompletionIsNarrowerThanTransferCompletion() throws SQLException {
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "W55-SALE-NULL", 1, 101);
+            insertGoat(connection, "W55-TRANSFER-NULL", 1, 101);
+            insertGoat(connection, "W55-SALE-LEGACY", 1, 101);
+            long saleWithoutAcceptance = goatId(connection, "W55-SALE-NULL");
+            long transferWithoutAcceptance = goatId(connection, "W55-TRANSFER-NULL");
+            long legacySale = goatId(connection, "W55-SALE-LEGACY");
+
+            execute(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, effective_at, completed_at,
+                         requested_by, completed_by)
+                    values (%d, 101, 102, 'INTERNAL_SALE', 'COMPLETED', 'payment completion',
+                            'w55-sale-null', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', timestamptz '2026-01-02 00:00:00+00',
+                            1, 1)
+                    """.formatted(saleWithoutAcceptance));
+
+            assertSqlFails(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, effective_at, completed_at,
+                         requested_by, completed_by)
+                    values (%d, 101, 102, 'INTERNAL_TRANSFER', 'COMPLETED', 'acceptance required',
+                            'w55-transfer-null', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', timestamptz '2026-01-02 00:00:00+00',
+                            1, 1)
+                    """.formatted(transferWithoutAcceptance));
+
+            execute(connection, """
+                    insert into ownership_transfer
+                        (goat_id, source_farm_id, target_farm_id, kind, state, reason,
+                         idempotency_key, requested_at, accepted_at, effective_at, completed_at,
+                         requested_by, accepted_by, completed_by)
+                    values (%d, 101, 102, 'INTERNAL_SALE', 'COMPLETED', 'legacy accepted sale',
+                            'w55-sale-legacy', timestamptz '2026-01-01 00:00:00+00',
+                            timestamptz '2026-01-01 12:00:00+00', timestamptz '2026-01-02 00:00:00+00',
+                            timestamptz '2026-01-02 00:00:00+00', 1, 2, 1)
+                    """.formatted(legacySale));
+
+            assertThat(queryLong(connection,
+                    "select count(*) from ownership_transfer where state = 'COMPLETED'"))
+                    .isEqualTo(2L);
         }
     }
 

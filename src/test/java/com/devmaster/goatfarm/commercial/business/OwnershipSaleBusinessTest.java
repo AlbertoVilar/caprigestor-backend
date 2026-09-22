@@ -107,13 +107,15 @@ class OwnershipSaleBusinessTest {
     }
 
     @Test
-    void paymentFirstDoesNotCompleteUntilAcceptance() {
+    void paymentCompletesWithoutBuyerAcceptance() {
         AnimalSaleRecord open = sale(new AnimalSaleCommand(501L, SOURCE, 7L, 42L, "42", "Goat", date(), amount(), date().plusDays(2), SalePaymentStatus.OPEN, null, null, TARGET));
         when(sales.findAnimalSaleByIdAndFarmId(501L, SOURCE)).thenReturn(Optional.of(open));
+        when(ownership.findSaleTransfer(501L)).thenReturn(transfer(700L, OwnershipTransferStatus.REQUESTED));
+        when(ownership.completeInternalSaleAfterPayment(501L)).thenReturn(paymentCompletedTransfer(700L));
         var result = business.registerOwnershipSalePayment(SOURCE, 501L, new SalePaymentRequestVO(date().plusDays(1)));
         assertThat(result.paymentStatus()).isEqualTo(SalePaymentStatus.PAID);
-        assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.REQUESTED);
-        verify(ownership, never()).completeInternalSaleAfterPayment(501L);
+        assertThat(result.ownershipTransferStatus()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        verify(ownership).completeInternalSaleAfterPayment(501L);
     }
 
     @Test
@@ -174,6 +176,13 @@ class OwnershipSaleBusinessTest {
                 status == OwnershipTransferStatus.COMPLETED ? requested.plusSeconds(1) : null,
                 status == OwnershipTransferStatus.COMPLETED ? requested.plusSeconds(1) : null, cancelled, 99L,
                 accepted ? 77L : null, status == OwnershipTransferStatus.COMPLETED ? 77L : null, saleId);
+    }
+    private OwnershipTransfer paymentCompletedTransfer(long id) {
+        Instant requested = Instant.parse("2026-09-18T12:00:00Z");
+        Instant completed = requested.plusSeconds(1);
+        return OwnershipTransfer.rehydrate(id, GoatId.of(42L), SOURCE, TARGET, OwnershipTransferKind.INTERNAL_SALE,
+                OwnershipTransferStatus.COMPLETED, "OWNERSHIP_SALE:501", "sale-42", requested, null,
+                completed, completed, null, 99L, null, 99L, 501L);
     }
     private AnimalSaleRecord sale(AnimalSaleCommand c) { return new AnimalSaleRecord(c.id() == null ? 501L : c.id(), c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Buyer", true), c.goatTechnicalId(), c.goatRegistrationNumber(), c.goatName(), c.saleDate(), c.amount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null, c.targetFarmId()); }
     private GoatResponseVO goat(long id, String rg) { GoatResponseVO goat = new GoatResponseVO(); goat.setTechnicalId(id); goat.setRegistrationNumber(rg); goat.setName("Goat"); return goat; }
