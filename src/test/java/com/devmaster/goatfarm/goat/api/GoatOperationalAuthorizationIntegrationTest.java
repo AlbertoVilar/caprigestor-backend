@@ -35,6 +35,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Instant;
 
@@ -64,6 +65,8 @@ class GoatOperationalAuthorizationIntegrationTest {
     @Autowired private PregnancyRepository pregnancyRepository;
     @Autowired private ReproductiveEventRepository reproductiveEventRepository;
     @Autowired private GoatOwnershipPeriodRepository ownershipPeriodRepository;
+
+    @Autowired private Clock clock;
 
     private User admin;
     private User owner;
@@ -156,7 +159,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         mockMvc.perform(patch(path + "/exit")
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"exitType\":\"VENDA\",\"exitDate\":\"" + LocalDate.now() + "\"}"))
+                        .content("{\"exitType\":\"VENDA\",\"exitDate\":\"" + LocalDate.now(clock) + "\"}"))
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete(path).header("Authorization", bearer(token)))
                 .andExpect(status().isForbidden());
@@ -247,7 +250,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         mockMvc.perform(patch(goatsPath(managedFarm) + "/technical-" + exitCandidate.getTechnicalId() + "/exit")
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"exitType\":\"VENDA\",\"exitDate\":\"" + LocalDate.now() + "\"}"))
+                        .content("{\"exitType\":\"VENDA\",\"exitDate\":\"" + LocalDate.now(clock) + "\"}"))
                 .andExpect(status().isOk());
         mockMvc.perform(delete(goatsPath(managedFarm) + "/technical-" + deleteCandidate.getTechnicalId())
                         .header("Authorization", bearer(ownerToken)))
@@ -335,7 +338,7 @@ class GoatOperationalAuthorizationIntegrationTest {
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
         goat.setBreed(GoatBreed.SAANEN);
-        goat.setBirthDate(LocalDate.now().minusYears(2));
+        goat.setBirthDate(LocalDate.now(clock).minusYears(2));
         goat.setStatus(GoatStatus.ATIVO);
         goat.setFarm(farm);
         GoatEntity saved = goatRepository.save(goat);
@@ -354,8 +357,8 @@ class GoatOperationalAuthorizationIntegrationTest {
                 .farmId(managedFarm.getId())
                 .goatId(targetMother.getRegistrationNumber())
                 .status(PregnancyStatus.ACTIVE)
-                .breedingDate(LocalDate.now().minusDays(150))
-                .confirmDate(LocalDate.now().minusDays(120))
+                .breedingDate(LocalDate.now(clock).minusDays(150))
+                .confirmDate(LocalDate.now(clock).minusDays(120))
                 .build());
     }
 
@@ -381,13 +384,13 @@ class GoatOperationalAuthorizationIntegrationTest {
         return "{\"registrationNumber\":\"" + registrationNumber + "\","
                 + "\"name\":\"" + name + "\","
                 + "\"gender\":\"FEMEA\",\"breed\":\"SAANEN\",\"color\":\"Branca\","
-                + "\"birthDate\":\"" + LocalDate.now().minusDays(1) + "\",\"status\":\"ATIVO\","
+                + "\"birthDate\":\"" + LocalDate.now(clock).minusDays(1) + "\",\"status\":\"ATIVO\","
                 + "\"tod\":\"" + registrationNumber.substring(0, 5) + "\","
                 + "\"toe\":\"" + registrationNumber.substring(5) + "\",\"category\":\"PA\"}";
     }
 
     private String birthPayload(String registrationNumber, String name) {
-        return "{\"birthDate\":\"" + LocalDate.now() + "\",\"kids\":[{"
+        return "{\"birthDate\":\"" + LocalDate.now(clock) + "\",\"kids\":[{"
                 + "\"registrationNumber\":\"" + registrationNumber + "\",\"name\":\"" + name + "\","
                 + "\"gender\":\"FEMEA\",\"breed\":\"SAANEN\",\"color\":\"Branca\",\"category\":\"PA\"}]}";
     }
