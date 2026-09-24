@@ -34,6 +34,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -82,6 +83,9 @@ class ReproductionActivePregnancyIntegrationTest {
     @SpyBean
     private PregnancyPersistenceAdapter pregnancyPersistenceAdapter;
 
+    @Autowired
+    private Clock clock;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
@@ -125,7 +129,7 @@ class ReproductionActivePregnancyIntegrationTest {
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setName("Mimosinha");
         ownerGoat.setGender(Gender.FEMEA);
-        ownerGoat.setBirthDate(LocalDate.now().minusYears(2));
+        ownerGoat.setBirthDate(LocalDate.now(clock).minusYears(2));
         ownerGoat.setFarm(ownerFarm);
         ownerGoat.setStatus(GoatStatus.ATIVO);
         goatRepository.save(ownerGoat);
@@ -152,7 +156,7 @@ class ReproductionActivePregnancyIntegrationTest {
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .eventType(ReproductiveEventType.COVERAGE)
-                .eventDate(LocalDate.now().minusDays(60))
+                .eventDate(LocalDate.now(clock).minusDays(60))
                 .breedingType(BreedingType.NATURAL)
                 .build();
         reproductiveEventRepository.save(coverage);
@@ -163,13 +167,13 @@ class ReproductionActivePregnancyIntegrationTest {
                 .goatId(ownerGoat.getRegistrationNumber())
                 .status(PregnancyStatus.ACTIVE)
                 .breedingDate(coverage.getEventDate())
-                .confirmDate(LocalDate.now().minusDays(10))
+                .confirmDate(LocalDate.now(clock).minusDays(10))
                 .build();
         pregnancyRepository.save(activePregnancy);
 
         // 3. Prepare request to confirm another pregnancy
         PregnancyConfirmRequestDTO request = new PregnancyConfirmRequestDTO();
-        request.setCheckDate(LocalDate.now());
+        request.setCheckDate(LocalDate.now(clock));
         request.setCheckResult(PregnancyCheckResult.POSITIVE);
         request.setNotes("Tentativa de duplicidade");
 

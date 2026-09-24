@@ -37,6 +37,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,6 +88,9 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Autowired
     private FarmOperatorRepository farmOperatorRepository;
 
+    @Autowired
+    private Clock clock;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
@@ -129,7 +133,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setName("Mimosinha");
         ownerGoat.setGender(Gender.FEMEA);
-        ownerGoat.setBirthDate(LocalDate.now().minusYears(2));
+        ownerGoat.setBirthDate(LocalDate.now(clock).minusYears(2));
         ownerGoat.setFarm(ownerFarm);
         ownerGoat.setStatus(GoatStatus.ATIVO);
         goatRepository.save(ownerGoat);
@@ -150,7 +154,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldReturnEligiblePendingRecommendation_whenCoverageEligibleAndNoCheck() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate coverageDate = LocalDate.now().minusDays(70);
+        LocalDate coverageDate = LocalDate.now(clock).minusDays(70);
 
         ReproductiveEventEntity coverage = saveCoverageEvent(coverageDate);
 
@@ -188,7 +192,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldCreateCoverageCorrectionEvent_whenRequestIsValid() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate coverageDate = LocalDate.now().minusDays(10);
+        LocalDate coverageDate = LocalDate.now(clock).minusDays(10);
 
         ReproductiveEventEntity coverage = saveCoverageEvent(coverageDate);
 
@@ -215,7 +219,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldConfirmPregnancy_whenCheckDateIsAtLeast60Days() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate checkDate = LocalDate.now();
+        LocalDate checkDate = LocalDate.now(clock);
         LocalDate coverageDate = checkDate.minusDays(60);
 
         saveCoverageEvent(coverageDate);
@@ -240,7 +244,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldReturn422_whenConfirmIsBefore60Days() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate checkDate = LocalDate.now();
+        LocalDate checkDate = LocalDate.now(clock);
         LocalDate coverageDate = checkDate.minusDays(59);
 
         saveCoverageEvent(coverageDate);
@@ -263,7 +267,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldRegisterNegativeCheck_whenCheckDateIsAtLeast60Days() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate checkDate = LocalDate.now();
+        LocalDate checkDate = LocalDate.now(clock);
         LocalDate coverageDate = checkDate.minusDays(60);
 
         saveCoverageEvent(coverageDate);
@@ -287,7 +291,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldReturn422_whenNegativeCheckIsBefore60Days() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate checkDate = LocalDate.now();
+        LocalDate checkDate = LocalDate.now(clock);
         LocalDate coverageDate = checkDate.minusDays(59);
 
         saveCoverageEvent(coverageDate);
@@ -310,7 +314,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldOrderEventsByEventDateDescAndIdDesc() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate eventDate = LocalDate.now().minusDays(15);
+        LocalDate eventDate = LocalDate.now(clock).minusDays(15);
 
         ReproductiveEventEntity first = saveCoverageEvent(eventDate);
         ReproductiveEventEntity second = saveCoverageEvent(eventDate);
@@ -326,7 +330,7 @@ class ReproductionRecommendationAndCorrectionIntegrationTest {
     @Test
     void shouldOrderPregnanciesByBreedingDateDescAndIdDesc() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        LocalDate breedingDate = LocalDate.now().minusDays(90);
+        LocalDate breedingDate = LocalDate.now(clock).minusDays(90);
 
         PregnancyEntity active = PregnancyEntity.builder()
                 .farmId(ownerFarm.getId())
