@@ -26,6 +26,27 @@ public interface GoatFarmRepository extends JpaRepository<GoatFarm, Long> {
 
     Optional<GoatFarm> findByAddressId(Long addressId);
 
+    @Query("""
+            SELECT gf FROM GoatFarm gf
+            WHERE (gf.user.id = :userId
+               OR EXISTS (
+                   SELECT fo.id FROM FarmOperator fo
+                   WHERE fo.farm.id = gf.id AND fo.user.id = :userId
+               ))
+              AND (:query = '' OR LOWER(gf.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(COALESCE(gf.tod, '')) LIKE LOWER(CONCAT('%', :query, '%')))
+            """)
+    Page<GoatFarm> findAllManagedByUserId(@Param("userId") Long userId,
+                                          @Param("query") String query,
+                                          Pageable pageable);
+
+    @Query("""
+            SELECT gf FROM GoatFarm gf
+            WHERE (:query = '' OR LOWER(gf.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(COALESCE(gf.tod, '')) LIKE LOWER(CONCAT('%', :query, '%')))
+            """)
+    Page<GoatFarm> findAllManaged(@Param("query") String query, Pageable pageable);
+
     @Query("SELECT gf FROM GoatFarm gf LEFT JOIN FETCH gf.address LEFT JOIN FETCH gf.phones WHERE gf.id = :id")
     Optional<GoatFarm> findByIdWithDetails(@Param("id") Long id);
 }

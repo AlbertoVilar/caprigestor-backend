@@ -121,6 +121,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // Fazendas (público - leitura)
                 .requestMatchers(HttpMethod.GET,
+                        "/api/v1/goatfarms/managed").hasAnyAuthority("ROLE_ADMIN", "ROLE_FARM_OWNER", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms",
                         "/api/v1/goatfarms/*",
                         "/api/v1/goatfarms/name").permitAll()
