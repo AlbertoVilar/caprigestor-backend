@@ -33,6 +33,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,6 +89,8 @@ class LactationBusinessTest {
         lenient().doNothing().when(goatOwnershipGuard)
                 .requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
         lenient().when(lactationPersistencePort.findActiveByGoatTechnicalId(any(GoatId.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(lactationPersistencePort.findActiveByFarmIdAndGoatId(anyLong(), anyString()))
                 .thenReturn(Optional.empty());
         lenient().when(lactationPersistencePort.findLatestByGoatTechnicalId(any(GoatId.class)))
                 .thenReturn(Optional.empty());
@@ -222,7 +225,7 @@ class LactationBusinessTest {
         Lactation existingLactation = Lactation.rehydrate(lactationId, farmId, goatId, null,
                 LactationStatus.ACTIVE, startDate, null, null, null, 90, 60, null, null);
 
-        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(existingLactation));
         when(lactationPersistencePort.save(any(Lactation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -254,7 +257,7 @@ class LactationBusinessTest {
         Long lactationId = 999L;
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
 
-        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
@@ -272,7 +275,7 @@ class LactationBusinessTest {
         Lactation closedLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.CLOSED,
                 LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
-        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(closedLactation));
 
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
@@ -291,7 +294,7 @@ class LactationBusinessTest {
         Lactation activeLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.ACTIVE,
                 startDate, null, null, null, 90, 60, null, null);
 
-        when(lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, new GoatId(123L)))
+        when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(activeLactation));
 
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
@@ -411,6 +414,44 @@ class LactationBusinessTest {
     }
 
     @Test
+    void getActiveLactation_shouldUseOnlyCurrentFarmOperationalSegment() {
+        Lactation current = Lactation.rehydrate(50L, 1L, "123", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 25), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(1L, "123"))
+                .thenReturn(Optional.of(current));
+        when(lactationMapper.toResponseVO(current)).thenReturn(responseVO());
+
+        LactationResponseVO result = lactationBusiness.getActiveLactation(1L, "123");
+
+        assertNotNull(result);
+        verify(goatOwnershipGuard).requireCurrentFarm(new GoatId(123L), 1L);
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(1L, "123");
+        assertEquals(1L, current.getFarmId());
+    }
+
+    @Test
+    void activeSummary_shouldUseCurrentFarmOperationalSegment() {
+        Lactation current = Lactation.rehydrate(50L, 1L, "123", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 25), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(1L, "123"))
+                .thenReturn(Optional.of(current));
+        when(milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
+                eq(1L), eq("123"), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(1L), eq("123"), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+
+        LactationSummaryResponseVO result = lactationBusiness.getActiveLactationSummary(1L, "123");
+
+        assertNotNull(result);
+        assertEquals(50L, result.getLactation().getLactationId());
+        assertEquals(1L, current.getFarmId());
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(1L, "123");
+    }
+
+    @Test
     void getActiveLactation_shouldThrowResourceNotFound_whenNotExists() {
         Long farmId = 1L;
         String goatId = "123";
@@ -437,6 +478,46 @@ class LactationBusinessTest {
 
         assertNotNull(result);
         assertEquals(expectedVO.getId(), result.getId());
+    }
+
+    @Test
+    void closeActiveForOwnershipTransferUsesSaoPauloDateAndPreservesProvenance() {
+        Lactation active = Lactation.rehydrate(49L, 19L, "OLD-RG", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 24), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
+                .thenReturn(Optional.of(active));
+        when(lactationPersistencePort.save(active)).thenReturn(active);
+
+        lactationBusiness.closeActiveForOwnershipTransfer(
+                new GoatId(123L), 19L, Instant.parse("2026-09-25T02:00:00Z"));
+
+        assertEquals(LactationStatus.CLOSED, active.getStatus());
+        assertEquals(LocalDate.of(2026, 9, 24), active.getEndDate());
+        assertEquals(19L, active.getFarmId());
+        verify(lactationPersistencePort).save(active);
+    }
+
+    @Test
+    void closeActiveForOwnershipTransferDoesNothingWithoutActiveSegment() {
+        lactationBusiness.closeActiveForOwnershipTransfer(
+                new GoatId(123L), 19L, Instant.parse("2026-09-25T12:00:00Z"));
+
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
+    }
+
+    @Test
+    void closeActiveForOwnershipTransferFailsClosedWhenActiveSegmentHasUnexpectedFarm() {
+        Lactation active = Lactation.rehydrate(49L, 18L, "OTHER-RG", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 24), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
+                .thenReturn(Optional.of(active));
+
+        assertThrows(BusinessRuleException.class,
+                () -> lactationBusiness.closeActiveForOwnershipTransfer(
+                        new GoatId(123L), 19L, Instant.parse("2026-09-25T12:00:00Z")));
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
     }
 
     @Test

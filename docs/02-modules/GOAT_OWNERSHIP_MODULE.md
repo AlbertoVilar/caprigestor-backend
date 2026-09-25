@@ -43,6 +43,19 @@ registro. O ledger mantém períodos `TRANSFER_OUT` e `TRANSFER_IN` no mesmo
 instante efetivo; a projeção `cabras.capril_id` é sincronizada somente como
 compatibilidade.
 
+### Continuidade operacional da lactação
+
+Ao concluir `INTERNAL_TRANSFER` ou `INTERNAL_SALE`, a lactação `ACTIVE` da
+fazenda de origem é encerrada atomicamente no mesmo handoff (`ACTIVE -> CLOSED`).
+O `farm_id` de origem, o `GoatId`, a data inicial, as produções e a proveniência
+histórica permanecem intactos; somente o período operacional deixa de ser
+válido para a origem. `CLOSED` por transferência não é `DRY` e não pode ser
+retomada. Depois do handoff, a fazenda compradora pode abrir um novo segmento
+`ACTIVE` para o mesmo `GoatId`, preservando a unicidade global de uma lactação
+ativa definida na V47. O histórico permanece acessível pelo dossiê e não é
+migrado. A resolução da data civil usa `America/Sao_Paulo`, e dias divididos
+entre owners continuam sujeitos ao fail-closed de ownership.
+
 ## Limites de escopo
 
 W7 é backend-only e não ativa `INTERNAL_SALE`, `RETURN`, `EXTERNAL_CLAIM`,

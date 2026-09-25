@@ -5,7 +5,10 @@ import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUs
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
 import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipSaleRequest;
 import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipTransferRequest;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipTransferUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatCurrentOwnerProjectionPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipLockPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipPeriodPersistencePort;
@@ -18,6 +21,8 @@ import com.devmaster.goatfarm.goatownership.domain.GoatOwnershipPeriod;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
 import com.devmaster.goatfarm.goatownership.persistence.adapter.CreatorReferencePersistenceAdapter;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.sql.Timestamp;
 import java.util.List;
@@ -44,7 +50,10 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -74,8 +83,102 @@ class GoatOwnershipTransferPostgresIntegrationTest {
     @Autowired GoatOwnershipPeriodPersistencePort periodPersistence;
     @Autowired GoatOwnershipQueryPort ownershipQuery;
     @Autowired OwnershipTransferPersistencePort transferPersistence;
-    @Autowired GoatCurrentOwnerProjectionPort projection;
+    @SpyBean GoatCurrentOwnerProjectionPort projection;
     @Autowired CreatorReferencePersistenceAdapter creatorReference;
+    @Autowired GoatOwnershipTransferUseCase realTransferUseCase;
+    @Autowired GoatOwnershipSaleUseCase realSaleUseCase;
+    @MockBean CurrentPrincipalQueryUseCase currentPrincipalQuery;
+    @MockBean FarmAuthorizationUseCase farmAuthorization;
+
+    @Test
+    void springPostgresInternalTransferClosesOriginLactationAndMovesOwnership() {
+        long sourceFarm = createFarm("W14 Transfer Source");
+        long targetFarm = createFarm("W14 Transfer Target");
+        long goatRow = createGoat(sourceFarm, "W14-TRANSFER-" + System.nanoTime());
+        String registration = jdbcTemplate.queryForObject("select num_registro from cabras where id = ?", String.class, goatRow);
+        seedOpenPeriod(goatRow, sourceFarm, "w14-real-transfer");
+        long lactationId = seedActiveLactation(sourceFarm, goatRow, registration);
+        configureRealOwnershipPrincipal();
+
+        var requested = realTransferUseCase.requestInternalTransfer(new InternalOwnershipTransferRequest(
+                GoatId.of(goatRow), targetFarm, "w14 real transfer", "w14-real-transfer-" + goatRow));
+        var completed = realTransferUseCase.acceptTransfer(requested.id());
+
+        assertThat(completed.status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        assertThat(jdbcTemplate.queryForObject("select status from lactation where id = ?", String.class, lactationId))
+                .isEqualTo("CLOSED");
+        assertThat(jdbcTemplate.queryForObject("select farm_id from lactation where id = ?", Long.class, lactationId))
+                .isEqualTo(sourceFarm);
+        assertThat(jdbcTemplate.queryForObject("select end_date from lactation where id = ?", LocalDate.class, lactationId))
+                .isEqualTo(LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")));
+        assertThat(jdbcTemplate.queryForObject("select farm_id from goat_ownership_period where goat_id = ? and ended_at is null", Long.class, goatRow))
+                .isEqualTo(targetFarm);
+        assertThat(jdbcTemplate.queryForObject("select capril_id from cabras where id = ?", Long.class, goatRow))
+                .isEqualTo(targetFarm);
+    }
+
+    @Test
+    void springPostgresInternalSaleClosesOriginLactationAndMovesOwnership() {
+        long sourceFarm = createFarm("W14 Sale Source");
+        long targetFarm = createFarm("W14 Sale Target");
+        long goatRow = createGoat(sourceFarm, "W14-SALE-" + System.nanoTime());
+        String registration = jdbcTemplate.queryForObject("select num_registro from cabras where id = ?", String.class, goatRow);
+        seedOpenPeriod(goatRow, sourceFarm, "w14-real-sale");
+        long lactationId = seedActiveLactation(sourceFarm, goatRow, registration);
+        long saleId = seedInternalSale(sourceFarm, targetFarm, goatRow, registration);
+        configureRealOwnershipPrincipal();
+
+        var requested = realSaleUseCase.requestInternalSale(new InternalOwnershipSaleRequest(
+                GoatId.of(goatRow), sourceFarm, targetFarm, saleId,
+                "w14 real sale", "w14-real-sale-" + goatRow));
+        var completed = realSaleUseCase.completeInternalSaleAfterPayment(requested.saleId());
+
+        assertThat(completed.status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        assertThat(jdbcTemplate.queryForObject("select status from lactation where id = ?", String.class, lactationId))
+                .isEqualTo("CLOSED");
+        assertThat(jdbcTemplate.queryForObject("select farm_id from lactation where id = ?", Long.class, lactationId))
+                .isEqualTo(sourceFarm);
+        assertThat(jdbcTemplate.queryForObject("select farm_id from goat_ownership_period where goat_id = ? and ended_at is null", Long.class, goatRow))
+                .isEqualTo(targetFarm);
+        assertThat(jdbcTemplate.queryForObject("select capril_id from cabras where id = ?", Long.class, goatRow))
+                .isEqualTo(targetFarm);
+    }
+
+    @Test
+    void springPostgresTransferRollbackRestoresActiveLactationAndOriginOwnership() {
+        long sourceFarm = createFarm("W14 Rollback Source");
+        long targetFarm = createFarm("W14 Rollback Target");
+        long goatRow = createGoat(sourceFarm, "W14-ROLLBACK-" + System.nanoTime());
+        String registration = jdbcTemplate.queryForObject("select num_registro from cabras where id = ?", String.class, goatRow);
+        seedOpenPeriod(goatRow, sourceFarm, "w14-real-rollback");
+        long lactationId = seedActiveLactation(sourceFarm, goatRow, registration);
+        configureRealOwnershipPrincipal();
+        var requested = realTransferUseCase.requestInternalTransfer(new InternalOwnershipTransferRequest(
+                GoatId.of(goatRow), targetFarm, "w14 rollback", "w14-real-rollback-" + goatRow));
+
+        doThrow(new IllegalStateException("w14 integration projection failure"))
+                .when(projection).moveFromTo(any(), anyLong(), anyLong());
+        try {
+            assertThatThrownBy(() -> realTransferUseCase.acceptTransfer(requested.id()))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("w14 integration projection failure");
+        } finally {
+            reset(projection);
+        }
+
+        assertThat(jdbcTemplate.queryForObject("select status from lactation where id = ?", String.class, lactationId))
+                .isEqualTo("ACTIVE");
+        assertThat(jdbcTemplate.queryForObject("select farm_id from goat_ownership_period where goat_id = ? and ended_at is null", Long.class, goatRow))
+                .isEqualTo(sourceFarm);
+        assertThat(jdbcTemplate.queryForObject("select capril_id from cabras where id = ?", Long.class, goatRow))
+                .isEqualTo(sourceFarm);
+    }
+
+    private void configureRealOwnershipPrincipal() {
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(
+                new AuthenticatedPrincipal(1L, "w14-integration@example.com", "W14 Integration", Set.of("ROLE_FARM_OWNER")));
+        when(farmAuthorization.canAdministerFarm(anyLong())).thenReturn(true);
+    }
 
     @Test
     void internalTransferCompletesAtomicallyAndPreservesIdentityAndHistory() {
@@ -272,12 +375,32 @@ class GoatOwnershipTransferPostgresIntegrationTest {
         var authorization = mock(FarmAuthorizationUseCase.class);
         when(principal.requireCurrent()).thenReturn(new AuthenticatedPrincipal(1L, "w6@example.com", "W6", Set.of("ROLE_FARM_OWNER")));
         when(authorization.canAdministerFarm(anyLong())).thenReturn(true);
+        var lactationCommandUseCase = mock(com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase.class);
         return new GoatOwnershipTransferBusiness(principal, authorization, farmPersistence, ownershipLock,
-                periodPersistence, transferPersistence, projection, Clock.fixed(now, ZoneOffset.UTC));
+                periodPersistence, transferPersistence, projection, Clock.fixed(now, ZoneOffset.UTC), lactationCommandUseCase);
     }
 
     private void seedOpenPeriod(long goatId, long farmId, String source) {
         jdbcTemplate.update("insert into goat_ownership_period (goat_id, farm_id, started_at, entry_type, source, version) values (?, ?, ?, 'MANUAL_IMPORT', ?, 0)", goatId, farmId, Timestamp.from(START), source);
+    }
+
+    private long seedActiveLactation(long farmId, long goatTechnicalId, String registration) {
+        return jdbcTemplate.queryForObject(
+                "insert into lactation (farm_id, goat_id, goat_technical_id, status, start_date) values (?, ?, ?, 'ACTIVE', date '2026-01-15') returning id",
+                Long.class, farmId, registration, goatTechnicalId);
+    }
+
+    private long seedInternalSale(long sourceFarm, long targetFarm, long goatTechnicalId, String registration) {
+        long customerId = jdbcTemplate.queryForObject(
+                "insert into commercial_customer (farm_id, name, active) values (?, 'W14 Customer', true) returning id",
+                Long.class, sourceFarm);
+        return jdbcTemplate.queryForObject("""
+                insert into animal_sale
+                    (farm_id, target_farm_id, customer_id, goat_registration_number, goat_technical_id,
+                     goat_name, sale_date, amount, due_date, payment_status, payment_date)
+                values (?, ?, ?, ?, ?, 'W14 Sale Goat', date '2026-09-25', 100, date '2026-09-25', 'PAID', date '2026-09-25')
+                returning id
+                """, Long.class, sourceFarm, targetFarm, customerId, registration, goatTechnicalId);
     }
 
     private long createFarm(String prefix) {

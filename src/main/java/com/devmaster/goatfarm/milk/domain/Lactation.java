@@ -116,6 +116,26 @@ public final class Lactation {
         dryStartDate = null;
     }
 
+    /**
+     * Closes the operational segment when ownership moves to another farm.
+     * This is intentionally distinct from drying: a transferred segment must
+     * never be resumed by the new owner.
+     */
+    public void closeForOwnershipTransfer(LocalDate closeDate) {
+        if (status != LactationStatus.ACTIVE) {
+            throw new IllegalStateException("Apenas lactacoes ativas podem ser encerradas por transferencia.");
+        }
+        if (closeDate == null) {
+            throw new IllegalArgumentException("Data de encerramento da lactacao e obrigatoria.");
+        }
+        if (closeDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("Data de encerramento nao pode ser anterior a data de inicio.");
+        }
+        status = LactationStatus.CLOSED;
+        endDate = closeDate;
+        dryStartDate = null;
+    }
+
     public Long getId() { return id; }
     public Long getFarmId() { return farmId; }
     public String getGoatId() { return goatId; }

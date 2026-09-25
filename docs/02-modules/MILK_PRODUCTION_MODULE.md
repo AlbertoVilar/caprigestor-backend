@@ -22,7 +22,14 @@ diretamente a tabela `pregnancy`; alertas de secagem usam o contrato batch
 ## Regras / Contratos
 - Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
 - `POST` exige `date`, `shift` e `volumeLiters`.
-- Registro de produção depende de lactação ativa.
+- Registro de produção depende de lactação `ACTIVE` do farm operacional atual;
+  uma lactação `ACTIVE` histórica de outro ownership não pode ser reutilizada.
+- No handoff de ownership, a lactação `ACTIVE` da origem é fechada
+  atomicamente (`ACTIVE -> CLOSED`), preservando `farm_id`, GoatId e produções;
+  o comprador inicia um novo segmento `ACTIVE` para novas produções.
+- `CLOSED` por transferência não é `DRY` nem pode ser retomada. O histórico
+  continua disponível no dossiê e não é migrado; a unicidade global de `ACTIVE`
+  por GoatId da V47 permanece válida.
 - `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
 - `DELETE` realiza cancelamento lógico (não remove histórico físico).
 - As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.

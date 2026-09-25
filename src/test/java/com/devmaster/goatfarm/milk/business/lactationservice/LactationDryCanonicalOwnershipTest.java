@@ -70,30 +70,30 @@ class LactationDryCanonicalOwnershipTest {
         lenient().doNothing().when(ownershipGuard).requireCurrentFarm(GOAT_ID, CURRENT_FARM);
         lenient().doNothing().when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, CURRENT_FARM, DRY_DATE);
-        lenient().when(lactationPersistence.findByIdAndGoatTechnicalId(10L, GOAT_ID))
-                .thenReturn(Optional.of(inheritedActiveLactation()));
+        lenient().when(lactationPersistence.findByIdAndFarmIdAndGoatId(10L, CURRENT_FARM, ROUTE_REGISTRATION))
+                .thenReturn(Optional.of(currentActiveLactation()));
         lenient().when(lactationPersistence.save(any(Lactation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
-    void currentOwnerCanDryInheritedOriginLactationWithoutRewritingHistory() {
-        Lactation inherited = inheritedActiveLactation();
-        when(lactationPersistence.findByIdAndGoatTechnicalId(10L, GOAT_ID))
-                .thenReturn(Optional.of(inherited));
+    void currentOwnerCanDryCurrentFarmLactationWithoutRewritingHistory() {
+        Lactation current = currentActiveLactation();
+        when(lactationPersistence.findByIdAndFarmIdAndGoatId(10L, CURRENT_FARM, ROUTE_REGISTRATION))
+                .thenReturn(Optional.of(current));
 
         business.dryLactation(CURRENT_FARM, ROUTE_REGISTRATION, 10L, request(DRY_DATE));
 
         ArgumentCaptor<Lactation> captor = ArgumentCaptor.forClass(Lactation.class);
         verify(lactationPersistence).save(captor.capture());
-        assertSame(inherited, captor.getValue());
-        assertEquals(LactationStatus.DRY, inherited.getStatus());
-        assertEquals(DRY_DATE, inherited.getEndDate());
-        assertEquals(DRY_DATE, inherited.getDryStartDate());
-        assertEquals(ORIGIN_FARM, inherited.getFarmId());
-        assertEquals(HISTORICAL_REGISTRATION, inherited.getGoatId());
-        assertEquals(GOAT_ID.value(), inherited.getGoatTechnicalId());
-        verify(lactationPersistence).findByIdAndGoatTechnicalId(10L, GOAT_ID);
+        assertSame(current, captor.getValue());
+        assertEquals(LactationStatus.DRY, current.getStatus());
+        assertEquals(DRY_DATE, current.getEndDate());
+        assertEquals(DRY_DATE, current.getDryStartDate());
+        assertEquals(CURRENT_FARM, current.getFarmId());
+        assertEquals(ROUTE_REGISTRATION, current.getGoatId());
+        assertEquals(GOAT_ID.value(), current.getGoatTechnicalId());
+        verify(lactationPersistence).findByIdAndFarmIdAndGoatId(10L, CURRENT_FARM, ROUTE_REGISTRATION);
         verify(ownershipGuard).requireCurrentFarm(GOAT_ID, CURRENT_FARM);
         verify(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, CURRENT_FARM, DRY_DATE);
     }
@@ -106,7 +106,7 @@ class LactationDryCanonicalOwnershipTest {
         assertThrows(AuthorizationDeniedException.class,
                 () -> business.dryLactation(ORIGIN_FARM, ROUTE_REGISTRATION, 10L, request(DRY_DATE)));
 
-        verify(lactationPersistence, never()).findByIdAndGoatTechnicalId(anyLong(), any(GoatId.class));
+        verify(lactationPersistence, never()).findByIdAndFarmIdAndGoatId(anyLong(), anyLong(), any());
         verify(genderValidator, never()).requireFemaleAndActive(any(GoatId.class));
         verify(lactationPersistence, never()).save(any(Lactation.class));
     }
@@ -118,7 +118,7 @@ class LactationDryCanonicalOwnershipTest {
 
         verify(ownershipGuard).requireCurrentFarm(GOAT_ID, ORIGIN_FARM);
         verify(genderValidator, never()).requireFemaleAndActive(any(GoatId.class));
-        verify(lactationPersistence, never()).findByIdAndGoatTechnicalId(anyLong(), any(GoatId.class));
+        verify(lactationPersistence, never()).findByIdAndFarmIdAndGoatId(anyLong(), anyLong(), any());
         verify(lactationPersistence, never()).save(any(Lactation.class));
     }
 
@@ -126,7 +126,7 @@ class LactationDryCanonicalOwnershipTest {
     void wrongGoatTechnicalIdCannotResolveAnotherGoatLactation() {
         when(referenceResolver.resolveGlobal("technical-42"))
                 .thenReturn(Optional.of(new GoatReference(GOAT_ID, CURRENT_FARM, ROUTE_REGISTRATION, "Matriz")));
-        when(lactationPersistence.findByIdAndGoatTechnicalId(99L, GOAT_ID)).thenReturn(Optional.empty());
+        when(lactationPersistence.findByIdAndFarmIdAndGoatId(99L, CURRENT_FARM, ROUTE_REGISTRATION)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
                 () -> business.dryLactation(CURRENT_FARM, "technical-42", 99L, request(DRY_DATE)));
@@ -136,8 +136,8 @@ class LactationDryCanonicalOwnershipTest {
 
     @Test
     void alreadyDryLactationIsRejected() {
-        when(lactationPersistence.findByIdAndGoatTechnicalId(10L, GOAT_ID))
-                .thenReturn(Optional.of(lactation(LactationStatus.DRY)));
+        when(lactationPersistence.findByIdAndFarmIdAndGoatId(10L, CURRENT_FARM, ROUTE_REGISTRATION))
+                .thenReturn(Optional.of(currentLactation(LactationStatus.DRY)));
 
         assertThrows(BusinessRuleException.class,
                 () -> business.dryLactation(CURRENT_FARM, ROUTE_REGISTRATION, 10L, request(DRY_DATE)));
@@ -185,13 +185,14 @@ class LactationDryCanonicalOwnershipTest {
 
     @Test
     void currentRegistrationChangeDoesNotAlterHistoricalSnapshot() {
-        Lactation inherited = inheritedActiveLactation();
-        when(lactationPersistence.findByIdAndGoatTechnicalId(10L, GOAT_ID)).thenReturn(Optional.of(inherited));
+        Lactation current = currentActiveLactation();
+        when(lactationPersistence.findByIdAndFarmIdAndGoatId(10L, CURRENT_FARM, ROUTE_REGISTRATION))
+                .thenReturn(Optional.of(current));
 
         business.dryLactation(CURRENT_FARM, ROUTE_REGISTRATION, 10L, request(DRY_DATE));
 
-        assertEquals(HISTORICAL_REGISTRATION, inherited.getGoatId());
-        assertEquals(ORIGIN_FARM, inherited.getFarmId());
+        assertEquals(ROUTE_REGISTRATION, current.getGoatId());
+        assertEquals(CURRENT_FARM, current.getFarmId());
     }
 
     private LactationDryRequestVO request(LocalDate endDate) {
@@ -202,6 +203,17 @@ class LactationDryCanonicalOwnershipTest {
 
     private Lactation inheritedActiveLactation() {
         return lactation(LactationStatus.ACTIVE);
+    }
+
+    private Lactation currentActiveLactation() {
+        return currentLactation(LactationStatus.ACTIVE);
+    }
+
+    private Lactation currentLactation(LactationStatus status) {
+        return Lactation.rehydrate(10L, CURRENT_FARM, ROUTE_REGISTRATION, GOAT_ID.value(), status,
+                START_DATE, status == LactationStatus.DRY ? START_DATE.plusDays(1) : null,
+                null, status == LactationStatus.DRY ? START_DATE.plusDays(1) : null,
+                90, 60, null, null);
     }
 
     private Lactation lactation(LactationStatus status) {

@@ -70,7 +70,8 @@ class MilkProductionCanonicalOwnershipTest {
         lenient().doNothing().when(genderValidator).requireFemaleAndActive(any(GoatId.class));
         lenient().when(milkPersistence.existsActiveByGoatTechnicalIdAndDateAndShift(any(GoatId.class), any(LocalDate.class), any(MilkingShift.class)))
                 .thenReturn(false);
-        lenient().when(lactationPersistence.findActiveByGoatTechnicalId(GOAT_ID)).thenReturn(Optional.of(activeLactation(FARM_A)));
+        lenient().when(lactationPersistence.findActiveByFarmIdAndGoatId(FARM_B, CURRENT_RG))
+                .thenReturn(Optional.of(activeLactation(FARM_B, CURRENT_RG)));
         lenient().when(withdrawalQuery.getGoatWithdrawalStatus(eq(GOAT_ID), any(LocalDate.class)))
                 .thenReturn(noWithdrawal());
         lenient().when(milkPersistence.save(any(MilkProduction.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -78,7 +79,7 @@ class MilkProductionCanonicalOwnershipTest {
     }
 
     @Test
-    void currentOwnerCanRecordAgainstInheritedActiveLactation() {
+    void currentOwnerCanRecordAgainstCurrentFarmLactation() {
         MilkProductionResponseVO response = business.createMilkProduction(FARM_B, "NEW-RG", request());
 
         assertNotNull(response);
@@ -89,24 +90,21 @@ class MilkProductionCanonicalOwnershipTest {
         assertEquals(CURRENT_RG, saved.getGoatId());
         assertEquals(GOAT_ID.value(), saved.getGoatTechnicalId());
         assertEquals(10L, saved.getLactationId());
-        assertEquals(FARM_A, activeLactation(FARM_A).getFarmId());
+        assertEquals(FARM_B, activeLactation(FARM_B, CURRENT_RG).getFarmId());
     }
 
     @Test
-    void inheritedLactationOriginAndSnapshotRemainUnchangedWhenRegistrationDiffers() {
-        Lactation inherited = activeLactation(FARM_A);
-        when(lactationPersistence.findActiveByGoatTechnicalId(GOAT_ID)).thenReturn(Optional.of(inherited));
+    void formerFarmLactationCannotBeReusedByCurrentOwner() {
+        Lactation inherited = activeLactation(FARM_A, "OLD-RG");
+        when(lactationPersistence.findActiveByFarmIdAndGoatId(FARM_B, CURRENT_RG))
+                .thenReturn(Optional.empty());
 
-        business.createMilkProduction(FARM_B, CURRENT_RG, request());
+        assertThrows(NoActiveLactationException.class,
+                () -> business.createMilkProduction(FARM_B, CURRENT_RG, request()));
 
         assertEquals(FARM_A, inherited.getFarmId());
         assertEquals("OLD-RG", inherited.getGoatId());
-        assertEquals(GOAT_ID.value(), inherited.getGoatTechnicalId());
-        ArgumentCaptor<MilkProduction> captor = ArgumentCaptor.forClass(MilkProduction.class);
-        verify(milkPersistence).save(captor.capture());
-        assertEquals(CURRENT_RG, captor.getValue().getGoatId());
-        assertEquals(FARM_B, captor.getValue().getFarmId());
-        assertEquals(10L, captor.getValue().getLactationId());
+        verify(milkPersistence, never()).save(any());
     }
 
     @Test
@@ -178,8 +176,8 @@ class MilkProductionCanonicalOwnershipTest {
     }
 
     @Test
-    void missingGlobalActiveLactationPreservesExistingException() {
-        when(lactationPersistence.findActiveByGoatTechnicalId(GOAT_ID)).thenReturn(Optional.empty());
+    void missingCurrentFarmActiveLactationPreservesExistingException() {
+        when(lactationPersistence.findActiveByFarmIdAndGoatId(FARM_B, CURRENT_RG)).thenReturn(Optional.empty());
         assertThrows(NoActiveLactationException.class,
                 () -> business.createMilkProduction(FARM_B, CURRENT_RG, request()));
         verify(withdrawalQuery, never()).getGoatWithdrawalStatus(any(GoatId.class), any(LocalDate.class));
@@ -214,7 +212,7 @@ class MilkProductionCanonicalOwnershipTest {
         order.verify(genderValidator).requireFemaleAndActive(GOAT_ID);
         order.verify(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, RECORD_DATE);
         order.verify(milkPersistence).existsActiveByGoatTechnicalIdAndDateAndShift(GOAT_ID, RECORD_DATE, MilkingShift.MORNING);
-        order.verify(lactationPersistence).findActiveByGoatTechnicalId(GOAT_ID);
+        order.verify(lactationPersistence).findActiveByFarmIdAndGoatId(FARM_B, CURRENT_RG);
         order.verify(withdrawalQuery).getGoatWithdrawalStatus(GOAT_ID, RECORD_DATE);
     }
 
@@ -224,7 +222,11 @@ class MilkProductionCanonicalOwnershipTest {
     }
 
     private Lactation activeLactation(Long farmId) {
-        return Lactation.rehydrate(10L, farmId, "OLD-RG", GOAT_ID.value(), LactationStatus.ACTIVE,
+        return activeLactation(farmId, "OLD-RG");
+    }
+
+    private Lactation activeLactation(Long farmId, String registration) {
+        return Lactation.rehydrate(10L, farmId, registration, GOAT_ID.value(), LactationStatus.ACTIVE,
                 RECORD_DATE.minusDays(10), null, null, null, 90, 60, null, null);
     }
 

@@ -46,6 +46,29 @@ class LactationDomainTest {
     }
 
     @Test
+    void ownershipTransferClosesActiveSegmentWithoutMarkingItDry() {
+        Lactation lactation = Lactation.open(7L, "RG-1", LocalDate.of(2026, 1, 10));
+
+        lactation.closeForOwnershipTransfer(LocalDate.of(2026, 4, 1));
+
+        assertEquals(LactationStatus.CLOSED, lactation.getStatus());
+        assertEquals(LocalDate.of(2026, 4, 1), lactation.getEndDate());
+        assertNull(lactation.getDryStartDate());
+    }
+
+    @Test
+    void ownershipTransferCannotCloseNonActiveOrBeforeStart() {
+        Lactation dry = Lactation.open(7L, "RG-1", LocalDate.of(2026, 1, 10));
+        dry.dry(LocalDate.of(2026, 2, 1));
+        assertThrows(IllegalStateException.class,
+                () -> dry.closeForOwnershipTransfer(LocalDate.of(2026, 3, 1)));
+
+        Lactation active = Lactation.open(7L, "RG-1", LocalDate.of(2026, 1, 10));
+        assertThrows(IllegalArgumentException.class,
+                () -> active.closeForOwnershipTransfer(LocalDate.of(2026, 1, 9)));
+    }
+
+    @Test
     void rejectsInvalidOpenAndDryTransitions() {
         assertThrows(IllegalArgumentException.class,
                 () -> Lactation.open(null, "RG-1", LocalDate.now()));

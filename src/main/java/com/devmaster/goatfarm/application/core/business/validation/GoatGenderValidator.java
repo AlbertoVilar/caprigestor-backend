@@ -33,6 +33,17 @@ public class GoatGenderValidator {
         validateActiveStatus(goat.status());
     }
 
+    /**
+     * Validates sex by stable technical identity. Ownership is deliberately
+     * checked by the caller so historical farm provenance is not mistaken for
+     * the current operational farm.
+     */
+    public void requireFemale(GoatId goatId) {
+        var goat = goatValidationQueryPort.findForValidation(goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para o GoatId informado."));
+        validateFemale(goat.gender());
+    }
+
     public void requireFemaleAndActive(GoatId goatId) {
         var goat = goatValidationQueryPort.findForValidation(goatId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para o GoatId informado."));

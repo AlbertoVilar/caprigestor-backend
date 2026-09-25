@@ -18,6 +18,9 @@ import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.devmaster.goatfarm.authority.persistence.entity.FarmOperator;
 import com.devmaster.goatfarm.authority.persistence.entity.Role;
 import com.devmaster.goatfarm.authority.persistence.entity.User;
@@ -46,6 +49,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 
@@ -96,6 +100,9 @@ public class SecurityOwnershipIntegrationTest {
 
     @Autowired
     private MilkProductionRepository milkProductionRepository;
+
+    @Autowired
+    private GoatOwnershipPeriodRepository goatOwnershipPeriodRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -187,6 +194,14 @@ public class SecurityOwnershipIntegrationTest {
         ownerGoat.setStatus(GoatStatus.ATIVO);
         goatRepository.save(ownerGoat);
 
+        GoatOwnershipPeriodEntity ownership = new GoatOwnershipPeriodEntity();
+        ownership.setGoatId(ownerGoat.getTechnicalId());
+        ownership.setFarmId(ownerFarm.getId());
+        ownership.setStartedAt(Instant.now().minusSeconds(365L * 86_400));
+        ownership.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownership.setSource("Security ownership integration fixture");
+        goatOwnershipPeriodRepository.save(ownership);
+
         anotherGoat = new GoatEntity();
         anotherGoat.setName("GoatEntity 2");
         anotherGoat.setRegistrationNumber("GOAT-002");
@@ -199,6 +214,7 @@ public class SecurityOwnershipIntegrationTest {
         LactationEntity lactation = new LactationEntity();
         lactation.setFarmId(ownerFarm.getId());
         lactation.setGoatId(ownerGoat.getRegistrationNumber());
+        lactation.setGoatTechnicalId(ownerGoat.getTechnicalId());
         lactation.setStartDate(LocalDate.now().minusDays(10));
         lactation.setStatus(LactationStatus.ACTIVE);
         ownerLactation = lactationRepository.save(lactation);
@@ -212,6 +228,7 @@ public class SecurityOwnershipIntegrationTest {
         MilkProductionEntity production = new MilkProductionEntity();
         production.setFarmId(ownerFarm.getId());
         production.setGoatId(ownerGoat.getRegistrationNumber());
+        production.setGoatTechnicalId(ownerGoat.getTechnicalId());
         production.setLactation(lactation);
         production.setDate(LocalDate.now());
         production.setVolumeLiters(new BigDecimal("2.5"));
@@ -230,6 +247,7 @@ public class SecurityOwnershipIntegrationTest {
         lactationRepository.deleteAll();
         eventRepository.deleteAll();
         healthEventRepository.deleteAll();
+        goatOwnershipPeriodRepository.deleteAll();
         farmOperatorRepository.deleteAll();
         goatRepository.deleteAll();
         phoneRepository.deleteAll();

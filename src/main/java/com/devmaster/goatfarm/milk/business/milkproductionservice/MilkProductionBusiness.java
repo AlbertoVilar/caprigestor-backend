@@ -98,7 +98,7 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
         goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, requestVO.getDate());
 
         validateNoDuplicateProduction(technicalId, requestVO.getDate(), requestVO.getShift());
-        Lactation lactation = getRequiredActiveLactation(technicalId);
+        Lactation lactation = getRequiredActiveLactation(farmId, goat.registrationNumber());
         GoatWithdrawalStatusVO withdrawalStatus = healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(
                 technicalId, requestVO.getDate());
 
@@ -213,11 +213,9 @@ public class MilkProductionBusiness implements MilkProductionUseCase {
      * Regra 2:
      * Produção só pode existir se houver lactação ativa
      */
-    private Lactation getRequiredActiveLactation(
-            GoatId goatId
-    ) {
+    private Lactation getRequiredActiveLactation(Long farmId, String goatRegistrationNumber) {
         return lactationPersistencePort
-                .findActiveByGoatTechnicalId(goatId)
+                .findActiveByFarmIdAndGoatId(farmId, goatRegistrationNumber)
                 .orElseThrow(NoActiveLactationException::new);
     }
 
