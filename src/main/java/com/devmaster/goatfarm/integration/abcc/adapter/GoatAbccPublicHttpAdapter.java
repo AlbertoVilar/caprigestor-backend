@@ -1,5 +1,7 @@
 package com.devmaster.goatfarm.integration.abcc.adapter;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
@@ -10,245 +12,185 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import com.devmaster.goatfarm.goat.enums.Gender;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Entities;
-import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
-import java.text.Normalizer;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+/** Adapter for the current JavaScript/JSON public SisCapri API. */
 @Component
 public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort,
         GoatExternalParentQueryPort, GenealogyAbccQueryPort {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GoatAbccPublicHttpAdapter.class);
     private static final String BASE_URL = "https://siscapri.abccaprinos.com.br";
-    private static final String SEARCH_PAGE_URL = BASE_URL + "/x.php?m=siscapri.genealogia&site=siscapri";
-    private static final String SEARCH_URL = BASE_URL + "/x.php?m=siscapri.Genealogia&f=Buscar&site=siscapri&runat=client";
-    private static final String PREVIEW_URL = BASE_URL + "/x.php?m=siscapri.genealogia&f=mostraArvoreGenealogica&site=siscapri&runat=client";
+    private static final String API_URL = BASE_URL + "/x.php?m=siscapri.api.api_genealogia&site=siscapri";
+    private static final String OP_RACES = "getRacas";
+    private static final String OP_SEARCH = "getAnimaisPublico";
+    private static final String OP_DETAILS = "getDetalhesAnimalCompleto";
+    /** The legacy public search returned ten rows per page; keep that boundary locally. */
+    private static final int SEARCH_PAGE_SIZE = 10;
 
-    private static final Pattern VIEWSTATE_PATTERN = Pattern.compile(
-            "<xmp id=\"viewstate\" style=\"display:none\">(.*?)</xmp>",
-            Pattern.DOTALL
-    );
-
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final String apiUrl;
     private long connectTimeoutSeconds = 30;
     private long requestTimeoutSeconds = 60;
     private int maxAttempts = 2;
     private long retryBackoffMillis = 150;
     private int maxResponseBytes = 2 * 1024 * 1024;
 
-    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.connect-timeout-seconds:30}")
-    void setConnectTimeoutSeconds(long value) {
-        connectTimeoutSeconds = value;
+    public GoatAbccPublicHttpAdapter() {
+        this(API_URL);
     }
+
+    GoatAbccPublicHttpAdapter(String apiUrl) {
+        this.apiUrl = apiUrl;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.connect-timeout-seconds:30}")
+    void setConnectTimeoutSeconds(long value) { connectTimeoutSeconds = value; }
 
     @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.request-timeout-seconds:60}")
-    void setRequestTimeoutSeconds(long value) {
-        requestTimeoutSeconds = value;
-    }
+    void setRequestTimeoutSeconds(long value) { requestTimeoutSeconds = value; }
 
     @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.max-attempts:2}")
-    void setMaxAttempts(int value) {
-        maxAttempts = value;
-    }
+    void setMaxAttempts(int value) { maxAttempts = value; }
 
     @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.retry-backoff-millis:150}")
-    void setRetryBackoffMillis(long value) {
-        retryBackoffMillis = value;
-    }
+    void setRetryBackoffMillis(long value) { retryBackoffMillis = value; }
 
     @org.springframework.beans.factory.annotation.Value("${caprigestor.abcc.max-response-bytes:2097152}")
-    void setMaxResponseBytes(int value) {
-        maxResponseBytes = value;
-    }
+    void setMaxResponseBytes(int value) { maxResponseBytes = value; }
 
     @Override
     public List<GoatAbccRaceOptionVO> listRaces() {
         try {
-            HttpClient client = newClient();
-            String searchPage = get(client, SEARCH_PAGE_URL);
-            return parseRaceOptions(searchPage);
+            JsonNode response = postJson(Map.of("runat", "client", "f", OP_RACES));
+            if (!response.isArray()) throw malformed("ABCC retornou lista de raças com formato inválido.");
+            List<GoatAbccRaceOptionVO> result = new ArrayList<>();
+            for (JsonNode race : response) {
+                Integer id = integer(race, "rc_id");
+                String name = text(race, "rc_descricao");
+                if (id != null && id > 0 && !isBlank(name)) {
+                    result.add(GoatAbccRaceOptionVO.builder().id(id).name(name).build());
+                }
+            }
+            return result;
         } catch (AbccIntegrationException ex) {
-            LOGGER.warn("Falha ao carregar lista de raças da ABCC pública.", ex);
             throw ex;
         } catch (IOException ex) {
             throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
-        } catch (RuntimeException ex) {
-            LOGGER.warn("Falha ao carregar lista de raças da ABCC pública.", ex);
-            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
+        } catch (Exception ex) {
+            throw malformed("Resposta inválida da ABCC pública.", ex);
         }
     }
 
     @Override
-    public GoatAbccRawSearchResultVO search(GoatAbccSearchRequestVO requestVO) {
+    public GoatAbccRawSearchResultVO search(GoatAbccSearchRequestVO request) {
         try {
-            HttpClient client = newClient();
-            String searchPage = get(client, SEARCH_PAGE_URL);
-            String viewstate = extractViewstate(searchPage);
-            pause();
-
-            Map<String, String> payload = new LinkedHashMap<>();
-            payload.put("viewstate", viewstate);
-            payload.put("i_keyword_0", String.valueOf(requestVO.getRaceId()));
-            payload.put("i_keyword_2", requestVO.getAffix());
-            payload.put("i_keyword_6", valueOrEmpty(requestVO.getSex()));
-            payload.put("i_keyword_1", valueOrEmpty(requestVO.getTod()));
-            payload.put("i_keyword_3", valueOrEmpty(requestVO.getToe()));
-            payload.put("i_keyword_5", valueOrEmpty(requestVO.getDna()));
-            payload.put("i_keyword_4", valueOrEmpty(requestVO.getName()));
-
-            String resultHtml = post(client, SEARCH_URL, payload);
-            GoatAbccRawSearchResultVO firstPage = parseSearchResult(resultHtml);
-
-            int targetPage = requestVO.getPage() == null ? 1 : requestVO.getPage();
-            if (targetPage <= 1 || firstPage.getTotalPages() == null || firstPage.getTotalPages() <= 1) {
-                return firstPage;
-            }
-
-            int boundedPage = Math.min(targetPage, firstPage.getTotalPages());
-            if (boundedPage == firstPage.getCurrentPage()) {
-                return firstPage;
-            }
-
-            String pagingUrl = composePagingUrl(
-                    firstPage.getCurrentUrl(),
-                    boundedPage,
-                    firstPage.getOffset() == null ? 7 : firstPage.getOffset()
-            );
-            pause();
-            String pagedHtml = post(client, pagingUrl, Map.of("viewstate", viewstate));
-            return parseSearchResult(pagedHtml);
+            Map<String, String> form = new LinkedHashMap<>();
+            form.put("runat", "client");
+            form.put("f", OP_SEARCH);
+            form.put("raca", value(request == null ? null : request.getRaceId()));
+            form.put("termo", value(request == null ? null : request.getName()));
+            form.put("afixo", value(request == null ? null : request.getAffix()));
+            form.put("sexo", value(request == null ? null : request.getSex()));
+            form.put("dna", value(request == null ? null : request.getDna()));
+            form.put("tod", value(request == null ? null : request.getTod()));
+            form.put("toe", value(request == null ? null : request.getToe()));
+            return mapSearchResult(postJson(form), request == null ? null : request.getPage());
         } catch (AbccIntegrationException ex) {
-            LOGGER.warn("Falha ao buscar animais na ABCC pública.", ex);
             throw ex;
         } catch (IOException ex) {
             throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
-        } catch (RuntimeException ex) {
-            LOGGER.warn("Falha ao buscar animais na ABCC pública.", ex);
-            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
+        } catch (Exception ex) {
+            throw malformed("Resposta inválida da ABCC pública.", ex);
         }
     }
 
     @Override
     public GoatAbccRawSearchResultVO searchByRegistration(Integer raceId, String registrationNumber) {
-        String normalized = normalizeRegistration(registrationNumber);
-        if (raceId == null || raceId < 1 || isBlank(normalized) || normalized.length() < 10) {
-            return GoatAbccRawSearchResultVO.builder()
-                    .currentPage(1)
-                    .totalPages(1)
-                    .items(List.of())
-                    .build();
+        if (isBlank(registrationNumber)) return emptySearch();
+        try {
+            Map<String, String> form = searchForm(raceId, registrationNumber);
+            JsonNode response = postJson(form);
+            String expected = normalizeRegistration(registrationNumber);
+            List<GoatAbccRawSearchItemVO> matches = new ArrayList<>();
+            if (!response.isArray()) throw malformed("ABCC retornou pesquisa com formato inválido.");
+            for (JsonNode item : response) {
+                if (isObjectWithIdentity(item)
+                        && expected.equals(normalizeRegistration(text(item, "registro")))) {
+                    matches.add(mapSearchItem(item));
+                }
+            }
+            return GoatAbccRawSearchResultVO.builder().currentPage(1).totalPages(1)
+                    .offset(0).items(matches).build();
+        } catch (AbccIntegrationException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
+        } catch (Exception ex) {
+            throw malformed("Resposta inválida da ABCC pública.", ex);
         }
-
-        String tod = normalized.substring(0, 5);
-        String toe = normalized.substring(5);
-        return search(GoatAbccSearchRequestVO.builder()
-                .raceId(raceId)
-                .affix("")
-                .page(1)
-                .tod(tod)
-                .toe(toe)
-                .build());
     }
 
     @Override
     public GoatAbccRawPreviewVO preview(String externalId) {
         try {
-            HttpClient client = newClient();
-            String searchPage = get(client, SEARCH_PAGE_URL);
-            String viewstate = extractViewstate(searchPage);
-            pause();
-
-            String previewHtml = post(client, PREVIEW_URL, Map.of(
-                    "viewstate", viewstate,
-                    "valueid", externalId
-            ));
-            return parsePreview(externalId, previewHtml);
+            return mapPreview(externalId, loadDetails(externalId));
         } catch (AbccIntegrationException ex) {
-            LOGGER.warn("Falha ao carregar preview de genealogia ABCC para externalId={}", externalId, ex);
             throw ex;
         } catch (IOException ex) {
             throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
-        } catch (RuntimeException ex) {
-            LOGGER.warn("Falha ao carregar preview de genealogia ABCC para externalId={}", externalId, ex);
-            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
+        } catch (Exception ex) {
+            throw malformed("Resposta inválida da ABCC pública.", ex);
         }
     }
 
     @Override
     public Optional<GenealogyAbccSnapshotVO> findGenealogyByRegistrationNumber(String registrationNumber) {
-        if (isBlank(registrationNumber)) {
-            return Optional.empty();
-        }
-
+        if (isBlank(registrationNumber)) return Optional.empty();
         try {
-            String registrationLookup = normalizeRegistration(registrationNumber);
-            HttpClient client = newClient();
-            String searchPage = get(client, SEARCH_PAGE_URL);
-            String viewstate = extractViewstate(searchPage);
-            pause();
-
-            Optional<GenealogyAbccSnapshotVO> directByRegistration = loadSnapshotByValueId(
-                    client,
-                    viewstate,
-                    registrationNumber.trim(),
-                    registrationLookup
-            );
-            if (directByRegistration.isPresent()) {
-                return directByRegistration;
-            }
-
-            Optional<String> externalId = findExternalIdByRegistration(client, viewstate, registrationNumber.trim());
-            if (externalId.isEmpty()) {
+            String expected = normalizeRegistration(registrationNumber);
+            JsonNode exact = findExactRegistration(postJson(searchForm(null, registrationNumber)), expected);
+            if (exact == null) return Optional.empty();
+            String externalId = text(exact, "id");
+            if (isBlank(externalId)) throw malformed("ABCC retornou animal sem identificador externo.");
+            GenealogyAbccSnapshotVO snapshot = mapGenealogy(externalId, loadDetails(externalId));
+            if (snapshot == null || !expected.equals(normalizeRegistration(snapshot.getAnimalRegistrationNumber()))) {
                 return Optional.empty();
             }
-
-            pause();
-            return loadSnapshotByValueId(client, viewstate, externalId.get(), registrationLookup);
+            return Optional.of(snapshot);
         } catch (AbccIntegrationException ex) {
-            LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
             throw ex;
         } catch (IOException ex) {
             throw new AbccUnavailableException("Falha de comunicação com a ABCC pública.", ex);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new AbccUnavailableException("Consulta à ABCC foi interrompida.", ex);
-        } catch (RuntimeException ex) {
-            LOGGER.warn("Falha ao consultar genealogia complementar ABCC para registro={}", registrationNumber, ex);
-            throw new AbccMalformedResponseException("Resposta inválida da ABCC pública.", ex);
+        } catch (Exception ex) {
+            throw malformed("Resposta inválida da ABCC pública.", ex);
         }
     }
 
@@ -256,527 +198,218 @@ public class GoatAbccPublicHttpAdapter implements GoatAbccPublicQueryPort,
     public Optional<ExternalParentReference> findByRegistrationNumber(String registrationNumber) {
         return findGenealogyByRegistrationNumber(registrationNumber)
                 .map(snapshot -> new ExternalParentReference(
-                        snapshot.getAnimalRegistrationNumber(),
-                        snapshot.getAnimalGender()
-                ));
+                        snapshot.getAnimalRegistrationNumber(), snapshot.getAnimalGender()));
     }
 
-    private Optional<String> findExternalIdByRegistration(
-            HttpClient client,
-            String viewstate,
-            String registrationNumber
-    ) throws IOException, InterruptedException {
-        String normalized = normalizeRegistration(registrationNumber);
-        if (isBlank(normalized) || normalized.length() < 10) {
-            return Optional.empty();
-        }
-
-        String tod = normalized.substring(0, 5);
-        String toe = normalized.substring(5);
-
-        Map<String, String> payload = new LinkedHashMap<>();
-        payload.put("viewstate", viewstate);
-        payload.put("i_keyword_0", "");
-        payload.put("i_keyword_2", "");
-        payload.put("i_keyword_6", "");
-        payload.put("i_keyword_1", tod);
-        payload.put("i_keyword_3", toe);
-        payload.put("i_keyword_5", "");
-        payload.put("i_keyword_4", "");
-
-        String resultHtml = post(client, SEARCH_URL, payload);
-        GoatAbccRawSearchResultVO searchResult = parseSearchResult(resultHtml);
-        if (searchResult.getItems() == null || searchResult.getItems().isEmpty()) {
-            return Optional.empty();
-        }
-
-        return searchResult.getItems().stream()
-                .filter(item -> normalizeRegistration(item.getTod()).equals(tod))
-                .filter(item -> normalizeRegistration(item.getToe()).equals(toe))
-                .map(item -> cleanText(item.getExternalId()))
-                .filter(Objects::nonNull)
-                .findFirst();
+    private JsonNode loadDetails(String externalId) throws IOException, InterruptedException {
+        if (isBlank(externalId)) throw malformed("Identificador externo ABCC ausente.");
+        return postJson(Map.of("runat", "client", "f", OP_DETAILS, "id", externalId.trim()));
     }
 
-    private Optional<GenealogyAbccSnapshotVO> loadSnapshotByValueId(
-            HttpClient client,
-            String viewstate,
-            String valueId,
-            String expectedRegistration
-    ) throws IOException, InterruptedException {
-        if (isBlank(valueId)) {
-            return Optional.empty();
+    private JsonNode postJson(Map<String, String> form) throws IOException, InterruptedException {
+        HttpClient client = newClient();
+        String body = new AbccHttpTransport(client, Duration.ofSeconds(Math.max(1, requestTimeoutSeconds)),
+                maxAttempts, retryBackoffMillis, maxResponseBytes).post(apiUrl, formEncode(form));
+        try {
+            JsonNode json = objectMapper.readTree(body);
+            if (json == null || json.isNull()) throw malformed("ABCC retornou JSON vazio.");
+            return json;
+        } catch (AbccIntegrationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw malformed("ABCC retornou JSON inválido.", ex);
         }
+    }
 
-        String previewHtml = post(client, PREVIEW_URL, Map.of(
-                "viewstate", viewstate,
-                "valueid", valueId.trim()
-        ));
+    private Map<String, String> searchForm(Integer raceId, String registration) {
+        Map<String, String> form = new LinkedHashMap<>();
+        form.put("runat", "client");
+        form.put("f", OP_SEARCH);
+        // Empty race is accepted by the public API for an exact registration lookup.
+        form.put("raca", value(raceId));
+        form.put("termo", registration.trim());
+        form.put("afixo", "");
+        form.put("sexo", "");
+        form.put("dna", "");
+        form.put("tod", "");
+        form.put("toe", "");
+        return form;
+    }
 
-        GenealogyAbccSnapshotVO snapshot = parseGenealogySnapshot(valueId.trim(), previewHtml);
-        if (snapshot == null || isBlank(snapshot.getAnimalRegistrationNumber())) {
-            return Optional.empty();
+    private GoatAbccRawSearchResultVO mapSearchResult(JsonNode response, Integer requestedPage) {
+        if (!response.isArray()) throw malformed("ABCC retornou pesquisa com formato inválido.");
+        List<GoatAbccRawSearchItemVO> allItems = new ArrayList<>();
+        for (JsonNode item : response) {
+            if (isObjectWithIdentity(item)) allItems.add(mapSearchItem(item));
         }
+        int totalPages = Math.max(1, (int) Math.ceil(allItems.size() / (double) SEARCH_PAGE_SIZE));
+        int currentPage = Math.max(1, Math.min(requestedPage == null ? 1 : requestedPage, totalPages));
+        int fromIndex = Math.min((currentPage - 1) * SEARCH_PAGE_SIZE, allItems.size());
+        int toIndex = Math.min(fromIndex + SEARCH_PAGE_SIZE, allItems.size());
+        List<GoatAbccRawSearchItemVO> pageItems = allItems.subList(fromIndex, toIndex);
+        return GoatAbccRawSearchResultVO.builder().currentPage(currentPage).totalPages(totalPages)
+                .offset(fromIndex).currentUrl(null).items(pageItems).build();
+    }
 
-        String returnedRegistration = normalizeRegistration(snapshot.getAnimalRegistrationNumber());
-        if (!isBlank(expectedRegistration) && !expectedRegistration.equals(returnedRegistration)) {
-            return Optional.empty();
+    private GoatAbccRawSearchItemVO mapSearchItem(JsonNode item) {
+        String registration = text(item, "registro");
+        String normalizedRegistration = normalizeRegistration(registration);
+        String tod = text(item, "tod");
+        String toe = text(item, "toe");
+        if ((isBlank(tod) || isBlank(toe)) && normalizedRegistration.length() >= 10) {
+            tod = normalizedRegistration.substring(0, 5);
+            toe = normalizedRegistration.substring(5);
         }
+        return GoatAbccRawSearchItemVO.builder().externalId(text(item, "id"))
+                .nome(text(item, "nome")).situacao(text(item, "situacao"))
+                .dna(text(item, "dna")).tod(tod).toe(toe)
+                .criador(text(item, "criador")).afixo(text(item, "afixo"))
+                .dataNascimento(firstNonBlank(text(item, "dataNascimento"), text(item, "data_nasce")))
+                .sexo(text(item, "sexo")).raca(text(item, "raca"))
+                .pelagem(text(item, "pelagem")).build();
+    }
 
-        return Optional.of(snapshot);
+    private String firstNonBlank(String first, String second) {
+        return isBlank(first) ? second : first;
+    }
+
+    private GoatAbccRawPreviewVO mapPreview(String externalId, JsonNode details) {
+        JsonNode data = requiredObject(details, "dados_cadastrais");
+        JsonNode parents = details.path("pais");
+        return GoatAbccRawPreviewVO.builder().externalId(externalId)
+                .nome(text(data, "nome")).registro(text(data, "registro"))
+                .criador(text(data, "criador")).proprietario(text(data, "proprietario"))
+                .raca(text(data, "raca")).pelagem(text(data, "pelagem"))
+                .situacao(text(data, "situacao")).sexo(text(data, "sexo"))
+                .categoria(text(data, "categoria")).tod(text(data, "tod"))
+                .toe(text(data, "toe")).dataNascimento(text(data, "data_nasce"))
+                .paiNome(text(parents.path("pai"), "nome"))
+                .paiRegistro(text(parents.path("pai"), "registro"))
+                .maeNome(text(parents.path("mae"), "nome"))
+                .maeRegistro(text(parents.path("mae"), "registro")).build();
+    }
+
+    private GenealogyAbccSnapshotVO mapGenealogy(String externalId, JsonNode details) {
+        JsonNode data = requiredObject(details, "dados_cadastrais");
+        JsonNode tree = requiredObject(details, "arvore");
+        JsonNode animal = requiredObject(tree, "animal");
+        JsonNode paternal = tree.path("avos_paternos");
+        JsonNode maternal = tree.path("avos_maternos");
+        JsonNode great = tree.path("bisavos");
+        return GenealogyAbccSnapshotVO.builder().externalId(externalId)
+                .animalName(text(animal, "nome")).animalRegistrationNumber(text(animal, "registro"))
+                .animalGender(parseGender(text(data, "sexo")))
+                .fatherName(text(tree.path("pai"), "nome"))
+                .fatherRegistrationNumber(text(tree.path("pai"), "registro"))
+                .motherName(text(tree.path("mae"), "nome"))
+                .motherRegistrationNumber(text(tree.path("mae"), "registro"))
+                .paternalGrandfatherName(text(paternal.path("pai"), "nome"))
+                .paternalGrandfatherRegistrationNumber(text(paternal.path("pai"), "registro"))
+                .paternalGrandmotherName(text(paternal.path("mae"), "nome"))
+                .paternalGrandmotherRegistrationNumber(text(paternal.path("mae"), "registro"))
+                .maternalGrandfatherName(text(maternal.path("pai"), "nome"))
+                .maternalGrandfatherRegistrationNumber(text(maternal.path("pai"), "registro"))
+                .maternalGrandmotherName(text(maternal.path("mae"), "nome"))
+                .maternalGrandmotherRegistrationNumber(text(maternal.path("mae"), "registro"))
+                .bisavoPaternoPaiName(text(great.path("paterno_pai_pai"), "nome"))
+                .bisavoPaternoPaiRegistrationNumber(text(great.path("paterno_pai_pai"), "registro"))
+                .bisavoPaternoMaeName(text(great.path("paterno_pai_mae"), "nome"))
+                .bisavoPaternoMaeRegistrationNumber(text(great.path("paterno_pai_mae"), "registro"))
+                .bisavoPaternaPaiName(text(great.path("paterno_mae_pai"), "nome"))
+                .bisavoPaternaPaiRegistrationNumber(text(great.path("paterno_mae_pai"), "registro"))
+                .bisavoPaternaMaeName(text(great.path("paterno_mae_mae"), "nome"))
+                .bisavoPaternaMaeRegistrationNumber(text(great.path("paterno_mae_mae"), "registro"))
+                .bisavoMaternoPaiName(text(great.path("materno_pai_pai"), "nome"))
+                .bisavoMaternoPaiRegistrationNumber(text(great.path("materno_pai_pai"), "registro"))
+                .bisavoMaternoMaeName(text(great.path("materno_pai_mae"), "nome"))
+                .bisavoMaternoMaeRegistrationNumber(text(great.path("materno_pai_mae"), "registro"))
+                .bisavoMaternaPaiName(text(great.path("materno_mae_pai"), "nome"))
+                .bisavoMaternaPaiRegistrationNumber(text(great.path("materno_mae_pai"), "registro"))
+                .bisavoMaternaMaeName(text(great.path("materno_mae_mae"), "nome"))
+                .bisavoMaternaMaeRegistrationNumber(text(great.path("materno_mae_mae"), "registro"))
+                .build();
+    }
+
+    private JsonNode findExactRegistration(JsonNode response, String expected) {
+        if (!response.isArray()) throw malformed("ABCC retornou pesquisa com formato inválido.");
+        for (JsonNode item : response) {
+            if (isObjectWithIdentity(item)
+                    && expected.equals(normalizeRegistration(text(item, "registro")))) return item;
+        }
+        return null;
+    }
+
+    private boolean isObjectWithIdentity(JsonNode item) {
+        return item != null && item.isObject() && !isBlank(text(item, "id"))
+                && !isBlank(text(item, "registro"));
+    }
+
+    private JsonNode requiredObject(JsonNode parent, String field) {
+        JsonNode value = parent.path(field);
+        if (!value.isObject()) throw malformed("ABCC não retornou o campo obrigatório " + field + ".");
+        return value;
+    }
+
+    private Integer integer(JsonNode node, String field) {
+        JsonNode value = node == null ? null : node.get(field);
+        return value != null && value.canConvertToInt() ? value.intValue() : null;
+    }
+
+    private String text(JsonNode node, String field) {
+        if (node == null || node.isMissingNode() || node.isNull()) return null;
+        JsonNode value = node.get(field);
+        if (value == null || value.isNull() || !value.isValueNode()) return null;
+        String result = value.asText();
+        return isBlank(result) ? null : result.trim();
+    }
+
+    private String value(Object value) { return value == null ? "" : String.valueOf(value); }
+
+    private GoatAbccRawSearchResultVO emptySearch() {
+        return GoatAbccRawSearchResultVO.builder().currentPage(1).totalPages(1)
+                .offset(0).items(List.of()).build();
     }
 
     private HttpClient newClient() {
-        CookieManager cookieManager = new CookieManager();
-        cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
-        return HttpClient.newBuilder()
-                .cookieHandler(cookieManager)
+        CookieManager cookies = new CookieManager();
+        cookies.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+        return HttpClient.newBuilder().cookieHandler(cookies)
                 .followRedirects(HttpClient.Redirect.NORMAL)
-                .connectTimeout(Duration.ofSeconds(Math.max(1, connectTimeoutSeconds)))
-                .build();
-    }
-
-    private List<GoatAbccRaceOptionVO> parseRaceOptions(String html) {
-        Document document = Jsoup.parse(html);
-        Element select = document.selectFirst("select[name=i_keyword_0]");
-        if (select == null) {
-            return List.of();
-        }
-
-        Map<Integer, String> deduplicated = new LinkedHashMap<>();
-        for (Element option : select.select("option")) {
-            String idValue = cleanText(option.attr("value"));
-            String name = cleanText(option.text());
-            if (idValue == null || name == null) {
-                continue;
-            }
-
-            try {
-                Integer id = Integer.parseInt(idValue);
-                deduplicated.put(id, name);
-            } catch (NumberFormatException ignored) {
-                // ignora opções não numéricas
-            }
-        }
-
-        return deduplicated.entrySet().stream()
-                .map(entry -> GoatAbccRaceOptionVO.builder()
-                        .id(entry.getKey())
-                        .name(entry.getValue())
-                        .build())
-                .toList();
-    }
-
-    private GoatAbccRawSearchResultVO parseSearchResult(String html) {
-        Document document = Jsoup.parse(html);
-        Element listView = document.selectFirst("div#lvListaGenealogia.ListView, div.ListView");
-        if (listView == null) {
-            return GoatAbccRawSearchResultVO.builder()
-                    .currentPage(1)
-                    .totalPages(1)
-                    .offset(7)
-                    .currentUrl(null)
-                    .items(List.of())
-                    .build();
-        }
-
-        int currentPage = parseInteger(listView.attr("curpage"), 1);
-        int totalPages = parseInteger(listView.attr("pages"), 1);
-        int offset = parseInteger(listView.attr("offset"), 7);
-        String currentUrl = Entities.unescape(listView.attr("current_url"));
-
-        List<GoatAbccRawSearchItemVO> items = new ArrayList<>();
-        Elements rows = listView.select("div.dataset table tbody tr");
-        for (Element row : rows) {
-            Elements cells = row.select("td");
-            if (cells.size() < 13) {
-                continue;
-            }
-            String externalId = textOrNull(row.selectFirst("input[name=valueid]"), "value");
-            if (externalId == null) {
-                externalId = cleanText(cells.get(1).text());
-            }
-
-            items.add(GoatAbccRawSearchItemVO.builder()
-                    .externalId(externalId)
-                    .nome(cleanText(cells.get(2).text()))
-                    .situacao(cleanText(cells.get(3).text()))
-                    .dna(cleanText(cells.get(4).text()))
-                    .tod(cleanText(cells.get(5).text()))
-                    .toe(cleanText(cells.get(6).text()))
-                    .criador(cleanText(cells.get(7).text()))
-                    .afixo(cleanText(cells.get(8).text()))
-                    .dataNascimento(cleanText(cells.get(9).text()))
-                    .sexo(cleanText(cells.get(10).text()))
-                    .raca(cleanText(cells.get(11).text()))
-                    .pelagem(cleanText(cells.get(12).text()))
-                    .build());
-        }
-
-        return GoatAbccRawSearchResultVO.builder()
-                .currentPage(currentPage)
-                .totalPages(totalPages)
-                .offset(offset)
-                .currentUrl(currentUrl)
-                .items(items)
-                .build();
-    }
-
-    private GoatAbccRawPreviewVO parsePreview(String externalId, String html) {
-        Document document = Jsoup.parse(html);
-        Elements boxes = document.select("div#divArvore div.bordaBox table");
-        if (boxes.isEmpty()) {
-            throw new AbccMalformedResponseException("ABCC retornou HTML sem dados de genealogia.");
-        }
-
-        Map<String, String> principal = parseKeyValues(boxes.getFirst());
-
-        String fatherName = null;
-        String fatherRegistration = null;
-        String motherName = null;
-        String motherRegistration = null;
-
-        for (int i = 1; i < boxes.size(); i++) {
-            Map<String, String> relative = parseKeyValues(boxes.get(i));
-            String relationship = normalizeToken(relative.get("Parentesco"));
-            if ("pai".equals(relationship)) {
-                fatherName = cleanText(relative.get("Nome"));
-                fatherRegistration = cleanText(relative.get("Registro"));
-            } else if ("mae".equals(relationship)) {
-                motherName = cleanText(relative.get("Nome"));
-                motherRegistration = cleanText(relative.get("Registro"));
-            }
-        }
-
-        return GoatAbccRawPreviewVO.builder()
-                .externalId(externalId)
-                .nome(cleanText(principal.get("Nome")))
-                .registro(cleanText(principal.get("Registro")))
-                .criador(cleanText(principal.get("Criador")))
-                .proprietario(cleanText(principal.get("Proprietário")))
-                .raca(cleanText(principal.get("Raça")))
-                .pelagem(cleanText(principal.get("Pelagem")))
-                .situacao(cleanText(principal.get("Situação")))
-                .sexo(cleanText(principal.get("Sexo")))
-                .categoria(cleanText(principal.get("Categoria")))
-                .tod(cleanText(principal.get("TOD")))
-                .toe(cleanText(principal.get("TOE")))
-                .dataNascimento(cleanText(principal.get("Data Nasc.")))
-                .paiNome(fatherName)
-                .paiRegistro(fatherRegistration)
-                .maeNome(motherName)
-                .maeRegistro(motherRegistration)
-                .build();
-    }
-
-    private GenealogyAbccSnapshotVO parseGenealogySnapshot(String externalId, String html) {
-        Document document = Jsoup.parse(html);
-        Elements boxes = document.select("div#divArvore div.bordaBox table");
-        if (boxes.isEmpty()) {
-            return null;
-        }
-
-        Map<String, String> principal = parseKeyValues(boxes.getFirst());
-        Map<String, RelativeNode> relatives = parseRelativeNodes(boxes);
-
-        return GenealogyAbccSnapshotVO.builder()
-                .externalId(externalId)
-                .animalName(cleanText(principal.get("Nome")))
-                .animalRegistrationNumber(cleanText(principal.get("Registro")))
-                .animalGender(parseGender(principal.get("Sexo")))
-                .fatherName(relName(relatives, "pai"))
-                .fatherRegistrationNumber(relRegistration(relatives, "pai"))
-                .motherName(relName(relatives, "mae"))
-                .motherRegistrationNumber(relRegistration(relatives, "mae"))
-                .paternalGrandfatherName(relName(relatives, "avoPaterno"))
-                .paternalGrandfatherRegistrationNumber(relRegistration(relatives, "avoPaterno"))
-                .paternalGrandmotherName(relName(relatives, "avoPaterna"))
-                .paternalGrandmotherRegistrationNumber(relRegistration(relatives, "avoPaterna"))
-                .maternalGrandfatherName(relName(relatives, "avoMaterno"))
-                .maternalGrandfatherRegistrationNumber(relRegistration(relatives, "avoMaterno"))
-                .maternalGrandmotherName(relName(relatives, "avoMaterna"))
-                .maternalGrandmotherRegistrationNumber(relRegistration(relatives, "avoMaterna"))
-                .bisavoPaternoPaiName(relName(relatives, "bisavoPaternoPai"))
-                .bisavoPaternoPaiRegistrationNumber(relRegistration(relatives, "bisavoPaternoPai"))
-                .bisavoPaternaPaiName(relName(relatives, "bisavoPaternaPai"))
-                .bisavoPaternaPaiRegistrationNumber(relRegistration(relatives, "bisavoPaternaPai"))
-                .bisavoPaternoMaeName(relName(relatives, "bisavoPaternoMae"))
-                .bisavoPaternoMaeRegistrationNumber(relRegistration(relatives, "bisavoPaternoMae"))
-                .bisavoPaternaMaeName(relName(relatives, "bisavoPaternaMae"))
-                .bisavoPaternaMaeRegistrationNumber(relRegistration(relatives, "bisavoPaternaMae"))
-                .bisavoMaternoPaiName(relName(relatives, "bisavoMaternoPai"))
-                .bisavoMaternoPaiRegistrationNumber(relRegistration(relatives, "bisavoMaternoPai"))
-                .bisavoMaternaPaiName(relName(relatives, "bisavoMaternaPai"))
-                .bisavoMaternaPaiRegistrationNumber(relRegistration(relatives, "bisavoMaternaPai"))
-                .bisavoMaternoMaeName(relName(relatives, "bisavoMaternoMae"))
-                .bisavoMaternoMaeRegistrationNumber(relRegistration(relatives, "bisavoMaternoMae"))
-                .bisavoMaternaMaeName(relName(relatives, "bisavoMaternaMae"))
-                .bisavoMaternaMaeRegistrationNumber(relRegistration(relatives, "bisavoMaternaMae"))
-                .build();
-    }
-
-    private Map<String, RelativeNode> parseRelativeNodes(Elements boxes) {
-        Map<String, RelativeNode> relatives = new HashMap<>();
-        Map<String, Integer> repeatedRelationshipCounter = new HashMap<>();
-
-        for (int i = 1; i < boxes.size(); i++) {
-            Map<String, String> relative = parseKeyValues(boxes.get(i));
-            String relationship = normalizeRelationship(relative.get("Parentesco"), repeatedRelationshipCounter);
-            if (relationship == null) {
-                continue;
-            }
-
-            relatives.put(relationship, new RelativeNode(
-                    cleanText(relative.get("Nome")),
-                    cleanText(relative.get("Registro"))
-            ));
-        }
-
-        return relatives;
-    }
-
-    private String normalizeRelationship(String rawValue, Map<String, Integer> repeatedRelationshipCounter) {
-        String token = normalizeToken(rawValue)
-                .replaceAll("[^a-z0-9 ]", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
-
-        if (token.isEmpty()) {
-            return null;
-        }
-
-        return switch (token) {
-            case "pai" -> "pai";
-            case "mae" -> "mae";
-            case "avo paterno" -> "avoPaterno";
-            case "avo paterna" -> "avoPaterna";
-            case "avo materno" -> "avoMaterno";
-            case "avo materna" -> "avoMaterna";
-            case "bisavo paterno pai" -> "bisavoPaternoPai";
-            case "bisavo paterna pai" -> "bisavoPaternaPai";
-            case "bisavo paterno mae" -> "bisavoPaternoMae";
-            case "bisavo paterna mae" -> "bisavoPaternaMae";
-            case "bisavo materno pai" -> "bisavoMaternoPai";
-            case "bisavo materna pai" -> "bisavoMaternaPai";
-            case "bisavo materno mae" -> "bisavoMaternoMae";
-            case "bisavo materna mae" -> "bisavoMaternaMae";
-            case "bisavo paterno" -> selectRepeatedBisavoKey(
-                    "bisavo paterno",
-                    "bisavoPaternoPai",
-                    "bisavoPaternoMae",
-                    repeatedRelationshipCounter
-            );
-            case "bisavo paterna" -> selectRepeatedBisavoKey(
-                    "bisavo paterna",
-                    "bisavoPaternaPai",
-                    "bisavoPaternaMae",
-                    repeatedRelationshipCounter
-            );
-            case "bisavo materno" -> selectRepeatedBisavoKey(
-                    "bisavo materno",
-                    "bisavoMaternoPai",
-                    "bisavoMaternoMae",
-                    repeatedRelationshipCounter
-            );
-            case "bisavo materna" -> selectRepeatedBisavoKey(
-                    "bisavo materna",
-                    "bisavoMaternaPai",
-                    "bisavoMaternaMae",
-                    repeatedRelationshipCounter
-            );
-            default -> null;
-        };
-    }
-
-    private String selectRepeatedBisavoKey(
-            String counterKey,
-            String firstOccurrenceKey,
-            String secondOccurrenceKey,
-            Map<String, Integer> repeatedRelationshipCounter
-    ) {
-        int occurrence = repeatedRelationshipCounter.merge(counterKey, 1, Integer::sum);
-        return occurrence <= 1 ? firstOccurrenceKey : secondOccurrenceKey;
-    }
-
-    private String relName(Map<String, RelativeNode> relatives, String key) {
-        RelativeNode node = relatives.get(key);
-        return node == null ? null : node.name();
-    }
-
-    private String relRegistration(Map<String, RelativeNode> relatives, String key) {
-        RelativeNode node = relatives.get(key);
-        return node == null ? null : node.registrationNumber();
-    }
-
-    private Map<String, String> parseKeyValues(Element table) {
-        Map<String, String> values = new HashMap<>();
-        for (Element row : table.select("tr")) {
-            Elements columns = row.select("td");
-            if (columns.size() < 2) {
-                continue;
-            }
-            String key = cleanText(columns.get(0).text());
-            if (key == null) {
-                continue;
-            }
-            values.put(key.replace(":", ""), cleanText(columns.get(1).text()));
-        }
-        return values;
-    }
-
-    private String composePagingUrl(String currentUrl, int page, int offset) {
-        String base = currentUrl == null ? "" : currentUrl;
-        if (!base.startsWith("http")) {
-            base = BASE_URL + base;
-        }
-
-        var components = UriComponentsBuilder.fromUriString(base).build();
-        var builder = UriComponentsBuilder.fromUriString(base).replaceQuery(null);
-        appendDecodedQueryParameters(builder, components.getQuery());
-
-        return builder
-                .queryParam("curpage", page)
-                .queryParam("offset", offset)
-                .queryParam("_lvid", "lvListaGenealogia")
-                .queryParam("paging", true)
-                .queryParam("runat", "client")
-                .encode()
-                .build()
-                .toUriString();
-    }
-
-    private void appendDecodedQueryParameters(UriComponentsBuilder builder, String query) {
-        if (query == null || query.isBlank()) {
-            return;
-        }
-
-        for (String parameter : query.split("&", -1)) {
-            int separator = parameter.indexOf('=');
-            String rawName = separator < 0 ? parameter : parameter.substring(0, separator);
-            String rawValue = separator < 0 ? null : parameter.substring(separator + 1);
-            String name = decodeQueryComponent(rawName);
-            if (name.isBlank()) {
-                continue;
-            }
-            if (rawValue == null) {
-                builder.queryParam(name);
-            } else {
-                builder.queryParam(name, decodeQueryComponent(rawValue));
-            }
-        }
-    }
-
-    private String decodeQueryComponent(String value) {
-        return URLDecoder.decode(value, StandardCharsets.UTF_8);
-    }
-
-    private String extractViewstate(String html) {
-        Matcher matcher = VIEWSTATE_PATTERN.matcher(Objects.requireNonNullElse(html, ""));
-        if (matcher.find()) {
-            String viewstate = cleanText(matcher.group(1));
-            if (viewstate != null) {
-                return viewstate;
-            }
-        }
-        throw new AbccMalformedResponseException("ABCC retornou HTML sem viewstate obrigatório.");
-    }
-
-    private String get(HttpClient client, String url) throws IOException, InterruptedException {
-        return transport(client).get(url);
-    }
-
-    private String post(HttpClient client, String url, Map<String, String> form) throws IOException, InterruptedException {
-        return transport(client).post(url, formEncode(form));
-    }
-
-    private AbccHttpTransport transport(HttpClient client) {
-        return new AbccHttpTransport(
-                client,
-                Duration.ofSeconds(Math.max(1, requestTimeoutSeconds)),
-                maxAttempts,
-                retryBackoffMillis,
-                maxResponseBytes
-        );
+                .connectTimeout(Duration.ofSeconds(Math.max(1, connectTimeoutSeconds))).build();
     }
 
     private String formEncode(Map<String, String> form) {
-        StringBuilder builder = new StringBuilder();
+        StringBuilder encoded = new StringBuilder();
         for (Map.Entry<String, String> entry : form.entrySet()) {
-            if (builder.length() > 0) {
-                builder.append('&');
-            }
-            builder.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
-            builder.append('=');
-            builder.append(URLEncoder.encode(valueOrEmpty(entry.getValue()), StandardCharsets.UTF_8));
+            if (encoded.length() > 0) encoded.append('&');
+            encoded.append(java.net.URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
+            encoded.append('=').append(java.net.URLEncoder.encode(value(entry.getValue()), StandardCharsets.UTF_8));
         }
-        return builder.toString();
-    }
-
-    private void pause() {
-        try {
-            Thread.sleep(180);
-        } catch (InterruptedException interruptedException) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    private int parseInteger(String value, int fallback) {
-        try {
-            return Integer.parseInt(value);
-        } catch (Exception ignored) {
-            return fallback;
-        }
-    }
-
-    private String textOrNull(Element element, String attribute) {
-        if (element == null) {
-            return null;
-        }
-        String value = attribute == null ? element.text() : element.attr(attribute);
-        return cleanText(value);
-    }
-
-    private String valueOrEmpty(String value) {
-        return value == null ? "" : value;
-    }
-
-    private String cleanText(String value) {
-        if (value == null) {
-            return null;
-        }
-        String normalized = value.replace('\u00A0', ' ').trim().replaceAll("\\s+", " ");
-        return normalized.isEmpty() ? null : normalized;
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
+        return encoded.toString();
     }
 
     static String normalizeRegistration(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
+        return value == null ? "" : value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT);
     }
 
     private Gender parseGender(String value) {
-        return switch (normalizeToken(value)) {
+        if (value == null) return null;
+        String normalized = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
             case "macho" -> Gender.MACHO;
             case "femea" -> Gender.FEMEA;
             default -> null;
         };
     }
 
-    private String normalizeToken(String value) {
-        if (value == null) {
-            return "";
-        }
-        return Normalizer.normalize(value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .trim()
-                .toLowerCase(Locale.ROOT);
+    private boolean isBlank(String value) { return value == null || value.trim().isEmpty(); }
+
+    private AbccMalformedResponseException malformed(String message) {
+        return new AbccMalformedResponseException(message);
     }
 
-    private record RelativeNode(String name, String registrationNumber) {
+    private AbccMalformedResponseException malformed(String message, Throwable cause) {
+        return new AbccMalformedResponseException(message, cause);
     }
 }
