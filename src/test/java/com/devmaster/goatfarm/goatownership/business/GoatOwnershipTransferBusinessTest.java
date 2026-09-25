@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goatownership.business;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
@@ -18,6 +19,7 @@ import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
+import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -58,6 +61,7 @@ class GoatOwnershipTransferBusinessTest {
     @Mock GoatOwnershipPeriodPersistencePort periodPersistence;
     @Mock OwnershipTransferPersistencePort transferPersistence;
     @Mock GoatCurrentOwnerProjectionPort projection;
+    @Mock LactationCommandUseCase lactationCommandUseCase;
 
     private GoatOwnershipTransferBusiness business;
 
@@ -65,7 +69,7 @@ class GoatOwnershipTransferBusinessTest {
     void setUp() {
         business = new GoatOwnershipTransferBusiness(principalQuery, authorization, farmPersistence,
                 ownershipLock, periodPersistence, transferPersistence, projection,
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC), lactationCommandUseCase);
         lenient().when(principalQuery.requireCurrent()).thenReturn(principal("ROLE_FARM_OWNER"));
         lenient().when(farmPersistence.findById(TARGET)).thenReturn(Optional.of(farm(TARGET)));
         lenient().when(transferPersistence.findGoatIdByTransferId(any(Long.class))).thenReturn(Optional.of(GOAT));
@@ -154,6 +158,7 @@ class GoatOwnershipTransferBusinessTest {
         assertThat(target.getValue().farmId()).isEqualTo(TARGET);
         assertThat(target.getValue().startedAt()).isEqualTo(NOW);
         verify(projection).moveFromTo(GOAT, SOURCE, TARGET);
+        verify(lactationCommandUseCase).closeActiveForOwnershipTransfer(GOAT, SOURCE, NOW);
         verify(transferPersistence).save(transfer);
     }
 
@@ -169,6 +174,25 @@ class GoatOwnershipTransferBusinessTest {
 
         assertThatThrownBy(() -> business.acceptTransfer(99L))
                 .hasMessageContaining("projection drift");
+        verify(transferPersistence, never()).save(transfer);
+    }
+
+    @Test
+    void lactationClosureFailureAbortsTransferBeforeOwnershipHandoff() {
+        var source = openPeriod(1L, SOURCE, START);
+        var transfer = requestedTransfer(99L, "move", "lactation-failure", SOURCE, TARGET);
+        when(transferPersistence.findById(99L)).thenReturn(Optional.of(transfer));
+        when(ownershipLock.lockGoatOwnership(GOAT)).thenReturn(Optional.of(
+                new GoatOwnershipLockState(GOAT, Optional.of(source))));
+        when(authorization.canAdministerFarm(TARGET)).thenReturn(true);
+        doThrow(new BusinessRuleException("lactation closure failed"))
+                .when(lactationCommandUseCase)
+                .closeActiveForOwnershipTransfer(GOAT, SOURCE, NOW);
+
+        assertThatThrownBy(() -> business.acceptTransfer(99L))
+                .hasMessageContaining("lactation closure failed");
+        verify(periodPersistence, never()).handoff(any(), any());
+        verify(projection, never()).moveFromTo(any(), any(Long.class), any(Long.class));
         verify(transferPersistence, never()).save(transfer);
     }
 
@@ -244,6 +268,7 @@ class GoatOwnershipTransferBusinessTest {
         assertThat(business.completeInternalSaleAfterPayment(501L)).isSameAs(sale);
         assertThat(sale.status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         verify(projection).moveFromTo(GOAT, SOURCE, TARGET);
+        verify(lactationCommandUseCase).closeActiveForOwnershipTransfer(GOAT, SOURCE, NOW);
     }
 
     @Test
@@ -260,6 +285,7 @@ class GoatOwnershipTransferBusinessTest {
         assertThat(business.completeInternalSaleAfterPayment(501L).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         assertThat(business.completeInternalSaleAfterPayment(501L).status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
         verify(projection, times(1)).moveFromTo(GOAT, SOURCE, TARGET);
+        verify(lactationCommandUseCase, times(1)).closeActiveForOwnershipTransfer(GOAT, SOURCE, NOW);
     }
 
     @Test

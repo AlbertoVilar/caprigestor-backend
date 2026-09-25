@@ -109,7 +109,7 @@ class MilkProductionBusinessTest {
                 eq(new GoatId(42L)), eq(request.getDate()), eq(request.getShift())))
                 .thenReturn(false);
 
-        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(42L)))
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.of(lactation));
 
         MilkProduction savedEntity = validEntity();
@@ -129,7 +129,7 @@ class MilkProductionBusinessTest {
 
         // Verify
         verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(new GoatId(42L), request.getDate(), request.getShift());
-        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(42L));
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
         verify(milkProductionPersistencePort).save(any(MilkProduction.class));
     }
 
@@ -190,7 +190,7 @@ class MilkProductionBusinessTest {
                 new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(false);
 
-        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(42L)))
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.empty());
 
         // Act & Assert
@@ -201,7 +201,7 @@ class MilkProductionBusinessTest {
         verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(
                 new GoatId(42L), request.getDate(), request.getShift()
         );
-        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(42L));
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
         verifyNoInteractions(milkProductionMapper);
         verify(milkProductionPersistencePort, never()).save(any());
     }
@@ -241,7 +241,7 @@ class MilkProductionBusinessTest {
                                 .build())
                         .build());
 
-        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(42L)))
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.of(lactation));
         when(milkProductionPersistencePort.save(any(MilkProduction.class))).thenReturn(savedEntity);
         when(milkProductionMapper.toResponseVO(savedEntity)).thenReturn(responseVO);
@@ -257,7 +257,7 @@ class MilkProductionBusinessTest {
         assertEquals(request.getDate().plusDays(3), captured.getMilkWithdrawalEndDate());
         assertEquals("Antibiotico", captured.getMilkWithdrawalSource());
         assertTrue(result.isRecordedDuringMilkWithdrawal());
-        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(42L));
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
     }
 
     // ==================================================================================

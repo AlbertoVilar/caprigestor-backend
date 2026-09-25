@@ -31,6 +31,19 @@ histórico atravessa o core como `PageQuery`/`PageResult` e o adapter traduz par
 ativas do contexto Milk com o contrato batch `PregnancyDryOffQueryUseCase`,
 proprietário de Reproduction; Milk não consulta mais a tabela `pregnancy`.
 
+### Segmentação por ownership
+
+Na conclusão de um `INTERNAL_TRANSFER` ou `INTERNAL_SALE`, a lactação `ACTIVE`
+da fazenda de origem é fechada atomicamente (`ACTIVE -> CLOSED`) junto com o
+handoff de ownership. O `farm_id`, o `GoatId`, o início, as produções e toda a
+proveniência do segmento antigo permanecem imutáveis. Esse `CLOSED` é distinto
+de `DRY` e não pode ser retomado. Após a transferência, o proprietário atual
+pode iniciar uma nova lactação `ACTIVE` para o mesmo animal; a unicidade global
+de uma lactação `ACTIVE` por GoatId da V47 continua válida porque o segmento
+anterior foi fechado. O histórico continua disponível no dossiê e não é
+migrado. A data final derivada de um `Instant` usa `America/Sao_Paulo`, e a
+regra de ownership fail-closed permanece válida quando o dia civil é dividido.
+
 ## Regras operacionais atuais
 - `ACTIVE`: lactacao em producao, apta a receber registros de leite.
 - `DRY`: secagem confirmada. Nao existe lactacao ativa para producao enquanto o animal estiver seco.

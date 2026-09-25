@@ -24,6 +24,7 @@ import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
 import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
+import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,7 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
     private final OwnershipTransferPersistencePort transferPersistence;
     private final GoatCurrentOwnerProjectionPort projection;
     private final Clock clock;
+    private final LactationCommandUseCase lactationCommandUseCase;
 
     public GoatOwnershipTransferBusiness(CurrentPrincipalQueryUseCase currentPrincipalQuery,
                                          FarmAuthorizationUseCase farmAuthorization,
@@ -57,7 +59,8 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
                                          GoatOwnershipPeriodPersistencePort periodPersistence,
                                          OwnershipTransferPersistencePort transferPersistence,
                                          GoatCurrentOwnerProjectionPort projection,
-                                         Clock clock) {
+                                         Clock clock,
+                                         LactationCommandUseCase lactationCommandUseCase) {
         this.currentPrincipalQuery = currentPrincipalQuery;
         this.farmAuthorization = farmAuthorization;
         this.farmPersistence = farmPersistence;
@@ -66,6 +69,7 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         this.transferPersistence = transferPersistence;
         this.projection = projection;
         this.clock = clock;
+        this.lactationCommandUseCase = lactationCommandUseCase;
     }
 
     @Override
@@ -138,6 +142,8 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         AuthenticatedPrincipal principal = currentPrincipalQuery.requireCurrent();
         long actorId = requirePrincipalId(principal);
         Instant effectiveAt = Instant.now(clock);
+        lactationCommandUseCase.closeActiveForOwnershipTransfer(
+                transfer.goatId(), source.farmId(), effectiveAt);
         source.close(effectiveAt, OwnershipExitType.TRANSFER_OUT);
         GoatOwnershipPeriod target = GoatOwnershipPeriod.open(
                 transfer.goatId(), targetFarmId, effectiveAt,
@@ -332,6 +338,8 @@ public class GoatOwnershipTransferBusiness implements GoatOwnershipTransferUseCa
         }
         long actorId = requirePrincipalId(currentPrincipalQuery.requireCurrent());
         Instant effectiveAt = Instant.now(clock);
+        lactationCommandUseCase.closeActiveForOwnershipTransfer(
+                transfer.goatId(), source.farmId(), effectiveAt);
         source.close(effectiveAt, OwnershipExitType.EXTERNAL_SALE);
         GoatOwnershipPeriod target = GoatOwnershipPeriod.open(transfer.goatId(), transfer.targetFarmId(), effectiveAt,
                 OwnershipEntryType.PURCHASE, "OWNERSHIP_SALE:" + transfer.saleId());

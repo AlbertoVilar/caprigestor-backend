@@ -31,6 +31,8 @@ import com.devmaster.goatfarm.milk.application.model.LactationDryOffAlertSnapsho
 import com.devmaster.goatfarm.milk.domain.Lactation;
 
 import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -155,7 +157,8 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         }
 
         goatGenderValidator.requireFemaleAndActive(technicalId);
-        Lactation lactation = lactationPersistencePort.findByIdAndGoatTechnicalId(lactationId, technicalId)
+        Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(
+                        lactationId, farmId, goat.registrationNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Lactação não encontrada para esta cabra"));
 
         if (lactation.getStatus() != LactationStatus.ACTIVE) {
@@ -180,22 +183,26 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO resumeLactation(Long farmId, String goatId, Long lactationId) {
-        goatGenderValidator.requireFemaleAndActive(farmId, goatId);
+        GoatReference goat = requireCurrentOperationalGoat(farmId, goatId);
+        GoatId technicalId = goat.id();
+        goatGenderValidator.requireFemaleAndActive(technicalId);
 
-        Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId)
+        Lactation lactation = lactationPersistencePort.findByIdAndFarmIdAndGoatId(
+                        lactationId, farmId, goat.registrationNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Lactacao nao encontrada para esta cabra"));
 
         if (lactation.getStatus() != LactationStatus.DRY) {
             throw new BusinessRuleException("Apenas lactacoes secadas podem ser retomadas.");
         }
 
-        Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId);
+        Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(
+                farmId, goat.registrationNumber());
         if (activeLactation.isPresent() && !activeLactation.get().getId().equals(lactationId)) {
             throw new BusinessRuleException("Ja existe uma lactacao ativa para esta cabra.");
         }
 
         Optional<PregnancySnapshot> pregnancySnapshot = pregnancySnapshotQueryPort
-                .findLatestByFarmIdAndGoatId(farmId, goatId, LocalDate.now());
+                .findLatestByFarmIdAndGoatId(farmId, goat.registrationNumber(), LocalDate.now());
 
         if (pregnancySnapshot.map(PregnancySnapshot::active).orElse(false)) {
             throw new BusinessRuleException("Nao e permitido retomar lactacao com prenhez ativa.");
@@ -214,18 +221,63 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
 
     @Override
     public LactationResponseVO getActiveLactation(Long farmId, String goatId) {
-        goatGenderValidator.requireFemale(farmId, goatId);
-        Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
+        GoatReference goat = requireCurrentOperationalGoat(farmId, goatId);
+        GoatId technicalId = goat.id();
+        goatGenderValidator.requireFemale(technicalId);
+        Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(
+                        farmId, goat.registrationNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactação ativa encontrada para esta cabra"));
         return lactationMapper.toResponseVO(lactation);
     }
 
     @Override
     public LactationSummaryResponseVO getActiveLactationSummary(Long farmId, String goatId) {
-        goatGenderValidator.requireFemale(farmId, goatId);
-        Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId)
+        GoatReference goat = requireCurrentOperationalGoat(farmId, goatId);
+        GoatId technicalId = goat.id();
+        goatGenderValidator.requireFemale(technicalId);
+        Lactation lactation = lactationPersistencePort.findActiveByFarmIdAndGoatId(
+                        farmId, goat.registrationNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Nenhuma lactação ativa encontrada para esta cabra"));
-        return buildSummary(farmId, goatId, lactation);
+        return buildSummary(farmId, goat.registrationNumber(), lactation);
+    }
+
+    @Override
+    public void closeActiveForOwnershipTransfer(GoatId goatId, long sourceFarmId, Instant effectiveAt) {
+        if (goatId == null) {
+            throw new InvalidArgumentException("goatId", "GoatId e obrigatorio.");
+        }
+        if (sourceFarmId <= 0) {
+            throw new InvalidArgumentException("sourceFarmId", "Identificador da fazenda de origem invalido.");
+        }
+        if (effectiveAt == null) {
+            throw new InvalidArgumentException("effectiveAt", "Instante efetivo da transferencia e obrigatorio.");
+        }
+
+        Optional<Lactation> active = lactationPersistencePort.findActiveByGoatTechnicalId(goatId);
+        if (active.isEmpty()) {
+            return;
+        }
+        Lactation lactation = active.get();
+        if (!Objects.equals(lactation.getFarmId(), sourceFarmId)) {
+            throw new BusinessRuleException("lactation",
+                    "A lactacao ativa nao pertence a fazenda de origem canonica.");
+        }
+
+        LocalDate effectiveDate = effectiveAt.atZone(ZoneId.of("America/Sao_Paulo")).toLocalDate();
+        lactation.closeForOwnershipTransfer(effectiveDate);
+        lactationPersistencePort.save(lactation);
+    }
+
+    private GoatReference requireCurrentOperationalGoat(Long farmId, String goatRouteToken) {
+        GoatReference goat = goatReferenceResolver.resolveGlobal(goatRouteToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada."));
+        long requestedFarmId = requireFarmId(farmId);
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), requestedFarmId);
+        if (!Objects.equals(goat.farmId(), farmId)) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
+        return goat;
     }
 
     @Override
