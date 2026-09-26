@@ -291,22 +291,10 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 farmId,
                 GoatAbccPreviewRequestVO.builder().externalId(externalId).build()
         );
-        enforceTodMatchForNonAdmin(isAdmin, farmTod, trimOrNull(abccPreview.getTod()));
-
-        if (!isAdmin && !isSameTod(goatRequestVO.getTod(), farmTod)) {
-            throw new BusinessRuleException(FIELD_TOD, MSG_REQUEST_TOD_MISMATCH);
-        }
-
-        goatRequestVO.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
-                .creatorNameSnapshot(trimOrNull(abccPreview.getCreatorName()))
-                .creatorTod(trimOrNull(abccPreview.getTod()))
-                .evidenceReference("ABCC:" + externalId.trim())
-                .build());
-        return goatManagementUseCase.createGoat(farmId, goatRequestVO, GoatCreationOrigin.ABCC_IMPORT);
+        return confirmFromPreview(farmId, externalId, goatRequestVO, abccPreview, isAdmin, farmTod);
     }
 
     @Override
-    @Transactional
     public GoatAbccBatchConfirmResponseVO confirmBatch(Long farmId, List<GoatAbccBatchConfirmItemVO> items) {
         ownershipService.verifyFarmOwnership(farmId);
 
@@ -356,7 +344,14 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                     continue;
                 }
 
-                GoatResponseVO created = confirm(farmId, externalId, goatRequestVO);
+                GoatResponseVO created = confirmFromPreview(
+                        farmId,
+                        externalId,
+                        goatRequestVO,
+                        previewVO,
+                        isAdmin,
+                        trimOrNull(farm.tod())
+                );
                 imported++;
                 results.add(GoatAbccBatchConfirmItemResultVO.builder()
                         .externalId(externalId)
@@ -407,6 +402,28 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .totalError(error)
                 .results(results)
                 .build();
+    }
+
+    private GoatResponseVO confirmFromPreview(
+            Long farmId,
+            String externalId,
+            GoatRequestVO goatRequestVO,
+            GoatAbccPreviewResponseVO abccPreview,
+            boolean isAdmin,
+            String farmTod
+    ) {
+        enforceTodMatchForNonAdmin(isAdmin, farmTod, trimOrNull(abccPreview.getTod()));
+
+        if (!isAdmin && !isSameTod(goatRequestVO.getTod(), farmTod)) {
+            throw new BusinessRuleException(FIELD_TOD, MSG_REQUEST_TOD_MISMATCH);
+        }
+
+        goatRequestVO.setCreatorProvenance(GoatCreatorProvenanceVO.builder()
+                .creatorNameSnapshot(trimOrNull(abccPreview.getCreatorName()))
+                .creatorTod(trimOrNull(abccPreview.getTod()))
+                .evidenceReference("ABCC:" + externalId.trim())
+                .build());
+        return goatManagementUseCase.createGoat(farmId, goatRequestVO, GoatCreationOrigin.ABCC_IMPORT);
     }
 
     private FarmRecord loadFarm(Long farmId) {
