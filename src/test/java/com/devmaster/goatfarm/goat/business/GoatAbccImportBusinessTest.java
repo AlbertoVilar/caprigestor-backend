@@ -606,6 +606,45 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void shouldPreviewEachSuccessfullyImportedBatchItemOnce() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(
+                buildRawPreview("A-001", "1111111111", "IMPORTAVEL", "12345", "11111")
+        );
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(goatResponse("1111111111", "IMPORTAVEL"));
+
+        business.confirmBatch(1L, List.of(GoatAbccBatchConfirmItemVO.builder().externalId("A-001").build()));
+
+        verify(abccPublicQueryPort).preview("A-001");
+    }
+
+    @Test
+    void shouldKeepBatchRequestAndCreatorProvenanceInTheSamePreviewSnapshot() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", "12345")));
+        GoatAbccRawPreviewVO snapshotA = buildRawPreview("A-001", "1111111111", "SNAPSHOT A", "12345", "11111");
+        snapshotA.setCriador("CREATOR A");
+        GoatAbccRawPreviewVO snapshotB = buildRawPreview("A-001", "2222222222", "SNAPSHOT B", "12345", "22222");
+        snapshotB.setCriador("CREATOR B");
+        when(abccPublicQueryPort.preview("A-001")).thenReturn(snapshotA, snapshotB);
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(GoatRequestVO.class), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(goatResponse("1111111111", "SNAPSHOT A"));
+
+        business.confirmBatch(1L, List.of(GoatAbccBatchConfirmItemVO.builder().externalId("A-001").build()));
+
+        ArgumentCaptor<GoatRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(requestCaptor.getValue().getRegistrationNumber()).isEqualTo("1111111111");
+        assertThat(requestCaptor.getValue().getName()).isEqualTo("SNAPSHOT A");
+        assertThat(requestCaptor.getValue().getCreatorProvenance().getCreatorNameSnapshot()).isEqualTo("CREATOR A");
+        assertThat(requestCaptor.getValue().getCreatorProvenance().getCreatorTod()).isEqualTo("12345");
+        assertThat(requestCaptor.getValue().getCreatorProvenance().getEvidenceReference()).isEqualTo("ABCC:A-001");
+        verify(abccPublicQueryPort).preview("A-001");
+    }
+
+    @Test
     void shouldBlockBatchWhenFarmTodIsMissingForNonAdmin() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(new com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal(1L, "alberto@example.com", "Alberto", java.util.Set.of("ROLE_FARM_OWNER")));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(buildFarmRecord(1L, "Capril Vilar", null)));
@@ -640,6 +679,13 @@ class GoatAbccImportBusinessTest {
         User user = new User();
         user.setName(name);
         return user;
+    }
+
+    private GoatResponseVO goatResponse(String registrationNumber, String name) {
+        GoatResponseVO response = new GoatResponseVO();
+        response.setRegistrationNumber(registrationNumber);
+        response.setName(name);
+        return response;
     }
 
     private GoatAbccRawPreviewVO buildRawPreview(String externalId, String registro, String nome, String tod, String toe) {

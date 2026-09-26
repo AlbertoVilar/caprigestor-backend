@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +38,11 @@ public class GoatFarmPersistenceAdapter implements GoatFarmPersistencePort,
 
     public GoatFarmPersistenceAdapter(GoatFarmRepository repository, UserRepository userRepository, AddressRepository addressRepository) { this.repository = repository; this.userRepository = userRepository; this.addressRepository = addressRepository; }
 
-    @Override public Optional<FarmRecord> findById(Long id) { return repository.findById(id).map(this::toRecord); }
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<FarmRecord> findById(Long id) {
+        return repository.findById(id).map(this::toRecord);
+    }
     @Override public Optional<FarmRecord> findByIdAndUserId(Long id, Long userId) { return repository.findByIdAndUserId(id, userId).map(this::toRecord); }
     @Override public Optional<FarmRecord> findByAddressId(Long addressId) { return repository.findByAddressId(addressId).map(this::toRecord); }
     @Override public Optional<FarmRecord> findByIdWithDetails(Long id) { return repository.findByIdWithDetails(id).map(this::toRecord); }
