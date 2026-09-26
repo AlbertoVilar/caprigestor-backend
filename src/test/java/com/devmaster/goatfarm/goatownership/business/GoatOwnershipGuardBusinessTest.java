@@ -132,6 +132,79 @@ class GoatOwnershipGuardBusinessTest {
     }
 
     @Test
+    void sameDayInitialImportOrBirthIsUnambiguous() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.ABCC_IMPORT, null)));
+
+        assertThatCode(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .doesNotThrowAnyException();
+
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.BIRTH, null)));
+
+        assertThatCode(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .doesNotThrowAnyException();
+
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.MANUAL_IMPORT, null)));
+
+        assertThatCode(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void sameDayTransferInIsNotTreatedAsInitialOwnership() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 20L, startedAt, null, OwnershipEntryType.TRANSFER_IN, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 20L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void sameDayInitialOwnershipDeniesWrongExpectedFarm() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.ABCC_IMPORT, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 20L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void dateBeforeFirstOwnershipFailsClosed() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        Instant startedAt = LocalDate.of(2026, 9, 10).atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.ABCC_IMPORT, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(
+                GOAT_ID, 10L, LocalDate.of(2026, 9, 9)))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void sameDayPurchaseIsNotTreatedAsInitialOwnership() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.PURCHASE, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
     void exactCivilDayBoundariesAreAccepted() {
         ZoneId zone = ZoneId.of("America/Sao_Paulo");
         LocalDate date = LocalDate.of(2026, 9, 11);
