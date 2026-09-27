@@ -138,13 +138,14 @@ class GoatAbccQueryBusinessTest {
     }
 
     @Test
-    void previewMapsSemRgdAsActive() {
+    void previewPreservesSemRgdWithoutAssigningLocalStatus() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm()));
         when(abccPublicQueryPort.preview("A-1")).thenReturn(rawPreview("A-1", "1234500001", "12345", "Sem RGD"));
 
         var response = business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-1").build());
 
-        assertThat(response.getStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(response.getStatus()).isNull();
+        assertThat(response.getAbccSituation()).isEqualTo("Sem RGD");
         assertThat(response.getNormalizationWarnings()).isEmpty();
     }
 

@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.goat.business.abcc;
 
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
-import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccImportCandidateVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchItemVO;
@@ -21,13 +21,14 @@ class AbccAnimalTranslatorTest {
     private final AbccAnimalTranslator translator = new AbccAnimalTranslator();
 
     @Test
-    void mapsGenderBreedStatusAndCategoryVocabulary() {
+    void mapsGenderBreedAndCategoryWithoutConvertingAbccSituationToLocalStatus() {
         GoatAbccPreviewResponseVO preview = translator.toPreview(rawPreview(
                 "Macho", "ALPINA FRANCESA", "Sem RGD", "PCOD", "10/01/2020"), 7L, "Capril Vilar");
 
         assertThat(preview.getGender()).isEqualTo(Gender.MACHO);
         assertThat(preview.getBreed()).isEqualTo(GoatBreed.ALPINA);
-        assertThat(preview.getStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(preview.getStatus()).isNull();
+        assertThat(preview.getAbccSituation()).isEqualTo("Sem RGD");
         assertThat(preview.getCategory()).isEqualTo(Category.PC);
         assertThat(preview.getBirthDate()).isEqualTo(LocalDate.of(2020, 1, 10));
         assertThat(preview.getNormalizationWarnings())
@@ -43,20 +44,17 @@ class AbccAnimalTranslatorTest {
     }
 
     @Test
-    void mapsAllKnownStatusValuesAndWarnsForUnknown() {
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "ATIVA", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.ATIVO);
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "INATIVO", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.INATIVO);
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "VENDIDO", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.VENDIDO);
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "FALECIDA", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.FALECIDO);
-
-        GoatAbccPreviewResponseVO unknown = translator.toPreview(
-                rawPreview("Fêmea", "SAANEN", "NOVA SITUAÇÃO", "PO", "10/01/2020"), 1L, "Fazenda");
-        assertThat(unknown.getStatus()).isNull();
-        assertThat(unknown.getNormalizationWarnings()).contains("Valor de situação da ABCC não mapeado: NOVA SITUAÇÃO");
+    void preservesExternalSituationsWithoutAssigningLocalStatusOrWarning() {
+        for (String situation : new String[]{"RGD", "VENDIDO", "FALECIDO", "SUSPENSO", null, "NOVA SITUAÇÃO"}) {
+            GoatAbccPreviewResponseVO preview = translator.toPreview(
+                    rawPreview("Fêmea", "SAANEN", situation, "PO", "10/01/2020"), 1L, "Fazenda");
+            assertThat(preview.getStatus()).as("local status for ABCC=%s", situation).isNull();
+            assertThat(preview.getAbccSituation()).as("raw ABCC=%s", situation).isEqualTo(situation);
+        }
+        GoatAbccPreviewResponseVO padded = translator.toPreview(
+                rawPreview("Fêmea", "SAANEN", " RGD ", "PO", "10/01/2020"), 1L, "Fazenda");
+        assertThat(padded.getAbccSituation()).isEqualTo(" RGD ");
+        assertThat(padded.getStatus()).isNull();
     }
 
     @Test
@@ -93,7 +91,7 @@ class AbccAnimalTranslatorTest {
     }
 
     @Test
-    void mapsRawSearchItemWithNormalizedFieldsAndWarnings() {
+    void mapsRawSearchItemWithoutNormalizedLocalStatus() {
         var item = translator.normalizeSearchItem(GoatAbccRawSearchItemVO.builder()
                 .externalId(" A-1 ")
                 .nome("  ZENDA  ")
@@ -109,18 +107,19 @@ class AbccAnimalTranslatorTest {
         assertThat(item.getNome()).isEqualTo("ZENDA");
         assertThat(item.getNormalizedGender()).isEqualTo(Gender.FEMEA);
         assertThat(item.getNormalizedBreed()).isEqualTo(GoatBreed.SAANEN);
-        assertThat(item.getNormalizedStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(item.getSituacao()).isEqualTo("RGD");
+        assertThat(item.getNormalizedStatus()).isNull();
         assertThat(item.getNormalizationWarnings()).isEmpty();
     }
 
     @Test
-    void mapsPreviewToGoatRequestAndPreservesRequiredFields() {
+    void mapsPreviewToImportCandidateWithoutLifecycleStatus() {
         GoatAbccPreviewResponseVO preview = translator.toPreview(rawPreview(
                 "Macho", "SAANEN", "RGD", "PO", "10/01/2020"), 9L, "Capril");
         preview.setFatherRegistrationNumber(" PAI-1 ");
         preview.setMotherRegistrationNumber(" MAE-1 ");
 
-        GoatRequestVO request = translator.buildGoatRequestFromPreview(preview);
+        GoatAbccImportCandidateVO request = translator.buildImportCandidateFromPreview(preview);
 
         assertThat(request.getRegistrationNumber()).isEqualTo("1400810001");
         assertThat(request.getName()).isEqualTo("ANIMAL ABCC");
@@ -132,18 +131,20 @@ class AbccAnimalTranslatorTest {
     }
 
     @Test
-    void rejectsMissingMandatoryImportFields() {
+    void rejectsMissingMandatoryImportFieldsButNotMissingAbccSituation() {
         GoatAbccPreviewResponseVO preview = translator.toPreview(rawPreview(
                 "Macho", "SAANEN", "RGD", "PO", "10/01/2020"), 1L, "Fazenda");
 
         preview.setRegistrationNumber(null);
-        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview))
+        assertThatThrownBy(() -> translator.buildImportCandidateFromPreview(preview))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Registro ABCC ausente");
 
         preview.setRegistrationNumber("1400810001");
+        preview.setStatus(null);
+        preview.setAbccSituation("SUSPENSO");
         preview.setTod(null);
-        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview))
+        assertThatThrownBy(() -> translator.buildImportCandidateFromPreview(preview))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("TOD ABCC ausente");
     }

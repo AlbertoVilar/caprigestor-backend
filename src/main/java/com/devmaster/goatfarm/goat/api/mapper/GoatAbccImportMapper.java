@@ -110,6 +110,7 @@ public class GoatAbccImportMapper {
                 .breed(vo.getBreed())
                 .color(vo.getColor())
                 .birthDate(vo.getBirthDate())
+                .abccSituation(vo.getAbccSituation())
                 .status(vo.getStatus())
                 .tod(vo.getTod())
                 .toe(vo.getToe())

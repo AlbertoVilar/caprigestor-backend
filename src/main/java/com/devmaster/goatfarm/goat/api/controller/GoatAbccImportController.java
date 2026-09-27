@@ -150,6 +150,7 @@ public class GoatAbccImportController {
     ) {
         var responseVO = goatAbccImportUseCase.confirmBatch(
                 farmId,
+                requestDTO.getStatus(),
                 goatAbccImportMapper.toBatchConfirmItemsVO(requestDTO)
         );
         return ResponseEntity.ok(goatAbccImportMapper.toBatchConfirmResponseDTO(responseVO));

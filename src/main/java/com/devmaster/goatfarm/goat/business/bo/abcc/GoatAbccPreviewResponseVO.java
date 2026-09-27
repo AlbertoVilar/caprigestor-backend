@@ -29,6 +29,9 @@ public class GoatAbccPreviewResponseVO {
     private GoatBreed breed;
     private String color;
     private LocalDate birthDate;
+    /** Raw registry situation from ABCC; it is not the CapriGestor lifecycle status. */
+    private String abccSituation;
+    /** Legacy compatibility field. ABCC situation must never populate local status. */
     private GoatStatus status;
     private String tod;
     private String toe;

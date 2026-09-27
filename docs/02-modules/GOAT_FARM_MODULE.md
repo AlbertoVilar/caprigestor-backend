@@ -162,11 +162,11 @@ Importação ABCC (opcional):
 - O lookup por RG carrega o mesmo preview editável do fluxo existente; a confirmação continua
   manual e usa exclusivamente `confirm` após a revisão do usuário.
 
-## Regra de situação ABCC sem RGD
-- `Sem RGD` não impede importação patrimonial.
-- O identificador estável para o fluxo é o `registrationNumber` ABCC.
-- No fluxo patrimonial ABCC, a situação `Sem RGD` é normalizada como `ATIVO` para manter coerência entre `preview`, `confirm` e `confirm-batch`.
-- A deduplicação por `registrationNumber` e a validação de `TOD` continuam obrigatórias sem alteração.
+## Situação ABCC e status local na importação
+- A situação ABCC (`RGD`, `Sem RGD`, `Vendido`, `Falecido`, suspensa, ausente ou outro valor) é informação externa de registro/histórico; não define nem bloqueia o ciclo de vida local.
+- `preview` e busca preservam a situação ABCC como dado informativo. Campos legados de status normalizado permanecem disponíveis por compatibilidade, mas não recebem status local derivado da ABCC.
+- A confirmação unitária mantém o status local informado no cadastro pelo usuário. A confirmação em lote exige um `status` explícito selecionado no CapriGestor, aplicado localmente aos itens aceitos.
+- O identificador estável para o fluxo é o `registrationNumber` ABCC; duplicidade é verificada globalmente no CapriGestor, e validação de `TOD` permanece obrigatória para usuário não administrativo.
 
 ## Saída controlada do animal do rebanho (backend-first)
 - Objetivo: registrar saída operacional com rastreabilidade mínima sem exclusão física do animal.
@@ -208,7 +208,7 @@ Status por item:
 - `ERROR`
 
 Regras de decisão por item no lote:
-- Duplicidade (`farmId + registrationNumber`) -> `SKIPPED_DUPLICATE`
+- Duplicidade global (`registrationNumber`) -> `SKIPPED_DUPLICATE`
 - TOD incompatível para usuário comum -> `SKIPPED_TOD_MISMATCH`
 - Item válido -> `IMPORTED`
 - Falha técnica/validação residual -> `ERROR`

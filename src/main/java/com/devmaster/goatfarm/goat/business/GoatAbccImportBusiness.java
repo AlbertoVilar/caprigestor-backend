@@ -20,8 +20,10 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
+import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccImportCandidateVO;
 import com.devmaster.goatfarm.goat.business.abcc.AbccImportEligibilityPolicy;
 import com.devmaster.goatfarm.goat.business.abcc.AbccAnimalTranslator;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -90,7 +92,14 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
     }
 
     @Override
-    public GoatAbccBatchConfirmResponseVO confirmBatch(Long farmId, List<GoatAbccBatchConfirmItemVO> items) {
+    public GoatAbccBatchConfirmResponseVO confirmBatch(
+            Long farmId,
+            GoatStatus localStatus,
+            List<GoatAbccBatchConfirmItemVO> items
+    ) {
+        if (localStatus == null) {
+            throw new BusinessRuleException("status", "Informe a situação local do animal no CapriGestor para confirmar a importação em lote.");
+        }
         ownershipService.verifyFarmOwnership(farmId);
 
         if (items == null || items.isEmpty()) {
@@ -119,22 +128,24 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 continue;
             }
 
+            GoatAbccImportCandidateVO candidate = null;
             try {
                 GoatAbccPreviewResponseVO previewVO = goatAbccQueryUseCase.preview(
                         farmId,
                         GoatAbccPreviewRequestVO.builder().externalId(externalId).build()
                 );
-                GoatRequestVO goatRequestVO = animalTranslator.buildGoatRequestFromPreview(previewVO);
-                String registrationNumber = goatRequestVO.getRegistrationNumber();
+                candidate = animalTranslator.buildImportCandidateFromPreview(previewVO);
+                GoatRequestVO goatRequestVO = toGoatRequest(candidate, localStatus);
+                String registrationNumber = candidate.getRegistrationNumber();
 
-                if (goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registrationNumber, farmId).isPresent()) {
+                if (goatReferenceQueryPort.findReferenceByRegistrationNumber(registrationNumber).isPresent()) {
                     skippedDuplicate++;
                     results.add(GoatAbccBatchConfirmItemResultVO.builder()
                             .externalId(externalId)
                             .registrationNumber(registrationNumber)
                             .name(goatRequestVO.getName())
                             .status(STATUS_SKIPPED_DUPLICATE)
-                            .message("Registro já existente nesta fazenda. Item ignorado por duplicidade.")
+                            .message("Registro já existe no CapriGestor. Item ignorado por duplicidade.")
                             .build());
                     continue;
                 }
@@ -173,11 +184,13 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                         .message(ex.getMessage())
                         .build());
             } catch (DuplicateEntityException ex) {
-                error++;
+                skippedDuplicate++;
                 results.add(GoatAbccBatchConfirmItemResultVO.builder()
                         .externalId(externalId)
-                        .status(STATUS_ERROR)
-                        .message("Conflito de registro durante a importação: " + ex.getMessage())
+                        .registrationNumber(candidate == null ? null : candidate.getRegistrationNumber())
+                        .name(candidate == null ? null : candidate.getName())
+                        .status(STATUS_SKIPPED_DUPLICATE)
+                        .message("Registro já existe no CapriGestor. Item ignorado por duplicidade.")
                         .build());
             } catch (RuntimeException ex) {
                 error++;
@@ -196,6 +209,23 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 .totalSkippedTodMismatch(skippedTodMismatch)
                 .totalError(error)
                 .results(results)
+                .build();
+    }
+
+    private GoatRequestVO toGoatRequest(GoatAbccImportCandidateVO candidate, GoatStatus localStatus) {
+        return GoatRequestVO.builder()
+                .registrationNumber(candidate.getRegistrationNumber())
+                .name(candidate.getName())
+                .gender(candidate.getGender())
+                .breed(candidate.getBreed())
+                .color(candidate.getColor())
+                .birthDate(candidate.getBirthDate())
+                .status(localStatus)
+                .tod(candidate.getTod())
+                .toe(candidate.getToe())
+                .category(candidate.getCategory())
+                .fatherRegistrationNumber(candidate.getFatherRegistrationNumber())
+                .motherRegistrationNumber(candidate.getMotherRegistrationNumber())
                 .build();
     }
 

@@ -119,6 +119,31 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void singleConfirmKeepsEveryUserStatusWhenAbccSituationContradictsIt() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatStatus[] localStatuses = {GoatStatus.ATIVO, GoatStatus.INATIVO, GoatStatus.VENDIDO, GoatStatus.FALECIDO};
+        String[] externalSituations = {"VENDIDO", "RGD", "FALECIDO", "RGD"};
+        String[] registrations = {"1643218012", "1643218013", "1643218014", "1643218015"};
+
+        for (int index = 0; index < localStatuses.length; index++) {
+            String externalId = "A-" + index;
+            GoatAbccPreviewResponseVO abcc = preview(externalId, registrations[index], "12345");
+            abcc.setAbccSituation(externalSituations[index]);
+            abcc.setStatus(null);
+            when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(abcc);
+            GoatRequestVO localRequest = request(registrations[index], "12345");
+            localRequest.setStatus(localStatuses[index]);
+            when(goatManagementUseCase.createGoat(eq(1L), eq(localRequest), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                    .thenReturn(response(registrations[index], "ANIMAL"));
+
+            business.confirm(1L, externalId, localRequest);
+
+            verify(goatManagementUseCase).createGoat(1L, localRequest, GoatCreationOrigin.ABCC_IMPORT);
+            assertThat(localRequest.getStatus()).as("requested local status").isEqualTo(localStatuses[index]);
+        }
+    }
+
+    @Test
     void adminKeepsTodBypass() {
         when(currentPrincipalQuery.requireCurrent()).thenReturn(principal("ROLE_ADMIN"));
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
@@ -142,14 +167,15 @@ class GoatAbccImportBusinessTest {
                 default -> preview("invalid", null, "12345");
             };
         });
-        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
-        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId("2222222222", 1L)).thenReturn(Optional.empty());
-        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId("3333333333", 1L))
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("1111111111")).thenReturn(Optional.empty());
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("2222222222")).thenReturn(Optional.empty());
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("3333333333"))
                 .thenReturn(Optional.of(new GoatReference(new GoatId(33L), 1L, "3333333333", "DUPLICATE")));
         when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
                 .thenReturn(response("1111111111", "OK"));
 
-        var result = business.confirmBatch(1L, List.of(item("ok"), item("wrong-tod"), item("duplicate"), item("invalid")));
+        var result = business.confirmBatch(1L, GoatStatus.ATIVO,
+                List.of(item("ok"), item("wrong-tod"), item("duplicate"), item("invalid")));
 
         assertThat(result.getTotalSelected()).isEqualTo(4);
         assertThat(result.getTotalImported()).isEqualTo(1);
@@ -167,15 +193,16 @@ class GoatAbccImportBusinessTest {
         snapshot.setName("SNAPSHOT A");
         snapshot.setCreatorName("CREATOR A");
         when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(snapshot);
-        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId("1111111111", 1L)).thenReturn(Optional.empty());
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("1111111111")).thenReturn(Optional.empty());
         when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
                 .thenReturn(response("1111111111", "SNAPSHOT A"));
 
-        business.confirmBatch(1L, List.of(item("A-1")));
+        business.confirmBatch(1L, GoatStatus.ATIVO, List.of(item("A-1")));
 
         ArgumentCaptor<GoatRequestVO> captor = ArgumentCaptor.forClass(GoatRequestVO.class);
         verify(goatManagementUseCase).createGoat(eq(1L), captor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
         assertThat(captor.getValue().getName()).isEqualTo("SNAPSHOT A");
+        assertThat(captor.getValue().getStatus()).isEqualTo(GoatStatus.ATIVO);
         assertThat(captor.getValue().getCreatorProvenance().getCreatorNameSnapshot()).isEqualTo("CREATOR A");
         verify(goatAbccQueryUseCase).preview(eq(1L), any(GoatAbccPreviewRequestVO.class));
     }
@@ -183,10 +210,79 @@ class GoatAbccImportBusinessTest {
     @Test
     void batchStopsBeforeQueryWhenFarmTodMissingForNonAdmin() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm(null)));
-        assertThatThrownBy(() -> business.confirmBatch(1L, List.of(item("A-1"))))
+        assertThatThrownBy(() -> business.confirmBatch(1L, GoatStatus.ATIVO, List.of(item("A-1"))))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("não possui TOD configurado");
         verify(goatAbccQueryUseCase, never()).preview(anyLong(), any());
+    }
+
+    @Test
+    void batchRequiresLocalStatusBeforeQueryingAbcc() {
+        assertThatThrownBy(() -> business.confirmBatch(1L, null, List.of(item("A-1"))))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("situação local");
+        verify(goatAbccQueryUseCase, never()).preview(anyLong(), any());
+        verify(goatManagementUseCase, never()).createGoat(anyLong(), any(), any());
+    }
+
+    @Test
+    void localBatchStatusWinsEvenWhenAbccSaysSoldOrUnknown() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatAbccPreviewResponseVO sold = preview("sold", "1111111111", "12345");
+        sold.setAbccSituation("VENDIDO");
+        sold.setStatus(null);
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(sold);
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("1111111111")).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(response("1111111111", "ANIMAL"));
+
+        business.confirmBatch(1L, GoatStatus.ATIVO, List.of(item("sold")));
+
+        ArgumentCaptor<GoatRequestVO> captor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(1L), captor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(captor.getValue().getStatus()).isEqualTo(GoatStatus.ATIVO);
+    }
+
+    @Test
+    void batchImportsNullAndUnknownAbccSituationsUsingExplicitLocalStatus() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatAbccPreviewResponseVO missing = preview("missing", "1111111111", "12345");
+        missing.setAbccSituation(null);
+        GoatAbccPreviewResponseVO unknown = preview("unknown", "2222222222", "12345");
+        unknown.setAbccSituation("SITUAÇÃO NOVA");
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenAnswer(invocation -> {
+            String externalId = ((GoatAbccPreviewRequestVO) invocation.getArgument(1)).getExternalId();
+            return "missing".equals(externalId) ? missing : unknown;
+        });
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber(any())).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenAnswer(invocation -> {
+                    GoatRequestVO request = invocation.getArgument(1);
+                    return response(request.getRegistrationNumber(), request.getName());
+                });
+
+        var result = business.confirmBatch(1L, GoatStatus.INATIVO, List.of(item("missing"), item("unknown")));
+
+        assertThat(result.getTotalImported()).isEqualTo(2);
+        ArgumentCaptor<GoatRequestVO> captor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase, org.mockito.Mockito.times(2))
+                .createGoat(eq(1L), captor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(captor.getAllValues()).allSatisfy(request -> assertThat(request.getStatus()).isEqualTo(GoatStatus.INATIVO));
+    }
+
+    @Test
+    void concurrentGlobalDuplicateIsSkippedRatherThanReportedAsError() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(preview("A-1", "1111111111", "12345"));
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumber("1111111111")).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenThrow(new DuplicateEntityException("registrationNumber", "already exists"));
+
+        var result = business.confirmBatch(1L, GoatStatus.ATIVO, List.of(item("A-1")));
+
+        assertThat(result.getTotalSkippedDuplicate()).isEqualTo(1);
+        assertThat(result.getTotalError()).isZero();
+        assertThat(result.getResults().get(0).getStatus()).isEqualTo("SKIPPED_DUPLICATE");
     }
 
     @Test

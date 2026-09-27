@@ -135,7 +135,8 @@ class GoatAbccImportControllerTest {
                 .name("FALCÃO DO CAPRIL DA PRATA")
                 .gender(Gender.MACHO)
                 .breed(GoatBreed.SAANEN)
-                .status(GoatStatus.ATIVO)
+                .abccSituation("SUSPENSO")
+                .status(null)
                 .birthDate(LocalDate.of(2014, 5, 16))
                 .farmId(1L)
                 .farmName("Capril Vilar")
@@ -154,6 +155,8 @@ class GoatAbccImportControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.externalSource").value("ABCC_PUBLIC"))
                 .andExpect(jsonPath("$.registrationNumber").value("1433214017"))
+                .andExpect(jsonPath("$.abccSituation").value("SUSPENSO"))
+                .andExpect(jsonPath("$.status").doesNotExist())
                 .andExpect(jsonPath("$.gender").value("MACHO"))
                 .andExpect(jsonPath("$.breed").value("SAANEN"));
 
@@ -234,7 +237,7 @@ class GoatAbccImportControllerTest {
     @Test
     @WithMockUser(roles = "FARM_OWNER")
     void shouldConfirmBatchAbccImportSuccessfully() throws Exception {
-        when(goatAbccImportUseCase.confirmBatch(eq(1L), any())).thenReturn(
+        when(goatAbccImportUseCase.confirmBatch(eq(1L), eq(GoatStatus.ATIVO), any())).thenReturn(
                 GoatAbccBatchConfirmResponseVO.builder()
                         .totalSelected(4)
                         .totalImported(1)
@@ -277,7 +280,8 @@ class GoatAbccImportControllerTest {
                     { "externalId": "A-002" },
                     { "externalId": "A-003" },
                     { "externalId": "A-004" }
-                  ]
+                  ],
+                  "status": "ATIVO"
                 }
                 """;
 
@@ -293,7 +297,23 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.totalError").value(1))
                 .andExpect(jsonPath("$.results[2].status").value("SKIPPED_TOD_MISMATCH"));
 
-        verify(goatAbccImportUseCase).confirmBatch(eq(1L), any());
+        verify(goatAbccImportUseCase).confirmBatch(eq(1L), eq(GoatStatus.ATIVO), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "FARM_OWNER")
+    void shouldRejectBatchWithoutExplicitLocalStatusBeforeUseCase() throws Exception {
+        String payload = """
+                { "items": [{ "externalId": "A-001" }] }
+                """;
+
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/imports/abcc/confirm-batch")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnprocessableEntity());
+
+        verify(goatAbccImportUseCase, never()).confirmBatch(eq(1L), any(), any());
     }
 
     @Test

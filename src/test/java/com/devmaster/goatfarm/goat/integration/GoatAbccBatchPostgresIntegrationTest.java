@@ -102,7 +102,7 @@ class GoatAbccBatchPostgresIntegrationTest {
     }
 
     @Test
-    void batchKeepsPriorImportWhenLaterCreationFails() {
+    void batchKeepsPriorImportAndSkipsGlobalDuplicateFromOtherFarm() {
         long userId = createUser("batch-owner@example.com", "10000000001");
         long targetFarmId = createFarm(userId, "ABCC Batch Target", "16153");
         long otherFarmId = createFarm(userId, "ABCC Batch Other", "27164");
@@ -117,15 +117,16 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("global-duplicate")).thenReturn(
                 preview("global-duplicate", duplicateRegistration, "Fails in create", "16153"));
 
-        var response = abccImportUseCase.confirmBatch(targetFarmId, List.of(
+        var response = abccImportUseCase.confirmBatch(targetFarmId, GoatStatus.ATIVO, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("success").build(),
                 GoatAbccBatchConfirmItemVO.builder().externalId("global-duplicate").build()
         ));
 
         assertThat(response.getTotalImported()).isEqualTo(1);
-        assertThat(response.getTotalError()).isEqualTo(1);
+        assertThat(response.getTotalSkippedDuplicate()).isEqualTo(1);
+        assertThat(response.getTotalError()).isZero();
         assertThat(response.getResults().stream().map(result -> result.getStatus()).toList())
-                .containsExactly("IMPORTED", "ERROR");
+                .containsExactly("IMPORTED", "SKIPPED_DUPLICATE");
         assertThat(countGoats(importedRegistration)).isEqualTo(1);
         assertThat(countGoats(duplicateRegistration)).isEqualTo(1);
     }
@@ -139,7 +140,7 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("valid-one")).thenReturn(preview("valid-one", "1615499011", "Valid one", "16154"));
         when(abccPublicQueryPort.preview("valid-two")).thenReturn(preview("valid-two", "1615499012", "Valid two", "16154"));
 
-        var response = abccImportUseCase.confirmBatch(farmId, List.of(
+        var response = abccImportUseCase.confirmBatch(farmId, GoatStatus.ATIVO, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("valid-one").build(),
                 GoatAbccBatchConfirmItemVO.builder().externalId("valid-two").build()
         ));
@@ -159,7 +160,7 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("valid")).thenReturn(preview("valid", "1615599021", "Valid", "16155"));
         when(abccPublicQueryPort.preview("wrong-tod")).thenReturn(preview("wrong-tod", "1615599022", "Wrong TOD", "99999"));
 
-        var response = abccImportUseCase.confirmBatch(farmId, List.of(
+        var response = abccImportUseCase.confirmBatch(farmId, GoatStatus.ATIVO, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("valid").build(),
                 GoatAbccBatchConfirmItemVO.builder().externalId("wrong-tod").build()
         ));
@@ -171,7 +172,7 @@ class GoatAbccBatchPostgresIntegrationTest {
     }
 
     @Test
-    void batchContinuesWithLaterSuccessAfterCreationFailure() {
+    void batchContinuesWithLaterSuccessAfterGlobalDuplicate() {
         long userId = createUser("later-success@example.com", "10000000004");
         long targetFarmId = createFarm(userId, "ABCC Batch Later Target", "16156");
         long otherFarmId = createFarm(userId, "ABCC Batch Later Other", "27165");
@@ -184,15 +185,16 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("later-success")).thenReturn(
                 preview("later-success", "1615699032", "Later success", "16156"));
 
-        var response = abccImportUseCase.confirmBatch(targetFarmId, List.of(
+        var response = abccImportUseCase.confirmBatch(targetFarmId, GoatStatus.ATIVO, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("global-duplicate").build(),
                 GoatAbccBatchConfirmItemVO.builder().externalId("later-success").build()
         ));
 
         assertThat(response.getTotalImported()).isEqualTo(1);
-        assertThat(response.getTotalError()).isEqualTo(1);
+        assertThat(response.getTotalSkippedDuplicate()).isEqualTo(1);
+        assertThat(response.getTotalError()).isZero();
         assertThat(response.getResults().stream().map(result -> result.getStatus()).toList())
-                .containsExactly("ERROR", "IMPORTED");
+                .containsExactly("SKIPPED_DUPLICATE", "IMPORTED");
         assertThat(countGoats("1615699032")).isEqualTo(1);
     }
 
@@ -206,13 +208,39 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("local-duplicate")).thenReturn(
                 preview("local-duplicate", "1615799041", "Existing locally", "16157"));
 
-        var response = abccImportUseCase.confirmBatch(farmId, List.of(
+        var response = abccImportUseCase.confirmBatch(farmId, GoatStatus.ATIVO, List.of(
                 GoatAbccBatchConfirmItemVO.builder().externalId("local-duplicate").build()
         ));
 
         assertThat(response.getTotalImported()).isZero();
         assertThat(response.getTotalSkippedDuplicate()).isEqualTo(1);
         assertThat(countGoats("1615799041")).isEqualTo(1);
+    }
+
+    @Test
+    void batchUsesExplicitLocalStatusRegardlessOfExternalSituation() {
+        long userId = createUser("local-status@example.com", "10000000007");
+        long farmId = createFarm(userId, "ABCC Batch Local Status", "16159");
+        configureAuthorizedPrincipal(userId, farmId);
+
+        when(abccPublicQueryPort.preview("abcc-sold-local-active"))
+                .thenReturn(preview("abcc-sold-local-active", "1615999051", "Sold at ABCC", "16159", "VENDIDO"));
+        when(abccPublicQueryPort.preview("abcc-deceased-local-inactive"))
+                .thenReturn(preview("abcc-deceased-local-inactive", "1615999052", "Deceased at ABCC", "16159", "RGD"));
+
+        var response = abccImportUseCase.confirmBatch(farmId, GoatStatus.ATIVO, List.of(
+                GoatAbccBatchConfirmItemVO.builder().externalId("abcc-sold-local-active").build()
+        ));
+        var secondResponse = abccImportUseCase.confirmBatch(farmId, GoatStatus.FALECIDO, List.of(
+                GoatAbccBatchConfirmItemVO.builder().externalId("abcc-deceased-local-inactive").build()
+        ));
+
+        assertThat(response.getTotalImported()).isEqualTo(1);
+        assertThat(secondResponse.getTotalImported()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select status from cabras where num_registro = ?", String.class,
+                "1615999051")).isEqualTo("ATIVO");
+        assertThat(jdbcTemplate.queryForObject("select status from cabras where num_registro = ?", String.class,
+                "1615999052")).isEqualTo("FALECIDO");
     }
 
     private void configureAuthorizedPrincipal(long userId, long... farmIds) {
@@ -246,9 +274,13 @@ class GoatAbccBatchPostgresIntegrationTest {
     }
 
     private GoatAbccRawPreviewVO preview(String externalId, String registrationNumber, String name, String tod) {
+        return preview(externalId, registrationNumber, name, tod, "RGD");
+    }
+
+    private GoatAbccRawPreviewVO preview(String externalId, String registrationNumber, String name, String tod, String situation) {
         return GoatAbccRawPreviewVO.builder()
                 .externalId(externalId).registro(registrationNumber).nome(name)
-                .sexo("Fêmea").raca("SAANEN").pelagem("Branca").situacao("RGD")
+                .sexo("Fêmea").raca("SAANEN").pelagem("Branca").situacao(situation)
                 .categoria("PA").dataNascimento("01/01/2025").tod(tod)
                 .toe(registrationNumber.substring(5)).build();
     }
