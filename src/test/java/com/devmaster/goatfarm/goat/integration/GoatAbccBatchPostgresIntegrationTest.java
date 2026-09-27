@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatAbccPublicQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatExternalParentQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawPreviewVO;
 import com.devmaster.goatfarm.goat.enums.Category;
@@ -20,10 +21,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -31,9 +34,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -56,12 +61,45 @@ class GoatAbccBatchPostgresIntegrationTest {
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private GoatAbccImportUseCase abccImportUseCase;
     @Autowired private GoatManagementUseCase goatManagementUseCase;
+    @SpyBean private com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase ownershipInitialization;
 
     @MockBean private FarmAuthorizationUseCase farmAuthorizationUseCase;
     @MockBean private CurrentPrincipalQueryUseCase currentPrincipalQueryUseCase;
     @MockBean private GoatAbccPublicQueryPort abccPublicQueryPort;
     @MockBean private GoatExternalParentQueryPort goatExternalParentQueryPort;
     @MockBean private GenealogyAbccQueryPort genealogyAbccQueryPort;
+
+    @Test
+    void singleConfirmKeepsAbccOutsideTransactionAndGoatPersistenceInsideAtomicTransaction() {
+        long userId = createUser("single-confirm@example.com", "10000000006");
+        long farmId = createFarm(userId, "ABCC Single Confirm", "16158");
+        configureAuthorizedPrincipal(userId, farmId);
+
+        AtomicReference<Boolean> abccTransactionActive = new AtomicReference<>();
+        AtomicReference<Boolean> ownershipWriteTransactionActive = new AtomicReference<>();
+        when(abccPublicQueryPort.preview("single-confirm")).thenAnswer(invocation -> {
+            abccTransactionActive.set(TransactionSynchronizationManager.isActualTransactionActive());
+            return preview("single-confirm", "1615899051", "Single confirmed", "16158");
+        });
+        doAnswer(invocation -> {
+            ownershipWriteTransactionActive.set(TransactionSynchronizationManager.isActualTransactionActive());
+            return invocation.callRealMethod();
+        }).when(ownershipInitialization).initialize(org.mockito.ArgumentMatchers.any());
+
+        GoatResponseVO created = abccImportUseCase.confirm(
+                farmId, "single-confirm", goatRequest("1615899051", "Single confirmed", "16158"));
+
+        assertThat(abccTransactionActive).hasValue(false);
+        assertThat(ownershipWriteTransactionActive).hasValue(true);
+        assertThat(created.getTechnicalId()).isPositive();
+        assertThat(countGoats("1615899051")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from goat_creator_reference where goat_id = ?", Integer.class,
+                created.getTechnicalId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from goat_ownership_period where goat_id = ? and farm_id = ? and ended_at is null",
+                Integer.class, created.getTechnicalId(), farmId)).isEqualTo(1);
+    }
 
     @Test
     void batchKeepsPriorImportWhenLaterCreationFails() {

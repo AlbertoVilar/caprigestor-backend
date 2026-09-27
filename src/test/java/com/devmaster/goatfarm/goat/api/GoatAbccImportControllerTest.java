@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.goat.api;
 import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccQueryUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemResultVO;
@@ -57,6 +58,9 @@ class GoatAbccImportControllerTest {
     private GoatAbccImportUseCase goatAbccImportUseCase;
 
     @MockBean
+    private GoatAbccQueryUseCase goatAbccQueryUseCase;
+
+    @MockBean
     private OwnershipService ownershipService;
 
     @BeforeEach
@@ -69,7 +73,7 @@ class GoatAbccImportControllerTest {
 
     @Test
     void shouldListAbccRacesSuccessfully() throws Exception {
-        when(goatAbccImportUseCase.listRaces(eq(1L))).thenReturn(List.of(
+        when(goatAbccQueryUseCase.listRaces(eq(1L))).thenReturn(List.of(
                 GoatAbccRaceOptionVO.builder().id(9).name("SAANEN").normalizedBreed(GoatBreed.SAANEN).build(),
                 GoatAbccRaceOptionVO.builder().id(2).name("BOER").normalizedBreed(GoatBreed.BOER).build()
         ));
@@ -80,12 +84,12 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.items[0].name").value("SAANEN"))
                 .andExpect(jsonPath("$.items[0].normalizedBreed").value("SAANEN"));
 
-        verify(goatAbccImportUseCase).listRaces(eq(1L));
+        verify(goatAbccQueryUseCase).listRaces(eq(1L));
     }
 
     @Test
     void shouldSearchAbccSuccessfully() throws Exception {
-        when(goatAbccImportUseCase.search(eq(1L), any())).thenReturn(GoatAbccSearchResponseVO.builder()
+        when(goatAbccQueryUseCase.search(eq(1L), any())).thenReturn(GoatAbccSearchResponseVO.builder()
                 .currentPage(1)
                 .totalPages(5)
                 .pageSize(1)
@@ -119,12 +123,12 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.items[0].normalizedGender").value("MACHO"))
                 .andExpect(jsonPath("$.items[0].normalizedBreed").value("SAANEN"));
 
-        verify(goatAbccImportUseCase).search(eq(1L), any());
+        verify(goatAbccQueryUseCase).search(eq(1L), any());
     }
 
     @Test
     void shouldPreviewAbccSuccessfully() throws Exception {
-        when(goatAbccImportUseCase.preview(eq(1L), any())).thenReturn(GoatAbccPreviewResponseVO.builder()
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(GoatAbccPreviewResponseVO.builder()
                 .externalSource("ABCC_PUBLIC")
                 .externalId("4044")
                 .registrationNumber("1433214017")
@@ -153,12 +157,12 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.gender").value("MACHO"))
                 .andExpect(jsonPath("$.breed").value("SAANEN"));
 
-        verify(goatAbccImportUseCase).preview(eq(1L), any());
+        verify(goatAbccQueryUseCase).preview(eq(1L), any());
     }
 
     @Test
     void shouldLookupAbccByRaceAndRegistrationWithoutPersisting() throws Exception {
-        when(goatAbccImportUseCase.lookupByRegistration(eq(1L), any())).thenReturn(
+        when(goatAbccQueryUseCase.lookupByRegistration(eq(1L), any())).thenReturn(
                 GoatAbccRegistrationLookupResponseVO.builder()
                         .status("FOUND")
                         .message("Animal localizado")
@@ -181,7 +185,7 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.preview.externalId").value("4044"))
                 .andExpect(jsonPath("$.preview.registrationNumber").value("1234567890"));
 
-        verify(goatAbccImportUseCase).lookupByRegistration(eq(1L), any());
+        verify(goatAbccQueryUseCase).lookupByRegistration(eq(1L), any());
     }
 
     @Test
