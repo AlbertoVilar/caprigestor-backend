@@ -16,6 +16,7 @@ import com.devmaster.goatfarm.goat.api.dto.GoatResponseDTO;
 import com.devmaster.goatfarm.goat.api.mapper.GoatAbccImportMapper;
 import com.devmaster.goatfarm.goat.api.mapper.GoatMapper;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccImportUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatAbccQueryUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -36,15 +37,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class GoatAbccImportController {
 
     private final GoatAbccImportUseCase goatAbccImportUseCase;
+    private final GoatAbccQueryUseCase goatAbccQueryUseCase;
     private final GoatAbccImportMapper goatAbccImportMapper;
     private final GoatMapper goatMapper;
 
     public GoatAbccImportController(
             GoatAbccImportUseCase goatAbccImportUseCase,
+            GoatAbccQueryUseCase goatAbccQueryUseCase,
             GoatAbccImportMapper goatAbccImportMapper,
             GoatMapper goatMapper
     ) {
         this.goatAbccImportUseCase = goatAbccImportUseCase;
+        this.goatAbccQueryUseCase = goatAbccQueryUseCase;
         this.goatAbccImportMapper = goatAbccImportMapper;
         this.goatMapper = goatMapper;
     }
@@ -59,7 +63,7 @@ public class GoatAbccImportController {
     public ResponseEntity<GoatAbccRaceOptionsResponseDTO> listRaces(
             @PathVariable("farmId") Long farmId
     ) {
-        var responseVO = goatAbccImportUseCase.listRaces(farmId);
+        var responseVO = goatAbccQueryUseCase.listRaces(farmId);
         return ResponseEntity.ok(goatAbccImportMapper.toRaceOptionsResponseDTO(responseVO));
     }
 
@@ -74,7 +78,7 @@ public class GoatAbccImportController {
             @PathVariable("farmId") Long farmId,
             @Valid @RequestBody GoatAbccSearchRequestDTO requestDTO
     ) {
-        var responseVO = goatAbccImportUseCase.search(farmId, goatAbccImportMapper.toSearchRequestVO(requestDTO));
+        var responseVO = goatAbccQueryUseCase.search(farmId, goatAbccImportMapper.toSearchRequestVO(requestDTO));
         return ResponseEntity.ok(goatAbccImportMapper.toSearchResponseDTO(responseVO));
     }
 
@@ -89,7 +93,7 @@ public class GoatAbccImportController {
             @PathVariable("farmId") Long farmId,
             @Valid @RequestBody GoatAbccPreviewRequestDTO requestDTO
     ) {
-        var responseVO = goatAbccImportUseCase.preview(farmId, goatAbccImportMapper.toPreviewRequestVO(requestDTO));
+        var responseVO = goatAbccQueryUseCase.preview(farmId, goatAbccImportMapper.toPreviewRequestVO(requestDTO));
         return ResponseEntity.ok(goatAbccImportMapper.toPreviewResponseDTO(responseVO));
     }
 
@@ -104,7 +108,7 @@ public class GoatAbccImportController {
             @PathVariable("farmId") Long farmId,
             @Valid @RequestBody GoatAbccRegistrationLookupRequestDTO requestDTO
     ) {
-        var responseVO = goatAbccImportUseCase.lookupByRegistration(
+        var responseVO = goatAbccQueryUseCase.lookupByRegistration(
                 farmId,
                 goatAbccImportMapper.toRegistrationLookupRequestVO(requestDTO)
         );

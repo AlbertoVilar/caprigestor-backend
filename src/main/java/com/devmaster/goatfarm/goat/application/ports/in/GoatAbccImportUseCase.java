@@ -4,25 +4,10 @@ import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmItemVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccBatchConfirmResponseVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRaceOptionVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupRequestVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupResponseVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
-import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchResponseVO;
 
 import java.util.List;
 
 public interface GoatAbccImportUseCase {
-
-    List<GoatAbccRaceOptionVO> listRaces(Long farmId);
-
-    GoatAbccSearchResponseVO search(Long farmId, GoatAbccSearchRequestVO requestVO);
-
-    GoatAbccPreviewResponseVO preview(Long farmId, GoatAbccPreviewRequestVO requestVO);
-
-    GoatAbccRegistrationLookupResponseVO lookupByRegistration(Long farmId, GoatAbccRegistrationLookupRequestVO requestVO);
 
     GoatResponseVO confirm(Long farmId, String externalId, GoatRequestVO goatRequestVO);
 
