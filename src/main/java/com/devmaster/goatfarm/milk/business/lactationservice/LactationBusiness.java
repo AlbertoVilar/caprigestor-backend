@@ -116,10 +116,11 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         if (startDate == null) {
             throw new InvalidArgumentException("startDate", "Data de início da lactação é obrigatória.");
         }
-        if (startDate.isAfter(LocalDate.now(clock))) {
+        LocalDate today = LocalDate.now(clock);
+        if (startDate.isAfter(today)) {
             throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
         }
-        if (startDate.isBefore(LocalDate.now(clock))) {
+        if (startDate.isBefore(today)) {
             goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, startDate);
         }
 
