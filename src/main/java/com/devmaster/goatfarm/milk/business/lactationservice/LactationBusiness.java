@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancyDryOffQ
 import com.devmaster.goatfarm.reproduction.application.model.PregnancyDryOffSnapshot;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
@@ -58,6 +59,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     private final LactationBusinessMapper lactationMapper;
     private final GoatReferenceResolver goatReferenceResolver;
     private final GoatOwnershipGuardUseCase goatOwnershipGuard;
+    private final GoatBirthDateQueryPort goatBirthDateQueryPort;
     private final Clock clock;
 
     /**
@@ -74,6 +76,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                              LactationBusinessMapper lactationMapper,
                              GoatReferenceResolver goatReferenceResolver,
                              GoatOwnershipGuardUseCase goatOwnershipGuard,
+                             GoatBirthDateQueryPort goatBirthDateQueryPort,
                              Clock clock) {
         this.lactationPersistencePort = lactationPersistencePort;
         this.milkProductionSummaryQueryPort = milkProductionSummaryQueryPort;
@@ -83,6 +86,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         this.lactationMapper = lactationMapper;
         this.goatReferenceResolver = goatReferenceResolver;
         this.goatOwnershipGuard = goatOwnershipGuard;
+        this.goatBirthDateQueryPort = goatBirthDateQueryPort;
         this.clock = clock;
     }
 
@@ -122,6 +126,18 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         }
         if (startDate.isBefore(today)) {
             goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, startDate);
+        }
+
+        LocalDate birthDate = goatBirthDateQueryPort.findBirthDate(technicalId)
+                .orElseThrow(() -> new BusinessRuleException("birthDate",
+                        "Data de nascimento canônica da cabra indisponível."));
+        if (startDate.isBefore(birthDate)) {
+            throw new BusinessRuleException("startDate",
+                    "Data de início da lactação não pode ser anterior à data de nascimento da cabra.");
+        }
+        if (startDate.isBefore(birthDate.plusMonths(12)) && !vo.isConfirmYoungAge()) {
+            throw new BusinessRuleException("confirmYoungAge",
+                    "A cabra terá menos de 12 meses na data de início da lactação. Confirme explicitamente para continuar.");
         }
 
         Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByGoatTechnicalId(technicalId);

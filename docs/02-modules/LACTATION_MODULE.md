@@ -60,6 +60,14 @@ regra de ownership fail-closed permanece válida quando o dia civil é dividido.
 ## Regras / Contratos
 - Base principal por cabra: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations`.
 - Abertura exige `startDate`.
+- A data de início nunca pode anteceder a data de nascimento canônica da cabra.
+- Antes do aniversário de 12 meses, a abertura exige `confirmYoungAge: true` explícito;
+  o campo omitido equivale a `false`. A regra é validada no backend após o
+  ownership e a aptidão operacional, usando a data persistida da cabra por
+  `GoatId`. A partir do aniversário de 12 meses, o campo não é necessário.
+- Prenhez ou parto cadastrados não são pré-requisitos: uma cabra adquirida já
+  lactante pode ser registrada sem inventar histórico reprodutivo. As
+  salvaguardas de prenhez já existentes permanecem.
 - Secagem (`dry`) exige `endDate` e move o ciclo para `DRY`.
 - Retomada (`resume`) so e aceita para uma lactacao `DRY` cuja prenhez nao esteja mais ativa.
 - Consultas de sumario combinam dados da lactacao, producao e recomendacao de secagem.
@@ -96,7 +104,8 @@ Content-Type: application/json
 
 ```json
 {
-  "startDate": "2026-01-01"
+  "startDate": "2026-01-01",
+  "confirmYoungAge": false
 }
 ```
 

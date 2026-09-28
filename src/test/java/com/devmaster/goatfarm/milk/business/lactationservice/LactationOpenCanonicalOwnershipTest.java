@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.milk.business.lactationservice;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
@@ -58,19 +59,22 @@ class LactationOpenCanonicalOwnershipTest {
     @Mock private LactationBusinessMapper mapper;
     @Mock private GoatReferenceResolver referenceResolver;
     @Mock private GoatOwnershipGuardUseCase ownershipGuard;
+    @Mock private GoatBirthDateQueryPort goatBirthDateQueryPort;
 
     private LactationBusiness business;
 
     @BeforeEach
     void setUp() {
         business = new LactationBusiness(lactationPersistence, milkSummary, pregnancySnapshots,
-                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard, CLOCK);
+                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard, goatBirthDateQueryPort, CLOCK);
         lenient().when(referenceResolver.resolveGlobal(REGISTRATION))
                 .thenReturn(Optional.of(new GoatReference(GOAT_ID, REQUESTED_FARM, REGISTRATION, "Matriz")));
         lenient().when(lactationPersistence.findActiveByGoatTechnicalId(GOAT_ID)).thenReturn(Optional.empty());
         lenient().when(lactationPersistence.findLatestByGoatTechnicalId(GOAT_ID)).thenReturn(Optional.empty());
         lenient().when(pregnancySnapshots.findLatestByGoatTechnicalId(GOAT_ID, START_DATE)).thenReturn(Optional.empty());
         lenient().when(lactationPersistence.save(any(Lactation.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(goatBirthDateQueryPort.findBirthDate(GOAT_ID))
+                .thenReturn(Optional.of(LocalDate.of(2020, 1, 1)));
     }
 
     @Test

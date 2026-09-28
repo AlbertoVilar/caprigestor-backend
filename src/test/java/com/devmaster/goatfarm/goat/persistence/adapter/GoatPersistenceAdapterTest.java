@@ -91,6 +91,16 @@ class GoatPersistenceAdapterTest {
     }
 
     @Test
+    void birthDateLookupUsesCanonicalTechnicalIdentity() {
+        when(repository.findByTechnicalId(10L)).thenReturn(Optional.of(entity));
+
+        assertThat(adapter.findBirthDate(GoatId.of(10L)))
+                .contains(LocalDate.of(2024, 1, 1));
+        assertThat(adapter.findBirthDate(null)).isEmpty();
+        verify(repository).findByTechnicalId(10L);
+    }
+
+    @Test
     void mapsApplicationPaginationToSpringDataAtPersistenceBoundary() {
         Page<GoatEntity> page = new PageImpl<>(List.of(entity), PageRequest.of(2, 5), 21);
         when(repository.findAllByFarmId(eq(1L), any(Pageable.class))).thenReturn(page);

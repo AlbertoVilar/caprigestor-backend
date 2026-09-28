@@ -281,6 +281,12 @@ Rotas canônicas de lactação:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/milk/alerts/dry-off?referenceDate=&page=&size=`
 
+Na abertura (`POST`), o payload aceita `startDate` e o booleano aditivo
+`confirmYoungAge` (omitido = `false`). Data anterior ao nascimento canônico
+é rejeitada mesmo com confirmação. Entre o nascimento e o aniversário de
+12 meses, `confirmYoungAge: true` é obrigatório; em idade maior não é exigido.
+Ausência de histórico de prenhez/parto não impede a abertura.
+
 Rotas canônicas de produção de leite:
 - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`
 - `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}`

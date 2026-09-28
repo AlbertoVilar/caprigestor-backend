@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.business.lactationservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.Gender;
@@ -82,6 +83,9 @@ class LactationBusinessTest {
     @Mock
     private GoatOwnershipGuardUseCase goatOwnershipGuard;
 
+    @Mock
+    private GoatBirthDateQueryPort goatBirthDateQueryPort;
+
     private LactationBusiness lactationBusiness;
 
     @BeforeEach
@@ -102,6 +106,8 @@ class LactationBusinessTest {
                 .thenReturn(Optional.empty());
         lenient().when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(any(GoatId.class), any(LocalDate.class)))
                 .thenReturn(Optional.empty());
+        lenient().when(goatBirthDateQueryPort.findBirthDate(any(GoatId.class)))
+                .thenReturn(Optional.of(LocalDate.of(2020, 1, 1)));
         lactationBusiness = new LactationBusiness(
                 lactationPersistencePort,
                 milkProductionSummaryQueryPort,
@@ -111,6 +117,7 @@ class LactationBusinessTest {
                 lactationMapper,
                 goatReferenceResolver,
                 goatOwnershipGuard,
+                goatBirthDateQueryPort,
                 CLOCK
         );
     }
