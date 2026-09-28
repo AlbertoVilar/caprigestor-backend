@@ -34,6 +34,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +53,10 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LactationBusinessTest {
+
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDate.of(2026, 9, 27).atStartOfDay(ZoneId.of("America/Sao_Paulo")).toInstant(),
+            ZoneId.of("America/Sao_Paulo"));
 
     @Mock
     private LactationPersistencePort lactationPersistencePort;
@@ -104,7 +110,8 @@ class LactationBusinessTest {
                 goatGenderValidator,
                 lactationMapper,
                 goatReferenceResolver,
-                goatOwnershipGuard
+                goatOwnershipGuard,
+                CLOCK
         );
     }
 
@@ -201,7 +208,7 @@ class LactationBusinessTest {
         String goatId = "123";
 
         LactationRequestVO futureRequest = new LactationRequestVO();
-        futureRequest.setStartDate(LocalDate.now().plusDays(1));
+        futureRequest.setStartDate(LocalDate.now(CLOCK).plusDays(1));
 
         InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, futureRequest));

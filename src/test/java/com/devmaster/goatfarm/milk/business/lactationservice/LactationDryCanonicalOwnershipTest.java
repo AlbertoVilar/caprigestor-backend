@@ -24,6 +24,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,6 +50,9 @@ class LactationDryCanonicalOwnershipTest {
     private static final String HISTORICAL_REGISTRATION = "RG-AT-ORIGIN";
     private static final LocalDate START_DATE = LocalDate.of(2026, 9, 10);
     private static final LocalDate DRY_DATE = LocalDate.of(2026, 9, 16);
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDate.of(2026, 9, 27).atStartOfDay(ZoneId.of("America/Sao_Paulo")).toInstant(),
+            ZoneId.of("America/Sao_Paulo"));
 
     @Mock private LactationPersistencePort lactationPersistence;
     @Mock private MilkProductionSummaryQueryPort milkSummary;
@@ -63,7 +68,7 @@ class LactationDryCanonicalOwnershipTest {
     @BeforeEach
     void setUp() {
         business = new LactationBusiness(lactationPersistence, milkSummary, pregnancySnapshots,
-                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard);
+                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard, CLOCK);
         lenient().when(referenceResolver.resolveGlobal(ROUTE_REGISTRATION))
                 .thenReturn(Optional.of(new GoatReference(GOAT_ID, CURRENT_FARM, ROUTE_REGISTRATION, "Matriz")));
         lenient().doNothing().when(genderValidator).requireFemaleAndActive(GOAT_ID);

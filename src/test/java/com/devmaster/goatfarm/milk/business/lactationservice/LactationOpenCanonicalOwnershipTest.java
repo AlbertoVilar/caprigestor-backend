@@ -25,11 +25,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -43,6 +46,9 @@ class LactationOpenCanonicalOwnershipTest {
     private static final GoatId GOAT_ID = GoatId.of(42L);
     private static final String REGISTRATION = "RG-42";
     private static final LocalDate START_DATE = LocalDate.of(2026, 9, 10);
+    private static final Clock CLOCK = Clock.fixed(
+            START_DATE.atTime(12, 0).atZone(ZoneId.of("America/Sao_Paulo")).toInstant(),
+            ZoneId.of("America/Sao_Paulo"));
 
     @Mock private LactationPersistencePort lactationPersistence;
     @Mock private MilkProductionSummaryQueryPort milkSummary;
@@ -58,7 +64,7 @@ class LactationOpenCanonicalOwnershipTest {
     @BeforeEach
     void setUp() {
         business = new LactationBusiness(lactationPersistence, milkSummary, pregnancySnapshots,
-                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard);
+                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard, CLOCK);
         lenient().when(referenceResolver.resolveGlobal(REGISTRATION))
                 .thenReturn(Optional.of(new GoatReference(GOAT_ID, REQUESTED_FARM, REGISTRATION, "Matriz")));
         lenient().when(lactationPersistence.findActiveByGoatTechnicalId(GOAT_ID)).thenReturn(Optional.empty());
@@ -68,7 +74,7 @@ class LactationOpenCanonicalOwnershipTest {
     }
 
     @Test
-    void currentOwnerCanOpenNewLactationAfterTransferWhenNoActiveCycleExists() {
+    void currentOwnerCanOpenLactationTodayWithoutWholeDayOwnershipGuard() {
         business.openLactation(REQUESTED_FARM, REGISTRATION, request());
 
         ArgumentCaptor<Lactation> captor = ArgumentCaptor.forClass(Lactation.class);
@@ -78,7 +84,52 @@ class LactationOpenCanonicalOwnershipTest {
         assertEquals(GOAT_ID.value(), created.getGoatTechnicalId());
         assertEquals(REGISTRATION, created.getGoatId());
         verify(ownershipGuard).requireCurrentFarm(GOAT_ID, REQUESTED_FARM);
-        verify(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, START_DATE);
+        verify(ownershipGuard, never()).requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+    }
+
+    @Test
+    void sameDayCanonicalEntryDuringDayDoesNotBlockAmoraEquivalentLactationOpening() {
+        business.openLactation(REQUESTED_FARM, REGISTRATION, request());
+
+        verify(ownershipGuard).requireCurrentFarm(GOAT_ID, REQUESTED_FARM);
+        verify(ownershipGuard, never()).requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+        verify(lactationPersistence).save(any(Lactation.class));
+    }
+
+    @Test
+    void pastStartDateStillRequiresHistoricalOwnershipGuard() {
+        LocalDate pastDate = START_DATE.minusDays(1);
+        when(pregnancySnapshots.findLatestByGoatTechnicalId(GOAT_ID, pastDate)).thenReturn(Optional.empty());
+
+        business.openLactation(REQUESTED_FARM, REGISTRATION, request(pastDate));
+
+        verify(ownershipGuard).requireCurrentFarm(GOAT_ID, REQUESTED_FARM);
+        verify(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, pastDate);
+        verify(lactationPersistence).save(any(Lactation.class));
+    }
+
+    @Test
+    void historicallyDeniedPastStartDateDoesNotSaveLactation() {
+        LocalDate pastDate = START_DATE.minusDays(1);
+        doThrow(new AuthorizationDeniedException("historical ownership denied"))
+                .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, pastDate);
+
+        assertThrows(AuthorizationDeniedException.class,
+                () -> business.openLactation(REQUESTED_FARM, REGISTRATION, request(pastDate)));
+
+        verify(lactationPersistence, never()).save(any(Lactation.class));
+    }
+
+    @Test
+    void futureStartDateIsRejectedWithoutOwnershipHistoryLookupOrSave() {
+        LocalDate futureDate = START_DATE.plusDays(1);
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException.class,
+                () -> business.openLactation(REQUESTED_FARM, REGISTRATION, request(futureDate)));
+
+        verify(ownershipGuard).requireCurrentFarm(GOAT_ID, REQUESTED_FARM);
+        verify(ownershipGuard, never()).requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+        verify(lactationPersistence, never()).save(any(Lactation.class));
     }
 
     @Test
@@ -138,12 +189,13 @@ class LactationOpenCanonicalOwnershipTest {
     }
 
     @Test
-    void transferDayFailsClosedThroughWholeCivilDayPolicy() {
+    void pastTransferDayFailsClosedThroughWholeCivilDayPolicy() {
+        LocalDate pastDate = START_DATE.minusDays(1);
         doThrow(new AuthorizationDeniedException("ambiguous ownership day"))
-                .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, START_DATE);
+                .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, pastDate);
 
         assertThrows(AuthorizationDeniedException.class,
-                () -> business.openLactation(REQUESTED_FARM, REGISTRATION, request()));
+                () -> business.openLactation(REQUESTED_FARM, REGISTRATION, request(pastDate)));
         verify(lactationPersistence, never()).save(any(Lactation.class));
     }
 
@@ -184,7 +236,11 @@ class LactationOpenCanonicalOwnershipTest {
     }
 
     private LactationRequestVO request() {
-        return LactationRequestVO.builder().startDate(START_DATE).build();
+        return request(START_DATE);
+    }
+
+    private LactationRequestVO request(LocalDate startDate) {
+        return LactationRequestVO.builder().startDate(startDate).build();
     }
 
     private Lactation lactation(LactationStatus status) {

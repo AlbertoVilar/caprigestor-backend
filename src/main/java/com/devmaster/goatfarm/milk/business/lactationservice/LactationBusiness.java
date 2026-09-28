@@ -32,6 +32,7 @@ import com.devmaster.goatfarm.milk.domain.Lactation;
 
 import java.time.LocalDate;
 import java.time.Instant;
+import java.time.Clock;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.math.BigDecimal;
@@ -57,6 +58,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
     private final LactationBusinessMapper lactationMapper;
     private final GoatReferenceResolver goatReferenceResolver;
     private final GoatOwnershipGuardUseCase goatOwnershipGuard;
+    private final Clock clock;
 
     /**
      * Spring constructor for the canonical GoatId/ownership-aware command
@@ -71,7 +73,8 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
                              GoatGenderValidator goatGenderValidator,
                              LactationBusinessMapper lactationMapper,
                              GoatReferenceResolver goatReferenceResolver,
-                             GoatOwnershipGuardUseCase goatOwnershipGuard) {
+                             GoatOwnershipGuardUseCase goatOwnershipGuard,
+                             Clock clock) {
         this.lactationPersistencePort = lactationPersistencePort;
         this.milkProductionSummaryQueryPort = milkProductionSummaryQueryPort;
         this.pregnancySnapshotQueryPort = pregnancySnapshotQueryPort;
@@ -80,6 +83,7 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         this.lactationMapper = lactationMapper;
         this.goatReferenceResolver = goatReferenceResolver;
         this.goatOwnershipGuard = goatOwnershipGuard;
+        this.clock = clock;
     }
 
     @Override
@@ -112,10 +116,13 @@ public class LactationBusiness implements LactationCommandUseCase, LactationQuer
         if (startDate == null) {
             throw new InvalidArgumentException("startDate", "Data de início da lactação é obrigatória.");
         }
-        if (startDate != null && startDate.isAfter(LocalDate.now())) {
+        LocalDate today = LocalDate.now(clock);
+        if (startDate.isAfter(today)) {
             throw new InvalidArgumentException("startDate", "Data de início da lactação não pode ser futura.");
         }
-        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, startDate);
+        if (startDate.isBefore(today)) {
+            goatOwnershipGuard.requireUnambiguousOwnershipOnDate(technicalId, farmId, startDate);
+        }
 
         Optional<Lactation> activeLactation = lactationPersistencePort.findActiveByGoatTechnicalId(technicalId);
         if (activeLactation.isPresent()) {
