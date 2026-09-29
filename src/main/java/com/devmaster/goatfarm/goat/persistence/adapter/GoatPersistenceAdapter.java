@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBreedCount;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 /**
  * Persistence adapter for the Goat aggregate.
@@ -40,7 +42,7 @@ import java.util.Optional;
  */
 @Component
 public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyReadUseCase,
-        GoatReferenceQueryPort, GoatValidationQueryPort {
+        GoatReferenceQueryPort, GoatValidationQueryPort, GoatBirthDateQueryPort {
 
     private final GoatRepository goatRepository;
     private final GoatPersistenceMapper mapper;
@@ -180,6 +182,12 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
                         goat.getGender(),
                         goat.getStatus()
                 ));
+    }
+
+    @Override
+    public Optional<LocalDate> findBirthDate(GoatId goatId) {
+        return goatId == null ? Optional.empty()
+                : goatRepository.findByTechnicalId(goatId.value()).map(GoatEntity::getBirthDate);
     }
 
     @Override

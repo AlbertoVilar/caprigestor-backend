@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
@@ -62,13 +63,14 @@ class LactationDryCanonicalOwnershipTest {
     @Mock private LactationBusinessMapper mapper;
     @Mock private GoatReferenceResolver referenceResolver;
     @Mock private GoatOwnershipGuardUseCase ownershipGuard;
+    @Mock private GoatBirthDateQueryPort goatBirthDateQueryPort;
 
     private LactationBusiness business;
 
     @BeforeEach
     void setUp() {
         business = new LactationBusiness(lactationPersistence, milkSummary, pregnancySnapshots,
-                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard, CLOCK);
+                pregnancyDryOff, genderValidator, mapper, referenceResolver, ownershipGuard, goatBirthDateQueryPort, CLOCK);
         lenient().when(referenceResolver.resolveGlobal(ROUTE_REGISTRATION))
                 .thenReturn(Optional.of(new GoatReference(GOAT_ID, CURRENT_FARM, ROUTE_REGISTRATION, "Matriz")));
         lenient().doNothing().when(genderValidator).requireFemaleAndActive(GOAT_ID);
