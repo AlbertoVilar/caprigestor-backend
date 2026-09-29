@@ -7,8 +7,12 @@ import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipSaleRequest;
 import com.devmaster.goatfarm.goatownership.application.model.InternalOwnershipTransferRequest;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipMovementDirection;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipMovementKind;
+import com.devmaster.goatfarm.goatownership.application.model.OwnershipMovementPageQuery;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipTransferUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.OwnershipMovementQueryUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatCurrentOwnerProjectionPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipLockPort;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipPeriodPersistencePort;
@@ -87,6 +91,7 @@ class GoatOwnershipTransferPostgresIntegrationTest {
     @Autowired CreatorReferencePersistenceAdapter creatorReference;
     @Autowired GoatOwnershipTransferUseCase realTransferUseCase;
     @Autowired GoatOwnershipSaleUseCase realSaleUseCase;
+    @Autowired OwnershipMovementQueryUseCase movementQueryUseCase;
     @MockBean CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @MockBean FarmAuthorizationUseCase farmAuthorization;
 
@@ -115,6 +120,17 @@ class GoatOwnershipTransferPostgresIntegrationTest {
                 .isEqualTo(targetFarm);
         assertThat(jdbcTemplate.queryForObject("select capril_id from cabras where id = ?", Long.class, goatRow))
                 .isEqualTo(targetFarm);
+
+        var movement = movementQueryUseCase.listForFarm(sourceFarm, OwnershipMovementDirection.OUTGOING,
+                        null, OwnershipMovementKind.INTERNAL_TRANSFER, new OwnershipMovementPageQuery(0, 20))
+                .content().stream().filter(item -> item.movementId().equals(requested.id()))
+                .findFirst().orElseThrow();
+        assertThat(movement.saleId()).isNull();
+        assertThat(movement.saleDate()).isNull();
+        assertThat(movement.amount()).isNull();
+        assertThat(movement.paymentStatus()).isNull();
+        assertThat(movement.paymentDate()).isNull();
+
     }
 
     @Test
@@ -131,6 +147,16 @@ class GoatOwnershipTransferPostgresIntegrationTest {
         var requested = realSaleUseCase.requestInternalSale(new InternalOwnershipSaleRequest(
                 GoatId.of(goatRow), sourceFarm, targetFarm, saleId,
                 "w14 real sale", "w14-real-sale-" + goatRow));
+
+        var pendingSale = movementQueryUseCase.listForFarm(sourceFarm, OwnershipMovementDirection.OUTGOING,
+                OwnershipTransferStatus.REQUESTED, OwnershipMovementKind.INTERNAL_SALE,
+                new OwnershipMovementPageQuery(0, 20)).content().stream()
+                .filter(item -> item.saleId() != null && item.saleId() == saleId)
+                .findFirst().orElseThrow();
+        assertThat(pendingSale.realized()).isFalse();
+        assertThat(pendingSale.status()).isEqualTo(OwnershipTransferStatus.REQUESTED);
+        assertThat(pendingSale.paymentStatus()).isEqualTo("PAID");
+
         var completed = realSaleUseCase.completeInternalSaleAfterPayment(requested.saleId());
 
         assertThat(completed.status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
@@ -142,6 +168,53 @@ class GoatOwnershipTransferPostgresIntegrationTest {
                 .isEqualTo(targetFarm);
         assertThat(jdbcTemplate.queryForObject("select capril_id from cabras where id = ?", Long.class, goatRow))
                 .isEqualTo(targetFarm);
+
+        var outgoing = movementQueryUseCase.listForFarm(sourceFarm, OwnershipMovementDirection.OUTGOING,
+                null, null, new OwnershipMovementPageQuery(0, 20));
+        var incoming = movementQueryUseCase.listForFarm(targetFarm, OwnershipMovementDirection.INCOMING,
+                null, null, new OwnershipMovementPageQuery(0, 20));
+        var outgoingSale = outgoing.content().stream().filter(item -> item.saleId() != null && item.saleId() == saleId).toList();
+        var incomingSale = incoming.content().stream().filter(item -> item.saleId() != null && item.saleId() == saleId).toList();
+
+        assertThat(outgoingSale).hasSize(1);
+        assertThat(incomingSale).hasSize(1);
+        assertThat(outgoingSale.getFirst().movementId()).isEqualTo(incomingSale.getFirst().movementId());
+        assertThat(outgoingSale.getFirst().movementKind()).isEqualTo(OwnershipMovementKind.INTERNAL_SALE);
+        assertThat(outgoingSale.getFirst().status()).isEqualTo(OwnershipTransferStatus.COMPLETED);
+        assertThat(outgoingSale.getFirst().realized()).isTrue();
+        assertThat(outgoingSale.getFirst().amount()).isEqualByComparingTo("100.00");
+        assertThat(outgoingSale.getFirst().paymentStatus()).isEqualTo("PAID");
+        assertThat(outgoingSale.getFirst().paymentDate()).isEqualTo(LocalDate.parse("2026-09-25"));
+    }
+
+    @Test
+    void movementReadModelFailsClosedWhenSaleForeignKeyPointsToDifferentGoatAndFarms() {
+        long movementSourceFarm = createFarm("W14 Corrupt Movement Source");
+        long movementTargetFarm = createFarm("W14 Corrupt Movement Target");
+        long movementGoat = createGoat(movementSourceFarm, "W14-MOVEMENT-GOAT-" + System.nanoTime());
+
+        long saleSourceFarm = createFarm("W14 Corrupt Sale Source");
+        long saleTargetFarm = createFarm("W14 Corrupt Sale Target");
+        long saleGoat = createGoat(saleSourceFarm, "W14-SALE-GOAT-" + System.nanoTime());
+        String saleRegistration = jdbcTemplate.queryForObject(
+                "select num_registro from cabras where id = ?", String.class, saleGoat);
+        long saleId = seedInternalSale(saleSourceFarm, saleTargetFarm, saleGoat, saleRegistration);
+        Long requestedBy = jdbcTemplate.queryForObject(
+                "select user_id from capril where id = ?", Long.class, movementSourceFarm);
+        jdbcTemplate.update("""
+                insert into ownership_transfer
+                    (goat_id, source_farm_id, target_farm_id, kind, state, reason, idempotency_key,
+                     requested_at, requested_by, sale_id, version)
+                values (?, ?, ?, 'INTERNAL_SALE', 'REQUESTED', 'corrupt semantic link', ?, ?, ?, ?, 0)
+                """, movementGoat, movementSourceFarm, movementTargetFarm,
+                "w14-corrupt-sale-link-" + movementGoat, Timestamp.from(START), requestedBy, saleId);
+        configureRealOwnershipPrincipal();
+
+        assertThatThrownBy(() -> movementQueryUseCase.listForFarm(movementSourceFarm,
+                OwnershipMovementDirection.OUTGOING, null, OwnershipMovementKind.INTERNAL_SALE,
+                new OwnershipMovementPageQuery(0, 20)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("sale link violates movement identity integrity");
     }
 
     @Test
