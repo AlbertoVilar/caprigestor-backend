@@ -22,13 +22,21 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccPreviewResponseVO;
 import com.devmaster.goatfarm.goat.business.abcc.AbccImportEligibilityPolicy;
 import com.devmaster.goatfarm.goat.business.abcc.AbccAnimalTranslator;
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.stereotype.Service;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
+
+    private static final Set<String> ABCC_DEATH_SITUATIONS = Set.of(
+            "FALECIDO", "FALECIDA", "MORTO", "MORTA", "OBITO", "DECEASED"
+    );
 
     private static final String STATUS_IMPORTED = "IMPORTED";
     private static final String STATUS_SKIPPED_DUPLICATE = "SKIPPED_DUPLICATE";
@@ -77,6 +85,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         if (goatRequestVO == null) {
             throw new BusinessRuleException("goat", "Dados do animal são obrigatórios para confirmar a importação.");
         }
+        requireLocalStatus(goatRequestVO.getStatus());
 
         boolean isAdmin = currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN");
         FarmRecord farm = loadFarm(farmId);
@@ -86,6 +95,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                 farmId,
                 GoatAbccPreviewRequestVO.builder().externalId(externalId).build()
         );
+        goatRequestVO.setStatus(resolveImportStatus(abccPreview, goatRequestVO.getStatus()));
         return confirmFromPreview(farmId, externalId, goatRequestVO, abccPreview, isAdmin, farmTod);
     }
 
@@ -96,6 +106,7 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
         if (items == null || items.isEmpty()) {
             throw new BusinessRuleException("items", "Selecione ao menos um animal da página atual para importar.");
         }
+        requireBatchLocalStatuses(items);
 
         boolean isAdmin = currentPrincipalQuery.requireCurrent().hasAuthority("ROLE_ADMIN");
         FarmRecord farm = loadFarm(farmId);
@@ -124,7 +135,10 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
                         farmId,
                         GoatAbccPreviewRequestVO.builder().externalId(externalId).build()
                 );
-                GoatRequestVO goatRequestVO = animalTranslator.buildGoatRequestFromPreview(previewVO);
+                GoatRequestVO goatRequestVO = animalTranslator.buildGoatRequestFromPreview(
+                        previewVO,
+                        resolveImportStatus(previewVO, item.getStatus())
+                );
                 String registrationNumber = goatRequestVO.getRegistrationNumber();
 
                 if (goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(registrationNumber, farmId).isPresent()) {
@@ -227,6 +241,42 @@ public class GoatAbccImportBusiness implements GoatAbccImportUseCase {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private void requireLocalStatus(GoatStatus status) {
+        if (status == null) {
+            throw new BusinessRuleException("status", "A situação local do animal é obrigatória para confirmar a importação.");
+        }
+    }
+
+    private void requireBatchLocalStatuses(List<GoatAbccBatchConfirmItemVO> items) {
+        for (int index = 0; index < items.size(); index++) {
+            GoatAbccBatchConfirmItemVO item = items.get(index);
+            if (item == null || item.getStatus() == null) {
+                throw new BusinessRuleException(
+                        "items[" + index + "].status",
+                        "A situação local é obrigatória para cada animal selecionado."
+                );
+            }
+        }
+    }
+
+    private GoatStatus resolveImportStatus(GoatAbccPreviewResponseVO freshPreview, GoatStatus requestedLocalStatus) {
+        if (isAbccReportedDeceased(freshPreview.getAbccSituation())) {
+            return GoatStatus.FALECIDO;
+        }
+        return requestedLocalStatus;
+    }
+
+    private boolean isAbccReportedDeceased(String abccSituation) {
+        if (abccSituation == null || abccSituation.isBlank()) {
+            return false;
+        }
+        String normalized = Normalizer.normalize(abccSituation, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .trim()
+                .toUpperCase(Locale.ROOT);
+        return ABCC_DEATH_SITUATIONS.contains(normalized);
     }
 
     private String trimOrNull(String value) {

@@ -118,8 +118,8 @@ class GoatAbccBatchPostgresIntegrationTest {
                 preview("global-duplicate", duplicateRegistration, "Fails in create", "16153"));
 
         var response = abccImportUseCase.confirmBatch(targetFarmId, List.of(
-                GoatAbccBatchConfirmItemVO.builder().externalId("success").build(),
-                GoatAbccBatchConfirmItemVO.builder().externalId("global-duplicate").build()
+                GoatAbccBatchConfirmItemVO.builder().externalId("success").status(GoatStatus.ATIVO).build(),
+                GoatAbccBatchConfirmItemVO.builder().externalId("global-duplicate").status(GoatStatus.VENDIDO).build()
         ));
 
         assertThat(response.getTotalImported()).isEqualTo(1);
@@ -140,8 +140,8 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("valid-two")).thenReturn(preview("valid-two", "1615499012", "Valid two", "16154"));
 
         var response = abccImportUseCase.confirmBatch(farmId, List.of(
-                GoatAbccBatchConfirmItemVO.builder().externalId("valid-one").build(),
-                GoatAbccBatchConfirmItemVO.builder().externalId("valid-two").build()
+                GoatAbccBatchConfirmItemVO.builder().externalId("valid-one").status(GoatStatus.ATIVO).build(),
+                GoatAbccBatchConfirmItemVO.builder().externalId("valid-two").status(GoatStatus.INATIVO).build()
         ));
 
         assertThat(response.getTotalImported()).isEqualTo(2);
@@ -160,8 +160,8 @@ class GoatAbccBatchPostgresIntegrationTest {
         when(abccPublicQueryPort.preview("wrong-tod")).thenReturn(preview("wrong-tod", "1615599022", "Wrong TOD", "99999"));
 
         var response = abccImportUseCase.confirmBatch(farmId, List.of(
-                GoatAbccBatchConfirmItemVO.builder().externalId("valid").build(),
-                GoatAbccBatchConfirmItemVO.builder().externalId("wrong-tod").build()
+                GoatAbccBatchConfirmItemVO.builder().externalId("valid").status(GoatStatus.ATIVO).build(),
+                GoatAbccBatchConfirmItemVO.builder().externalId("wrong-tod").status(GoatStatus.FALECIDO).build()
         ));
 
         assertThat(response.getTotalImported()).isEqualTo(1);
@@ -185,8 +185,8 @@ class GoatAbccBatchPostgresIntegrationTest {
                 preview("later-success", "1615699032", "Later success", "16156"));
 
         var response = abccImportUseCase.confirmBatch(targetFarmId, List.of(
-                GoatAbccBatchConfirmItemVO.builder().externalId("global-duplicate").build(),
-                GoatAbccBatchConfirmItemVO.builder().externalId("later-success").build()
+                GoatAbccBatchConfirmItemVO.builder().externalId("global-duplicate").status(GoatStatus.VENDIDO).build(),
+                GoatAbccBatchConfirmItemVO.builder().externalId("later-success").status(GoatStatus.ATIVO).build()
         ));
 
         assertThat(response.getTotalImported()).isEqualTo(1);
@@ -207,7 +207,7 @@ class GoatAbccBatchPostgresIntegrationTest {
                 preview("local-duplicate", "1615799041", "Existing locally", "16157"));
 
         var response = abccImportUseCase.confirmBatch(farmId, List.of(
-                GoatAbccBatchConfirmItemVO.builder().externalId("local-duplicate").build()
+                GoatAbccBatchConfirmItemVO.builder().externalId("local-duplicate").status(GoatStatus.ATIVO).build()
         ));
 
         assertThat(response.getTotalImported()).isZero();

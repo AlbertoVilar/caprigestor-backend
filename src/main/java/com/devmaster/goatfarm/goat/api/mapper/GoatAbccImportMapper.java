@@ -111,6 +111,7 @@ public class GoatAbccImportMapper {
                 .color(vo.getColor())
                 .birthDate(vo.getBirthDate())
                 .status(vo.getStatus())
+                .abccSituation(vo.getAbccSituation())
                 .tod(vo.getTod())
                 .toe(vo.getToe())
                 .category(vo.getCategory())
@@ -143,6 +144,7 @@ public class GoatAbccImportMapper {
     private GoatAbccBatchConfirmItemVO toBatchConfirmItemVO(GoatAbccBatchConfirmItemDTO dto) {
         return GoatAbccBatchConfirmItemVO.builder()
                 .externalId(dto != null ? dto.getExternalId() : null)
+                .status(dto != null ? dto.getStatus() : null)
                 .build();
     }
 

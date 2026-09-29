@@ -21,13 +21,14 @@ class AbccAnimalTranslatorTest {
     private final AbccAnimalTranslator translator = new AbccAnimalTranslator();
 
     @Test
-    void mapsGenderBreedStatusAndCategoryVocabulary() {
+    void mapsGenderBreedAndCategoryWithoutDerivingLocalStatus() {
         GoatAbccPreviewResponseVO preview = translator.toPreview(rawPreview(
                 "Macho", "ALPINA FRANCESA", "Sem RGD", "PCOD", "10/01/2020"), 7L, "Capril Vilar");
 
         assertThat(preview.getGender()).isEqualTo(Gender.MACHO);
         assertThat(preview.getBreed()).isEqualTo(GoatBreed.ALPINA);
-        assertThat(preview.getStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(preview.getStatus()).isNull();
+        assertThat(preview.getAbccSituation()).isEqualTo("Sem RGD");
         assertThat(preview.getCategory()).isEqualTo(Category.PC);
         assertThat(preview.getBirthDate()).isEqualTo(LocalDate.of(2020, 1, 10));
         assertThat(preview.getNormalizationWarnings())
@@ -43,20 +44,13 @@ class AbccAnimalTranslatorTest {
     }
 
     @Test
-    void mapsAllKnownStatusValuesAndWarnsForUnknown() {
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "ATIVA", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.ATIVO);
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "INATIVO", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.INATIVO);
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "VENDIDO", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.VENDIDO);
-        assertThat(translator.toPreview(rawPreview("Fêmea", "SAANEN", "FALECIDA", "PO", "10/01/2020"), 1L, "Fazenda").getStatus())
-                .isEqualTo(GoatStatus.FALECIDO);
-
-        GoatAbccPreviewResponseVO unknown = translator.toPreview(
-                rawPreview("Fêmea", "SAANEN", "NOVA SITUAÇÃO", "PO", "10/01/2020"), 1L, "Fazenda");
-        assertThat(unknown.getStatus()).isNull();
-        assertThat(unknown.getNormalizationWarnings()).contains("Valor de situação da ABCC não mapeado: NOVA SITUAÇÃO");
+    void preservesKnownUnknownAndMissingAbccSituationWithoutLocalStatusMapping() {
+        for (String situation : new String[]{"ATIVA", "INATIVO", "VENDIDO", "NOVA SITUAÇÃO", null}) {
+            GoatAbccPreviewResponseVO preview = translator.toPreview(
+                    rawPreview("Fêmea", "SAANEN", situation, "PO", "10/01/2020"), 1L, "Fazenda");
+            assertThat(preview.getStatus()).isNull();
+            assertThat(preview.getAbccSituation()).isEqualTo(situation);
+        }
     }
 
     @Test
@@ -109,7 +103,7 @@ class AbccAnimalTranslatorTest {
         assertThat(item.getNome()).isEqualTo("ZENDA");
         assertThat(item.getNormalizedGender()).isEqualTo(Gender.FEMEA);
         assertThat(item.getNormalizedBreed()).isEqualTo(GoatBreed.SAANEN);
-        assertThat(item.getNormalizedStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(item.getNormalizedStatus()).isNull();
         assertThat(item.getNormalizationWarnings()).isEmpty();
     }
 
@@ -120,7 +114,7 @@ class AbccAnimalTranslatorTest {
         preview.setFatherRegistrationNumber(" PAI-1 ");
         preview.setMotherRegistrationNumber(" MAE-1 ");
 
-        GoatRequestVO request = translator.buildGoatRequestFromPreview(preview);
+        GoatRequestVO request = translator.buildGoatRequestFromPreview(preview, GoatStatus.VENDIDO);
 
         assertThat(request.getRegistrationNumber()).isEqualTo("1400810001");
         assertThat(request.getName()).isEqualTo("ANIMAL ABCC");
@@ -129,6 +123,7 @@ class AbccAnimalTranslatorTest {
         assertThat(request.getToe()).isEqualTo("00001");
         assertThat(request.getFatherRegistrationNumber()).isEqualTo("PAI-1");
         assertThat(request.getMotherRegistrationNumber()).isEqualTo("MAE-1");
+        assertThat(request.getStatus()).isEqualTo(GoatStatus.VENDIDO);
     }
 
     @Test
@@ -137,15 +132,20 @@ class AbccAnimalTranslatorTest {
                 "Macho", "SAANEN", "RGD", "PO", "10/01/2020"), 1L, "Fazenda");
 
         preview.setRegistrationNumber(null);
-        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview))
+        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview, GoatStatus.ATIVO))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("Registro ABCC ausente");
 
         preview.setRegistrationNumber("1400810001");
         preview.setTod(null);
-        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview))
+        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview, GoatStatus.ATIVO))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("TOD ABCC ausente");
+
+        preview.setTod("12345");
+        assertThatThrownBy(() -> translator.buildGoatRequestFromPreview(preview, null))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("situação local");
     }
 
     private GoatAbccRawPreviewVO rawPreview(

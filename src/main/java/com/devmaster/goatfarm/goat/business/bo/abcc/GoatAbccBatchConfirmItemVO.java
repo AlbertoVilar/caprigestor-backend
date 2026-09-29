@@ -1,5 +1,6 @@
 package com.devmaster.goatfarm.goat.business.bo.abcc;
 
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,4 +15,5 @@ import lombok.Setter;
 public class GoatAbccBatchConfirmItemVO {
 
     private String externalId;
+    private GoatStatus status;
 }
