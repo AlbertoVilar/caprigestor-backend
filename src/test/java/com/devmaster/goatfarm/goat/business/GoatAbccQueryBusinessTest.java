@@ -17,7 +17,6 @@ import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRawSearchResultVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccRegistrationLookupRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.abcc.GoatAbccSearchRequestVO;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
-import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -138,13 +137,14 @@ class GoatAbccQueryBusinessTest {
     }
 
     @Test
-    void previewMapsSemRgdAsActive() {
+    void previewKeepsSemRgdAsRegistralInformationWithoutMappingLocalStatus() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm()));
         when(abccPublicQueryPort.preview("A-1")).thenReturn(rawPreview("A-1", "1234500001", "12345", "Sem RGD"));
 
         var response = business.preview(1L, GoatAbccPreviewRequestVO.builder().externalId("A-1").build());
 
-        assertThat(response.getStatus()).isEqualTo(GoatStatus.ATIVO);
+        assertThat(response.getStatus()).isNull();
+        assertThat(response.getAbccSituation()).isEqualTo("Sem RGD");
         assertThat(response.getNormalizationWarnings()).isEmpty();
     }
 

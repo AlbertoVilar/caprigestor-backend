@@ -29,7 +29,9 @@ public class GoatAbccPreviewResponseVO {
     private GoatBreed breed;
     private String color;
     private LocalDate birthDate;
+    /** Compatibility field. Explicit ABCC death is applied at confirmation. */
     private GoatStatus status;
+    private String abccSituation;
     private String tod;
     private String toe;
     private Category category;

@@ -35,3 +35,29 @@ adapter deriva TOD/TOE apenas para compor o formulário da ABCC. O resultado é 
 raça selecionada e pelo RG normalizado; o preview é carregado e validado novamente antes do
 status `FOUND`. `NOT_FOUND` e `AMBIGUOUS` são resultados funcionais, enquanto timeout ou
 resposta inválida continuam sendo indisponibilidade externa (HTTP 503).
+
+## Situação registral ABCC e status operacional local
+
+`situacao` retornada pela ABCC é informação registral externa. Ela não é e não
+determina o `GoatStatus` operacional do CapriGestor, com uma única exceção de
+domínio: uma situação ABCC explicitamente normalizada como falecimento
+(`FALECIDO`, `FALECIDA`, `MORTO`, `MORTA`, `ÓBITO` ou `DECEASED`) fixa o status
+local da importação em `FALECIDO`. A fronteira anti-corrupção normaliza os dados
+registráveis (como raça, sexo, categoria e identificação), mas não infere o
+ciclo de vida local a partir de `RGD`, `SEM RGD`, `ATIVO`, `VENDIDO`, `SUSPENSO`
+ou qualquer outro valor externo.
+
+A importação individual recebe o status local explícito dentro de `goat.status`.
+No lote, cada item deve enviar `{ externalId, status }`; não há status global
+para a requisição. A validação estrutural de status ocorre antes dos previews
+ABCC. Depois de válida, a operação continua best-effort: cada item consulta um
+preview novo e pode importar, ser ignorado pela duplicidade/TOD atual ou falhar
+independentemente dos demais. Valores ausentes, desconhecidos ou incomuns de
+`situacao` não bloqueiam a importação por si só.
+
+No frontend, uma situação de morte retornada pela ABCC é exibida apenas como
+aviso informativo e não pré-seleciona nem bloqueia o status local. Cada item
+continua exigindo escolha explícita do usuário. Na confirmação, o backend usa
+um preview novo e aplica a exceção de morte apenas se essa consulta fresca
+confirmar a situação; dados ABCC vistos anteriormente não são tratados como
+escolha local do usuário.

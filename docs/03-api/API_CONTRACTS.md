@@ -150,6 +150,18 @@ Importação ABCC:
   atualiza um animal. A mesma combinação raça + RG é validada novamente no preview antes
   de ser disponibilizada para pré-preenchimento.
 - O endpoint `confirm` reutiliza internamente as regras de criação manual de cabra para evitar duplicação de domínio.
+- A situação registral retornada pela ABCC é apenas informativa, exceto quando
+  indicar inequivocamente falecimento (`FALECIDO`, `FALECIDA`, `MORTO`, `MORTA`,
+  `ÓBITO` ou `DECEASED`). Nessa exceção de domínio, o backend fixa o status
+  operacional importado em `FALECIDO`, inclusive se o cliente enviar outro
+  valor. Nos demais casos, `confirm` exige `goat.status` explícito e
+  `confirm-batch` exige status por item, por exemplo
+  `{ "items": [{ "externalId": "A-001", "status": "ATIVO" }, { "externalId": "A-002", "status": "VENDIDO" }] }`.
+  Não existe status global do lote. A interface mostra a situação ABCC de
+  falecimento apenas como aviso e exige escolha explícita do status local, sem
+  pré-preencher nem bloquear o campo. O backend revalida a situação no preview
+  fresco da confirmação. Situação ABCC ausente ou desconhecida não é razão
+  isolada para bloquear a importação.
 
 Genealogia complementar ABCC:
 - Consulta pública e `read-only` para complementar a genealogia do animal local.

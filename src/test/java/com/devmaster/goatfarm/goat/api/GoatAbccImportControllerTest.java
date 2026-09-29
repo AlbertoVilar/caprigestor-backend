@@ -273,10 +273,10 @@ class GoatAbccImportControllerTest {
         String payload = """
                 {
                   "items": [
-                    { "externalId": "A-001" },
-                    { "externalId": "A-002" },
-                    { "externalId": "A-003" },
-                    { "externalId": "A-004" }
+                    { "externalId": "A-001", "status": "ATIVO" },
+                    { "externalId": "A-002", "status": "INATIVO" },
+                    { "externalId": "A-003", "status": "VENDIDO" },
+                    { "externalId": "A-004", "status": "FALECIDO" }
                   ]
                 }
                 """;
@@ -294,6 +294,18 @@ class GoatAbccImportControllerTest {
                 .andExpect(jsonPath("$.results[2].status").value("SKIPPED_TOD_MISMATCH"));
 
         verify(goatAbccImportUseCase).confirmBatch(eq(1L), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "FARM_OWNER")
+    void shouldRejectBatchItemWithoutExplicitLocalStatus() throws Exception {
+        mockMvc.perform(post("/api/v1/goatfarms/1/goats/imports/abcc/confirm-batch")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"externalId\":\"A-001\"}]}"))
+                .andExpect(status().isUnprocessableEntity());
+
+        verify(goatAbccImportUseCase, never()).confirmBatch(eq(1L), any());
     }
 
     @Test

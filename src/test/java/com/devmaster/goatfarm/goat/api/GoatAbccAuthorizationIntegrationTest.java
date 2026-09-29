@@ -252,7 +252,7 @@ class GoatAbccAuthorizationIntegrationTest {
     }
 
     private String batchPayload(String externalId) {
-        return "{\"items\":[{\"externalId\":\"" + externalId + "\"}]}";
+        return "{\"items\":[{\"externalId\":\"" + externalId + "\",\"status\":\"ATIVO\"}]}";
     }
 
     private void cleanDatabase() {

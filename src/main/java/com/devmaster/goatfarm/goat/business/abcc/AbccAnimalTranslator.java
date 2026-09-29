@@ -47,7 +47,6 @@ public class AbccAnimalTranslator {
         List<String> warnings = new ArrayList<>();
         Gender gender = normalizeGender(raw.getSexo(), warnings, "sexo");
         GoatBreed breed = normalizeBreed(raw.getRaca(), warnings, "raça");
-        GoatStatus status = normalizeStatus(raw.getSituacao(), warnings, "situação");
 
         return GoatAbccSearchItemVO.builder()
                 .externalSource(ABCC_SOURCE)
@@ -65,7 +64,8 @@ public class AbccAnimalTranslator {
                 .pelagem(trimOrNull(raw.getPelagem()))
                 .normalizedGender(gender)
                 .normalizedBreed(breed)
-                .normalizedStatus(status)
+                // Compatibility field only: status is not populated on search results.
+                .normalizedStatus(null)
                 .normalizationWarnings(warnings)
                 .build();
     }
@@ -74,7 +74,6 @@ public class AbccAnimalTranslator {
         List<String> warnings = new ArrayList<>();
         Gender gender = normalizeGender(raw.getSexo(), warnings, "sexo");
         GoatBreed breed = normalizeBreed(raw.getRaca(), warnings, "raça");
-        GoatStatus status = normalizeStatus(raw.getSituacao(), warnings, "situação");
         Category category = normalizeCategory(raw.getCategoria(), warnings, "categoria");
         LocalDate birthDate = parseDate(raw.getDataNascimento(), warnings, "dataNascimento");
 
@@ -95,7 +94,9 @@ public class AbccAnimalTranslator {
                 .breed(breed)
                 .color(trimOrNull(raw.getPelagem()))
                 .birthDate(birthDate)
-                .status(status)
+                // Compatibility field only: lifecycle status is not derived from ABCC data.
+                .status(null)
+                .abccSituation(trimOrNull(raw.getSituacao()))
                 .tod(trimOrNull(raw.getTod()))
                 .toe(trimOrNull(raw.getToe()))
                 .category(category)
@@ -110,7 +111,7 @@ public class AbccAnimalTranslator {
                 .build();
     }
 
-    public GoatRequestVO buildGoatRequestFromPreview(GoatAbccPreviewResponseVO previewVO) {
+    public GoatRequestVO buildGoatRequestFromPreview(GoatAbccPreviewResponseVO previewVO, GoatStatus localStatus) {
         String registrationNumber = trimOrNull(previewVO.getRegistrationNumber());
         String name = trimOrNull(previewVO.getName());
         String color = trimOrNull(previewVO.getColor());
@@ -135,8 +136,8 @@ public class AbccAnimalTranslator {
         if (previewVO.getBirthDate() == null) {
             throw new BusinessRuleException("birthDate", "Data de nascimento ABCC inválida para importar este item.");
         }
-        if (previewVO.getStatus() == null) {
-            throw new BusinessRuleException("status", "Situação ABCC não mapeada para importar este item.");
+        if (localStatus == null) {
+            throw new BusinessRuleException("status", "A situação local do animal é obrigatória para importar este item.");
         }
         if (tod == null) {
             throw new BusinessRuleException("tod", "TOD ABCC ausente para importar este item.");
@@ -152,7 +153,7 @@ public class AbccAnimalTranslator {
                 .breed(previewVO.getBreed())
                 .color(color)
                 .birthDate(previewVO.getBirthDate())
-                .status(previewVO.getStatus())
+                .status(localStatus)
                 .tod(tod)
                 .toe(toe)
                 .category(previewVO.getCategory())
@@ -239,22 +240,6 @@ public class AbccAnimalTranslator {
         }
         warnings.add("Valor de " + fieldLabel + " da ABCC não mapeado: " + value);
         return null;
-    }
-
-    private GoatStatus normalizeStatus(String value, List<String> warnings, String fieldLabel) {
-        if (isBlank(value)) {
-            return null;
-        }
-        return switch (normalizedToken(value)) {
-            case "RGD", "SEM RGD", "SEM R.G.D.", "ATIVO", "ATIVA", "REGISTRADO", "REGISTRO DEFINITIVO" -> GoatStatus.ATIVO;
-            case "INATIVO", "INATIVA", "SUSPENSO", "SUSPENSA" -> GoatStatus.INATIVO;
-            case "VENDIDO", "VENDIDA", "ALIENADO", "ALIENADA" -> GoatStatus.VENDIDO;
-            case "FALECIDO", "FALECIDA", "OBITO", "MORTO", "MORTA" -> GoatStatus.FALECIDO;
-            default -> {
-                warnings.add("Valor de " + fieldLabel + " da ABCC não mapeado: " + value);
-                yield null;
-            }
-        };
     }
 
     private Category normalizeCategory(String value, List<String> warnings, String fieldLabel) {

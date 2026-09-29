@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -131,6 +132,38 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void confirmMakesExplicitAbccDeathAuthoritativeOverSubmittedLocalStatus() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatAbccPreviewResponseVO abccPreview = preview("A-1", "1643218012", "12345");
+        abccPreview.setAbccSituation("FALECIDA");
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(abccPreview);
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(response("1643218012", "ANIMAL"));
+
+        business.confirm(1L, "A-1", request("1643218012", "12345"));
+
+        ArgumentCaptor<GoatRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(requestCaptor.getValue().getStatus()).isEqualTo(GoatStatus.FALECIDO);
+    }
+
+    @Test
+    void confirmRecognizesAccentedDeathSituationAndDoesNotTreatOtherSituationsAsDeath() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatAbccPreviewResponseVO deceased = preview("A-1", "1643218012", "12345");
+        deceased.setAbccSituation("  ÓBITO ");
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(deceased);
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(response("1643218012", "ANIMAL"));
+
+        business.confirm(1L, "A-1", request("1643218012", "12345"));
+
+        ArgumentCaptor<GoatRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(requestCaptor.getValue().getStatus()).isEqualTo(GoatStatus.FALECIDO);
+    }
+
+    @Test
     void batchKeepsBestEffortStatusesAndDuplicatePrecheck() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
         when(goatAbccQueryUseCase.preview(eq(1L), any())).thenAnswer(invocation -> {
@@ -197,6 +230,71 @@ class GoatAbccImportBusinessTest {
     }
 
     @Test
+    void confirmRejectsMissingLocalStatusBeforePreview() {
+        GoatRequestVO request = request("1643218012", "12345");
+        request.setStatus(null);
+
+        assertThatThrownBy(() -> business.confirm(1L, "A-1", request))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("situação local");
+
+        verify(goatAbccQueryUseCase, never()).preview(anyLong(), any());
+    }
+
+    @Test
+    void batchRejectsMissingLocalStatusBeforePreview() {
+        assertThatThrownBy(() -> business.confirmBatch(1L, List.of(
+                GoatAbccBatchConfirmItemVO.builder().externalId("A-1").build()
+        )))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("situação local");
+
+        verify(goatAbccQueryUseCase, never()).preview(anyLong(), any());
+    }
+
+    @Test
+    void batchPreservesEachExplicitLocalStatusIndependentlyOfAbccSituation() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatAbccPreviewResponseVO first = preview("A-1", "1111111111", "12345");
+        first.setAbccSituation("VENDIDO");
+        GoatAbccPreviewResponseVO second = preview("A-2", "1111111112", "12345");
+        second.setAbccSituation("SEM RGD");
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(first, second);
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(any(), eq(1L))).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(response("1111111111", "A"), response("1111111112", "B"));
+
+        business.confirmBatch(1L, List.of(
+                GoatAbccBatchConfirmItemVO.builder().externalId("A-1").status(GoatStatus.INATIVO).build(),
+                GoatAbccBatchConfirmItemVO.builder().externalId("A-2").status(GoatStatus.FALECIDO).build()
+        ));
+
+        ArgumentCaptor<GoatRequestVO> requests = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase, times(2)).createGoat(eq(1L), requests.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(requests.getAllValues()).extracting(GoatRequestVO::getStatus)
+                .containsExactly(GoatStatus.INATIVO, GoatStatus.FALECIDO);
+    }
+
+    @Test
+    void batchMakesExplicitAbccDeathAuthoritativeOverItsSubmittedStatus() {
+        when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm("12345")));
+        GoatAbccPreviewResponseVO deceased = preview("A-1", "1111111111", "12345");
+        deceased.setAbccSituation("MORTO");
+        when(goatAbccQueryUseCase.preview(eq(1L), any())).thenReturn(deceased);
+        when(goatReferenceQueryPort.findReferenceByRegistrationNumberAndFarmId(any(), eq(1L))).thenReturn(Optional.empty());
+        when(goatManagementUseCase.createGoat(eq(1L), any(), eq(GoatCreationOrigin.ABCC_IMPORT)))
+                .thenReturn(response("1111111111", "A"));
+
+        business.confirmBatch(1L, List.of(
+                GoatAbccBatchConfirmItemVO.builder().externalId("A-1").status(GoatStatus.ATIVO).build()
+        ));
+
+        ArgumentCaptor<GoatRequestVO> requestCaptor = ArgumentCaptor.forClass(GoatRequestVO.class);
+        verify(goatManagementUseCase).createGoat(eq(1L), requestCaptor.capture(), eq(GoatCreationOrigin.ABCC_IMPORT));
+        assertThat(requestCaptor.getValue().getStatus()).isEqualTo(GoatStatus.FALECIDO);
+    }
+
+    @Test
     void missingFarmTodAndInvalidExternalIdRemainBusinessRules() {
         when(goatFarmPort.findById(1L)).thenReturn(Optional.of(farm(null)));
         assertThatThrownBy(() -> business.confirm(1L, "A-1", request("1643218012", "12345")))
@@ -235,7 +333,7 @@ class GoatAbccImportBusinessTest {
     }
 
     private GoatAbccBatchConfirmItemVO item(String externalId) {
-        return GoatAbccBatchConfirmItemVO.builder().externalId(externalId).build();
+        return GoatAbccBatchConfirmItemVO.builder().externalId(externalId).status(GoatStatus.ATIVO).build();
     }
 
     private GoatResponseVO response(String registration, String name) {
