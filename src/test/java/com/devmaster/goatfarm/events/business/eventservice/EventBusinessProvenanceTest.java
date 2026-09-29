@@ -12,6 +12,10 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
+import com.devmaster.goatfarm.goatownership.business.GoatOwnershipGuardBusiness;
+import com.devmaster.goatfarm.goatownership.domain.GoatOwnershipPeriod;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,7 +26,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,6 +57,7 @@ class EventBusinessProvenanceTest {
     @Mock private FarmAuthorizationUseCase farmAuthorization;
     @Mock private EventPublisher eventPublisher;
     @Mock private GoatOwnershipGuardUseCase ownershipGuard;
+    @Mock private GoatOwnershipQueryPort ownershipQuery;
 
     private EventBusiness business;
 
@@ -75,6 +83,24 @@ class EventBusinessProvenanceTest {
         assertThat(captor.getValue().recordingFarmId()).isEqualTo(FARM_B);
         verify(ownershipGuard).requireCurrentFarm(GOAT_ID, FARM_B);
         verify(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
+    }
+
+    @Test
+    void eventCreationAcceptsDateOfFirstCanonicalAbccImportStartedAfterMidnight() {
+        when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
+                .thenReturn(Optional.of(goat(FARM_B)));
+        Instant startedAt = VALID_DATE.atStartOfDay(ZoneId.of("America/Sao_Paulo"))
+                .toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                GoatOwnershipPeriod.open(GOAT_ID, FARM_B, startedAt, OwnershipEntryType.ABCC_IMPORT, "TEST")));
+
+        EventBusiness businessWithCanonicalGuard = new EventBusiness(eventPersistence, goatReferences,
+                farmAuthorization, eventPublisher, new GoatOwnershipGuardBusiness(ownershipQuery),
+                Clock.fixed(Instant.parse("2026-09-19T12:00:00Z"), ZoneOffset.UTC));
+
+        businessWithCanonicalGuard.createEvent(FARM_B, REGISTRATION_NUMBER, request(VALID_DATE));
+
+        verify(eventPersistence).save(any(OperationalEvent.class));
     }
 
     @Test

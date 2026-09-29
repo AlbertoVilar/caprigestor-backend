@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
 import com.devmaster.goatfarm.goatownership.domain.GoatOwnershipPeriod;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +71,10 @@ public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
         Instant dayStart = date.atStartOfDay(OWNERSHIP_CALENDAR_ZONE).toInstant();
         Instant nextDayStart = date.plusDays(1).atStartOfDay(OWNERSHIP_CALENDAR_ZONE).toInstant();
 
+        if (isUnambiguousFirstCanonicalOwnership(periods, expectedFarmId, date, dayStart, nextDayStart)) {
+            return;
+        }
+
         List<GoatOwnershipPeriod> periodsCoveringWholeDay = periods.stream()
                 .filter(period -> !period.startedAt().isAfter(dayStart))
                 .filter(period -> period.endedAt() == null || !period.endedAt().isBefore(nextDayStart))
@@ -80,6 +85,32 @@ public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
             throw new AuthorizationDeniedException(
                     "A fazenda não possui ownership canônico inequívoco durante todo o dia informado.");
         }
+    }
+
+    private boolean isUnambiguousFirstCanonicalOwnership(
+            List<GoatOwnershipPeriod> periods,
+            long expectedFarmId,
+            LocalDate date,
+            Instant dayStart,
+            Instant nextDayStart
+    ) {
+        if (periods.size() != 1) {
+            return false;
+        }
+
+        GoatOwnershipPeriod initial = periods.get(0);
+        return initial.isOpen()
+                && initial.farmId() == expectedFarmId
+                && initial.startedAt().isAfter(dayStart)
+                && initial.startedAt().isBefore(nextDayStart)
+                && initial.startedAt().atZone(OWNERSHIP_CALENDAR_ZONE).toLocalDate().equals(date)
+                && isAllowedInitialEntryType(initial.entryType());
+    }
+
+    private boolean isAllowedInitialEntryType(OwnershipEntryType entryType) {
+        return entryType == OwnershipEntryType.BIRTH
+                || entryType == OwnershipEntryType.MANUAL_IMPORT
+                || entryType == OwnershipEntryType.ABCC_IMPORT;
     }
 
     private List<GoatOwnershipPeriod> loadConsistentHistory(GoatId goatId) {

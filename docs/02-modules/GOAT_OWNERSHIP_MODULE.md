@@ -54,7 +54,12 @@ retomada. Depois do handoff, a fazenda compradora pode abrir um novo segmento
 `ACTIVE` para o mesmo `GoatId`, preservando a unicidade global de uma lactação
 ativa definida na V47. O histórico permanece acessível pelo dossiê e não é
 migrado. A resolução da data civil usa `America/Sao_Paulo`, e dias divididos
-entre owners continuam sujeitos ao fail-closed de ownership.
+entre owners continuam sujeitos ao fail-closed de ownership, tanto para a
+fazenda de origem quanto para a de destino. A única exceção de data parcial é
+o primeiro e único período canônico, ainda aberto, iniciado naquele dia por
+`BIRTH`, `MANUAL_IMPORT` ou `ABCC_IMPORT`; nesses casos não há owner anterior
+cuja proveniência possa ser confundida. Períodos parciais por compra, retorno,
+transferência, reivindicação externa ou correção continuam rejeitados.
 
 ## Limites de escopo
 
