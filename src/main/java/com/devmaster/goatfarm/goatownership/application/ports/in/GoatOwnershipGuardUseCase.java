@@ -18,10 +18,14 @@ public interface GoatOwnershipGuardUseCase {
     void requireLastAssociatedFarm(GoatId goatId, long expectedFarmId);
 
     /**
-     * Requires the farm to own the Goat for the complete civil day represented
-     * by the supplied date. The concrete ownership calendar zone is a domain
-     * policy of the ownership module and is intentionally not supplied by
-     * callers.
+     * Requires the expected farm to own the Goat for the complete civil day
+     * represented by the supplied date. The sole partial-day exception is the
+     * first and only open canonical ownership period when it begins during
+     * that civil day and its entry type is {@code BIRTH}, {@code MANUAL_IMPORT},
+     * or {@code ABCC_IMPORT}. A day split by an ownership transfer remains
+     * ambiguous and is rejected for both farms. The concrete ownership
+     * calendar zone is a domain policy of the ownership module and is
+     * intentionally not supplied by callers.
      */
     void requireUnambiguousOwnershipOnDate(GoatId goatId, long expectedFarmId, LocalDate date);
 }

@@ -10,6 +10,8 @@ import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -128,6 +130,112 @@ class GoatOwnershipGuardBusinessTest {
                 .isInstanceOf(AuthorizationDeniedException.class);
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(
                 GOAT_ID, 20L, LocalDate.of(2026, 9, 10)))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = OwnershipEntryType.class, names = {"BIRTH", "MANUAL_IMPORT", "ABCC_IMPORT"})
+    void firstOpenCanonicalPeriodMayStartDuringItsFirstCivilDay(OwnershipEntryType entryType) {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, entryType, null)));
+
+        assertThatCode(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = OwnershipEntryType.class, names = {
+            "PURCHASE", "TRANSFER_IN", "RETURN", "EXTERNAL_CLAIM", "CORRECTION_REENTRY"
+    })
+    void otherPartialDayEntryTypesRemainAmbiguous(OwnershipEntryType entryType) {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, entryType, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void initialEntryExceptionRequiresExpectedFarmAndDateOnOrAfterOwnershipStart() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant startedAt = date.atStartOfDay(zone).toInstant().plus(14, ChronoUnit.HOURS);
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, startedAt, null, OwnershipEntryType.ABCC_IMPORT, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 20L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date.minusDays(1)))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void closedPartialDayInitialPeriodCannotUseException() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant dayStart = date.atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart.plus(14, ChronoUnit.HOURS), dayStart.plus(18, ChronoUnit.HOURS),
+                        OwnershipEntryType.BIRTH, OwnershipExitType.DEATH)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void multiplePeriodsCannotUseInitialEntryException() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant dayStart = date.atStartOfDay(zone).toInstant();
+        Instant nextDayStart = date.plusDays(1).atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart.plus(14, ChronoUnit.HOURS), nextDayStart,
+                        OwnershipEntryType.ABCC_IMPORT, OwnershipExitType.TRANSFER_OUT),
+                period(2L, 20L, nextDayStart, null, OwnershipEntryType.TRANSFER_IN, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(AuthorizationDeniedException.class);
+    }
+
+    @Test
+    void inconsistentAndMixedGoatHistoriesFailClosedForDatePolicy() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant dayStart = date.atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart, null, OwnershipEntryType.MANUAL_IMPORT, null),
+                period(2L, 20L, dayStart.plus(1, ChronoUnit.HOURS), null,
+                        OwnershipEntryType.ABCC_IMPORT, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(BusinessRuleException.class);
+
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, dayStart, null, OwnershipEntryType.MANUAL_IMPORT, null),
+                GoatOwnershipPeriod.rehydrate(2L, GoatId.of(8L), 20L,
+                        dayStart.plus(1, ChronoUnit.DAYS), null,
+                        OwnershipEntryType.TRANSFER_IN, null, "TEST")));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("outro GoatId");
+    }
+
+    @Test
+    void ownershipStartingAtNextDayBoundaryDoesNotCoverPriorDate() {
+        ZoneId zone = ZoneId.of("America/Sao_Paulo");
+        LocalDate date = LocalDate.of(2026, 9, 10);
+        Instant nextDayStart = date.plusDays(1).atStartOfDay(zone).toInstant();
+        when(ownershipQuery.findOwnershipHistory(GOAT_ID)).thenReturn(List.of(
+                period(1L, 10L, nextDayStart, null, OwnershipEntryType.MANUAL_IMPORT, null)));
+
+        assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
                 .isInstanceOf(AuthorizationDeniedException.class);
     }
 
