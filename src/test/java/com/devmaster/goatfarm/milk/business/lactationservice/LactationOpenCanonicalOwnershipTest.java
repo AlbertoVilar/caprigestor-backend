@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.business.lactationservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
@@ -115,10 +116,10 @@ class LactationOpenCanonicalOwnershipTest {
     @Test
     void historicallyDeniedPastStartDateDoesNotSaveLactation() {
         LocalDate pastDate = START_DATE.minusDays(1);
-        doThrow(new AuthorizationDeniedException("historical ownership denied"))
+        doThrow(new GoatOwnershipNotValidOnDateException("historical ownership denied"))
                 .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, pastDate);
 
-        assertThrows(AuthorizationDeniedException.class,
+        assertThrows(GoatOwnershipNotValidOnDateException.class,
                 () -> business.openLactation(REQUESTED_FARM, REGISTRATION, request(pastDate)));
 
         verify(lactationPersistence, never()).save(any(Lactation.class));
@@ -195,10 +196,10 @@ class LactationOpenCanonicalOwnershipTest {
     @Test
     void pastTransferDayFailsClosedThroughWholeCivilDayPolicy() {
         LocalDate pastDate = START_DATE.minusDays(1);
-        doThrow(new AuthorizationDeniedException("ambiguous ownership day"))
+        doThrow(new GoatOwnershipNotValidOnDateException("ambiguous ownership day"))
                 .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, REQUESTED_FARM, pastDate);
 
-        assertThrows(AuthorizationDeniedException.class,
+        assertThrows(GoatOwnershipNotValidOnDateException.class,
                 () -> business.openLactation(REQUESTED_FARM, REGISTRATION, request(pastDate)));
         verify(lactationPersistence, never()).save(any(Lactation.class));
     }

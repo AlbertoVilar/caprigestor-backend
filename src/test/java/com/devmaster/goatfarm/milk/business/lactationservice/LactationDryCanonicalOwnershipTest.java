@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.business.lactationservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
@@ -171,10 +172,10 @@ class LactationDryCanonicalOwnershipTest {
     @Test
     void transferDayIsRejectedByWholeCivilDayOwnershipPolicy() {
         LocalDate transferDay = LocalDate.of(2026, 9, 15);
-        doThrow(new AuthorizationDeniedException("ambiguous ownership day"))
+        doThrow(new GoatOwnershipNotValidOnDateException("ambiguous ownership day"))
                 .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, CURRENT_FARM, transferDay);
 
-        assertThrows(AuthorizationDeniedException.class,
+        assertThrows(GoatOwnershipNotValidOnDateException.class,
                 () -> business.dryLactation(CURRENT_FARM, ROUTE_REGISTRATION, 10L, request(transferDay)));
         verify(lactationPersistence, never()).save(any(Lactation.class));
     }
@@ -182,10 +183,10 @@ class LactationDryCanonicalOwnershipTest {
     @Test
     void currentOwnerCannotBackdateDryToFormerOwnersWholeDay() {
         LocalDate formerOwnerDate = LocalDate.of(2026, 9, 14);
-        doThrow(new AuthorizationDeniedException("date belonged to former owner"))
+        doThrow(new GoatOwnershipNotValidOnDateException("date belonged to former owner"))
                 .when(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, CURRENT_FARM, formerOwnerDate);
 
-        assertThrows(AuthorizationDeniedException.class,
+        assertThrows(GoatOwnershipNotValidOnDateException.class,
                 () -> business.dryLactation(CURRENT_FARM, ROUTE_REGISTRATION, 10L, request(formerOwnerDate)));
         verify(lactationPersistence, never()).save(any(Lactation.class));
     }

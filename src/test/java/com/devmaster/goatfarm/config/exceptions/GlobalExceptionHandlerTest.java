@@ -6,6 +6,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -206,5 +207,19 @@ class GlobalExceptionHandlerTest {
         assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(error ->
                 "auth".equals(error.getFieldName()) && message.equals(error.getMessage())));
+        assertNull(body.getCode());
+    }
+
+    @Test
+    void shouldHandleOwnershipDateInvariantWithStable422Code() {
+        String message = "Ownership não é inequívoco na data informada.";
+        ResponseEntity<ValidationError> response = globalExceptionHandler.goatOwnershipNotValidOnDate(
+                new GoatOwnershipNotValidOnDateException(message), httpServletRequest);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(GoatOwnershipNotValidOnDateException.ERROR_CODE, response.getBody().getCode());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "ownership".equals(error.getFieldName()) && message.equals(error.getMessage())));
     }
 }
