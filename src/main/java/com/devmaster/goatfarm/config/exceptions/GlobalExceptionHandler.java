@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.config.exceptions;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
@@ -37,6 +38,19 @@ public class GlobalExceptionHandler {
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
         String field = e.getFieldName() != null ? e.getFieldName() : "business_error";
         err.addError(field, e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(GoatOwnershipNotValidOnDateException.class)
+    public ResponseEntity<ValidationError> goatOwnershipNotValidOnDate(
+            GoatOwnershipNotValidOnDateException e,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ValidationError err = new ValidationError(
+                Instant.now(), status.value(), "Ownership do animal inválido na data informada", request.getRequestURI());
+        err.setCode(GoatOwnershipNotValidOnDateException.ERROR_CODE);
+        err.addError("ownership", e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
 

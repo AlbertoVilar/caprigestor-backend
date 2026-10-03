@@ -448,6 +448,7 @@ Erros seguem estrutura `ValidationError`:
   "status": 422,
   "error": "Regra de negócio violada",
   "path": "/api/v1/goatfarms/1/inventory/movements",
+  "code": null,
   "errors": [
     {
       "fieldName": "quantity",
@@ -457,17 +458,19 @@ Erros seguem estrutura `ValidationError`:
 }
 ```
 
+`code` é opcional e pode ser omitido/null em erros existentes. Restrições temporais do ownership canônico usam HTTP `422` e o código estável `GOAT_OWNERSHIP_NOT_VALID_ON_DATE`; a mensagem permanece em `errors[].message`. Falhas reais de autorização continuam usando HTTP `403` sem esse código.
+
 ### Mapeamento principal de status
 | Status | Origem típica |
 |---|---|
 | `400 Bad Request` | `InvalidArgumentException`, `IllegalArgumentException`, JSON inválido |
 | `401 Unauthorized` | falha de autenticação/token |
-| `403 Forbidden` | falha de ownership/perfil |
+| `403 Forbidden` | falha de autorização, perfil ou acesso à fazenda |
 | `404 Not Found` | `ResourceNotFoundException` |
 | `405 Method Not Allowed` | método HTTP não suportado |
 | `409 Conflict` | `DuplicateEntityException`, `DataIntegrityViolationException` |
 | `415 Unsupported Media Type` | content type não suportado |
-| `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean |
+| `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean ou ownership temporal inválido |
 | `503 Service Unavailable` | consulta ABCC indisponível ou insuficiente para validação obrigatória |
 | `500 Internal Server Error` | erro não tratado |
 

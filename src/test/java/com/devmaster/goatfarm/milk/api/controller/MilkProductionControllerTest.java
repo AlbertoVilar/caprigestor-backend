@@ -1,9 +1,12 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.milk.api.dto.MilkProductionResponseDTO;
+import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.api.mapper.MilkProductionMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.MilkProductionUseCase;
+import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
@@ -17,9 +20,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,5 +93,29 @@ class MilkProductionControllerTest {
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}", farmId, goatId, productionId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void create_shouldReturn422WithOwnershipCode_whenDateOwnershipIsAmbiguous() throws Exception {
+        Long farmId = 7L;
+        String goatId = "BR123";
+        MilkProductionRequestDTO request = MilkProductionRequestDTO.builder()
+                .date(LocalDate.of(2026, 9, 10))
+                .shift(MilkingShift.MORNING)
+                .volumeLiters(new BigDecimal("2.5"))
+                .build();
+        when(milkProductionMapper.toRequestVO(any(MilkProductionRequestDTO.class)))
+                .thenReturn(MilkProductionRequestVO.builder().date(request.getDate()).build());
+        when(milkProductionUseCase.createMilkProduction(any(Long.class), any(String.class), any(MilkProductionRequestVO.class)))
+                .thenThrow(new GoatOwnershipNotValidOnDateException("Ownership não é inequívoco na data informada."));
+
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions", farmId, goatId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2026-09-10","shift":"MORNING","volumeLiters":2.5}
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(GoatOwnershipNotValidOnDateException.ERROR_CODE))
+                .andExpect(jsonPath("$.errors[0].message").value("Ownership não é inequívoco na data informada."));
     }
 }

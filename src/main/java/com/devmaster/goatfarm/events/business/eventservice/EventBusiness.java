@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.events.business.eventservice;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
@@ -17,6 +18,7 @@ import com.devmaster.goatfarm.events.domain.OperationalEvent;
 import com.devmaster.goatfarm.events.enums.EventType;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,7 +71,7 @@ public class EventBusiness implements EventManagementUseCase {
         goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
         requireProjectionMatchesFarm(goat, farmId);
         requireDateNotInFuture(request.date());
-        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(goat.id(), farmId, request.date());
+        requireEventOwnershipProvenanceOnDate(goat.id(), farmId, request.date());
 
         OperationalEvent saved = eventPersistencePort.save(OperationalEvent.create(
                 toEventReference(goat), farmId, request.eventType(), request.date(), request.description(), request.location(),
@@ -88,7 +90,7 @@ public class EventBusiness implements EventManagementUseCase {
         OperationalEvent existing = findEventByStructuralIdentity(eventId, goat);
         requireMutationProvenance(existing, farmId);
         requireDateNotInFuture(request.date());
-        goatOwnershipGuard.requireUnambiguousOwnershipOnDate(goat.id(), existing.recordingFarmId(), request.date());
+        requireEventOwnershipProvenanceOnDate(goat.id(), existing.recordingFarmId(), request.date());
         OperationalEvent updated = eventPersistencePort.save(existing.revise(
                 request.eventType(), request.date(), request.description(), request.location(),
                 request.veterinarian(), request.outcome()));
@@ -163,6 +165,19 @@ public class EventBusiness implements EventManagementUseCase {
     private void requireDateNotInFuture(LocalDate date) {
         if (date.isAfter(LocalDate.now(clock.withZone(OWNERSHIP_CALENDAR_ZONE)))) {
             throw new InvalidArgumentException("date", "A data do evento não pode estar no futuro.");
+        }
+    }
+
+    private void requireEventOwnershipProvenanceOnDate(GoatId goatId, long farmId, LocalDate date) {
+        try {
+            goatOwnershipGuard.requireUnambiguousOwnershipOnDate(goatId, farmId, date);
+        } catch (GoatOwnershipNotValidOnDateException exception) {
+            if (exception.reason()
+                    == GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM) {
+                throw new AuthorizationDeniedException(
+                        "A fazenda não possui proveniência canônica para o animal na data informada.");
+            }
+            throw exception;
         }
     }
 

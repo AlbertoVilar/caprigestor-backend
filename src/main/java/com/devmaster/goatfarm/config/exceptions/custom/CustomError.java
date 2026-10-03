@@ -8,6 +8,7 @@ public class CustomError {
     private Integer status;
     private String error;
     private String path;
+    private String code;
 
 
     public CustomError(Instant timestamp, Integer status,
@@ -33,6 +34,14 @@ public class CustomError {
 
     public String getPath() {
         return path;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 
     public void setPath(String path) {

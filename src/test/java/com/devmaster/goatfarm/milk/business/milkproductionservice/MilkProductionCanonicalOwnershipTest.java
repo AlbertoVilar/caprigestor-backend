@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.milk.business.milkproductionservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateMilkProductionException;
 import com.devmaster.goatfarm.config.exceptions.NoActiveLactationException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
@@ -133,10 +134,10 @@ class MilkProductionCanonicalOwnershipTest {
 
     @Test
     void transferDayIsRejectedWithoutSaving() {
-        doThrow(new AuthorizationDeniedException("ambiguous transfer day")).when(ownershipGuard)
+        doThrow(new GoatOwnershipNotValidOnDateException("ambiguous transfer day")).when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, RECORD_DATE);
 
-        assertThrows(AuthorizationDeniedException.class,
+        assertThrows(GoatOwnershipNotValidOnDateException.class,
                 () -> business.createMilkProduction(FARM_B, CURRENT_RG, request()));
         verify(milkPersistence, never()).existsActiveByGoatTechnicalIdAndDateAndShift(any(), any(), any());
         verifyNoInteractions(lactationPersistence, withdrawalQuery, mapper);
@@ -145,9 +146,9 @@ class MilkProductionCanonicalOwnershipTest {
 
     @Test
     void currentOwnerCannotBackdateToFormerOwnersDay() {
-        doThrow(new AuthorizationDeniedException("date owned by former farm")).when(ownershipGuard)
+        doThrow(new GoatOwnershipNotValidOnDateException("date owned by former farm")).when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, RECORD_DATE);
-        assertThrows(AuthorizationDeniedException.class,
+        assertThrows(GoatOwnershipNotValidOnDateException.class,
                 () -> business.createMilkProduction(FARM_B, CURRENT_RG, request()));
         verify(milkPersistence, never()).save(any());
     }

@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goatownership.business;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
@@ -22,6 +23,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -127,10 +129,14 @@ class GoatOwnershipGuardBusinessTest {
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(
                 GOAT_ID, 10L, LocalDate.of(2026, 9, 10)))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOfSatisfying(GoatOwnershipNotValidOnDateException.class,
+                        exception -> assertThat(exception.reason()).isEqualTo(
+                                GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM));
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(
                 GOAT_ID, 20L, LocalDate.of(2026, 9, 10)))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOfSatisfying(GoatOwnershipNotValidOnDateException.class,
+                        exception -> assertThat(exception.reason()).isEqualTo(
+                                GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM));
     }
 
     @ParameterizedTest
@@ -158,7 +164,7 @@ class GoatOwnershipGuardBusinessTest {
                 period(1L, 10L, startedAt, null, entryType, null)));
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
     }
 
     @Test
@@ -170,9 +176,9 @@ class GoatOwnershipGuardBusinessTest {
                 period(1L, 10L, startedAt, null, OwnershipEntryType.ABCC_IMPORT, null)));
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 20L, date))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date.minusDays(1)))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
     }
 
     @Test
@@ -185,7 +191,7 @@ class GoatOwnershipGuardBusinessTest {
                         OwnershipEntryType.BIRTH, OwnershipExitType.DEATH)));
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
     }
 
     @Test
@@ -200,7 +206,7 @@ class GoatOwnershipGuardBusinessTest {
                 period(2L, 20L, nextDayStart, null, OwnershipEntryType.TRANSFER_IN, null)));
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
     }
 
     @Test
@@ -236,7 +242,7 @@ class GoatOwnershipGuardBusinessTest {
                 period(1L, 10L, nextDayStart, null, OwnershipEntryType.MANUAL_IMPORT, null)));
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
     }
 
     @Test
@@ -265,7 +271,7 @@ class GoatOwnershipGuardBusinessTest {
                         OwnershipEntryType.TRANSFER_IN, null)));
 
         assertThatThrownBy(() -> guard.requireUnambiguousOwnershipOnDate(GOAT_ID, 10L, date))
-                .isInstanceOf(AuthorizationDeniedException.class);
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
     }
 
     private GoatOwnershipPeriod period(Long id, long farmId, String startedAt, String endedAt,

@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.events.business.eventservice;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.events.application.ports.out.EventPersistencePort;
@@ -118,7 +119,8 @@ class EventBusinessProvenanceTest {
     void createRejectsOwnershipTransferDay() {
         when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
                 .thenReturn(Optional.of(goat(FARM_B)));
-        doThrow(new AuthorizationDeniedException("ambiguous transfer day")).when(ownershipGuard)
+        doThrow(new GoatOwnershipNotValidOnDateException("ambiguous transfer day",
+                GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM)).when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
 
         assertThatThrownBy(() -> business.createEvent(FARM_B, REGISTRATION_NUMBER, request(VALID_DATE)))
@@ -131,11 +133,25 @@ class EventBusinessProvenanceTest {
     void createRejectsDateOwnedByAnotherFarm() {
         when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
                 .thenReturn(Optional.of(goat(FARM_B)));
-        doThrow(new AuthorizationDeniedException("date belongs to former farm")).when(ownershipGuard)
+        doThrow(new GoatOwnershipNotValidOnDateException("date belongs to former farm",
+                GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM)).when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
 
         assertThatThrownBy(() -> business.createEvent(FARM_B, REGISTRATION_NUMBER, request(VALID_DATE)))
                 .isInstanceOf(AuthorizationDeniedException.class);
+
+        verify(eventPersistence, never()).save(any());
+    }
+
+    @Test
+    void createKeepsTemporalFailureWhenNoOtherFarmOwnsDate() {
+        when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
+                .thenReturn(Optional.of(goat(FARM_B)));
+        doThrow(new GoatOwnershipNotValidOnDateException("ownership does not cover the day")).when(ownershipGuard)
+                .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
+
+        assertThatThrownBy(() -> business.createEvent(FARM_B, REGISTRATION_NUMBER, request(VALID_DATE)))
+                .isInstanceOf(GoatOwnershipNotValidOnDateException.class);
 
         verify(eventPersistence, never()).save(any());
     }
@@ -189,7 +205,8 @@ class EventBusinessProvenanceTest {
     @Test
     void updateRejectsDateOwnedByAnotherFarm() {
         givenEvent(FARM_B, VALID_DATE.minusDays(1));
-        doThrow(new AuthorizationDeniedException("wrong ownership date")).when(ownershipGuard)
+        doThrow(new GoatOwnershipNotValidOnDateException("wrong ownership date",
+                GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM)).when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
 
         assertThatThrownBy(() -> business.updateEvent(FARM_B, REGISTRATION_NUMBER, EVENT_ID, request(VALID_DATE)))
@@ -201,7 +218,8 @@ class EventBusinessProvenanceTest {
     @Test
     void updateRejectsTransferDay() {
         givenEvent(FARM_B, VALID_DATE.minusDays(1));
-        doThrow(new AuthorizationDeniedException("ambiguous transfer day")).when(ownershipGuard)
+        doThrow(new GoatOwnershipNotValidOnDateException("ambiguous transfer day",
+                GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM)).when(ownershipGuard)
                 .requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
 
         assertThatThrownBy(() -> business.updateEvent(FARM_B, REGISTRATION_NUMBER, EVENT_ID, request(VALID_DATE)))

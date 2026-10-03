@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.goatownership.business;
 
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.goat.domain.GoatId;
@@ -82,8 +83,15 @@ public class GoatOwnershipGuardBusiness implements GoatOwnershipGuardUseCase {
 
         if (periodsCoveringWholeDay.size() != 1
                 || periodsCoveringWholeDay.get(0).farmId() != expectedFarmId) {
-            throw new AuthorizationDeniedException(
-                    "A fazenda não possui ownership canônico inequívoco durante todo o dia informado.");
+            boolean anotherFarmIntersectsDay = periods.stream()
+                    .filter(period -> period.farmId() != expectedFarmId)
+                    .anyMatch(period -> period.startedAt().isBefore(nextDayStart)
+                            && (period.endedAt() == null || period.endedAt().isAfter(dayStart)));
+            throw new GoatOwnershipNotValidOnDateException(
+                    "A fazenda não possui ownership canônico inequívoco durante todo o dia informado.",
+                    anotherFarmIntersectsDay
+                            ? GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_PERIOD_FROM_ANOTHER_FARM
+                            : GoatOwnershipNotValidOnDateException.Reason.OWNERSHIP_NOT_UNAMBIGUOUS);
         }
     }
 
