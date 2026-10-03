@@ -12,8 +12,12 @@ import java.time.LocalDate;
 public record OwnershipMovementResponseDTO(
         Long movementId,
         Long goatId,
+        String goatName,
+        String goatRegistrationNumber,
         Long sourceFarmId,
+        String sourceFarmName,
         Long targetFarmId,
+        String targetFarmName,
         OwnershipMovementKind movementKind,
         OwnershipTransferStatus status,
         OwnershipMovementDirection direction,

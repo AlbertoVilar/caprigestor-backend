@@ -134,6 +134,42 @@ class GoatOwnershipTransferPostgresIntegrationTest {
     }
 
     @Test
+    void postgresMovementReadModelEnrichesNamesAndCountsCanonicalMovements() {
+        long sourceFarm = createFarm("W14 Label Source");
+        long targetFarm = createFarm("W14 Label Target");
+        long goatRow = createGoat(sourceFarm, "W14-LABEL-" + System.nanoTime());
+        String registration = jdbcTemplate.queryForObject(
+                "select num_registro from cabras where id = ?", String.class, goatRow);
+        String goatName = "Isidra W14 " + goatRow;
+        jdbcTemplate.update("update cabras set nome = ? where id = ?", goatName, goatRow);
+        seedOpenPeriod(goatRow, sourceFarm, "w14-movement-labels");
+        configureRealOwnershipPrincipal();
+
+        var requested = realTransferUseCase.requestInternalTransfer(new InternalOwnershipTransferRequest(
+                GoatId.of(goatRow), targetFarm, "movement label query", "w14-movement-labels-" + goatRow));
+        realTransferUseCase.acceptTransfer(requested.id());
+
+        var outgoing = movementQueryUseCase.listForFarm(sourceFarm, OwnershipMovementDirection.OUTGOING,
+                null, OwnershipMovementKind.INTERNAL_TRANSFER, new OwnershipMovementPageQuery(0, 20));
+        assertThat(outgoing.totalElements()).isEqualTo(1);
+        assertThat(outgoing.content()).singleElement().satisfies(movement -> {
+            assertThat(movement.goatId()).isEqualTo(goatRow);
+            assertThat(movement.goatName()).isEqualTo(goatName);
+            assertThat(movement.goatRegistrationNumber()).isEqualTo(registration);
+            assertThat(movement.sourceFarmId()).isEqualTo(sourceFarm);
+            assertThat(movement.sourceFarmName()).startsWith("W14 Label Source ");
+            assertThat(movement.targetFarmId()).isEqualTo(targetFarm);
+            assertThat(movement.targetFarmName()).startsWith("W14 Label Target ");
+        });
+
+        var incoming = movementQueryUseCase.listForFarm(targetFarm, OwnershipMovementDirection.INCOMING,
+                null, OwnershipMovementKind.INTERNAL_TRANSFER, new OwnershipMovementPageQuery(0, 20));
+        assertThat(incoming.totalElements()).isEqualTo(1);
+        assertThat(incoming.content()).singleElement().satisfies(movement ->
+                assertThat(movement.movementId()).isEqualTo(requested.id()));
+    }
+
+    @Test
     void springPostgresInternalSaleClosesOriginLactationAndMovesOwnership() {
         long sourceFarm = createFarm("W14 Sale Source");
         long targetFarm = createFarm("W14 Sale Target");

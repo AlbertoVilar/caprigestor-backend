@@ -45,7 +45,7 @@ class OwnershipMovementControllerTest {
 
     @Test
     void mapsUnifiedCompletedInternalSaleMovementAndPagination() throws Exception {
-        var movement = new OwnershipMovementItem(71L, 55L, 19L, 1L,
+        var movement = new OwnershipMovementItem(71L, 55L, "Isidra", "RG-55", 19L, "Capril Bocaina", 1L, "Capril Vilar",
                 OwnershipMovementKind.INTERNAL_SALE, OwnershipTransferStatus.COMPLETED,
                 OwnershipMovementDirection.INCOMING, "Sale", Instant.parse("2026-09-29T12:00:00Z"),
                 null, Instant.parse("2026-09-29T13:00:00Z"), Instant.parse("2026-09-29T13:00:00Z"),
@@ -63,6 +63,10 @@ class OwnershipMovementControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].movementId").value(71))
                 .andExpect(jsonPath("$.content[0].movementKind").value("INTERNAL_SALE"))
+                .andExpect(jsonPath("$.content[0].goatName").value("Isidra"))
+                .andExpect(jsonPath("$.content[0].goatRegistrationNumber").value("RG-55"))
+                .andExpect(jsonPath("$.content[0].sourceFarmName").value("Capril Bocaina"))
+                .andExpect(jsonPath("$.content[0].targetFarmName").value("Capril Vilar"))
                 .andExpect(jsonPath("$.content[0].realized").value(true))
                 .andExpect(jsonPath("$.content[0].saleId").value(18))
                 .andExpect(jsonPath("$.content[0].paymentStatus").value("PAID"))

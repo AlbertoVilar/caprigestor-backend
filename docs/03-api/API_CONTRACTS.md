@@ -548,6 +548,23 @@ autenticação válida; `403` sem administração da fazenda de origem/destino;
 transferência ainda não expostos; e `422` para Bean Validation do corpo,
 limites semânticos de paginação ou violação do ciclo de vida/regra de negócio.
 
+### Ownership movement read model
+
+`GET /api/v1/goatfarms/{farmId}/ownership-movements` é a consulta paginada e
+somente leitura do ledger de propriedade para ADMIN ou FARM_OWNER que administra
+a fazenda consultada. `direction` é obrigatório (`INCOMING` ou `OUTGOING`);
+`kind` e `status` são filtros opcionais; `page` começa em zero e `size` aceita
+de 1 a 100.
+
+Cada item representa exatamente um movimento canônico e mantém `goatId`,
+`sourceFarmId` e `targetFarmId` como IDs técnicos. Para leitura humana, o response
+também pode trazer `goatName`, `goatRegistrationNumber`, `sourceFarmName` e
+`targetFarmName`. Esses campos são enriquecimento descritivo atual obtido das
+entidades de animal/fazenda, não snapshots imutáveis do instante da transferência;
+podem ser `null` quando os dados descritivos não estão disponíveis. Clientes
+devem manter fallback para os IDs técnicos. `totalElements` conta movimentos,
+independentemente dos joins usados para compor as descrições.
+
 ### Goat Ownership History (W9.2)
 
 `GET /api/v1/goats/{goatId}/ownership-history` é privado e exige autenticação
