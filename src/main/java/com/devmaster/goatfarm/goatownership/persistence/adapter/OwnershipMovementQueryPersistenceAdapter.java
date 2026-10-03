@@ -22,9 +22,13 @@ import java.util.Objects;
 public class OwnershipMovementQueryPersistenceAdapter implements OwnershipMovementQueryPort {
     private static final String SELECT = """
             select movement.id as movement_id,
-                   movement.goat_id,
+                   movement.goat_id as movement_goat_id,
+                   goat.nome as goat_name,
+                   goat.num_registro as goat_registration_number,
                    movement.source_farm_id,
+                   source_farm.name as source_farm_name,
                    movement.target_farm_id,
+                   target_farm.name as target_farm_name,
                    movement.kind,
                    movement.state,
                    movement.reason,
@@ -43,7 +47,15 @@ public class OwnershipMovementQueryPersistenceAdapter implements OwnershipMoveme
                    sale.payment_status,
                    sale.payment_date
               from ownership_transfer movement
+              left join cabras goat on goat.id = movement.goat_id
+              left join capril source_farm on source_farm.id = movement.source_farm_id
+              left join capril target_farm on target_farm.id = movement.target_farm_id
               left join animal_sale sale on sale.id = movement.sale_id
+             where movement.kind in ('INTERNAL_TRANSFER', 'INTERNAL_SALE')
+            """;
+    private static final String COUNT = """
+            select count(*)
+              from ownership_transfer movement
              where movement.kind in ('INTERNAL_TRANSFER', 'INTERNAL_SALE')
             """;
 
@@ -60,22 +72,26 @@ public class OwnershipMovementQueryPersistenceAdapter implements OwnershipMoveme
                                                          OwnershipMovementKind kind,
                                                          OwnershipMovementPageQuery pageQuery) {
         StringBuilder where = new StringBuilder(SELECT);
+        StringBuilder countWhere = new StringBuilder(COUNT);
         List<Object> parameters = new ArrayList<>();
-        where.append(direction == OwnershipMovementDirection.INCOMING
+        String farmFilter = direction == OwnershipMovementDirection.INCOMING
                 ? " and movement.target_farm_id = ?"
-                : " and movement.source_farm_id = ?");
+                : " and movement.source_farm_id = ?";
+        where.append(farmFilter);
+        countWhere.append(farmFilter);
         parameters.add(farmId);
         if (status != null) {
             where.append(" and movement.state = ?");
+            countWhere.append(" and movement.state = ?");
             parameters.add(status.name());
         }
         if (kind != null) {
             where.append(" and movement.kind = ?");
+            countWhere.append(" and movement.kind = ?");
             parameters.add(kind.name());
         }
 
-        Long totalElements = jdbcTemplate.queryForObject(
-                "select count(*) from (" + where + ") movement_count", Long.class, parameters.toArray());
+        Long totalElements = jdbcTemplate.queryForObject(countWhere.toString(), Long.class, parameters.toArray());
         String pageSql = where + " order by movement.requested_at desc, movement.id desc limit ? offset ?";
         List<Object> pageParameters = new ArrayList<>(parameters);
         pageParameters.add(pageQuery.size());
@@ -95,9 +111,13 @@ public class OwnershipMovementQueryPersistenceAdapter implements OwnershipMoveme
         validateSaleLink(resultSet, kind, movementSaleId, joinedSaleId);
         return new OwnershipMovementItem(
                 resultSet.getLong("movement_id"),
-                resultSet.getLong("goat_id"),
+                nullableLong(resultSet, "movement_goat_id"),
+                resultSet.getString("goat_name"),
+                resultSet.getString("goat_registration_number"),
                 nullableLong(resultSet, "source_farm_id"),
+                resultSet.getString("source_farm_name"),
                 resultSet.getLong("target_farm_id"),
+                resultSet.getString("target_farm_name"),
                 kind,
                 status,
                 direction,
@@ -128,7 +148,7 @@ public class OwnershipMovementQueryPersistenceAdapter implements OwnershipMoveme
 
         boolean validSaleLink = movementSaleId != null
                 && Objects.equals(movementSaleId, joinedSaleId)
-                && Objects.equals(nullableLong(resultSet, "goat_id"), nullableLong(resultSet, "sale_goat_id"))
+                && Objects.equals(nullableLong(resultSet, "movement_goat_id"), nullableLong(resultSet, "sale_goat_id"))
                 && Objects.equals(nullableLong(resultSet, "source_farm_id"), nullableLong(resultSet, "sale_source_farm_id"))
                 && Objects.equals(nullableLong(resultSet, "target_farm_id"), nullableLong(resultSet, "sale_target_farm_id"));
         if (!validSaleLink) {
