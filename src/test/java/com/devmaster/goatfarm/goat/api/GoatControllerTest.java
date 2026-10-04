@@ -204,6 +204,7 @@ class GoatControllerTest {
                 .active(20)
                 .inactive(2)
                 .sold(1)
+                .historicallySold(3)
                 .deceased(1)
                 .breeds(List.of(
                         GoatBreedSummaryVO.builder().label("SAANEN").count(10).build(),
@@ -216,6 +217,8 @@ class GoatControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(24))
                 .andExpect(jsonPath("$.males").value(6))
+                .andExpect(jsonPath("$.sold").value(1))
+                .andExpect(jsonPath("$.historicallySold").value(3))
                 .andExpect(jsonPath("$.breeds[0].label").value("SAANEN"))
                 .andExpect(jsonPath("$.breeds[0].count").value(10));
 

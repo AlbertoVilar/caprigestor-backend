@@ -28,6 +28,7 @@ import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.HistoricalAnimalSaleQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatCreatorProvenanceVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
@@ -58,6 +59,7 @@ import java.util.Objects;
 @Service
 public class GoatBusiness implements GoatManagementUseCase {
     private final GoatPersistencePort goatPort;
+    private final HistoricalAnimalSaleQueryPort historicalAnimalSaleQueryPort;
     private final GoatFarmPersistencePort goatFarmPort;
     private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
@@ -70,7 +72,8 @@ public class GoatBusiness implements GoatManagementUseCase {
     private final CreatorReferencePersistencePort creatorReferencePersistencePort;
     private final Clock clock;
 
-    public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
+    public GoatBusiness(GoatPersistencePort goatPort, HistoricalAnimalSaleQueryPort historicalAnimalSaleQueryPort,
+                        GoatFarmPersistencePort goatFarmPort,
                         FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder,
                         OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort,
                         CurrentPrincipalQueryUseCase currentPrincipalQuery,
@@ -80,6 +83,7 @@ public class GoatBusiness implements GoatManagementUseCase {
                         CreatorReferencePersistencePort creatorReferencePersistencePort,
                         Clock clock) {
         this.goatPort = goatPort;
+        this.historicalAnimalSaleQueryPort = historicalAnimalSaleQueryPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
@@ -378,7 +382,9 @@ public class GoatBusiness implements GoatManagementUseCase {
         if (summary.withoutBreed() > 0) breeds.add(GoatBreedSummaryVO.builder().breed(null).label("Não informada").count(summary.withoutBreed()).build());
         breeds.sort(Comparator.comparingLong(GoatBreedSummaryVO::getCount).reversed().thenComparing(GoatBreedSummaryVO::getLabel, String.CASE_INSENSITIVE_ORDER));
         return GoatHerdSummaryVO.builder().total(summary.total()).males(summary.males()).females(summary.females())
-                .active(summary.active()).inactive(summary.inactive()).sold(summary.sold()).deceased(summary.deceased()).breeds(breeds).build();
+                .active(summary.active()).inactive(summary.inactive()).sold(summary.sold())
+                .historicallySold(historicalAnimalSaleQueryPort.countDistinctSoldGoatsByFarmId(farmId))
+                .deceased(summary.deceased()).breeds(breeds).build();
     }
 
     private Goat findOrThrow(Long farmId, String token) {
