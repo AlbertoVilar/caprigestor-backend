@@ -41,6 +41,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -228,6 +229,82 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     @Test
+    void genericCreateAllowsOnlyPesagemAndOutro() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+
+        for (EventType eventType : new EventType[]{EventType.PESAGEM, EventType.OUTRO}) {
+            mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                            .header("Authorization", bearer(token))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(eventPayload(managedGoat, "Allowed " + eventType,
+                                    domainToday().minusDays(1), eventType)))
+                    .andExpect(status().isCreated());
+        }
+
+        org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void genericCreateRejectsEveryLegacySpecializedTypeWithStable422Code() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+        long existingEvents = eventRepository.count();
+
+        for (EventType eventType : new EventType[]{EventType.COBERTURA, EventType.PARTO, EventType.MORTE,
+                EventType.SAUDE, EventType.VACINACAO, EventType.TRANSFERENCIA, EventType.MUDANCA_PROPRIETARIO}) {
+            mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                            .header("Authorization", bearer(token))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(eventPayload(managedGoat, "Rejected " + eventType,
+                                    domainToday().minusDays(1), eventType)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+        }
+
+        org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(existingEvents);
+    }
+
+    @Test
+    void genericUpdateRejectsLegacyTransitionAndKeepsHistoricalLegacyEventReadOnly() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+        long writableEventId = createEvent(token, managedFarm, managedGoat, "Writable event");
+
+        mockMvc.perform(put(eventPath(managedFarm, managedGoat) + "/{eventId}", writableEventId)
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Convert to vaccine", domainToday().minusDays(1),
+                                EventType.VACINACAO)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+        org.assertj.core.api.Assertions.assertThat(eventRepository.findById(writableEventId).orElseThrow().getEventType())
+                .isEqualTo(EventType.OUTRO);
+
+        Event legacyEvent = createPersistedEvent(managedGoat, "Historical vaccine event", managedFarm.getId());
+        mockMvc.perform(put(eventPath(managedFarm, managedGoat) + "/{eventId}", legacyEvent.getId())
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Edit historical", domainToday().minusDays(1),
+                                EventType.OUTRO)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+        org.assertj.core.api.Assertions.assertThat(eventRepository.findById(legacyEvent.getId()).orElseThrow().getEventType())
+                .isEqualTo(EventType.VACINACAO);
+    }
+
+    @Test
+    void historicalLegacyVaccinationRemainsReadableByIdAndFilter() throws Exception {
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(get(eventPath(otherFarm, otherGoat) + "/{eventId}", otherFarmEvent.getId())
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventType").value("VACINACAO"));
+        mockMvc.perform(get(eventPath(otherFarm, otherGoat) + "/filter?eventType=VACINACAO")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].eventType").value("VACINACAO"));
+    }
+
+    @Test
     void formerOwnerCannotCreateEventAfterCanonicalTransfer() throws Exception {
         LocalDate transferDate = domainToday().minusDays(2);
         transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
@@ -357,8 +434,13 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private Event createPersistedEvent(GoatEntity goat, String description) {
+        return createPersistedEvent(goat, description, null);
+    }
+
+    private Event createPersistedEvent(GoatEntity goat, String description, Long recordingFarmId) {
         Event event = new Event();
         event.setGoat(goat);
+        event.setRecordingFarmId(recordingFarmId);
         event.setEventType(EventType.VACINACAO);
         event.setDate(domainToday().minusDays(1));
         event.setDescription(description);
@@ -386,11 +468,15 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private String eventPayload(GoatEntity goat, String description, LocalDate date) {
+        return eventPayload(goat, description, date, EventType.OUTRO);
+    }
+
+    private String eventPayload(GoatEntity goat, String description, LocalDate date, EventType eventType) {
         return String.format(
-                "{\"goatId\":\"%s\",\"eventType\":\"VACINACAO\",\"date\":\"%s\","
+                "{\"goatId\":\"%s\",\"eventType\":\"%s\",\"date\":\"%s\","
                         + "\"description\":\"%s\",\"location\":\"Farm\","
                         + "\"veterinarian\":\"Veterinarian\",\"outcome\":\"Completed\"}",
-                goat.getRegistrationNumber(), date, description);
+                goat.getRegistrationNumber(), eventType, date, description);
     }
 
     private String bearer(String token) {

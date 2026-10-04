@@ -4,6 +4,7 @@ import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException
 import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.events.application.exception.GenericEventTypeNotWritableException;
 import com.devmaster.goatfarm.events.application.ports.out.EventPersistencePort;
 import com.devmaster.goatfarm.events.application.ports.out.EventPublisher;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
@@ -87,6 +88,30 @@ class EventBusinessProvenanceTest {
     }
 
     @Test
+    void createRejectsLegacySpecializedEventTypesBeforePersistence() {
+        when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
+                .thenReturn(Optional.of(goat(FARM_B)));
+
+        List.of(EventType.COBERTURA, EventType.PARTO, EventType.MORTE, EventType.SAUDE,
+                        EventType.VACINACAO, EventType.TRANSFERENCIA, EventType.MUDANCA_PROPRIETARIO)
+                .forEach(eventType -> assertThatThrownBy(() -> business.createEvent(
+                                FARM_B, REGISTRATION_NUMBER, request(eventType, VALID_DATE)))
+                        .isInstanceOf(GenericEventTypeNotWritableException.class));
+
+        verify(eventPersistence, never()).save(any());
+    }
+
+    @Test
+    void createAllowsOtherAsGenericEventType() {
+        when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
+                .thenReturn(Optional.of(goat(FARM_B)));
+
+        business.createEvent(FARM_B, REGISTRATION_NUMBER, request(EventType.OUTRO, VALID_DATE));
+
+        verify(eventPersistence).save(any(OperationalEvent.class));
+    }
+
+    @Test
     void eventCreationAcceptsDateOfFirstCanonicalAbccImportStartedAfterMidnight() {
         when(goatReferences.findReferenceByRegistrationNumber(REGISTRATION_NUMBER))
                 .thenReturn(Optional.of(goat(FARM_B)));
@@ -167,6 +192,28 @@ class EventBusinessProvenanceTest {
         assertThat(captor.getValue().recordingFarmId()).isEqualTo(FARM_B);
         verify(ownershipGuard).requireCurrentFarm(GOAT_ID, FARM_B);
         verify(ownershipGuard).requireUnambiguousOwnershipOnDate(GOAT_ID, FARM_B, VALID_DATE);
+    }
+
+    @Test
+    void updateRejectsChangingWritableEventToLegacySpecializedType() {
+        givenEvent(FARM_B, VALID_DATE.minusDays(1), EventType.OUTRO);
+
+        assertThatThrownBy(() -> business.updateEvent(FARM_B, REGISTRATION_NUMBER, EVENT_ID,
+                request(EventType.VACINACAO, VALID_DATE)))
+                .isInstanceOf(GenericEventTypeNotWritableException.class);
+
+        verify(eventPersistence, never()).save(any());
+    }
+
+    @Test
+    void updateTreatsHistoricalLegacyEventAsReadOnly() {
+        givenEvent(FARM_B, VALID_DATE.minusDays(1), EventType.VACINACAO);
+
+        assertThatThrownBy(() -> business.updateEvent(FARM_B, REGISTRATION_NUMBER, EVENT_ID,
+                request(EventType.OUTRO, VALID_DATE)))
+                .isInstanceOf(GenericEventTypeNotWritableException.class);
+
+        verify(eventPersistence, never()).save(any());
     }
 
     @Test
@@ -286,9 +333,13 @@ class EventBusinessProvenanceTest {
     }
 
     private void givenEvent(Long recordingFarmId, LocalDate date) {
+        givenEvent(recordingFarmId, date, EventType.PESAGEM);
+    }
+
+    private void givenEvent(Long recordingFarmId, LocalDate date, EventType eventType) {
         when(eventPersistence.findByIdAndGoatId(EVENT_ID, GOAT_ID))
                 .thenReturn(Optional.of(new OperationalEvent(EVENT_ID, GOAT_ID, recordingFarmId,
-                        REGISTRATION_NUMBER, "Goat", EventType.PESAGEM, date,
+                        REGISTRATION_NUMBER, "Goat", eventType, date,
                         "before", "farm", "vet", "done")));
     }
 
@@ -297,7 +348,11 @@ class EventBusinessProvenanceTest {
     }
 
     private EventRequestVO request(LocalDate date) {
-        return new EventRequestVO(REGISTRATION_NUMBER, EventType.PESAGEM, date,
+        return request(EventType.PESAGEM, date);
+    }
+
+    private EventRequestVO request(EventType eventType, LocalDate date) {
+        return new EventRequestVO(REGISTRATION_NUMBER, eventType, date,
                 "after", "farm", "vet", "done");
     }
 }

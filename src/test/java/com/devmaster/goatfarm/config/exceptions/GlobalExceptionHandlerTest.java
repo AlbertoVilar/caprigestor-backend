@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.events.application.exception.GenericEventTypeNotWritableException;
 import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
 import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
@@ -221,5 +222,18 @@ class GlobalExceptionHandlerTest {
         assertEquals(GoatOwnershipNotValidOnDateException.ERROR_CODE, response.getBody().getCode());
         assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
                 "ownership".equals(error.getFieldName()) && message.equals(error.getMessage())));
+    }
+
+    @Test
+    void shouldHandleGenericEventTypeNotWritableWithStable422Code() {
+        ResponseEntity<ValidationError> response = globalExceptionHandler.genericEventTypeNotWritable(
+                new GenericEventTypeNotWritableException(), httpServletRequest);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(GenericEventTypeNotWritableException.ERROR_CODE, response.getBody().getCode());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "eventType".equals(error.getFieldName())
+                        && error.getMessage().contains("módulo especializado")));
     }
 }
