@@ -22,6 +22,8 @@ import com.devmaster.goatfarm.commercial.persistence.repository.AnimalSaleRevers
 import com.devmaster.goatfarm.farm.persistence.repository.GoatFarmRepository;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.HistoricalAnimalSaleQueryPort;
+import com.devmaster.goatfarm.commercial.enums.SalePaymentStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -32,7 +34,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
-public class CommercialPersistenceAdapter implements CustomerPersistencePort, AnimalSalePersistencePort, MilkSalePersistencePort, AnimalSaleReversalPersistencePort {
+public class CommercialPersistenceAdapter implements CustomerPersistencePort, AnimalSalePersistencePort, MilkSalePersistencePort,
+        AnimalSaleReversalPersistencePort, HistoricalAnimalSaleQueryPort {
 
     private final CustomerRepository customerRepository;
     private final AnimalSaleRepository animalSaleRepository;
@@ -145,6 +148,11 @@ public class CommercialPersistenceAdapter implements CustomerPersistencePort, An
     @Override
     public List<AnimalSaleRecord> findAnimalSalesByFarmId(Long farmId) {
         return animalSaleRepository.findByFarm_IdOrderBySaleDateDescIdDesc(farmId).stream().map(this::toRecord).toList();
+    }
+
+    @Override
+    public long countDistinctSoldGoatsByFarmId(Long farmId) {
+        return animalSaleRepository.countDistinctCompletedSoldGoatsByFarmId(farmId, SalePaymentStatus.PAID);
     }
 
     @Override

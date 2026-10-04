@@ -15,6 +15,7 @@ import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
 import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.HistoricalAnimalSaleQueryPort;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
@@ -46,6 +47,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class GoatBusinessTest {
     @Mock private GoatPersistencePort goatPort;
+    @Mock private HistoricalAnimalSaleQueryPort historicalAnimalSaleQueryPort;
     @Mock private GoatFarmPersistencePort goatFarmPort;
     @Mock private FarmAuthorizationUseCase ownershipService;
     @Mock private CurrentPrincipalQueryUseCase currentPrincipalQuery;
@@ -63,7 +65,7 @@ class GoatBusinessTest {
 
     @BeforeEach
     void setUp() {
-        business = new GoatBusiness(goatPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard, creatorReferencePersistencePort, Clock.system(ZoneId.of("America/Sao_Paulo")));
+        business = new GoatBusiness(goatPort, historicalAnimalSaleQueryPort, goatFarmPort, ownershipService, entityFinder, audit, parentage, currentPrincipalQuery, goatOwnershipExitUseCase, goatOwnershipInitializationUseCase, goatOwnershipGuard, creatorReferencePersistencePort, Clock.system(ZoneId.of("America/Sao_Paulo")));
         request = new GoatRequestVO();
         request.setRegistrationNumber("1643222002"); request.setName("Xeque"); request.setGender(Gender.MACHO);
         request.setBreed(GoatBreed.ALPINA); request.setBirthDate(LocalDate.of(2025, 1, 1));
@@ -589,6 +591,10 @@ class GoatBusinessTest {
         assertThat(page.totalElements()).isEqualTo(1);
 
         when(goatPort.getHerdSummary(1L)).thenReturn(new com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot(1, 1, 0, 1, 0, 0, 0, List.of(), 1));
-        assertThat(business.getGoatHerdSummary(1L).getTotal()).isEqualTo(1);
+        when(historicalAnimalSaleQueryPort.countDistinctSoldGoatsByFarmId(1L)).thenReturn(3L);
+        GoatHerdSummaryVO summary = business.getGoatHerdSummary(1L);
+        assertThat(summary.getTotal()).isEqualTo(1);
+        assertThat(summary.getSold()).isZero();
+        assertThat(summary.getHistoricallySold()).isEqualTo(3L);
     }
 }

@@ -277,7 +277,17 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 com `@PublicEndpoint` no controller e liberada pelo `SecurityConfig`. Pode ser
 chamada sem token e retorna `200` quando a fazenda existe. O DTO contém apenas
 agregados do rebanho (total, sexo, situação e distribuição por raça), sem
-informações de mutação ou dados de autorização.
+informações de mutação ou dados de autorização. Os campos `sold` e
+`historicallySold` têm semânticas diferentes:
+
+- `sold`: cabras atualmente projetadas na fazenda consultada com status
+  `VENDIDO`;
+- `historicallySold`: quantidade de cabras distintas com ao menos uma venda
+  concluída válida realizada pela fazenda como vendedora. Venda externa exige
+  pagamento `PAID` e ausência de reversão; venda interna exige pagamento `PAID`
+  e transferência canônica `INTERNAL_SALE` em estado `COMPLETED`. Transferência
+  simples não conta. Uma mesma cabra conta uma única vez, mesmo que tenha sido
+  vendida mais de uma vez pela mesma fazenda.
 
 As operações de escrita do mesmo recurso continuam exigindo suas políticas de
 fazenda (`@CanManageFarm` ou `@FarmOwnerOnly`); a consulta pública não altera

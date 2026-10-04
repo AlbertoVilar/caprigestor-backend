@@ -25,6 +25,31 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
     List<AnimalSale> findByTargetFarm_IdOrderBySaleDateDescIdDesc(Long targetFarmId);
 
     @Query("""
+            select count(distinct sale.goatTechnicalId)
+            from AnimalSale sale
+            where sale.farm.id = :farmId
+              and sale.paymentStatus = :paymentStatus
+              and (
+                  (sale.targetFarm is null and not exists (
+                      select reversal.id
+                      from AnimalSaleReversal reversal
+                      where reversal.sale.id = sale.id
+                  ))
+                  or (sale.targetFarm is not null and exists (
+                      select transfer.id
+                      from com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransferEntity transfer
+                      where transfer.saleId = sale.id
+                        and transfer.kind = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE
+                        and transfer.status = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED
+                  ))
+              )
+            """)
+    long countDistinctCompletedSoldGoatsByFarmId(
+            @Param("farmId") Long farmId,
+            @Param("paymentStatus") SalePaymentStatus paymentStatus
+    );
+
+    @Query("""
             select coalesce(sum(a.amount), 0)
             from AnimalSale a
             where a.farm.id = :farmId

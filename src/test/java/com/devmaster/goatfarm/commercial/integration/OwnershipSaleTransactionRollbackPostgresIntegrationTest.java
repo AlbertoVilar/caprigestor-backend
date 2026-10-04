@@ -27,6 +27,7 @@ import com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransfer
 import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.devmaster.goatfarm.goatownership.persistence.repository.GoatCurrentOwnerProjectionRepository;
 import com.devmaster.goatfarm.goatownership.persistence.repository.OwnershipTransferRepository;
+import com.devmaster.goatfarm.goat.application.ports.out.HistoricalAnimalSaleQueryPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,6 +45,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -86,6 +88,56 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     @Autowired private AnimalSaleReversalRepository reversals;
     @Autowired private OwnershipTransferRepository transfers;
     @Autowired private GoatOwnershipPeriodRepository periods;
+    @Autowired private HistoricalAnimalSaleQueryPort historicalAnimalSales;
+
+    @Test
+    void historicalSoldCountUsesDistinctCompletedNonReversedSalesBySeller() {
+        SaleFixture fixture = fixture("history-query-" + System.nanoTime());
+        User seller = fixture.source().getUser();
+        GoatEntity externalPaidGoat = goats.findById(fixture.goatId()).orElseThrow();
+        GoatEntity externalOpenGoat = goat(fixture.source(), seller, registration(fixture.source(), 2), "External open");
+        GoatEntity externalReversedGoat = goat(fixture.source(), seller, registration(fixture.source(), 3), "External reversed");
+        GoatEntity internalCompletedGoat = goat(fixture.source(), seller, registration(fixture.source(), 4), "Internal completed");
+        GoatEntity internalPendingGoat = goat(fixture.source(), seller, registration(fixture.source(), 5), "Internal pending");
+        GoatEntity internalCancelledGoat = goat(fixture.source(), seller, registration(fixture.source(), 6), "Internal cancelled");
+        GoatEntity resoldGoat = goat(fixture.source(), seller, registration(fixture.source(), 7), "Resold");
+        GoatEntity secondInternalGoat = goat(fixture.source(), seller, registration(fixture.source(), 8), "Second internal");
+        GoatEntity simpleTransferGoat = goat(fixture.source(), seller, registration(fixture.source(), 9), "Simple transfer");
+        GoatEntity internalRejectedGoat = goat(fixture.source(), seller, registration(fixture.source(), 10), "Internal rejected");
+
+        AnimalSale externalPaid = saveSale(fixture.source(), null, externalPaidGoat, SalePaymentStatus.PAID);
+        saveSale(fixture.source(), null, externalOpenGoat, SalePaymentStatus.OPEN);
+        AnimalSale externalReversed = saveSale(fixture.source(), null, externalReversedGoat, SalePaymentStatus.PAID);
+        AnimalSaleReversal reversal = new AnimalSaleReversal();
+        reversal.setSale(externalReversed);
+        reversal.setReason("integration fixture reversal");
+        reversal.setReversedAt(LocalDateTime.now());
+        reversals.saveAndFlush(reversal);
+
+        AnimalSale internalCompleted = saveSale(fixture.source(), fixture.target(), internalCompletedGoat, SalePaymentStatus.PAID);
+        saveTransfer(internalCompleted, internalCompletedGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED);
+        AnimalSale internalPending = saveSale(fixture.source(), fixture.target(), internalPendingGoat, SalePaymentStatus.OPEN);
+        saveTransfer(internalPending, internalPendingGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REQUESTED);
+        AnimalSale internalCancelled = saveSale(fixture.source(), fixture.target(), internalCancelledGoat, SalePaymentStatus.OPEN);
+        saveTransfer(internalCancelled, internalCancelledGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED);
+        AnimalSale internalRejected = saveSale(fixture.source(), fixture.target(), internalRejectedGoat, SalePaymentStatus.OPEN);
+        saveTransfer(internalRejected, internalRejectedGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.REJECTED);
+
+        AnimalSale resoldFirst = saveSale(fixture.source(), fixture.target(), resoldGoat, SalePaymentStatus.PAID);
+        saveTransfer(resoldFirst, resoldGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED);
+        AnimalSale resoldAgain = saveSale(fixture.source(), fixture.target(), resoldGoat, SalePaymentStatus.PAID);
+        saveTransfer(resoldAgain, resoldGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED);
+        AnimalSale secondInternal = saveSale(fixture.source(), fixture.target(), secondInternalGoat, SalePaymentStatus.PAID);
+        saveTransfer(secondInternal, secondInternalGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED);
+        saveTransfer(null, simpleTransferGoat, fixture, com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED,
+                com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_TRANSFER);
+
+        internalCompletedGoat.setFarm(fixture.target());
+        goats.saveAndFlush(internalCompletedGoat);
+
+        assertThat(historicalAnimalSales.countDistinctSoldGoatsByFarmId(fixture.source().getId())).isEqualTo(4L);
+        assertThat(historicalAnimalSales.countDistinctSoldGoatsByFarmId(fixture.target().getId())).isZero();
+    }
 
     @Test
     void projectionFailureRollsBackSalePaymentPeriodsProjectionAndTransfer() {
@@ -443,6 +495,60 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
         sale.setPaymentStatus(SalePaymentStatus.PAID);
         sale.setPaymentDate(paymentDate);
         return sale;
+    }
+
+    private AnimalSale saveSale(GoatFarm seller, GoatFarm target, GoatEntity goat, SalePaymentStatus paymentStatus) {
+        AnimalSale sale = new AnimalSale();
+        sale.setFarm(seller);
+        sale.setTargetFarm(target);
+        sale.setGoatTechnicalId(goat.getTechnicalId());
+        sale.setGoatRegistrationNumber(goat.getRegistrationNumber());
+        sale.setGoatName(goat.getName());
+        sale.setSaleDate(LocalDate.of(2026, 9, 19));
+        sale.setAmount(new BigDecimal("100.00"));
+        sale.setDueDate(LocalDate.of(2026, 9, 25));
+        sale.setPaymentStatus(paymentStatus);
+        sale.setPaymentDate(paymentStatus == SalePaymentStatus.PAID ? LocalDate.of(2026, 9, 19) : null);
+        return animalSales.saveAndFlush(sale);
+    }
+
+    private void saveTransfer(AnimalSale sale, GoatEntity goat, SaleFixture fixture,
+                              com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus status) {
+        saveTransfer(sale, goat, fixture, status,
+                com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE);
+    }
+
+    private void saveTransfer(AnimalSale sale, GoatEntity goat, SaleFixture fixture,
+                              com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus status,
+                              com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind kind) {
+        OwnershipTransferEntity transfer = new OwnershipTransferEntity();
+        transfer.setGoatId(goat.getTechnicalId());
+        transfer.setSourceFarmId(fixture.source().getId());
+        transfer.setTargetFarmId(fixture.target().getId());
+        transfer.setKind(kind);
+        transfer.setStatus(status);
+        transfer.setReason("historical sale query integration fixture");
+        transfer.setIdempotencyKey(java.util.UUID.randomUUID().toString());
+        transfer.setRequestedAt(Instant.now());
+        transfer.setRequestedBy(fixture.source().getUser().getId());
+        transfer.setSaleId(sale == null ? null : sale.getId());
+        if (status == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED) {
+            Instant completedAt = Instant.now();
+            transfer.setEffectiveAt(completedAt);
+            transfer.setCompletedAt(completedAt);
+            transfer.setCompletedBy(fixture.source().getUser().getId());
+            if (kind != com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE) {
+                transfer.setAcceptedAt(completedAt);
+                transfer.setAcceptedBy(fixture.source().getUser().getId());
+            }
+        } else if (status == com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.CANCELLED) {
+            transfer.setCancelledAt(Instant.now());
+        }
+        transfers.saveAndFlush(transfer);
+    }
+
+    private String registration(GoatFarm farm, int suffix) {
+        return farm.getTod() + String.format("%04d", suffix);
     }
 
     private GoatFarm farm(String name, String tod, User user) {
