@@ -129,6 +129,28 @@ ou OPERATOR vinculado); `canAdministerFarm` segue `@FarmOwnerOnly` (ADMIN ou
 FARM_OWNER da própria fazenda). O vínculo operador–fazenda é sempre decidido
 no backend.
 
+### Eventos genéricos do animal
+
+Rotas canônicas:
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/events`
+- `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/events`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/events/filter?eventType=&startDate=&endDate=`
+- `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+
+Eventos genéricos aceitam gravação somente para `PESAGEM` e `OUTRO`. Os valores
+legados `COBERTURA`, `PARTO`, `MORTE`, `SAUDE`, `VACINACAO`, `TRANSFERENCIA` e
+`MUDANCA_PROPRIETARIO` permanecem disponíveis em respostas, filtros e registros
+históricos, mas não podem ser criados nem atualizados por este módulo. Eventos
+históricos desses tipos podem ser lidos e excluídos conforme as regras de acesso
+existentes; o fluxo genérico não é fonte de verdade para Saúde, Reprodução,
+Ownership/Transferência ou Saída/Morte.
+
+Tentativa de POST/PUT com um desses tipos retorna `422` e o código
+`GENERIC_EVENT_TYPE_NOT_WRITABLE`. Use os fluxos especializados de Saúde,
+Reprodução, Ownership/Transferência ou Saída do animal.
+
 `GET /api/v1/goatfarms/{id}` permanece público e sanitizado para o catálogo.
 Para preencher a tela de edição, o frontend usa
 `GET /api/v1/goatfarms/{farmId}/management`, protegido por `@FarmOwnerOnly`.

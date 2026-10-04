@@ -9,6 +9,14 @@ public enum EventType {
     TRANSFERENCIA,
     MUDANCA_PROPRIETARIO,
     PESAGEM,
-    OUTRO
+    OUTRO;
+
+    /**
+     * Whether this value can be written through the generic Events module.
+     * Legacy values remain in the enum so persisted history stays readable.
+     */
+    public boolean isGenericWritable() {
+        return this == PESAGEM || this == OUTRO;
+    }
 }
 

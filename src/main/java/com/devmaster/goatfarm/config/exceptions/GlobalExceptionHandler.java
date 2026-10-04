@@ -9,6 +9,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.events.application.exception.GenericEventTypeNotWritableException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -51,6 +52,19 @@ public class GlobalExceptionHandler {
                 Instant.now(), status.value(), "Ownership do animal inválido na data informada", request.getRequestURI());
         err.setCode(GoatOwnershipNotValidOnDateException.ERROR_CODE);
         err.addError("ownership", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(GenericEventTypeNotWritableException.class)
+    public ResponseEntity<ValidationError> genericEventTypeNotWritable(
+            GenericEventTypeNotWritableException e,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ValidationError err = new ValidationError(
+                Instant.now(), status.value(), "Tipo de evento não permitido neste módulo", request.getRequestURI());
+        err.setCode(GenericEventTypeNotWritableException.ERROR_CODE);
+        err.addError("eventType", e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
 

@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.events.application.ports.out.EventPage;
 import com.devmaster.goatfarm.events.application.ports.out.EventPageQuery;
 import com.devmaster.goatfarm.events.application.ports.out.EventPersistencePort;
 import com.devmaster.goatfarm.events.application.ports.out.EventPublisher;
+import com.devmaster.goatfarm.events.application.exception.GenericEventTypeNotWritableException;
 import com.devmaster.goatfarm.events.business.bo.EventPublication;
 import com.devmaster.goatfarm.events.business.bo.EventRequestVO;
 import com.devmaster.goatfarm.events.business.bo.EventResponseVO;
@@ -72,6 +73,7 @@ public class EventBusiness implements EventManagementUseCase {
         requireProjectionMatchesFarm(goat, farmId);
         requireDateNotInFuture(request.date());
         requireEventOwnershipProvenanceOnDate(goat.id(), farmId, request.date());
+        requireGenericWritable(request.eventType());
 
         OperationalEvent saved = eventPersistencePort.save(OperationalEvent.create(
                 toEventReference(goat), farmId, request.eventType(), request.date(), request.description(), request.location(),
@@ -89,6 +91,8 @@ public class EventBusiness implements EventManagementUseCase {
 
         OperationalEvent existing = findEventByStructuralIdentity(eventId, goat);
         requireMutationProvenance(existing, farmId);
+        requireGenericWritable(existing.eventType());
+        requireGenericWritable(request.eventType());
         requireDateNotInFuture(request.date());
         requireEventOwnershipProvenanceOnDate(goat.id(), existing.recordingFarmId(), request.date());
         OperationalEvent updated = eventPersistencePort.save(existing.revise(
@@ -165,6 +169,12 @@ public class EventBusiness implements EventManagementUseCase {
     private void requireDateNotInFuture(LocalDate date) {
         if (date.isAfter(LocalDate.now(clock.withZone(OWNERSHIP_CALENDAR_ZONE)))) {
             throw new InvalidArgumentException("date", "A data do evento não pode estar no futuro.");
+        }
+    }
+
+    private void requireGenericWritable(EventType eventType) {
+        if (!eventType.isGenericWritable()) {
+            throw new GenericEventTypeNotWritableException();
         }
     }
 
