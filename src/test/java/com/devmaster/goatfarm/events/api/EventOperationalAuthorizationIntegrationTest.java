@@ -291,6 +291,50 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     @Test
+    void genericDeleteRejectsEveryLegacySpecializedTypeAndKeepsHistoryPersisted() throws Exception {
+        String ownerToken = loginAndGetToken(owner.getEmail());
+        String operatorToken = loginAndGetToken(linkedOperator.getEmail());
+        EventType[] specializedTypes = {EventType.COBERTURA, EventType.PARTO, EventType.MORTE,
+                EventType.SAUDE, EventType.VACINACAO, EventType.TRANSFERENCIA,
+                EventType.MUDANCA_PROPRIETARIO};
+
+        for (EventType eventType : specializedTypes) {
+            Event legacyEvent = createPersistedEvent(managedGoat, "Historical " + eventType,
+                    managedFarm.getId(), eventType);
+
+            mockMvc.perform(delete(eventPath(managedFarm, managedGoat) + "/{eventId}", legacyEvent.getId())
+                            .header("Authorization", bearer(operatorToken)))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(delete(eventPath(managedFarm, managedGoat) + "/{eventId}", legacyEvent.getId())
+                            .header("Authorization", bearer(ownerToken)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+
+            org.assertj.core.api.Assertions.assertThat(eventRepository.findById(legacyEvent.getId()))
+                    .isPresent()
+                    .get()
+                    .extracting(Event::getEventType)
+                    .isEqualTo(eventType);
+        }
+    }
+
+    @Test
+    void genericDeleteStillAllowsPesagemAndOutro() throws Exception {
+        String ownerToken = loginAndGetToken(owner.getEmail());
+
+        for (EventType eventType : new EventType[]{EventType.PESAGEM, EventType.OUTRO}) {
+            long eventId = createEvent(ownerToken, managedFarm, managedGoat,
+                    "Writable " + eventType, eventType);
+
+            mockMvc.perform(delete(eventPath(managedFarm, managedGoat) + "/{eventId}", eventId)
+                            .header("Authorization", bearer(ownerToken)))
+                    .andExpect(status().isNoContent());
+            org.assertj.core.api.Assertions.assertThat(eventRepository.existsById(eventId)).isFalse();
+        }
+    }
+
+    @Test
     void historicalLegacyVaccinationRemainsReadableByIdAndFilter() throws Exception {
         String token = loginAndGetToken(admin.getEmail());
 
@@ -388,10 +432,15 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private long createEvent(String token, GoatFarm farm, GoatEntity goat, String description) throws Exception {
+        return createEvent(token, farm, goat, description, EventType.OUTRO);
+    }
+
+    private long createEvent(String token, GoatFarm farm, GoatEntity goat, String description,
+                             EventType eventType) throws Exception {
         MvcResult result = mockMvc.perform(post(eventPath(farm, goat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(eventPayload(goat, description)))
+                        .content(eventPayload(goat, description, domainToday().minusDays(1), eventType)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
@@ -438,10 +487,15 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private Event createPersistedEvent(GoatEntity goat, String description, Long recordingFarmId) {
+        return createPersistedEvent(goat, description, recordingFarmId, EventType.VACINACAO);
+    }
+
+    private Event createPersistedEvent(GoatEntity goat, String description, Long recordingFarmId,
+                                       EventType eventType) {
         Event event = new Event();
         event.setGoat(goat);
         event.setRecordingFarmId(recordingFarmId);
-        event.setEventType(EventType.VACINACAO);
+        event.setEventType(eventType);
         event.setDate(domainToday().minusDays(1));
         event.setDescription(description);
         event.setLocation("Farm");

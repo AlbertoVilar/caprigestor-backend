@@ -141,6 +141,7 @@ public class EventBusiness implements EventManagementUseCase {
         goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
         OperationalEvent existing = findEventByStructuralIdentity(eventId, goat);
         requireMutationProvenance(existing, farmId);
+        requireGenericWritable(existing.eventType());
         eventPersistencePort.deleteById(eventId);
     }
 

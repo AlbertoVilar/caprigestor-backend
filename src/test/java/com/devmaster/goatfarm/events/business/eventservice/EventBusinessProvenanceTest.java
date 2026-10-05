@@ -296,6 +296,29 @@ class EventBusinessProvenanceTest {
     }
 
     @Test
+    void currentOwnerCanDeleteGenericOtherEvent() {
+        givenEvent(FARM_B, VALID_DATE, EventType.OUTRO);
+
+        business.deleteEvent(FARM_B, REGISTRATION_NUMBER, EVENT_ID);
+
+        verify(eventPersistence).deleteById(EVENT_ID);
+    }
+
+    @Test
+    void currentOwnerCannotDeleteLegacySpecializedEvents() {
+        List.of(EventType.COBERTURA, EventType.PARTO, EventType.MORTE, EventType.SAUDE,
+                        EventType.VACINACAO, EventType.TRANSFERENCIA, EventType.MUDANCA_PROPRIETARIO)
+                .forEach(eventType -> {
+                    givenEvent(FARM_B, VALID_DATE, eventType);
+
+                    assertThatThrownBy(() -> business.deleteEvent(FARM_B, REGISTRATION_NUMBER, EVENT_ID))
+                            .isInstanceOf(GenericEventTypeNotWritableException.class);
+                });
+
+        verify(eventPersistence, never()).deleteById(anyLong());
+    }
+
+    @Test
     void currentOwnerCannotDeleteFormerFarmProvenance() {
         givenEvent(FARM_A, VALID_DATE);
 
