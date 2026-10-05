@@ -1,5 +1,5 @@
 ﻿# Modulo Commercial (Comercial e Financeiro Operacional Minimo)
-Ultima atualizacao: 2026-09-07
+Ultima atualizacao: 2026-09-13
 Escopo: estado tecnico e funcional do modulo `commercial` apos a consolidacao da camada comercial minima e da etapa 1 do financeiro operacional da fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API Contracts](../03-api/API_CONTRACTS.md), [Inventory](./INVENTORY_MODULE.md)
 
@@ -22,6 +22,15 @@ O escopo atual cobre:
 - recebiveis minimos com estado `OPEN` ou `PAID`;
 - despesas operacionais da fazenda;
 - resumo mensal simples com receitas, saidas e saldo operacional.
+
+Na wave DEV-A11-I3-E1, a aplicação comercial passou a usar os modelos neutros
+`CustomerRecord`, `AnimalSaleRecord`/`AnimalSaleCommand` e
+`MilkSaleRecord`/`MilkSaleCommand`. Os três ports de persistência são coesos e
+os adapters resolvem as entidades JPA de Farm e Customer somente na borda. O
+Finance operacional segue o mesmo limite com `OperationalExpenseCommand`,
+`OperationalExpenseRecord` e `OperationalFinancePersistencePort`;
+`OperationalFinanceBusiness` não recebe nem retorna JPA. Não houve alteração
+de schema, contratos REST, autorização ou semântica de snapshots.
 
 Fora de escopo nesta etapa:
 - ERP;
@@ -46,6 +55,11 @@ Base canonica: `/api/v1/goatfarms/{farmId}/commercial`
 | `POST` | `/animal-sales` | registrar venda de animal com saida coerente |
 | `GET` | `/animal-sales` | listar vendas de animal |
 | `PATCH` | `/animal-sales/{saleId}/payment` | registrar pagamento da venda de animal |
+| `POST` | `/ownership-sales` | criar venda entre fazendas; a fazenda destino é o comprador canônico |
+| `GET` | `/ownership-sales/incoming` | listar solicitações recebidas pela fazenda compradora |
+| `GET` | `/ownership-sales/outgoing` | listar solicitações iniciadas pela fazenda vendedora |
+| `PATCH` | `/ownership-sales/{saleId}/payment` | vendedor confirma o pagamento; conclui atomicamente a venda e a transferência |
+| `POST` | `/ownership-sales/{saleId}/cancel` | cancelar sem mudar a propriedade |
 | `POST` | `/milk-sales` | registrar venda de leite |
 | `GET` | `/milk-sales` | listar vendas de leite |
 | `PATCH` | `/milk-sales/{saleId}/payment` | registrar pagamento da venda de leite |
@@ -124,6 +138,26 @@ Campos principais expostos:
 - as mutacoes sensiveis validam ownership no controller e novamente no business antes de carregar ou persistir dados;
 - OPERATOR sem vinculo, FARM_OWNER de outra fazenda e acesso cruzado recebem `403`; endpoint autenticado sem credencial responde `401`;
 - a venda de animal nao duplica a logica do ciclo do rebanho;
+- a venda W13 entre fazendas exige `targetFarmId`, cria um `INTERNAL_SALE`
+  no ledger canônico e não usa cliente comercial como comprador;
+- o request aceita `goatId`, `targetFarmId`, `saleDate`, `amount`, `dueDate`,
+  `paymentDate` opcional, `notes` e `idempotencyKey`; `customerId` não faz parte
+  do novo contrato de venda interna;
+- sem `paymentDate`, a venda fica `OPEN` e a transferência `REQUESTED`, mantendo
+  a propriedade na fazenda de origem;
+- com `paymentDate`, a venda nasce `PAID` e a transferência é concluída na mesma
+  transação; falha em qualquer etapa faz rollback de venda, pagamento e ownership;
+- a fazenda vendedora confirma o pagamento; essa confirmação fecha/abre os
+  períodos canônicos, atualiza a projeção e conclui o `INTERNAL_SALE` na mesma
+  transação; falha em qualquer etapa faz rollback de todo o processo;
+- aceite/rejeição do comprador não fazem parte do fluxo de `INTERNAL_SALE`;
+  as rotas legadas retornam erro de regra; continuam válidos apenas para
+  `INTERNAL_TRANSFER` sem venda;
+- a resposta de venda interna expõe `targetFarmId`, `targetFarmName` e
+  `targetFarmTod`; registros históricos podem manter `customerId/customerName`,
+  mas novas vendas internas não inventam cliente comercial;
+- vendas externas legadas permanecem no contrato original de `animal-sales` e
+  não são reinterpretadas como propriedade sem evidência de uma fazenda alvo;
 - recebiveis continuam minimos e derivados das vendas;
 - o resumo mensal usa dados reais persistidos, sem agregador paralelo ou BI.
 

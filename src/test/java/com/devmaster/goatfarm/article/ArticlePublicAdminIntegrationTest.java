@@ -116,6 +116,41 @@ class ArticlePublicAdminIntegrationTest {
     }
 
     @Test
+    void publicListShouldPreserveFilteringAndPagingMetadata() throws Exception {
+        Article first = Article.builder()
+                .title("Manejo de cabras")
+                .slug("manejo-cabras")
+                .excerpt("Resumo de manejo")
+                .contentMarkdown("Conteudo")
+                .category(ArticleCategory.MANEJO)
+                .published(true)
+                .publishedAt(LocalDateTime.now().minusDays(2))
+                .highlighted(false)
+                .build();
+        Article second = Article.builder()
+                .title("Manejo sanitario")
+                .slug("manejo-sanitario")
+                .excerpt("Resumo sanitario")
+                .contentMarkdown("Conteudo")
+                .category(ArticleCategory.SAUDE)
+                .published(true)
+                .publishedAt(LocalDateTime.now().minusDays(1))
+                .highlighted(false)
+                .build();
+        articleRepository.saveAll(List.of(first, second));
+
+        mockMvc.perform(get("/public/articles")
+                        .param("q", "manejo")
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.content.length()").value(1));
+    }
+
+    @Test
     void publicSlugShouldReturn404WhenNotPublished() throws Exception {
         Article draft = Article.builder()
                 .title("Artigo Rascunho")

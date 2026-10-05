@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.milk.persistence.repository;
 
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface MilkProductionRepository extends JpaRepository<MilkProduction, Long> {
+public interface MilkProductionRepository extends JpaRepository<MilkProductionEntity, Long> {
 
     @Query("""
     select case when count(mp) > 0 then true else false end from MilkProduction mp
@@ -46,8 +46,21 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
             @Param("shift") MilkingShift shift
     );
 
-    Optional<MilkProduction> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
-    Optional<MilkProduction> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
+    @Query("""
+    select case when count(mp) > 0 then true else false end from MilkProduction mp
+    where mp.goatTechnicalId = :goatTechnicalId
+      and mp.date = :date
+      and mp.shift = :shift
+      and mp.status = com.devmaster.goatfarm.milk.enums.MilkProductionStatus.ACTIVE
+    """)
+    boolean existsActiveByGoatTechnicalIdAndDateAndShift(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("date") LocalDate date,
+            @Param("shift") MilkingShift shift
+    );
+
+    Optional<MilkProductionEntity> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    Optional<MilkProductionEntity> findByIdAndFarmIdAndGoatTechnicalId(Long id, Long farmId, Long goatTechnicalId);
 
     @Query("""
     select mp from MilkProduction mp
@@ -57,7 +70,7 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
       and mp.date >= coalesce(:from, mp.date)
       and mp.date <= coalesce(:to, mp.date)
     """)
-    Page<MilkProduction> search(
+    Page<MilkProductionEntity> search(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId,
             @Param("from") LocalDate from,
@@ -74,7 +87,7 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
       and mp.date >= coalesce(:from, mp.date)
       and mp.date <= coalesce(:to, mp.date)
     """)
-    Page<MilkProduction> searchByTechnicalId(
+    Page<MilkProductionEntity> searchByTechnicalId(
             @Param("farmId") Long farmId,
             @Param("goatTechnicalId") Long goatTechnicalId,
             @Param("from") LocalDate from,
@@ -91,7 +104,7 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
       and mp.date >= :from
       and mp.date <= :to
     """)
-    List<MilkProduction> findByFarmIdAndGoatIdAndDateBetween(
+    List<MilkProductionEntity> findByFarmIdAndGoatIdAndDateBetween(
             @Param("farmId") Long farmId,
             @Param("goatId") String goatId,
             @Param("from") LocalDate from,
@@ -106,13 +119,23 @@ public interface MilkProductionRepository extends JpaRepository<MilkProduction, 
       and mp.date >= :from
       and mp.date <= :to
     """)
-    List<MilkProduction> findByFarmIdAndGoatTechnicalIdAndDateBetween(
+    List<MilkProductionEntity> findByFarmIdAndGoatTechnicalIdAndDateBetween(
             @Param("farmId") Long farmId,
             @Param("goatTechnicalId") Long goatTechnicalId,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to
     );
 
-
-
+    @Query("""
+    select mp from MilkProduction mp
+    where mp.farmId = :farmId
+      and (mp.goatTechnicalId = :goatTechnicalId
+           or (mp.goatTechnicalId is null and :rg is not null and mp.goatId = :rg))
+    order by mp.date desc, mp.id desc
+    """)
+    List<MilkProductionEntity> findHistoricalForDossier(
+            @Param("farmId") Long farmId,
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("rg") String rg
+    );
 }

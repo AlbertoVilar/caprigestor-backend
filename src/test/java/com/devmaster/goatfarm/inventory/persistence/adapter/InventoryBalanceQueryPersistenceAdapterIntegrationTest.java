@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.inventory.persistence.adapter;
 
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceFilterVO;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryBalanceEntity;
 import com.devmaster.goatfarm.inventory.persistence.entity.InventoryItemEntity;
 import com.devmaster.goatfarm.inventory.persistence.repository.InventoryBalanceRepository;
@@ -9,8 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
@@ -47,12 +46,11 @@ class InventoryBalanceQueryPersistenceAdapterIntegrationTest {
                 farmId,
                 activeItem.getId(),
                 501L,
-                true,
-                PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "itemId"))
-        ));
+                true
+        ), new PageQuery(0, 20, java.util.List.of()));
 
-        assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent()).singleElement().satisfies(balance -> {
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.content()).singleElement().satisfies(balance -> {
             assertThat(balance.itemId()).isEqualTo(activeItem.getId());
             assertThat(balance.itemName()).isEqualTo("Ração Premium");
             assertThat(balance.trackLot()).isTrue();
@@ -73,13 +71,12 @@ class InventoryBalanceQueryPersistenceAdapterIntegrationTest {
                 farmId,
                 null,
                 null,
-                false,
-                PageRequest.of(0, 1, Sort.by(Sort.Direction.ASC, "itemId"))
-        ));
+                false
+        ), new PageQuery(0, 1, java.util.List.of()));
 
-        assertThat(page.getTotalElements()).isEqualTo(2);
-        assertThat(page.getTotalPages()).isEqualTo(2);
-        assertThat(page.getContent()).singleElement().satisfies(balance -> {
+        assertThat(page.totalElements()).isEqualTo(2);
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content()).singleElement().satisfies(balance -> {
             assertThat(balance.itemId()).isEqualTo(first.getId());
             assertThat(balance.itemName()).isEqualTo("Milho");
         });

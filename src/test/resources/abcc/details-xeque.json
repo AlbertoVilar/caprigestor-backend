@@ -1,0 +1,21 @@
+{
+  "dados_cadastrais":{"id":55878,"criador":"JOSE ALBERTO VILAR PEREIRA","proprietario":"IVO JOSÉ GOMES DE ALMEIDA","raca":"ALPINA","registro":"1643218012","nome":"XEQUE V DO CAPRIL VILAR","sexo":"Macho","categoria":"PO","pelagem":"CHAMOISÉE","tod":"16432","toe":"18012","data_nasce":"27/06/2018"},
+  "arvore":{
+    "animal":{"nome":"XEQUE V DO CAPRIL VILAR","registro":"1643218012"},
+    "pai":{"nome":"C.V.C SIGNOS PETROLEO","registro":"1635717065"},
+    "mae":{"nome":"NAIDE DO CRS","registro":"2114517012"},
+    "avos_paternos":{"pai":{"nome":"PETRÓLEO CAPRIVAMA","registro":"1422915618"},"mae":{"nome":"BÉLGICA DA CAPRIVAMA","registro":"1422913470"}},
+    "avos_maternos":{"pai":{"nome":"JOSA CAPRIMEL","registro":"1650113018"},"mae":{"nome":"PANTALONA DO CRS","registro":"2114513061"}},
+    "bisavos":{
+      "paterno_pai_pai":{"nome":"BALOTELI DA CAPRIVAMA","registro":"1422913451"},
+      "paterno_pai_mae":{"nome":"COROA DA CAPRIVAMA","registro":"1422913488"},
+      "paterno_mae_pai":{"nome":"SHEREK SANRI","registro":"1421308033"},
+      "paterno_mae_mae":{"nome":"JUCELISE DO INLI","registro":"1418510219"},
+      "materno_pai_pai":{"nome":"NATAL DO JACOMÉ","registro":"1403110395"},
+      "materno_pai_mae":{"nome":"12018 CAPRIMEL","registro":"1650112018"},
+      "materno_mae_pai":{"nome":"HERE DO ANGICANO","registro":"2104406006"},
+      "materno_mae_mae":{"nome":"TOPÁZIO DO CRS","registro":"2114510040"}
+    }
+  },
+  "pais":{"pai":{"nome":"C.V.C SIGNOS PETROLEO","registro":"1635717065"},"mae":{"nome":"NAIDE DO CRS","registro":"2114517012"}}
+}

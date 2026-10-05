@@ -1,12 +1,18 @@
 package com.devmaster.goatfarm.milk.api.controller;
 
 import com.devmaster.goatfarm.milk.api.dto.LactationResponseDTO;
+import com.devmaster.goatfarm.milk.api.dto.LactationRequestDTO;
+import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
+import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -17,14 +23,46 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(LactationController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class LactationControllerTest {
+
+    @Test
+    void openRequestAcceptsExplicitYoungAgeConfirmation() throws Exception {
+        when(lactationMapper.toRequestVO(any())).thenReturn(new LactationRequestVO());
+
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations", 1L, "RG-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startDate\":\"2026-09-28\",\"confirmYoungAge\":true}"))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<LactationRequestDTO> request = ArgumentCaptor.forClass(LactationRequestDTO.class);
+        verify(lactationMapper).toRequestVO(request.capture());
+        org.junit.jupiter.api.Assertions.assertTrue(request.getValue().isConfirmYoungAge());
+    }
+
+    @Test
+    void unconfirmedYoungAgeBusinessErrorIsHttp422WithField() throws Exception {
+        LactationRequestVO request = new LactationRequestVO();
+        when(lactationMapper.toRequestVO(any())).thenReturn(request);
+        when(lactationCommandUseCase.openLactation(1L, "RG-1", request))
+                .thenThrow(new BusinessRuleException("confirmYoungAge", "Confirme explicitamente para continuar."));
+
+        mockMvc.perform(post("/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations", 1L, "RG-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startDate\":\"2026-09-28\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].fieldName").value("confirmYoungAge"));
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -126,5 +164,33 @@ class LactationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(14))
                 .andExpect(jsonPath("$.status").value(LactationStatus.ACTIVE.name()));
+    }
+
+    @Test
+    void getAllLactations_shouldPreserveSpringPageContractAtHttpBoundary() throws Exception {
+        Long farmId = 1L;
+        String goatId = "BR123";
+        LactationResponseVO responseVO = LactationResponseVO.builder()
+                .id(22L).farmId(farmId).goatId(goatId).status(LactationStatus.DRY)
+                .startDate(LocalDate.of(2026, 1, 10)).build();
+        LactationResponseDTO responseDTO = LactationResponseDTO.builder()
+                .id(responseVO.getId()).farmId(responseVO.getFarmId()).goatId(responseVO.getGoatId())
+                .status(responseVO.getStatus()).startDate(responseVO.getStartDate()).build();
+
+        when(lactationQueryUseCase.getAllLactations(eq(farmId), eq(goatId), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(java.util.List.of(responseVO), 3, 1, 2));
+        when(lactationMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations", farmId, goatId)
+                        .param("page", "1")
+                        .param("size", "2")
+                        .param("sort", "startDate,desc")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(22))
+                .andExpect(jsonPath("$.page.number").value(1))
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.totalElements").value(3))
+                .andExpect(jsonPath("$.page.totalPages").value(2));
     }
 }

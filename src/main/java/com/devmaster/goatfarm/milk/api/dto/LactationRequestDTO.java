@@ -20,4 +20,7 @@ public class LactationRequestDTO {
     @NotNull(message = "Data de início é obrigatória")
     @Schema(description = "Data de início da lactação", example = "2026-01-01", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate startDate;
+
+    @Schema(description = "Confirma explicitamente a abertura excepcional antes de 12 meses de idade", example = "false")
+    private boolean confirmYoungAge;
 }

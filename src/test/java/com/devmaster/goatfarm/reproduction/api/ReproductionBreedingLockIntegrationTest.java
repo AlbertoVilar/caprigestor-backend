@@ -17,7 +17,7 @@ import com.devmaster.goatfarm.reproduction.api.dto.PregnancyConfirmRequestDTO;
 import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -168,7 +168,7 @@ class ReproductionBreedingLockIntegrationTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[0].message").value(containsString("gestacao ativa")));
 
-        List<ReproductiveEvent> events = reproductiveEventRepository.findAll();
+        List<ReproductiveEventEntity> events = reproductiveEventRepository.findAll();
         long coverageCount = events.stream()
                 .filter(event -> event.getEventType() == ReproductiveEventType.COVERAGE)
                 .count();

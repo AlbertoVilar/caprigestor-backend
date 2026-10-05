@@ -10,6 +10,7 @@ import com.devmaster.goatfarm.article.business.bo.ArticleHighlightRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublishRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleRequestVO;
 import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
 import com.devmaster.goatfarm.config.security.authorization.AdminOnly;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,8 +76,8 @@ public class ArticleAdminController {
     @Operation(summary = "Lista artigos (inclui rascunhos)")
     public ResponseEntity<Page<ArticleResponseDTO>> getAllArticles(
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<ArticleResponseVO> page = articleQueryUseCase.getAllArticles(pageable);
-        Page<ArticleResponseDTO> dtoPage = page.map(articleMapper::toResponseDTO);
+        var page = articleQueryUseCase.getAllArticles(SpringPageMapper.toQuery(pageable));
+        Page<ArticleResponseDTO> dtoPage = SpringPageMapper.toSpringPage(page.map(articleMapper::toResponseDTO), pageable);
         return ResponseEntity.ok(dtoPage);
     }
 

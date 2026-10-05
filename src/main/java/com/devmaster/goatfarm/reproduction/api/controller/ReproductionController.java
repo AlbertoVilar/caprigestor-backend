@@ -1,9 +1,13 @@
 package com.devmaster.goatfarm.reproduction.api.controller;
 
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.reproduction.api.dto.*;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
-import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.BreedingCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancyCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.BirthCommandUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.WeaningCommandUseCase;
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
 import com.devmaster.goatfarm.reproduction.business.bo.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,12 +36,20 @@ import java.time.LocalDate;
 )
 public class ReproductionController {
 
-    private final ReproductionCommandUseCase commandUseCase;
+    private final BreedingCommandUseCase breedingUseCase;
+    private final PregnancyCommandUseCase pregnancyUseCase;
+    private final BirthCommandUseCase birthUseCase;
+    private final WeaningCommandUseCase weaningUseCase;
     private final ReproductionQueryUseCase queryUseCase;
     private final ReproductionMapper mapper;
 
-    public ReproductionController(ReproductionCommandUseCase commandUseCase, ReproductionQueryUseCase queryUseCase, ReproductionMapper mapper) {
-        this.commandUseCase = commandUseCase;
+    public ReproductionController(BreedingCommandUseCase breedingUseCase, PregnancyCommandUseCase pregnancyUseCase,
+                                  BirthCommandUseCase birthUseCase, WeaningCommandUseCase weaningUseCase,
+                                  ReproductionQueryUseCase queryUseCase, ReproductionMapper mapper) {
+        this.breedingUseCase = breedingUseCase;
+        this.pregnancyUseCase = pregnancyUseCase;
+        this.birthUseCase = birthUseCase;
+        this.weaningUseCase = weaningUseCase;
         this.queryUseCase = queryUseCase;
         this.mapper = mapper;
     }
@@ -56,7 +68,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody BreedingRequestDTO request) {
         BreedingRequestVO vo = mapper.toBreedingRequestVO(request);
-        ReproductiveEventResponseVO responseVO = commandUseCase.registerBreeding(farmId, goatId, vo);
+        ReproductiveEventResponseVO responseVO = breedingUseCase.registerBreeding(farmId, goatId, vo);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toReproductiveEventResponseDTO(responseVO));
     }
 
@@ -75,7 +87,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador do evento de cobertura") @PathVariable Long coverageEventId,
             @Valid @RequestBody CoverageCorrectionRequestDTO request) {
         CoverageCorrectionRequestVO vo = mapper.toCoverageCorrectionRequestVO(request);
-        ReproductiveEventResponseVO responseVO = commandUseCase.correctCoverage(farmId, goatId, coverageEventId, vo);
+        ReproductiveEventResponseVO responseVO = breedingUseCase.correctCoverage(farmId, goatId, coverageEventId, vo);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toReproductiveEventResponseDTO(responseVO));
     }
 
@@ -93,7 +105,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody PregnancyConfirmRequestDTO request) {
         PregnancyConfirmRequestVO vo = mapper.toPregnancyConfirmRequestVO(request);
-        PregnancyResponseVO responseVO = commandUseCase.confirmPregnancy(farmId, goatId, vo);
+        PregnancyResponseVO responseVO = pregnancyUseCase.confirmPregnancy(farmId, goatId, vo);
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
@@ -114,7 +126,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @Valid @RequestBody PregnancyCheckRequestDTO request) {
         PregnancyCheckRequestVO vo = mapper.toPregnancyCheckRequestVO(request);
-        ReproductiveEventResponseVO responseVO = commandUseCase.registerPregnancyCheck(farmId, goatId, vo);
+        ReproductiveEventResponseVO responseVO = pregnancyUseCase.registerPregnancyCheck(farmId, goatId, vo);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toReproductiveEventResponseDTO(responseVO));
     }
 
@@ -163,7 +175,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador da gestação") @PathVariable Long pregnancyId,
             @Valid @RequestBody PregnancyCloseRequestDTO request) {
         PregnancyCloseRequestVO vo = mapper.toPregnancyCloseRequestVO(request);
-        PregnancyResponseVO responseVO = commandUseCase.closePregnancy(farmId, goatId, pregnancyId, vo);
+        PregnancyResponseVO responseVO = pregnancyUseCase.closePregnancy(farmId, goatId, pregnancyId, vo);
         return ResponseEntity.ok(mapper.toPregnancyResponseDTO(responseVO));
     }
 
@@ -182,7 +194,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador da gestação ativa") @PathVariable Long pregnancyId,
             @Valid @RequestBody BirthRequestDTO request) {
         BirthRequestVO vo = mapper.toBirthRequestVO(request);
-        BirthResponseVO responseVO = commandUseCase.registerBirth(farmId, goatId, pregnancyId, vo);
+        BirthResponseVO responseVO = birthUseCase.registerBirth(farmId, goatId, pregnancyId, vo);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toBirthResponseDTO(responseVO));
     }
 
@@ -200,7 +212,7 @@ public class ReproductionController {
             @Parameter(description = "Identificador da cria/animal") @PathVariable String goatId,
             @Valid @RequestBody WeaningRequestDTO request) {
         WeaningRequestVO vo = mapper.toWeaningRequestVO(request);
-        WeaningResponseVO responseVO = commandUseCase.registerWeaning(farmId, goatId, vo);
+        WeaningResponseVO responseVO = weaningUseCase.registerWeaning(farmId, goatId, vo);
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toWeaningResponseDTO(responseVO));
     }
 
@@ -215,8 +227,9 @@ public class ReproductionController {
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "eventDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<ReproductiveEventResponseVO> pageVO = queryUseCase.getReproductiveEvents(farmId, goatId, pageable);
-        Page<ReproductiveEventResponseDTO> pageDTO = pageVO.map(mapper::toReproductiveEventResponseDTO);
+        var pageVO = queryUseCase.getReproductiveEvents(farmId, goatId, SpringPageMapper.toQuery(pageable));
+        Page<ReproductiveEventResponseDTO> pageDTO = SpringPageMapper.toSpringPage(
+                pageVO.map(mapper::toReproductiveEventResponseDTO), pageable);
         return ResponseEntity.ok(pageDTO);
     }
 
@@ -231,8 +244,9 @@ public class ReproductionController {
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "breedingDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<PregnancyResponseVO> pageVO = queryUseCase.getPregnancies(farmId, goatId, pageable);
-        Page<PregnancyResponseDTO> pageDTO = pageVO.map(mapper::toPregnancyResponseDTO);
+        var pageVO = queryUseCase.getPregnancies(farmId, goatId, SpringPageMapper.toQuery(pageable));
+        Page<PregnancyResponseDTO> pageDTO = SpringPageMapper.toSpringPage(
+                pageVO.map(mapper::toPregnancyResponseDTO), pageable);
         return ResponseEntity.ok(pageDTO);
     }
 

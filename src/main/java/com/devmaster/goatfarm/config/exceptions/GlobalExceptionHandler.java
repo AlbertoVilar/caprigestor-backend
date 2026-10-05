@@ -1,11 +1,15 @@
 package com.devmaster.goatfarm.config.exceptions;
 
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.UnauthorizedException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
+import com.devmaster.goatfarm.events.application.exception.GenericEventTypeNotWritableException;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -35,6 +39,32 @@ public class GlobalExceptionHandler {
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
         String field = e.getFieldName() != null ? e.getFieldName() : "business_error";
         err.addError(field, e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(GoatOwnershipNotValidOnDateException.class)
+    public ResponseEntity<ValidationError> goatOwnershipNotValidOnDate(
+            GoatOwnershipNotValidOnDateException e,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ValidationError err = new ValidationError(
+                Instant.now(), status.value(), "Ownership do animal inválido na data informada", request.getRequestURI());
+        err.setCode(GoatOwnershipNotValidOnDateException.ERROR_CODE);
+        err.addError("ownership", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(GenericEventTypeNotWritableException.class)
+    public ResponseEntity<ValidationError> genericEventTypeNotWritable(
+            GenericEventTypeNotWritableException e,
+            HttpServletRequest request
+    ) {
+        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
+        ValidationError err = new ValidationError(
+                Instant.now(), status.value(), "Tipo de evento não permitido neste módulo", request.getRequestURI());
+        err.setCode(GenericEventTypeNotWritableException.ERROR_CODE);
+        err.addError("eventType", e.getMessage());
         return ResponseEntity.status(status).body(err);
     }
 
@@ -172,11 +202,27 @@ public class GlobalExceptionHandler {
         Throwable rootCause = e.getRootCause();
         String message = rootCause != null ? rootCause.getMessage() : e.getMessage();
 
-        if (message != null && message.toLowerCase().contains("ux_pregnancy_single_active_per_goat")) {
+        String normalizedMessage = message == null ? "" : message.toLowerCase();
+        if (normalizedMessage.contains("ux_pregnancy_single_active_per_goat")) {
             err.addError("status", "Já existe uma gestação ativa para esta cabra");
+        } else if (normalizedMessage.contains("ux_lactation_single_active_per_goat_technical")) {
+            err.addError("status", "Já existe uma lactação ativa para esta cabra");
+        } else if (normalizedMessage.contains("uk_cabras_registration_number")
+                || normalizedMessage.contains("uk_cabras_farm_registration")) {
+            err.addError("registrationNumber", "Número de registro já existe para outro animal");
         } else {
             err.addError("integrity", "Violação de integridade no banco de dados");
         }
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(PersistenceConflictException.class)
+    public ResponseEntity<ValidationError> handlePersistenceConflict(PersistenceConflictException e, HttpServletRequest request) {
+        logger.warn("event=persistence_conflict method={} path={}", request.getMethod(), request.getRequestURI());
+        HttpStatus status = HttpStatus.CONFLICT;
+        ValidationError err = new ValidationError(Instant.now(), status.value(),
+                "Conflito de integridade de dados", request.getRequestURI());
+        err.addError("integrity", "Violação de integridade no banco de dados");
         return ResponseEntity.status(status).body(err);
     }
 
@@ -191,6 +237,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ValidationError> accessDenied(AccessDeniedException e, HttpServletRequest request) {
+        String error = "Acesso negado";
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());
+        err.addError("auth", e.getMessage());
+        return ResponseEntity.status(status).body(err);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ValidationError> authorizationDenied(AuthorizationDeniedException e, HttpServletRequest request) {
         String error = "Acesso negado";
         HttpStatus status = HttpStatus.FORBIDDEN;
         ValidationError err = new ValidationError(Instant.now(), status.value(), error, request.getRequestURI());

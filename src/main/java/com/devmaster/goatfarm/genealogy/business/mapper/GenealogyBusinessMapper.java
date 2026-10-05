@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.genealogy.business.mapper;
 
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import org.springframework.stereotype.Component;
 
 /** Maps the application-owned technical genealogy read model to the API VO. */

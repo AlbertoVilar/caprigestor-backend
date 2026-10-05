@@ -34,4 +34,20 @@ class GoatReferenceResolverTest {
         assertThat(resolver.resolve("42", 7L)).contains(reference);
         verify(queryPort).findReferenceByRegistrationNumberAndFarmId("42", 7L);
     }
+
+    @Test
+    void resolvesGlobalTechnicalTokenWithoutFarmProjection() {
+        when(queryPort.findReferenceByTechnicalId(new GoatId(42L))).thenReturn(Optional.of(reference));
+
+        assertThat(resolver.resolveGlobal("technical-42")).contains(reference);
+        verify(queryPort).findReferenceByTechnicalId(new GoatId(42L));
+    }
+
+    @Test
+    void resolvesGlobalRegistrationTokenWithoutFarmProjection() {
+        when(queryPort.findReferenceByRegistrationNumber("42")).thenReturn(Optional.of(reference));
+
+        assertThat(resolver.resolveGlobal("42")).contains(reference);
+        verify(queryPort).findReferenceByRegistrationNumber("42");
+    }
 }

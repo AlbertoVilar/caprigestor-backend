@@ -5,8 +5,6 @@ import com.devmaster.goatfarm.authority.persistence.entity.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,13 +30,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findById(Long id);
 
     Optional<User> findByCpf(String cpf);
-    @Query(nativeQuery = true, value = "DELETE FROM tb_user_role WHERE user_id != :adminId")
-    @Modifying
-    @Transactional
-    void deleteRolesFromOtherUsers(Long adminId);
-
-    @Query(nativeQuery = true, value = "DELETE FROM users WHERE id != :adminId")
-    @Modifying
-    @Transactional
-    void deleteOtherUsers(Long adminId);
 }

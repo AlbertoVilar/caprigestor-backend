@@ -7,7 +7,6 @@ import com.devmaster.goatfarm.events.persistence.adapter.EventPersistenceAdapter
 import com.devmaster.goatfarm.events.persistence.entity.Event;
 import com.devmaster.goatfarm.events.persistence.repository.EventRepository;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
@@ -47,10 +46,10 @@ class EventDaoUnitTest {
         event.setEventType(EventType.PESAGEM);
         event.setDate(LocalDate.of(2026, 1, 2));
         event.setDescription("Weight");
-        when(eventRepository.findByIdAndGoatTechnicalIdAndFarmId(10L, 42L, 7L))
+        when(eventRepository.findByIdAndGoatTechnicalId(10L, 42L))
                 .thenReturn(Optional.of(event));
 
-        assertThat(adapter.findByIdAndGoatIdAndFarmId(10L, new GoatId(42L), 7L)).isPresent();
+        assertThat(adapter.findByIdAndGoatId(10L, new GoatId(42L))).isPresent();
         adapter.deleteById(10L);
 
         verify(eventRepository).deleteById(10L);
@@ -72,6 +71,7 @@ class EventDaoUnitTest {
         Event persisted = new Event();
         persisted.setId(1L);
         persisted.setGoat(goat);
+        persisted.setRecordingFarmId(7L);
         persisted.setGoatRegistrationNumber("R-123-ANTIGO");
         persisted.setEventType(EventType.OUTRO);
         persisted.setDate(event.date());

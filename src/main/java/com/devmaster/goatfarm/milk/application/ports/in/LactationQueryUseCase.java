@@ -3,8 +3,8 @@ package com.devmaster.goatfarm.milk.application.ports.in;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.time.LocalDate;
 
@@ -18,7 +18,7 @@ public interface LactationQueryUseCase {
 
     LactationSummaryResponseVO getLactationSummary(Long farmId, String goatId, Long lactationId);
 
-    Page<LactationResponseVO> getAllLactations(Long farmId, String goatId, Pageable pageable);
+    PageResult<LactationResponseVO> getAllLactations(Long farmId, String goatId, PageQuery pageQuery);
 
-    Page<LactationDryOffAlertVO> getDryOffAlerts(Long farmId, LocalDate referenceDate, Pageable pageable);
+    PageResult<LactationDryOffAlertVO> getDryOffAlerts(Long farmId, LocalDate referenceDate, PageQuery pageQuery);
 }

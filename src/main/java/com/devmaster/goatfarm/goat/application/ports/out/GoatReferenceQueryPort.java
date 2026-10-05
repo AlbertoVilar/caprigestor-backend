@@ -12,6 +12,8 @@ public interface GoatReferenceQueryPort {
 
     Optional<GoatReference> findReferenceByRegistrationNumber(String registrationNumber);
 
+    Optional<GoatReference> findReferenceByTechnicalId(GoatId goatId);
+
     Optional<GoatReference> findReferenceByRegistrationNumberAndFarmId(
             String registrationNumber,
             Long farmId

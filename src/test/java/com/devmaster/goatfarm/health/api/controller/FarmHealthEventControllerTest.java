@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.health.api.mapper.FarmHealthAlertsApiMapper;
 import com.devmaster.goatfarm.health.api.mapper.HealthEventApiMapper;
 import com.devmaster.goatfarm.health.application.ports.in.FarmHealthAlertsQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertsResponseVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +14,17 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -122,5 +130,28 @@ class FarmHealthEventControllerTest {
                 .andExpect(jsonPath("$.dueTodayCount").value(1))
                 .andExpect(jsonPath("$.activeMeatWithdrawalCount").value(2))
                 .andExpect(jsonPath("$.windowDays").value(5));
+    }
+
+    @Test
+    void listCalendar_shouldPreservePageMetadataAndIncomingSort() throws Exception {
+        var pageable = PageRequest.of(2, 3, Sort.by(Sort.Order.asc("scheduledDate")));
+        when(queryUseCase.listCalendar(anyLong(), isNull(), isNull(), isNull(), isNull(), any()))
+                .thenReturn(new PageResult<>(List.of(), 7, 2, 3));
+
+        mockMvc.perform(get("/api/v1/goatfarms/{farmId}/health-events/calendar", 1L)
+                        .param("page", "2")
+                        .param("size", "3")
+                        .param("sort", "scheduledDate,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.number").value(2))
+                .andExpect(jsonPath("$.page.size").value(3))
+                .andExpect(jsonPath("$.page.totalElements").value(7))
+                .andExpect(jsonPath("$.page.totalPages").value(3));
+
+        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(PageQuery.class);
+        verify(queryUseCase).listCalendar(anyLong(), isNull(), isNull(), isNull(), isNull(), pageableCaptor.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(2, pageableCaptor.getValue().page());
+        org.junit.jupiter.api.Assertions.assertEquals(3, pageableCaptor.getValue().size());
+        org.junit.jupiter.api.Assertions.assertEquals("scheduledDate", pageableCaptor.getValue().sort().getFirst().field());
     }
 }

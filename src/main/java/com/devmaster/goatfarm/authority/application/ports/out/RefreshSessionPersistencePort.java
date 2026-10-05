@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.authority.application.ports.out;
 
-import com.devmaster.goatfarm.authority.persistence.entity.RefreshSession;
+import com.devmaster.goatfarm.authority.business.bo.RefreshSessionRecord;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -8,9 +8,9 @@ import java.util.UUID;
 
 public interface RefreshSessionPersistencePort {
 
-    Optional<RefreshSession> findByTokenHashForUpdate(String tokenHash);
+    Optional<RefreshSessionRecord> findByTokenHashForUpdate(String tokenHash);
 
-    RefreshSession save(RefreshSession refreshSession);
+    RefreshSessionRecord save(RefreshSessionRecord refreshSession);
 
     boolean consumeIfActive(Long sessionId, Instant consumedAt);
 

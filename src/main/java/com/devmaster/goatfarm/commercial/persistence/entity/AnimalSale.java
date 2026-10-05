@@ -14,10 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "animal_sale",
-        uniqueConstraints = @UniqueConstraint(name = "uk_animal_sale_goat_registration", columnNames = "goat_registration_number")
-)
+@Table(name = "animal_sale")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,8 +31,16 @@ public class AnimalSale {
     private GoatFarm farm;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "customer_id")
     private Customer customer;
+
+    /**
+     * Optional only for legacy external sales. A W13 ownership sale names the
+     * receiving farm explicitly; ownership itself remains in the ledger.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_farm_id")
+    private GoatFarm targetFarm;
 
     @Column(name = "goat_registration_number", nullable = false, length = 20)
     private String goatRegistrationNumber;
@@ -65,6 +70,7 @@ public class AnimalSale {
 
     @Column(name = "notes", length = 500)
     private String notes;
+
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

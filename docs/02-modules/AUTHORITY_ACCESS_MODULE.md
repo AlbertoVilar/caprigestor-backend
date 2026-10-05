@@ -1,5 +1,5 @@
 ﻿# Módulo Authority / acesso / recuperação de senha
-Última atualização: 2026-09-08
+Última atualização: 2026-09-12
 Escopo: autenticação, refresh, cadastro inicial, administração de usuários e recuperação de senha do CapriGestor.
 Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [Rotação JWT](../04-security/JWT_KEY_ROTATION_RUNBOOK.md), [Resposta a incidentes](../04-security/SECURITY_INCIDENT_RESPONSE.md)
 
@@ -8,6 +8,18 @@ Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONT
 - Todos os endpoints em `/api/v1/users/**` são exclusivamente administrativos e exigem `ROLE_ADMIN`.
 - A restrição existe tanto na configuração HTTP quanto no `UserController`, como defesa em profundidade.
 - Alterações administrativas de senha e de papéis também validam a autoridade antes de codificar senha, consultar papéis ou modificar uma entidade persistente.
+- O business/application do módulo usa `PasswordHashingPort` para hashing; a
+  implementação BCrypt continua em `config.security.PasswordHashingAdapter`,
+  preservando o `PasswordEncoder` como detalhe de infraestrutura.
+- `AuthBusiness` usa `CredentialAuthenticationPort` para validar credenciais e
+  `AuthTokenPort` para emissão e leitura de metadados JWT. Os adapters
+  `SpringCredentialAuthenticationAdapter` e `JwtTokenAdapter` traduzem as APIs
+  Spring Security/JWT e preservam os contratos atuais; o core não importa
+  `AuthenticationManager`, `Authentication`, `JwtDecoder` ou `Jwt`.
+- O core de Authority usa `AuthorityAccount` e `AuthorityRole`, além de
+  representações próprias para sessões de refresh e tokens de recuperação.
+  `AuthorityPersistenceMapper` e os adapters concentram a conversão para as
+  entidades JPA, sem alterar schema ou contratos HTTP.
 - `POST /api/v1/auth/register` permanece público, não recebe papéis no contrato e cria o usuário somente com o papel padrão `ROLE_OPERATOR`. Campos desconhecidos, inclusive uma tentativa de enviar `roles`, são rejeitados.
 - A autorização por fazenda distingue propriedade e operação: ADMIN possui acesso global, FARM_OWNER precisa ser o responsável da fazenda e OPERATOR precisa de vínculo persistido em `FarmOperator`.
 - `OwnershipService` consulta o vínculo operacional por `FarmAccessQueryPort`; o adapter de persistência concentra o acesso ao repositório Spring Data.
@@ -15,10 +27,31 @@ Links relacionados: [Portal](../INDEX.md), [Contratos da API](../03-api/API_CONT
   e a decisão recebe `AuthenticatedPrincipal` (id, email, nome e authorities),
   evitando que a emissão de JWT e as verificações de ownership precisem
   carregar a entidade JPA `User`.
+- A fronteira do principal atual é `CurrentPrincipalQueryUseCase`: o adaptador
+  Spring Security traduz a autenticação em email e `UserPrincipalQueryPort`
+  retorna `AuthenticatedPrincipal` com roles atuais persistidas. O contexto de
+  segurança não é acessado por serviços de negócio.
+- `OwnershipService` permanece como bean `ownershipService` para as expressões
+  SpEL, mas expõe somente a política farm-scoped de `FarmAuthorizationUseCase`.
 - `GET /api/v1/auth/me` permanece disponível para o usuário autenticado consultar os próprios dados. Esta correção não cria uma API de edição do perfil próprio.
 - O endpoint legado de diagnóstico de papéis foi removido: não possuía consumidor funcional e expunha dados administrativos desnecessários.
 - O fluxo interno de atualização do responsável por uma fazenda continua protegido pela validação de propriedade e não permite alteração de papéis.
 - Alterações de senha, redefinição de senha e alterações de papéis revogam todas as sessões de refresh do usuário. O access token já emitido continua válido somente até sua expiração curta.
+
+## Fechamento arquitetural DEV-A11-I2
+
+DEV-A11-I2 está concluída e integrada em `develop` (merge `adb025d`, PR #267).
+O core Authority usa somente modelos e ports da aplicação: dependências de
+`PasswordEncoder`, autenticação/JWT, `SecurityContextHolder` e entidades JPA
+`User`/`Role` são zero nos pacotes de aplicação/business. Os contratos de
+refresh e recuperação também não expõem entidades JPA.
+
+As antigas waves I2-D e I2-E são obsoletas como waves arquiteturais isoladas.
+`User implements UserDetails` permanece apenas como limpeza opcional na borda
+de persistência. A atomicidade concorrente do consumo de token de recuperação é
+hardening de segurança separado. A ponte `FarmUserPersistencePort` para a
+relação JPA legada da fazenda foi movida para a dívida cross-module/persistence
+de I3 e não deve ser ampliada.
 
 ## Políticas semânticas de autorização
 

@@ -1,7 +1,6 @@
 package com.devmaster.goatfarm.events.domain;
 
 import com.devmaster.goatfarm.events.enums.EventType;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 
 import java.time.LocalDate;
@@ -13,7 +12,7 @@ import java.time.LocalDate;
 public record OperationalEvent(
         Long id,
         GoatId goatId,
-        Long farmId,
+        Long recordingFarmId,
         String goatRegistrationNumber,
         String goatName,
         EventType eventType,
@@ -24,7 +23,8 @@ public record OperationalEvent(
         String outcome
 ) {
     public static OperationalEvent create(
-            GoatReference goat,
+            GoatEventReference goat,
+            Long recordingFarmId,
             EventType eventType,
             LocalDate date,
             String description,
@@ -32,7 +32,7 @@ public record OperationalEvent(
             String veterinarian,
             String outcome
     ) {
-        return new OperationalEvent(null, goat.id(), goat.farmId(), goat.registrationNumber(), goat.name(),
+        return new OperationalEvent(null, goat.id(), recordingFarmId, goat.registrationNumber(), goat.name(),
                 eventType, date, description, location, veterinarian, outcome);
     }
 
@@ -44,7 +44,7 @@ public record OperationalEvent(
             String veterinarian,
             String outcome
     ) {
-        return new OperationalEvent(id, goatId, farmId, goatRegistrationNumber, goatName,
+        return new OperationalEvent(id, goatId, recordingFarmId, goatRegistrationNumber, goatName,
                 eventType, date, description, location, veterinarian, outcome);
     }
 }

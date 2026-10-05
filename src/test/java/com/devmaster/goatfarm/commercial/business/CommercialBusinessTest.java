@@ -2,369 +2,337 @@ package com.devmaster.goatfarm.commercial.business;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
-import com.devmaster.goatfarm.audit.business.bo.OperationalAuditRecordVO;
-import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
-import com.devmaster.goatfarm.commercial.application.ports.out.CommercialPersistencePort;
-import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleRequestVO;
-import com.devmaster.goatfarm.commercial.business.bo.AnimalSaleResponseVO;
-import com.devmaster.goatfarm.commercial.business.bo.CommercialSummaryVO;
-import com.devmaster.goatfarm.commercial.business.bo.MilkSaleRequestVO;
-import com.devmaster.goatfarm.commercial.business.bo.SalePaymentRequestVO;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
+import com.devmaster.goatfarm.commercial.application.model.*;
+import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSalePersistencePort;
+import com.devmaster.goatfarm.commercial.application.ports.out.CustomerPersistencePort;
+import com.devmaster.goatfarm.commercial.application.ports.out.MilkSalePersistencePort;
+import com.devmaster.goatfarm.commercial.application.ports.out.AnimalSaleReversalPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipQueryPort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.GoatOwnershipPeriodPersistencePort;
+import com.devmaster.goatfarm.goatownership.application.ports.out.OwnershipTransferPersistencePort;
+import com.devmaster.goatfarm.commercial.business.bo.*;
 import com.devmaster.goatfarm.commercial.enums.SalePaymentStatus;
-import com.devmaster.goatfarm.commercial.persistence.entity.AnimalSale;
-import com.devmaster.goatfarm.commercial.persistence.entity.Customer;
-import com.devmaster.goatfarm.commercial.persistence.entity.MilkSale;
-import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
-import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
-import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipSaleUseCase;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind;
+import com.devmaster.goatfarm.goatownership.domain.GoatOwnershipPeriod;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.ZoneId;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CommercialBusinessTest {
+    @Mock CustomerPersistencePort customers;
+    @Mock AnimalSalePersistencePort animalSales;
+    @Mock MilkSalePersistencePort milkSales;
+    @Mock GoatFarmPersistencePort farms;
+    @Mock GoatManagementUseCase goats;
+    @Mock FarmAuthorizationUseCase authorization;
+    @Mock EntityFinder finder;
+    @Mock OperationalAuditUseCase audit;
+    @Mock GoatOwnershipSaleUseCase ownershipTransfers;
+    @Mock AnimalSaleReversalPersistencePort reversals;
+    @Mock GoatOwnershipQueryPort ownershipQuery;
+    @Mock GoatOwnershipPeriodPersistencePort ownershipPeriods;
+    @Mock OwnershipTransferPersistencePort ownershipTransferPersistence;
+    @Mock CurrentPrincipalQueryUseCase currentPrincipalQuery;
+    private CommercialBusiness business;
 
-    private CommercialBusiness commercialBusiness;
-
-    @Mock
-    private CommercialPersistencePort commercialPersistencePort;
-    @Mock
-    private GoatFarmPersistencePort goatFarmPersistencePort;
-    @Mock
-    private GoatManagementUseCase goatManagementUseCase;
-    @Mock
-    private OwnershipService ownershipService;
-    @Mock
-    private EntityFinder entityFinder;
-    @Mock
-    private OperationalAuditUseCase operationalAuditUseCase;
-
-    @BeforeEach
-    void setUp() {
-        commercialBusiness = new CommercialBusiness(
-                commercialPersistencePort,
-                goatFarmPersistencePort,
-                goatManagementUseCase,
-                ownershipService,
-                entityFinder,
-                operationalAuditUseCase
-        );
-
-        lenient().when(entityFinder.findOrThrow(any(), anyString())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            Supplier<Optional<Object>> supplier = invocation.getArgument(0);
-            String message = invocation.getArgument(1);
-            return supplier.get().orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(message));
-        });
-        lenient().when(ownershipService.canManageFarm(anyLong())).thenReturn(true);
+    @BeforeEach void setUp() {
+        business = new CommercialBusiness(customers, animalSales, milkSales, farms, goats, authorization, finder, audit,
+                ownershipTransfers, reversals, ownershipQuery, ownershipPeriods, ownershipTransferPersistence,
+                currentPrincipalQuery,
+                Clock.system(ZoneId.of("America/Sao_Paulo")));
+        lenient().when(authorization.canManageFarm(anyLong())).thenReturn(true);
+        lenient().when(farms.findById(anyLong())).thenReturn(Optional.of(farmRecord(1L)));
+        lenient().when(finder.findOrThrow(any(), anyString())).thenAnswer(i -> ((Optional<?>) ((java.util.function.Supplier<?>) i.getArgument(0)).get()).orElseThrow());
     }
 
-    @Test
-    void shouldCreateAnimalSaleAndTriggerGoatExitWhenGoatIsActive() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(10L, farm);
-        GoatResponseVO goat = goat("G001", "Cabra Teste", GoatStatus.ATIVO, null, null);
-
-        AnimalSaleRequestVO requestVO = new AnimalSaleRequestVO(
-                "G001",
-                10L,
-                LocalDate.now().minusDays(2),
-                new BigDecimal("1800"),
-                LocalDate.now().plusDays(5),
-                null,
-                "Venda de teste"
-        );
-
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.findCustomerByIdAndFarmId(10L, farmId)).thenReturn(Optional.of(customer));
-        when(goatManagementUseCase.findGoatById(farmId, "G001")).thenReturn(goat);
-        when(goatManagementUseCase.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
-        when(commercialPersistencePort.existsAnimalSaleByGoatRegistrationNumber("G001")).thenReturn(false);
-        when(commercialPersistencePort.saveAnimalSale(any(AnimalSale.class))).thenAnswer(invocation -> {
-            AnimalSale entity = invocation.getArgument(0);
-            entity.setId(77L);
-            return entity;
-        });
-
-        AnimalSaleResponseVO response = commercialBusiness.createAnimalSale(farmId, requestVO);
-
-        assertEquals(77L, response.id());
-        assertEquals("G001", response.goatRegistrationNumber());
-        assertEquals(SalePaymentStatus.OPEN, response.paymentStatus());
-        assertNull(response.paymentDate());
-
-        ArgumentCaptor<AnimalSale> saleCaptor = ArgumentCaptor.forClass(AnimalSale.class);
-        ArgumentCaptor<OperationalAuditRecordVO> auditCaptor = ArgumentCaptor.forClass(OperationalAuditRecordVO.class);
-        verify(commercialPersistencePort).saveAnimalSale(saleCaptor.capture());
-        verify(goatManagementUseCase).exitGoat(anyLong(), anyString(), any());
-        verify(operationalAuditUseCase).record(auditCaptor.capture());
-        assertEquals("Cabra Teste", saleCaptor.getValue().getGoatName());
-        assertEquals(new BigDecimal("1800.00"), saleCaptor.getValue().getAmount());
-        assertEquals(OperationalAuditActionType.ANIMAL_SALE_CREATED, auditCaptor.getValue().actionType());
+    @Test void createsCustomerWithoutEntityLeak() {
+        when(customers.save(any())).thenAnswer(i -> i.getArgument(0));
+        CustomerResponseVO result = business.createCustomer(1L, new CustomerRequestVO("Cliente", "DOC", null, null, null));
+        assertEquals("Cliente", result.name());
+        verify(customers).save(any(CustomerRecord.class));
     }
 
-    @Test
-    void shouldAllowAnimalSaleForAlreadySoldGoatWhenExitIsCommercialAndCoherent() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(10L, farm);
-        LocalDate saleDate = LocalDate.now().minusDays(3);
-        GoatResponseVO goat = goat("G002", "Cabra Vendida", GoatStatus.VENDIDO, GoatExitType.VENDA, saleDate);
-
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.findCustomerByIdAndFarmId(10L, farmId)).thenReturn(Optional.of(customer));
-        when(goatManagementUseCase.findGoatById(farmId, "G002")).thenReturn(goat);
-        when(commercialPersistencePort.existsAnimalSaleByGoatRegistrationNumber("G002")).thenReturn(false);
-        when(commercialPersistencePort.saveAnimalSale(any(AnimalSale.class))).thenAnswer(invocation -> {
-            AnimalSale entity = invocation.getArgument(0);
-            entity.setId(78L);
-            return entity;
-        });
-
-        AnimalSaleResponseVO response = commercialBusiness.createAnimalSale(
-                farmId,
-                new AnimalSaleRequestVO("G002", 10L, saleDate, new BigDecimal("950"), saleDate.plusDays(2), null, null)
-        );
-
-        assertEquals(78L, response.id());
-        verify(goatManagementUseCase, never()).exitGoat(anyLong(), anyString(), any());
+    @Test void preservesCurrentAcceptanceOfDuplicateCustomerDocumentAndEmail() {
+        when(customers.save(any())).thenAnswer(i -> i.getArgument(0));
+        CustomerRequestVO request = new CustomerRequestVO("Cliente", "DOC-1", null, "same@example.com", null);
+        assertDoesNotThrow(() -> business.createCustomer(1L, request));
+        assertDoesNotThrow(() -> business.createCustomer(1L, request));
+        verify(customers, times(2)).save(any(CustomerRecord.class));
     }
 
-    @Test
-    void shouldRejectAnimalSaleWhenGoatExitIsContradictory() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(10L, farm);
-        LocalDate saleDate = LocalDate.now().minusDays(2);
-        GoatResponseVO goat = goat("G003", "Cabra Transferida", GoatStatus.VENDIDO, GoatExitType.TRANSFERENCIA, saleDate);
-
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.findCustomerByIdAndFarmId(10L, farmId)).thenReturn(Optional.of(customer));
-        when(goatManagementUseCase.findGoatById(farmId, "G003")).thenReturn(goat);
-
-        assertThrows(
-                BusinessRuleException.class,
-                () -> commercialBusiness.createAnimalSale(
-                        farmId,
-                        new AnimalSaleRequestVO("G003", 10L, saleDate, new BigDecimal("800"), saleDate.plusDays(3), null, null)
-                )
-        );
-
-        verify(commercialPersistencePort, never()).saveAnimalSale(any());
+    @Test void createsAnimalSaleAndExitsActiveGoat() {
+        CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G1", GoatStatus.ATIVO);
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(goats.findGoatById(1L, "G1")).thenReturn(goat); when(goats.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
+        lenient().when(animalSales.existsExternalSaleByGoatTechnicalId(5L)).thenReturn(false); when(animalSales.save(any())).thenAnswer(i -> animalRecord((AnimalSaleCommand) i.getArgument(0)));
+        AnimalSaleResponseVO result = business.createAnimalSale(1L, new AnimalSaleRequestVO("G1", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null));
+        assertEquals(5L, result.goatTechnicalId()); verify(goats).exitGoat(eq(1L), eq("G1"), any()); verify(animalSales).save(any(AnimalSaleCommand.class));
     }
 
-    @Test
-    void shouldCreateMilkSaleAndCalculateTotal() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(22L, farm);
-        LocalDate saleDate = LocalDate.now().minusDays(1);
-
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.findCustomerByIdAndFarmId(22L, farmId)).thenReturn(Optional.of(customer));
-        when(commercialPersistencePort.saveMilkSale(any(MilkSale.class))).thenAnswer(invocation -> {
-            MilkSale entity = invocation.getArgument(0);
-            entity.setId(99L);
-            return entity;
-        });
-
-        var response = commercialBusiness.createMilkSale(
-                farmId,
-                new MilkSaleRequestVO(22L, saleDate, new BigDecimal("32.5"), new BigDecimal("4.80"), saleDate.plusDays(7), saleDate, "Leite fresco")
-        );
-
-        assertEquals(99L, response.id());
-        assertEquals(new BigDecimal("32.50"), response.quantityLiters());
-        assertEquals(new BigDecimal("4.80"), response.unitPrice());
-        assertEquals(new BigDecimal("156.00"), response.totalAmount());
-        assertEquals(SalePaymentStatus.PAID, response.paymentStatus());
-        verify(operationalAuditUseCase).record(any(OperationalAuditRecordVO.class));
+    @Test void createsMilkSaleAndCalculatesTotal() {
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer(10L)));
+        when(milkSales.save(any())).thenAnswer(i -> milkRecord((MilkSaleCommand) i.getArgument(0)));
+        MilkSaleResponseVO result = business.createMilkSale(1L, new MilkSaleRequestVO(10L, LocalDate.now().minusDays(1), new BigDecimal("2.5"), new BigDecimal("4"), LocalDate.now(), null, null));
+        assertEquals(new BigDecimal("10.00"), result.totalAmount()); verify(milkSales).save(any(MilkSaleCommand.class));
     }
 
-    @Test
-    void shouldRegisterAnimalSalePayment() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(33L, farm);
-        AnimalSale sale = AnimalSale.builder()
-                .id(12L)
-                .farm(farm)
-                .customer(customer)
-                .goatRegistrationNumber("G010")
-                .goatName("Cabra Recebivel")
-                .saleDate(LocalDate.now().minusDays(5))
-                .amount(new BigDecimal("1200.00"))
-                .dueDate(LocalDate.now().plusDays(5))
-                .paymentStatus(SalePaymentStatus.OPEN)
-                .build();
+    @Test void externalSaleIsBlockedWhenInternalSaleIsRequested() {
+        CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G-INTERNAL-REQUESTED", GoatStatus.ATIVO);
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(goats.findGoatById(1L, "G-INTERNAL-REQUESTED")).thenReturn(goat);
+        when(ownershipTransfers.hasActiveInternalSale(1L, com.devmaster.goatfarm.goat.domain.GoatId.of(5L))).thenReturn(true);
 
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.findAnimalSaleByIdAndFarmId(12L, farmId)).thenReturn(Optional.of(sale));
-        when(commercialPersistencePort.saveAnimalSale(any(AnimalSale.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        var response = commercialBusiness.registerAnimalSalePayment(
-                farmId,
-                12L,
-                new SalePaymentRequestVO(LocalDate.now().minusDays(1))
-        );
-
-        assertEquals(SalePaymentStatus.PAID, response.paymentStatus());
-        assertEquals(LocalDate.now().minusDays(1), response.paymentDate());
-        verify(operationalAuditUseCase).record(any(OperationalAuditRecordVO.class));
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class, () -> business.createAnimalSale(1L,
+                new AnimalSaleRequestVO("G-INTERNAL-REQUESTED", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null)));
+        verify(goats, never()).exitGoat(anyLong(), anyString(), any());
+        verify(animalSales, never()).save(any(AnimalSaleCommand.class));
     }
 
-    @Test
-    void shouldBuildCommercialSummaryAndReceivablesFromSales() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(44L, farm);
+    @Test void externalSaleIsBlockedWhenInternalSaleIsAccepted() {
+        CustomerRecord customer = customer(10L); GoatResponseVO goat = goat(5L, "G-INTERNAL-ACCEPTED", GoatStatus.ATIVO);
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(goats.findGoatById(1L, "G-INTERNAL-ACCEPTED")).thenReturn(goat);
+        when(ownershipTransfers.hasActiveInternalSale(1L, com.devmaster.goatfarm.goat.domain.GoatId.of(5L))).thenReturn(true);
 
-        AnimalSale animalSale = AnimalSale.builder()
-                .id(1L)
-                .farm(farm)
-                .customer(customer)
-                .goatRegistrationNumber("G100")
-                .goatName("Cabra 100")
-                .saleDate(LocalDate.now().minusDays(10))
-                .amount(new BigDecimal("1500.00"))
-                .dueDate(LocalDate.now().plusDays(2))
-                .paymentStatus(SalePaymentStatus.OPEN)
-                .build();
-
-        MilkSale milkSale = MilkSale.builder()
-                .id(2L)
-                .farm(farm)
-                .customer(customer)
-                .saleDate(LocalDate.now().minusDays(4))
-                .quantityLiters(new BigDecimal("20.00"))
-                .unitPrice(new BigDecimal("5.00"))
-                .totalAmount(new BigDecimal("100.00"))
-                .dueDate(LocalDate.now().minusDays(1))
-                .paymentStatus(SalePaymentStatus.PAID)
-                .paymentDate(LocalDate.now().minusDays(1))
-                .build();
-
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.countCustomersByFarmId(farmId)).thenReturn(1L);
-        when(commercialPersistencePort.findAnimalSalesByFarmId(farmId)).thenReturn(List.of(animalSale));
-        when(commercialPersistencePort.findMilkSalesByFarmId(farmId)).thenReturn(List.of(milkSale));
-
-        CommercialSummaryVO summary = commercialBusiness.getSummary(farmId);
-        List<?> receivables = commercialBusiness.listReceivables(farmId);
-
-        assertEquals(1L, summary.customerCount());
-        assertEquals(1L, summary.animalSalesCount());
-        assertEquals(new BigDecimal("1500.00"), summary.animalSalesTotal());
-        assertEquals(1L, summary.milkSalesCount());
-        assertEquals(new BigDecimal("20.00"), summary.milkSalesQuantityLiters());
-        assertEquals(new BigDecimal("100.00"), summary.milkSalesTotal());
-        assertEquals(1L, summary.openReceivablesCount());
-        assertEquals(new BigDecimal("1500.00"), summary.openReceivablesTotal());
-        assertEquals(1L, summary.paidReceivablesCount());
-        assertEquals(new BigDecimal("100.00"), summary.paidReceivablesTotal());
-        assertEquals(2, receivables.size());
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class, () -> business.createAnimalSale(1L,
+                new AnimalSaleRequestVO("G-INTERNAL-ACCEPTED", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null)));
+        verify(goats, never()).exitGoat(anyLong(), anyString(), any());
+        verify(animalSales, never()).save(any(AnimalSaleCommand.class));
     }
 
-    @Test
-    void shouldRejectPaymentDateInFuture() {
-        Long farmId = 1L;
-        GoatFarm farm = farm(farmId);
-        Customer customer = activeCustomer(22L, farm);
-
-        when(goatFarmPersistencePort.findById(farmId)).thenReturn(Optional.of(farm));
-        when(commercialPersistencePort.findCustomerByIdAndFarmId(22L, farmId)).thenReturn(Optional.of(customer));
-
-        assertThrows(
-                InvalidArgumentException.class,
-                () -> commercialBusiness.createMilkSale(
-                        farmId,
-                        new MilkSaleRequestVO(
-                                22L,
-                                LocalDate.now().minusDays(1),
-                                new BigDecimal("10"),
-                                new BigDecimal("4"),
-                                LocalDate.now().plusDays(1),
-                                LocalDate.now().plusDays(1),
-                                null
-                        )
-                )
-        );
+    @Test void sensitiveMutationsAuthorizeBeforePersistence() {
+        doThrow(new AccessDeniedException("denied")).when(authorization).verifyFarmOwnership(1L);
+        assertThrows(AccessDeniedException.class, () -> business.createMilkSale(1L, null));
+        verifyNoInteractions(customers, animalSales, milkSales, farms, goats);
     }
 
-    @Test
-    void sensitiveMutationsMustAuthorizeFarmOwnerBeforeLoadingOrPersistingData() {
-        doThrow(new AccessDeniedException("denied"))
-                .when(ownershipService).verifyFarmOwnership(1L);
+    @Test void salePersistenceFailurePropagatesAfterGoatExitForOuterTransactionRollback() {
+        CustomerRecord customer = customer(10L);
+        GoatResponseVO goat = goat(5L, "G-ROLLBACK", GoatStatus.ATIVO);
+        when(customers.findCustomerByIdAndFarmId(10L, 1L)).thenReturn(Optional.of(customer));
+        when(goats.findGoatById(1L, "G-ROLLBACK")).thenReturn(goat);
+        when(goats.exitGoat(anyLong(), anyString(), any())).thenReturn(new GoatExitResponseVO());
+        lenient().when(animalSales.existsExternalSaleByGoatTechnicalId(5L)).thenReturn(false);
+        when(animalSales.save(any())).thenThrow(new IllegalStateException("sale persistence failure"));
 
-        assertThrows(AccessDeniedException.class,
-                () -> commercialBusiness.createAnimalSale(1L, null));
-        assertThrows(AccessDeniedException.class,
-                () -> commercialBusiness.registerAnimalSalePayment(1L, 10L, null));
-        assertThrows(AccessDeniedException.class,
-                () -> commercialBusiness.createMilkSale(1L, null));
-        assertThrows(AccessDeniedException.class,
-                () -> commercialBusiness.registerMilkSalePayment(1L, 10L, null));
-
-        verifyNoInteractions(commercialPersistencePort, goatFarmPersistencePort, goatManagementUseCase);
+        assertThrows(IllegalStateException.class, () -> business.createAnimalSale(1L,
+                new AnimalSaleRequestVO("G-ROLLBACK", 10L, LocalDate.now().minusDays(1), new BigDecimal("100"), LocalDate.now(), null, null)));
+        verify(goats).exitGoat(eq(1L), eq("G-ROLLBACK"), any());
+        verify(animalSales).save(any(AnimalSaleCommand.class));
     }
 
-    private GoatFarm farm(Long id) {
-        GoatFarm farm = new GoatFarm();
-        farm.setId(id);
-        farm.setName("Fazenda QA");
-        return farm;
+    @Test void pendingOrRejectedOwnershipSalesDoNotEnterReceivablesOrSummary() {
+        AnimalSaleRecord pending = animalRecord(new AnimalSaleCommand(2L, 1L, 10L, 5L, "G1", "Cabra", LocalDate.now().minusDays(2),
+                new BigDecimal("100.00"), LocalDate.now().plusDays(5), SalePaymentStatus.OPEN, null, null, 20L));
+        when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(pending));
+        var transfer = mock(com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer.class);
+        when(transfer.status()).thenReturn(OwnershipTransferStatus.REQUESTED);
+        when(ownershipTransfers.findSaleTransfer(2L)).thenReturn(transfer);
+
+        assertTrue(business.listReceivables(1L).isEmpty());
+        assertEquals(0, business.getSummary(1L).animalSalesCount());
+        assertEquals(BigDecimal.ZERO.setScale(2), business.getSummary(1L).animalSalesTotal());
     }
 
-    private Customer activeCustomer(Long id, GoatFarm farm) {
-        return Customer.builder()
-                .id(id)
-                .farm(farm)
-                .name("Cliente QA")
-                .active(true)
-                .build();
+    @Test void reversedAnimalSaleRemainsInHistoryButHasNoEffectiveFinancialImpact() {
+        AnimalSaleRecord reversed = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("5000.00"), LocalDate.of(2026, 9, 20), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        AnimalSaleRecord valid = animalRecord(new AnimalSaleCommand(10L, 1L, 10L, 80L, "1400819007", "Substituta",
+                LocalDate.of(2026, 9, 21), new BigDecimal("5000.00"), LocalDate.of(2026, 9, 21), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 21), null));
+        AnimalSaleReversalRecord reversal = new AnimalSaleReversalRecord(1L, 9L, "Correção da venda", java.time.LocalDateTime.of(2026, 9, 22, 10, 0), 42L);
+        when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(reversed, valid));
+        when(reversals.findBySaleIds(anyCollection())).thenReturn(Map.of(9L, reversal));
+
+        List<AnimalSaleResponseVO> history = business.listAnimalSales(1L);
+        AnimalSaleResponseVO reversedResponse = history.stream().filter(item -> item.id().equals(9L)).findFirst().orElseThrow();
+        AnimalSaleResponseVO validResponse = history.stream().filter(item -> item.id().equals(10L)).findFirst().orElseThrow();
+        assertTrue(reversedResponse.reversed());
+        assertEquals(reversal.reversedAt(), reversedResponse.reversedAt());
+        assertEquals(reversal.reason(), reversedResponse.reversalReason());
+        assertFalse(validResponse.reversed());
+        assertNull(validResponse.reversedAt());
+        assertNull(validResponse.reversalReason());
+
+        assertTrue(business.listReceivables(1L).stream().noneMatch(item -> item.sourceId().equals(9L)));
+        CommercialSummaryVO summary = business.getSummary(1L);
+        assertEquals(1, summary.animalSalesCount());
+        assertEquals(new BigDecimal("5000.00"), summary.animalSalesTotal());
+        assertEquals(1, summary.paidReceivablesCount());
+        assertEquals(new BigDecimal("5000.00"), summary.paidReceivablesTotal());
     }
 
-    private GoatResponseVO goat(String registrationNumber, String name, GoatStatus status, GoatExitType exitType, LocalDate exitDate) {
-        GoatResponseVO goat = new GoatResponseVO();
-        goat.setRegistrationNumber(registrationNumber);
-        goat.setName(name);
-        goat.setStatus(status);
-        goat.setExitType(exitType);
-        goat.setExitDate(exitDate);
-        goat.setBirthDate(LocalDate.now().minusYears(2));
-        return goat;
+    @Test void completedInternalSaleRemainsEffectiveWhenNotReversed() {
+        AnimalSaleRecord completed = animalRecord(new AnimalSaleCommand(77L, 1L, 10L, 5L, "G-INTERNAL-COMPLETED", "Cabra interna",
+                LocalDate.of(2026, 9, 20), new BigDecimal("750.00"), LocalDate.of(2026, 9, 20), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null, 20L));
+        var transfer = mock(com.devmaster.goatfarm.goatownership.domain.OwnershipTransfer.class);
+        when(transfer.status()).thenReturn(OwnershipTransferStatus.COMPLETED);
+        when(animalSales.findAnimalSalesByFarmId(1L)).thenReturn(List.of(completed));
+        when(ownershipTransfers.findSaleTransfer(77L)).thenReturn(transfer);
+        when(reversals.findBySaleIds(anyCollection())).thenReturn(Map.of());
+
+        CommercialSummaryVO summary = business.getSummary(1L);
+
+        assertEquals(1, summary.animalSalesCount());
+        assertEquals(new BigDecimal("750.00"), summary.animalSalesTotal());
+        assertEquals(1, summary.paidReceivablesCount());
     }
+
+    @Test void legacyAnimalSalePaymentCannotBypassOwnershipSaleWorkflow() {
+        AnimalSaleRecord ownershipSale = animalRecord(new AnimalSaleCommand(77L, 1L, 10L, 5L, "G1", "Cabra",
+                LocalDate.now().minusDays(2), new BigDecimal("100.00"), LocalDate.now().plusDays(5),
+                SalePaymentStatus.OPEN, null, null, 20L));
+        when(animalSales.findAnimalSaleByIdAndFarmId(77L, 1L)).thenReturn(Optional.of(ownershipSale));
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class,
+                () -> business.registerAnimalSalePayment(1L, 77L,
+                        new SalePaymentRequestVO(LocalDate.now().minusDays(1))));
+        verify(animalSales, never()).save(any(AnimalSaleCommand.class));
+    }
+
+    @Test void reversesOnlyExternalSaleAndCreatesAuditableCorrectionReentry() {
+        Instant ended = Instant.parse("2026-09-20T23:27:21Z");
+        AnimalSaleRecord sale = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("100.00"), LocalDate.of(2026, 9, 30), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        GoatResponseVO goat = goat(79L, "1400819006", GoatStatus.VENDIDO); goat.setExitType(com.devmaster.goatfarm.goat.enums.GoatExitType.VENDA);
+        GoatOwnershipPeriod closed = GoatOwnershipPeriod.rehydrate(82L, GoatId.of(79L), 1L,
+                ended.minusSeconds(3600), ended, OwnershipEntryType.ABCC_IMPORT, OwnershipExitType.EXTERNAL_SALE, "GOAT_CREATE:ABCC_IMPORT");
+        when(animalSales.findAnimalSaleByIdAndFarmId(9L, 1L)).thenReturn(Optional.of(sale));
+        when(ownershipQuery.findOwnershipHistory(GoatId.of(79L))).thenReturn(List.of(closed));
+        when(goats.findGoatById(1L, "technical-79")).thenReturn(goat);
+        when(reversals.findBySaleId(9L)).thenReturn(Optional.empty());
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(42L, "admin@test", "Admin", Set.of("ROLE_ADMIN")));
+        when(ownershipPeriods.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        AnimalSaleReversalRecord reversal = new AnimalSaleReversalRecord(1L, 9L, "Destino correto: Capril Vilar", java.time.LocalDateTime.of(2026, 9, 21, 10, 0), 42L);
+        when(reversals.save(eq(9L), eq("Destino correto: Capril Vilar"), any(), eq(42L))).thenReturn(reversal);
+        AnimalSaleResponseVO response = business.reverseExternalAnimalSale(1L, 9L, "Destino correto: Capril Vilar");
+        assertTrue(response.reversed());
+        assertEquals(reversal.reversedAt(), response.reversedAt());
+        assertEquals(reversal.reason(), response.reversalReason());
+        verify(ownershipPeriods).save(argThat(p -> p.entryType() == OwnershipEntryType.CORRECTION_REENTRY
+                && p.source().equals("ANIMAL_SALE_REVERSAL:9") && p.farmId() == 1L));
+        verify(goats).restoreAfterSaleReversal(1L, "technical-79");
+        verify(reversals).save(eq(9L), eq("Destino correto: Capril Vilar"), any(), eq(42L));
+    }
+
+    @Test void refusesReversalWhenAnyOwnershipTransferAlreadyExists() {
+        AnimalSaleRecord sale = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("100.00"), LocalDate.of(2026, 9, 30), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        when(animalSales.findAnimalSaleByIdAndFarmId(9L, 1L)).thenReturn(Optional.of(sale));
+        when(reversals.findBySaleId(9L)).thenReturn(Optional.empty());
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(42L, "admin@test", "Admin", Set.of("ROLE_ADMIN")));
+        when(ownershipTransferPersistence.existsByGoatId(GoatId.of(79L))).thenReturn(true);
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class,
+                () -> business.reverseExternalAnimalSale(1L, 9L, "correção"));
+        verifyNoInteractions(ownershipQuery, ownershipPeriods);
+        verify(reversals).findBySaleId(9L);
+    }
+
+    @Test void refusesDuplicateReversal() {
+        AnimalSaleRecord sale = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("100.00"), LocalDate.of(2026, 9, 30), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(42L, "admin@test", "Admin", Set.of("ROLE_ADMIN")));
+        when(animalSales.findAnimalSaleByIdAndFarmId(9L, 1L)).thenReturn(Optional.of(sale));
+        when(reversals.findBySaleId(9L)).thenReturn(Optional.of(new com.devmaster.goatfarm.commercial.application.model.AnimalSaleReversalRecord(1L, 9L, "already", java.time.LocalDateTime.now(), 42L)));
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class,
+                () -> business.reverseExternalAnimalSale(1L, 9L, "correção"));
+        verifyNoInteractions(ownershipQuery, ownershipPeriods, goats);
+    }
+
+    @Test void farmOwnerCannotReverseCompletedSale() {
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(7L, "owner@test", "Owner", Set.of("ROLE_FARM_OWNER")));
+        assertThrows(com.devmaster.goatfarm.application.exception.AuthorizationDeniedException.class,
+                () -> business.reverseExternalAnimalSale(1L, 9L, "correção"));
+        verifyNoInteractions(animalSales, reversals, ownershipQuery, ownershipPeriods);
+    }
+
+    @Test void operatorCannotReverseCompletedSale() {
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(8L, "operator@test", "Operator", Set.of("ROLE_OPERATOR")));
+        assertThrows(com.devmaster.goatfarm.application.exception.AuthorizationDeniedException.class,
+                () -> business.reverseExternalAnimalSale(1L, 9L, "correção"));
+        verifyNoInteractions(animalSales, reversals, ownershipQuery, ownershipPeriods);
+    }
+
+    @Test void refusesReversalWhenLaterOwnershipExists() {
+        Instant ended = Instant.parse("2026-09-20T23:27:21Z");
+        AnimalSaleRecord sale = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("100.00"), LocalDate.of(2026, 9, 30), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        GoatOwnershipPeriod historical = GoatOwnershipPeriod.rehydrate(82L, GoatId.of(79L), 1L, ended.minusSeconds(3600), ended,
+                OwnershipEntryType.ABCC_IMPORT, OwnershipExitType.EXTERNAL_SALE, "GOAT_CREATE:ABCC_IMPORT");
+        GoatOwnershipPeriod later = GoatOwnershipPeriod.open(GoatId.of(79L), 2L, ended.plusSeconds(1), OwnershipEntryType.TRANSFER_IN, "later");
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(42L, "admin@test", "Admin", Set.of("ROLE_ADMIN")));
+        when(animalSales.findAnimalSaleByIdAndFarmId(9L, 1L)).thenReturn(Optional.of(sale));
+        when(reversals.findBySaleId(9L)).thenReturn(Optional.empty());
+        when(ownershipQuery.findOwnershipHistory(GoatId.of(79L))).thenReturn(List.of(historical, later));
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class,
+                () -> business.reverseExternalAnimalSale(1L, 9L, "correção"));
+        verifyNoInteractions(ownershipPeriods, goats);
+    }
+
+    @Test void refusesReversalWhenGoatProjectionIsIncompatible() {
+        Instant ended = Instant.parse("2026-09-20T23:27:21Z");
+        AnimalSaleRecord sale = animalRecord(new AnimalSaleCommand(9L, 1L, 10L, 79L, "1400819006", "ZÉLIA DA BOCAÍNA",
+                LocalDate.of(2026, 9, 20), new BigDecimal("100.00"), LocalDate.of(2026, 9, 30), SalePaymentStatus.PAID,
+                LocalDate.of(2026, 9, 20), null));
+        GoatOwnershipPeriod closed = GoatOwnershipPeriod.rehydrate(82L, GoatId.of(79L), 1L, ended.minusSeconds(3600), ended,
+                OwnershipEntryType.ABCC_IMPORT, OwnershipExitType.EXTERNAL_SALE, "GOAT_CREATE:ABCC_IMPORT");
+        GoatResponseVO activeWithWrongExit = goat(79L, "1400819006", GoatStatus.ATIVO);
+        when(currentPrincipalQuery.requireCurrent()).thenReturn(new AuthenticatedPrincipal(42L, "admin@test", "Admin", Set.of("ROLE_ADMIN")));
+        when(animalSales.findAnimalSaleByIdAndFarmId(9L, 1L)).thenReturn(Optional.of(sale));
+        when(reversals.findBySaleId(9L)).thenReturn(Optional.empty());
+        when(ownershipQuery.findOwnershipHistory(GoatId.of(79L))).thenReturn(List.of(closed));
+        when(goats.findGoatById(1L, "technical-79")).thenReturn(activeWithWrongExit);
+
+        assertThrows(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class,
+                () -> business.reverseExternalAnimalSale(1L, 9L, "correção"));
+        verifyNoInteractions(ownershipPeriods);
+    }
+
+    private CustomerRecord customer(Long id) { return new CustomerRecord(id, 1L, "Cliente", null, null, null, null, true, null, null); }
+    private FarmRecord farmRecord(Long id) { return new FarmRecord(id, "Fazenda", null, null, null, null, List.of(), null, null, null); }
+    private GoatResponseVO goat(Long id, String rg, GoatStatus status) { GoatResponseVO g = new GoatResponseVO(); g.setTechnicalId(id); g.setRegistrationNumber(rg); g.setName("Cabra"); g.setStatus(status); g.setBirthDate(LocalDate.now().minusYears(2)); return g; }
+    private AnimalSaleRecord animalRecord(AnimalSaleCommand c) { return new AnimalSaleRecord(c.id() == null ? 1L : c.id(), c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Cliente", true), c.goatTechnicalId(), c.goatRegistrationNumber(), c.goatName(), c.saleDate(), c.amount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null, c.targetFarmId()); }
+    private MilkSaleRecord milkRecord(MilkSaleCommand c) { return new MilkSaleRecord(1L, c.farmId(), c.customerId(), new CustomerReference(c.customerId(), "Cliente", true), c.saleDate(), c.quantityLiters(), c.unitPrice(), c.totalAmount(), c.dueDate(), c.paymentStatus(), c.paymentDate(), c.notes(), null, null); }
 }

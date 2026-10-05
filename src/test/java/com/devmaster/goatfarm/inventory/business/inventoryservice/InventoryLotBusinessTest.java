@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryLotPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemSnapshotVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotActivationRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotCreateRequestVO;
@@ -16,8 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -133,16 +133,16 @@ class InventoryLotBusinessTest {
 
     @Test
     void shouldListLotsFromPersistencePort() {
-        InventoryLotFilterVO filter = new InventoryLotFilterVO(1L, 10L, true, PageRequest.of(0, 20));
-        when(persistencePort.listLots(filter)).thenReturn(new PageImpl<>(
+        InventoryLotFilterVO filter = new InventoryLotFilterVO(1L, 10L, true);
+        PageQuery pageQuery = new PageQuery(0, 20, List.of());
+        when(persistencePort.listLots(filter, pageQuery)).thenReturn(new PageResult<>(
                 List.of(new InventoryLotResponseVO(1L, 1L, 10L, "Lote 1", null, null, true)),
-                PageRequest.of(0, 20),
-                1
+                1, 0, 20
         ));
 
-        var page = business.listLots(filter);
+        var page = business.listLots(filter, pageQuery);
 
-        assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent().get(0).code()).isEqualTo("Lote 1");
+        assertThat(page.totalElements()).isEqualTo(1);
+        assertThat(page.content().get(0).code()).isEqualTo("Lote 1");
     }
 }

@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.application.core.business.validation;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,24 @@ public class GoatGenderValidator {
 
     public void requireFemaleAndActive(Long farmId, String goatId) {
         var goat = requireGoat(farmId, goatId);
+        validateFemale(goat.gender());
+        validateActiveStatus(goat.status());
+    }
+
+    /**
+     * Validates sex by stable technical identity. Ownership is deliberately
+     * checked by the caller so historical farm provenance is not mistaken for
+     * the current operational farm.
+     */
+    public void requireFemale(GoatId goatId) {
+        var goat = goatValidationQueryPort.findForValidation(goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para o GoatId informado."));
+        validateFemale(goat.gender());
+    }
+
+    public void requireFemaleAndActive(GoatId goatId) {
+        var goat = goatValidationQueryPort.findForValidation(goatId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cabra não encontrada para o GoatId informado."));
         validateFemale(goat.gender());
         validateActiveStatus(goat.status());
     }

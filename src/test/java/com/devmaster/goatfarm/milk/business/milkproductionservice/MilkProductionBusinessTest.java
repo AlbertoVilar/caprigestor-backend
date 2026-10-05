@@ -14,14 +14,19 @@ import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
 import com.devmaster.goatfarm.milk.business.mapper.MilkProductionBusinessMapper;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.domain.Lactation;
+import com.devmaster.goatfarm.milk.domain.MilkProduction;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -53,6 +58,12 @@ class MilkProductionBusinessTest {
     @Mock
     private MilkProductionBusinessMapper milkProductionMapper;
 
+    @Mock
+    private GoatReferenceResolver goatReferenceResolver;
+
+    @Mock
+    private GoatOwnershipGuardUseCase goatOwnershipGuard;
+
     @InjectMocks
     private MilkProductionBusiness milkProductionBusiness;
 
@@ -61,7 +72,12 @@ class MilkProductionBusinessTest {
         // Método executado antes de cada teste.
         // Útil para resetar mocks ou configurar comportamento padrão se necessário.
         lenient().doNothing().when(goatGenderValidator).requireFemale(anyLong(), anyString());
-        lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(anyLong(), anyString(), any(LocalDate.class)))
+        lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(any(GoatId.class));
+        lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(GoatId.class), anyLong());
+        lenient().doNothing().when(goatOwnershipGuard).requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+        lenient().when(goatReferenceResolver.resolveGlobal(anyString()))
+                .thenReturn(Optional.of(new GoatReference(new GoatId(42L), 1L, "1643218012", "Goat", null)));
+        lenient().when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(any(GoatId.class), any(LocalDate.class)))
                 .thenReturn(GoatWithdrawalStatusVO.builder()
                         .goatId("GOAT-DEFAULT")
                         .referenceDate(LocalDate.now())
@@ -85,11 +101,12 @@ class MilkProductionBusinessTest {
         MilkProduction entity = validEntity();
         MilkProductionResponseVO responseVO = validResponseVO();
         // Se tem lactação ativa
-        Lactation lactation = new Lactation(); 
-        lactation.setId(10L);
+        Lactation lactation = Lactation.rehydrate(10L, farmId, goatId, null,
+                com.devmaster.goatfarm.milk.enums.LactationStatus.ACTIVE,
+                request.getDate().minusDays(10), null, null, null, 90, 60, null, null);
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                eq(farmId), eq(goatId), eq(request.getDate()), eq(request.getShift())))
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                eq(new GoatId(42L)), eq(request.getDate()), eq(request.getShift())))
                 .thenReturn(false);
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
@@ -97,8 +114,7 @@ class MilkProductionBusinessTest {
 
         MilkProduction savedEntity = validEntity();
 
-        when(milkProductionMapper.toEntity(request)).thenReturn(entity);
-        when(milkProductionPersistencePort.save(entity)).thenReturn(savedEntity);
+        when(milkProductionPersistencePort.save(any(MilkProduction.class))).thenReturn(savedEntity);
         when(milkProductionMapper.toResponseVO(savedEntity)).thenReturn(responseVO);
 
         // Act
@@ -112,9 +128,9 @@ class MilkProductionBusinessTest {
         assertEquals(responseVO.getShift(), result.getShift());
 
         // Verify
-        verify(milkProductionPersistencePort).existsByFarmIdAndGoatIdAndDateAndShift(farmId, goatId, request.getDate(), request.getShift());
+        verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(new GoatId(42L), request.getDate(), request.getShift());
         verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
-        verify(milkProductionPersistencePort).save(entity);
+        verify(milkProductionPersistencePort).save(any(MilkProduction.class));
     }
 
     @Test
@@ -146,8 +162,8 @@ class MilkProductionBusinessTest {
         String goatId = "1643218012";
         MilkProductionRequestVO request = validCreateVO();
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(true);
 
         // Act & Assert
@@ -155,8 +171,8 @@ class MilkProductionBusinessTest {
                 () -> milkProductionBusiness.createMilkProduction(farmId, goatId, request));
 
         // Verify
-        verify(milkProductionPersistencePort).existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         );
         verifyNoInteractions(lactationPersistencePort);
         verifyNoInteractions(milkProductionMapper);
@@ -170,8 +186,8 @@ class MilkProductionBusinessTest {
         String goatId = "1643218012";
         MilkProductionRequestVO request = validCreateVO();
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(false);
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
@@ -182,8 +198,8 @@ class MilkProductionBusinessTest {
                 () -> milkProductionBusiness.createMilkProduction(farmId, goatId, request));
 
         // Verify
-        verify(milkProductionPersistencePort).existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        verify(milkProductionPersistencePort).existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         );
         verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
         verifyNoInteractions(milkProductionMapper);
@@ -196,24 +212,22 @@ class MilkProductionBusinessTest {
         String goatId = "1643218012";
         MilkProductionRequestVO request = validCreateVO();
         MilkProduction entity = validEntity();
-        Lactation lactation = new Lactation();
-        lactation.setId(10L);
+        Lactation lactation = Lactation.rehydrate(10L, farmId, goatId, null,
+                com.devmaster.goatfarm.milk.enums.LactationStatus.ACTIVE,
+                request.getDate().minusDays(10), null, null, null, 90, 60, null, null);
         MilkProduction savedEntity = validEntity();
-        savedEntity.setRecordedDuringMilkWithdrawal(true);
-        savedEntity.setMilkWithdrawalEventId(88L);
-        savedEntity.setMilkWithdrawalEndDate(request.getDate().plusDays(3));
-        savedEntity.setMilkWithdrawalSource("Antibiotico");
+        savedEntity = withWithdrawalSnapshot(savedEntity, 88L, request.getDate().plusDays(3), "Antibiotico");
         MilkProductionResponseVO responseVO = validResponseVO();
         responseVO.setRecordedDuringMilkWithdrawal(true);
         responseVO.setMilkWithdrawalEventId(88L);
         responseVO.setMilkWithdrawalEndDate(request.getDate().plusDays(3));
         responseVO.setMilkWithdrawalSource("Antibiotico");
 
-        when(milkProductionPersistencePort.existsByFarmIdAndGoatIdAndDateAndShift(
-                farmId, goatId, request.getDate(), request.getShift()
+        when(milkProductionPersistencePort.existsActiveByGoatTechnicalIdAndDateAndShift(
+                new GoatId(42L), request.getDate(), request.getShift()
         )).thenReturn(false);
 
-        when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(farmId, goatId, request.getDate()))
+        when(healthWithdrawalQueryUseCase.getGoatWithdrawalStatus(new GoatId(42L), request.getDate()))
                 .thenReturn(GoatWithdrawalStatusVO.builder()
                         .goatId(goatId)
                         .referenceDate(request.getDate())
@@ -229,19 +243,20 @@ class MilkProductionBusinessTest {
 
         when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
                 .thenReturn(Optional.of(lactation));
-        when(milkProductionMapper.toEntity(request)).thenReturn(entity);
-        when(milkProductionPersistencePort.save(entity)).thenReturn(savedEntity);
+        when(milkProductionPersistencePort.save(any(MilkProduction.class))).thenReturn(savedEntity);
         when(milkProductionMapper.toResponseVO(savedEntity)).thenReturn(responseVO);
 
         MilkProductionResponseVO result = milkProductionBusiness.createMilkProduction(farmId, goatId, request);
 
         assertNotNull(result);
-        assertTrue(entity.isRecordedDuringMilkWithdrawal());
-        assertEquals(88L, entity.getMilkWithdrawalEventId());
-        assertEquals(request.getDate().plusDays(3), entity.getMilkWithdrawalEndDate());
-        assertEquals("Antibiotico", entity.getMilkWithdrawalSource());
+        ArgumentCaptor<MilkProduction> productionCaptor = ArgumentCaptor.forClass(MilkProduction.class);
+        verify(milkProductionPersistencePort).save(productionCaptor.capture());
+        MilkProduction captured = productionCaptor.getValue();
+        assertTrue(captured.isRecordedDuringMilkWithdrawal());
+        assertEquals(88L, captured.getMilkWithdrawalEventId());
+        assertEquals(request.getDate().plusDays(3), captured.getMilkWithdrawalEndDate());
+        assertEquals("Antibiotico", captured.getMilkWithdrawalSource());
         assertTrue(result.isRecordedDuringMilkWithdrawal());
-        verify(milkProductionPersistencePort).save(entity);
         verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
     }
 
@@ -316,7 +331,7 @@ class MilkProductionBusinessTest {
                 .build();
 
         MilkProduction savedEntity = validEntity();
-        savedEntity.setVolumeLiters(newVolume);
+        savedEntity = withVolume(savedEntity, newVolume);
         
         MilkProductionResponseVO expected = validResponseVO();
         expected.setVolumeLiters(newVolume);
@@ -365,8 +380,7 @@ class MilkProductionBusinessTest {
                 .build();
 
         MilkProduction savedEntity = validEntity();
-        savedEntity.setNotes(newNotes);
-        savedEntity.setVolumeLiters(oldVolume);
+        savedEntity = withVolumeAndNotes(savedEntity, oldVolume, newNotes);
 
         MilkProductionResponseVO expected = validResponseVO();
         expected.setNotes(newNotes);
@@ -405,7 +419,7 @@ class MilkProductionBusinessTest {
         Long id = 5L;
 
         MilkProduction canceled = validEntity();
-        canceled.setStatus(MilkProductionStatus.CANCELED);
+        canceled = canceled(canceled);
 
         MilkProductionUpdateRequestVO updateVO = MilkProductionUpdateRequestVO.builder()
                 .volumeLiters(new BigDecimal("3.00"))
@@ -444,8 +458,7 @@ class MilkProductionBusinessTest {
                 .thenReturn(Optional.of(entityBefore));
 
         MilkProduction savedEntity = validEntity();
-        savedEntity.setVolumeLiters(newVolume);
-        savedEntity.setNotes(newNotes);
+        savedEntity = withVolumeAndNotes(savedEntity, newVolume, newNotes);
 
         when(milkProductionPersistencePort.save(entityBefore))
                 .thenReturn(savedEntity);
@@ -560,15 +573,43 @@ class MilkProductionBusinessTest {
     // ==================================================================================
 
     private MilkProduction validEntity() {
-        MilkProduction entity = new MilkProduction();
-        entity.setId(5L);
-        entity.setDate(LocalDate.of(2026, 1, 1));
-        entity.setShift(MilkingShift.MORNING);
-        entity.setVolumeLiters(new BigDecimal("2.50"));
-        entity.setNotes("Ordenha da manhã");
-        entity.setRecordedDuringMilkWithdrawal(false);
-        entity.setStatus(MilkProductionStatus.ACTIVE);
-        return entity;
+        return MilkProduction.rehydrate(
+                5L, 1L, "1643218012", 42L, 10L,
+                LocalDate.of(2026, 1, 1), MilkingShift.MORNING,
+                new BigDecimal("2.50"), "Ordenha da manhã", MilkProductionStatus.ACTIVE,
+                null, null, false, null, null, null,
+                LocalDate.of(2026, 1, 1).atStartOfDay(), LocalDate.of(2026, 1, 1).atStartOfDay()
+        );
+    }
+
+    private MilkProduction withVolume(MilkProduction source, BigDecimal volume) {
+        return withVolumeAndNotes(source, volume, source.getNotes());
+    }
+
+    private MilkProduction withVolumeAndNotes(MilkProduction source, BigDecimal volume, String notes) {
+        return MilkProduction.rehydrate(source.getId(), source.getFarmId(), source.getGoatId(),
+                source.getGoatTechnicalId(), source.getLactationId(), source.getDate(), source.getShift(),
+                volume, notes, source.getStatus(), source.getCanceledAt(), source.getCanceledReason(),
+                source.isRecordedDuringMilkWithdrawal(), source.getMilkWithdrawalEventId(),
+                source.getMilkWithdrawalEndDate(), source.getMilkWithdrawalSource(), source.getCreatedAt(),
+                source.getUpdatedAt());
+    }
+
+    private MilkProduction withWithdrawalSnapshot(MilkProduction source, Long eventId, LocalDate endDate, String sourceName) {
+        return MilkProduction.rehydrate(source.getId(), source.getFarmId(), source.getGoatId(),
+                source.getGoatTechnicalId(), source.getLactationId(), source.getDate(), source.getShift(),
+                source.getVolumeLiters(), source.getNotes(), source.getStatus(), source.getCanceledAt(),
+                source.getCanceledReason(), true, eventId, endDate, sourceName, source.getCreatedAt(),
+                source.getUpdatedAt());
+    }
+
+    private MilkProduction canceled(MilkProduction source) {
+        return MilkProduction.rehydrate(source.getId(), source.getFarmId(), source.getGoatId(),
+                source.getGoatTechnicalId(), source.getLactationId(), source.getDate(), source.getShift(),
+                source.getVolumeLiters(), source.getNotes(), MilkProductionStatus.CANCELED,
+                LocalDate.of(2026, 1, 2).atStartOfDay(), "cancelado", source.isRecordedDuringMilkWithdrawal(),
+                source.getMilkWithdrawalEventId(), source.getMilkWithdrawalEndDate(), source.getMilkWithdrawalSource(),
+                source.getCreatedAt(), source.getUpdatedAt());
     }
 
     private MilkProductionRequestVO validCreateVO() {

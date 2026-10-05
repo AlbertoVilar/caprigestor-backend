@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.inventory.api.dto.InventoryLotResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryLotApiMapper;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryLotCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryLotQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotActivationRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotFilterVO;
@@ -18,8 +20,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
@@ -131,8 +131,8 @@ class InventoryLotControllerTest {
                 true
         );
 
-        when(queryUseCase.listLots(any(InventoryLotFilterVO.class)))
-                .thenReturn(new PageImpl<>(List.of(responseVO), PageRequest.of(0, 20), 1));
+        when(queryUseCase.listLots(any(InventoryLotFilterVO.class), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(responseVO), 1, 0, 20));
         when(apiMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/inventory/lots", 1L)
@@ -143,7 +143,7 @@ class InventoryLotControllerTest {
                 .andExpect(jsonPath("$.content[0].itemId").value(101))
                 .andExpect(jsonPath("$.page.totalElements").value(1));
 
-        verify(queryUseCase).listLots(any(InventoryLotFilterVO.class));
+        verify(queryUseCase).listLots(any(InventoryLotFilterVO.class), any(PageQuery.class));
     }
 
     @Test

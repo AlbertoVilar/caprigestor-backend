@@ -1,12 +1,18 @@
 package com.devmaster.goatfarm.reproduction.persistence.adapter;
 
 import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.model.PregnancyDiagnosisAlertSnapshot;
+import com.devmaster.goatfarm.reproduction.domain.ReproductiveEvent;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
-import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
+import com.devmaster.goatfarm.reproduction.persistence.mapper.ReproductiveEventPersistenceMapper;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
+import com.devmaster.goatfarm.reproduction.persistence.projection.PregnancyDiagnosisAlertProjection;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.application.pagination.SortDirection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,47 +33,60 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
 
     private final ReproductiveEventRepository repository;
     private final GoatReferenceQueryPort goatReferenceQueryPort;
+    private final ReproductiveEventPersistenceMapper mapper;
 
     public ReproductiveEventPersistenceAdapter(ReproductiveEventRepository repository) {
-        this(repository, null);
+        this(repository, null, new ReproductiveEventPersistenceMapper());
+    }
+
+    public ReproductiveEventPersistenceAdapter(ReproductiveEventRepository repository,
+                                               GoatReferenceQueryPort goatReferenceQueryPort) {
+        this(repository, goatReferenceQueryPort, new ReproductiveEventPersistenceMapper());
     }
 
     @Autowired
     public ReproductiveEventPersistenceAdapter(ReproductiveEventRepository repository,
-                                               GoatReferenceQueryPort goatReferenceQueryPort) {
+                                               GoatReferenceQueryPort goatReferenceQueryPort,
+                                               ReproductiveEventPersistenceMapper mapper) {
         this.repository = repository;
         this.goatReferenceQueryPort = goatReferenceQueryPort;
+        this.mapper = mapper;
     }
 
     @Override
     public ReproductiveEvent save(ReproductiveEvent entity) {
-        populateTechnicalIdentity(entity);
-        return repository.save(entity);
+        var persistence = mapper.toEntity(entity);
+        if (persistence.getGoatTechnicalId() == null) {
+            technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(persistence::setGoatTechnicalId);
+        }
+        return mapper.toDomain(repository.save(persistence));
     }
 
     @Override
-    public Page<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, Pageable pageable) {
+    public PageResult<ReproductiveEvent> findAllByFarmIdAndGoatId(Long farmId, String goatId, PageQuery pageQuery) {
+        Pageable pageable = toPageable(pageQuery);
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
-            Page<ReproductiveEvent> technical = repository.findAllByFarmIdAndGoatTechnicalIdOrderByEventDateDescIdDesc(
+            Page<ReproductiveEventEntity> technicalPage = repository.findAllByFarmIdAndGoatTechnicalIdOrderByEventDateDescIdDesc(
                     farmId, technicalId.get(), pageable);
+            Page<ReproductiveEvent> technical = technicalPage.map(mapper::toDomain);
             if (technical.hasContent()) {
-                return technical;
+                return toPageResult(technicalPage);
             }
         }
-        return repository.findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(farmId, goatId, pageable);
+        return toPageResult(repository.findAllByFarmIdAndGoatIdOrderByEventDateDescIdDesc(farmId, goatId, pageable));
     }
 
     @Override
     public Optional<ReproductiveEvent> findByIdAndFarmIdAndGoatId(Long eventId, Long farmId, String goatId) {
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
-            Optional<ReproductiveEvent> technical = repository.findByIdAndFarmIdAndGoatTechnicalId(eventId, farmId, technicalId.get());
+            Optional<ReproductiveEvent> technical = repository.findByIdAndFarmIdAndGoatTechnicalId(eventId, farmId, technicalId.get()).map(mapper::toDomain);
             if (technical.isPresent()) {
                 return technical;
             }
         }
-        return repository.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId);
+        return repository.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId).map(mapper::toDomain);
     }
 
     @Override
@@ -75,7 +94,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Optional<ReproductiveEvent> technical = repository.findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
-                    farmId, technicalId.get(), ReproductiveEventType.COVERAGE, date);
+                    farmId, technicalId.get(), ReproductiveEventType.COVERAGE, date).map(mapper::toDomain);
             if (technical.isPresent()) {
                 return technical;
             }
@@ -85,7 +104,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 goatId,
                 ReproductiveEventType.COVERAGE,
                 date
-        );
+        ).map(mapper::toDomain);
     }
 
     @Override
@@ -93,7 +112,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Optional<ReproductiveEvent> technical = repository.findLatestEffectiveCoverageOnOrBeforeByTechnicalId(
-                    farmId, technicalId.get(), date, PageRequest.of(0, 1)).stream().findFirst();
+                    farmId, technicalId.get(), date, PageRequest.of(0, 1)).stream().map(mapper::toDomain).findFirst();
             if (technical.isPresent()) {
                 return technical;
             }
@@ -103,7 +122,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 goatId,
                 date,
                 PageRequest.of(0, 1)
-        ).stream().findFirst();
+        ).stream().map(mapper::toDomain).findFirst();
     }
 
     @Override
@@ -111,7 +130,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Optional<ReproductiveEvent> technical = repository.findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndEventDateLessThanEqualOrderByEventDateDescIdDesc(
-                    farmId, technicalId.get(), ReproductiveEventType.PREGNANCY_CHECK, date);
+                    farmId, technicalId.get(), ReproductiveEventType.PREGNANCY_CHECK, date).map(mapper::toDomain);
             if (technical.isPresent()) {
                 return technical;
             }
@@ -121,7 +140,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 goatId,
                 ReproductiveEventType.PREGNANCY_CHECK,
                 date
-        );
+        ).map(mapper::toDomain);
     }
 
     @Override
@@ -129,7 +148,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Optional<ReproductiveEvent> technical = repository.findTopByFarmIdAndGoatTechnicalIdAndEventTypeAndRelatedEventIdOrderByEventDateDescIdDesc(
-                    farmId, technicalId.get(), ReproductiveEventType.COVERAGE_CORRECTION, relatedEventId);
+                    farmId, technicalId.get(), ReproductiveEventType.COVERAGE_CORRECTION, relatedEventId).map(mapper::toDomain);
             if (technical.isPresent()) {
                 return technical;
             }
@@ -139,7 +158,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 goatId,
                 ReproductiveEventType.COVERAGE_CORRECTION,
                 relatedEventId
-        );
+        ).map(mapper::toDomain);
     }
 
     @Override
@@ -147,7 +166,7 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
         Optional<Long> technicalId = technicalId(farmId, goatId);
         if (technicalId.isPresent()) {
             Optional<ReproductiveEvent> technical = repository.findTopByFarmIdAndGoatTechnicalIdAndEventTypeOrderByEventDateDescIdDesc(
-                    farmId, technicalId.get(), eventType);
+                    farmId, technicalId.get(), eventType).map(mapper::toDomain);
             if (technical.isPresent()) {
                 return technical;
             }
@@ -156,24 +175,24 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 farmId,
                 goatId,
                 eventType
-        );
+        ).map(mapper::toDomain);
     }
 
     @Override
-    public Page<PregnancyDiagnosisAlertProjection> findPendingPregnancyDiagnosisAlerts(
+    public PageResult<PregnancyDiagnosisAlertSnapshot> findPendingPregnancyDiagnosisAlerts(
             Long farmId,
             LocalDate referenceDate,
             int minDays,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
         LocalDate eligibleThresholdDate = referenceDate.minusDays(minDays);
-        return repository.findPendingPregnancyDiagnosisAlerts(
+        return toAlertPageResult(repository.findPendingPregnancyDiagnosisAlerts(
                 farmId,
                 referenceDate,
                 eligibleThresholdDate,
                 BLOCKING_DIAGNOSIS_EVENT_TYPES,
-                pageable
-        );
+                toPageable(pageQuery)
+        ));
     }
 
     private Optional<Long> technicalId(Long farmId, String registrationNumber) {
@@ -185,9 +204,28 @@ public class ReproductiveEventPersistenceAdapter implements ReproductiveEventPer
                 .map(id -> id.value());
     }
 
-    private void populateTechnicalIdentity(ReproductiveEvent entity) {
-        if (entity.getGoatTechnicalId() == null) {
-            technicalId(entity.getFarmId(), entity.getGoatId()).ifPresent(entity::setGoatTechnicalId);
+    private Pageable toPageable(PageQuery query) {
+        if (query == null) {
+            return PageRequest.of(0, 10);
         }
+        var orders = query.sort().stream()
+                .map(spec -> new org.springframework.data.domain.Sort.Order(
+                        spec.direction() == SortDirection.ASC ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC,
+                        spec.field()))
+                .toList();
+        return PageRequest.of(query.page(), query.size(), org.springframework.data.domain.Sort.by(orders));
     }
+
+    private PageResult<ReproductiveEvent> toPageResult(Page<ReproductiveEventEntity> page) {
+        return new PageResult<>(page.getContent().stream().map(mapper::toDomain).toList(),
+                page.getTotalElements(), page.getNumber(), page.getSize());
+    }
+
+    private PageResult<PregnancyDiagnosisAlertSnapshot> toAlertPageResult(Page<PregnancyDiagnosisAlertProjection> page) {
+        return new PageResult<>(page.getContent().stream()
+                .map(p -> new PregnancyDiagnosisAlertSnapshot(p.getGoatTechnicalId(), p.getGoatId(),
+                        p.getLastCoverageDate(), p.getLastCheckDate(), p.getEligibleDate()))
+                .toList(), page.getTotalElements(), page.getNumber(), page.getSize());
+    }
+
 }

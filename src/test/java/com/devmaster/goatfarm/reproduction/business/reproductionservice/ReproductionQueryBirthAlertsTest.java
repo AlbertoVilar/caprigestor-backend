@@ -1,0 +1,101 @@
+package com.devmaster.goatfarm.reproduction.business.reproductionservice;
+
+import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmRegistrationQueryUseCase;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.reproduction.application.ports.out.PregnancyPersistencePort;
+import com.devmaster.goatfarm.reproduction.application.ports.out.ReproductiveEventPersistencePort;
+import com.devmaster.goatfarm.reproduction.business.mapper.ReproductionBusinessMapper;
+import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
+import com.devmaster.goatfarm.reproduction.domain.Pregnancy;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ReproductionQueryBirthAlertsTest {
+
+    @Mock
+    private PregnancyPersistencePort pregnancyPersistencePort;
+
+    @Mock
+    private ReproductiveEventPersistencePort reproductiveEventPersistencePort;
+
+    @Mock
+    private GoatGenderValidator goatGenderValidator;
+
+    @Mock
+    private GoatPersistencePort goatPersistencePort;
+
+    @Mock
+    private GoatReferenceResolver goatReferenceResolver;
+
+    @Mock
+    private FarmRegistrationQueryUseCase farmRegistrationQueryUseCase;
+
+    @Mock
+    private GoatManagementUseCase goatManagementUseCase;
+
+    @Mock
+    private ReproductionBusinessMapper reproductionBusinessMapper;
+
+    private LegacyReproductionTestFacade reproductionBusiness;
+
+    @BeforeEach
+    void setUp() {
+        Clock clock = Clock.fixed(Instant.parse("2026-07-03T10:00:00Z"), ZoneOffset.UTC);
+        reproductionBusiness = new LegacyReproductionTestFacade(
+                pregnancyPersistencePort,
+                reproductiveEventPersistencePort,
+                goatPersistencePort,
+                goatReferenceResolver,
+                farmRegistrationQueryUseCase,
+                goatManagementUseCase,
+                goatGenderValidator,
+                reproductionBusinessMapper,
+                clock
+        );
+    }
+
+    @Test
+    void getPendingBirthAlerts_shouldReturnActivePregnanciesDueTodayOrEarlier() {
+        Long farmId = 14L;
+        LocalDate referenceDate = LocalDate.of(2026, 7, 3);
+        PageQuery pageQuery = new PageQuery(0, 20, List.of());
+        Pregnancy pregnancy = Pregnancy.builder()
+                .id(27L)
+                .farmId(farmId)
+                .goatId("1615325001")
+                .status(PregnancyStatus.ACTIVE)
+                .expectedDueDate(LocalDate.of(2026, 7, 1))
+                .build();
+
+        when(pregnancyPersistencePort.findActiveWithDueDateOnOrBefore(farmId, referenceDate, pageQuery))
+                .thenReturn(new PageResult<>(List.of(pregnancy), 1, 0, 20));
+
+        var result = reproductionBusiness.getPendingBirthAlerts(farmId, referenceDate, pageQuery);
+
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.content()).singleElement().satisfies(alert -> {
+            assertThat(alert.getPregnancyId()).isEqualTo(27L);
+            assertThat(alert.getGoatId()).isEqualTo("1615325001");
+            assertThat(alert.getExpectedDueDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+            assertThat(alert.getDaysOverdue()).isEqualTo(2);
+        });
+    }
+}

@@ -1,17 +1,17 @@
 package com.devmaster.goatfarm.commercial.business;
 
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.commercial.application.model.OperationalExpenseCommand;
+import com.devmaster.goatfarm.commercial.application.model.OperationalExpenseRecord;
 import com.devmaster.goatfarm.commercial.application.ports.in.OperationalFinanceUseCase;
 import com.devmaster.goatfarm.commercial.application.ports.out.InventoryPurchaseCostQueryPort;
 import com.devmaster.goatfarm.commercial.application.ports.out.OperationalFinancePersistencePort;
 import com.devmaster.goatfarm.commercial.business.bo.MonthlyOperationalSummaryVO;
 import com.devmaster.goatfarm.commercial.business.bo.OperationalExpenseRequestVO;
 import com.devmaster.goatfarm.commercial.business.bo.OperationalExpenseResponseVO;
-import com.devmaster.goatfarm.commercial.persistence.entity.OperationalExpense;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,13 +27,13 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     private final OperationalFinancePersistencePort persistencePort;
     private final GoatFarmPersistencePort goatFarmPersistencePort;
     private final InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
 
     public OperationalFinanceBusiness(
             OperationalFinancePersistencePort persistencePort,
             GoatFarmPersistencePort goatFarmPersistencePort,
             InventoryPurchaseCostQueryPort inventoryPurchaseCostQueryPort,
-            OwnershipService ownershipService
+            FarmAuthorizationUseCase ownershipService
     ) {
         this.persistencePort = persistencePort;
         this.goatFarmPersistencePort = goatFarmPersistencePort;
@@ -45,18 +45,19 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     @Transactional
     public OperationalExpenseResponseVO createOperationalExpense(Long farmId, OperationalExpenseRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-        GoatFarm farm = resolveFarm(farmId);
+        ensureFarmExists(farmId);
         validateRequest(requestVO);
 
-        OperationalExpense saved = persistencePort.saveOperationalExpense(
-                OperationalExpense.builder()
-                        .farm(farm)
-                        .category(requestVO.category())
-                        .description(normalizeText(requestVO.description()))
-                        .amount(requestVO.amount().setScale(2, RoundingMode.HALF_UP))
-                        .expenseDate(requestVO.expenseDate())
-                        .notes(normalizeText(requestVO.notes()))
-                        .build()
+        OperationalExpenseRecord saved = persistencePort.saveOperationalExpense(
+                new OperationalExpenseCommand(
+                        null,
+                        farmId,
+                        requestVO.category(),
+                        normalizeText(requestVO.description()),
+                        requestVO.amount().setScale(2, RoundingMode.HALF_UP),
+                        requestVO.expenseDate(),
+                        normalizeText(requestVO.notes())
+                )
         );
 
         return toResponseVO(saved);
@@ -66,7 +67,7 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     @Transactional(readOnly = true)
     public List<OperationalExpenseResponseVO> listOperationalExpenses(Long farmId) {
         ownershipService.verifyFarmManagement(farmId);
-        resolveFarm(farmId);
+        ensureFarmExists(farmId);
         return persistencePort.findOperationalExpensesByFarmId(farmId).stream().map(this::toResponseVO).toList();
     }
 
@@ -74,7 +75,7 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
     @Transactional(readOnly = true)
     public MonthlyOperationalSummaryVO getMonthlySummary(Long farmId, int year, int month) {
         ownershipService.verifyFarmManagement(farmId);
-        resolveFarm(farmId);
+        ensureFarmExists(farmId);
 
         YearMonth yearMonth = resolveYearMonth(year, month);
         LocalDate fromDate = yearMonth.atDay(1);
@@ -110,12 +111,12 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
         );
     }
 
-    private GoatFarm resolveFarm(Long farmId) {
+    private void ensureFarmExists(Long farmId) {
         if (farmId == null) {
             throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
         }
 
-        return goatFarmPersistencePort.findById(farmId)
+        goatFarmPersistencePort.findById(farmId)
                 .orElseThrow(() -> new ResourceNotFoundException("Fazenda nao encontrada."));
     }
 
@@ -157,15 +158,15 @@ public class OperationalFinanceBusiness implements OperationalFinanceUseCase {
         return (value == null ? BigDecimal.ZERO : value).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private OperationalExpenseResponseVO toResponseVO(OperationalExpense entity) {
+    private OperationalExpenseResponseVO toResponseVO(OperationalExpenseRecord record) {
         return new OperationalExpenseResponseVO(
-                entity.getId(),
-                entity.getCategory(),
-                entity.getDescription(),
-                entity.getAmount(),
-                entity.getExpenseDate(),
-                entity.getNotes(),
-                entity.getCreatedAt()
+                record.id(),
+                record.category(),
+                record.description(),
+                record.amount(),
+                record.expenseDate(),
+                record.notes(),
+                record.createdAt()
         );
     }
 }

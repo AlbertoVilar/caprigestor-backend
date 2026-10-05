@@ -30,13 +30,24 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
                     // RG. All goat-dependent structural references target id.
                     .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
-                    .isEqualTo(7L);
+                    // V47 removes farm-coupled technical safeguards and keeps
+                    // one direct GoatId FK for each consumer. Events already
+                    // had a direct technical FK in V40, so eight direct
+                    // GoatId FKs are expected here.
+                    .isEqualTo(8L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in ('fk_cabras_pai_goat_id','fk_cabras_mae_goat_id')"))
                     .isEqualTo(2L);
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and conrelid = 'public.milk_production'::regclass and conname = 'fk_milk_production_farm_goat_technical_lactation'"))
+                    .isZero();
+            assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and conrelid = 'public.milk_production'::regclass and conname = 'fk_milk_production_lactation'"))
                     .isEqualTo(1L);
             assertThat(hasConstraint(connection, "uk_cabras_farm_id", "UNIQUE")).isTrue();
             assertThat(hasConstraint(connection, "uk_lactation_farm_goat_technical_id", "UNIQUE")).isTrue();
+            assertThat(hasIndex(connection, "ux_lactation_single_active_per_goat_technical")).isTrue();
+            assertThat(indexDefinition(connection, "uk_animal_sale_external_goat_technical"))
+                    .containsIgnoringCase("unique")
+                    .containsIgnoringCase("goat_technical_id")
+                    .containsIgnoringCase("target_farm_id IS NULL");
             assertThat(hasConstraint(connection, "fk_goat_registration_history_goat", "FOREIGN KEY")).isTrue();
             // farm_id is the historical context at rectification time. It is
             // intentionally independent from the goat's current farm so a
@@ -53,6 +64,47 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertNotNullable(connection, "milk_production", "goat_technical_id");
             assertNotNullable(connection, "animal_sale", "goat_technical_id");
             assertNullable(connection, "operational_audit_entry", "goat_technical_id");
+        }
+    }
+
+    @Test
+    void upgradeFromV43EnforcesOnlyActiveLactationUniqueness() throws SQLException {
+        flyway("43").migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "L-101", "Lactation Goat", "FEMEA", 101);
+            long goatId = queryLong(connection,
+                    "select id from cabras where num_registro = 'L-101'");
+            execute(connection, ("insert into lactation "
+                    + "(farm_id, goat_id, goat_technical_id, status, start_date) values "
+                    + "(101, 'L-101', %d, 'DRY', date '2025-01-01'), "
+                    + "(101, 'L-101', %d, 'ACTIVE', date '2026-01-01')")
+                    .formatted(goatId, goatId));
+        }
+
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            long goatId = queryLong(connection,
+                    "select id from cabras where num_registro = 'L-101'");
+            assertThat(hasIndex(connection, "ux_lactation_single_active_per_goat_technical")).isTrue();
+            execute(connection, "insert into lactation "
+                    + "(farm_id, goat_id, goat_technical_id, status, start_date) "
+                    + "values (101, 'L-101', %d, 'DRY', date '2024-01-01')".formatted(goatId));
+            assertThatThrownBy(() -> execute(connection, "insert into lactation "
+                    + "(farm_id, goat_id, goat_technical_id, status, start_date) "
+                    + "values (101, 'L-101', %d, 'ACTIVE', date '2026-02-01')".formatted(goatId)))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("ux_lactation_single_active_per_goat_technical");
+            assertThat(queryLong(connection,
+                    "select count(*) from lactation where goat_technical_id = " + goatId
+                            + " and status = 'DRY'"))
+                    .isEqualTo(2L);
+            assertThat(queryLong(connection,
+                    "select count(*) from lactation where goat_technical_id = " + goatId
+                            + " and status = 'ACTIVE'"))
+                    .isEqualTo(1L);
         }
     }
 
@@ -101,7 +153,7 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname in (" + oldGoatConstraintNames() + ")"))
                     .isZero();
             assertThat(queryLong(connection, "select count(*) from pg_constraint where contype = 'f' and confrelid = 'public.cabras'::regclass and conname like '%technical%'"))
-                    .isEqualTo(7L);
+              .isEqualTo(8L);
         }
     }
 
@@ -122,6 +174,31 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
     }
 
     @Test
+    void externalSalesAreStructurallyUniqueByGoatIdButInternalHistoryIsNot() throws SQLException {
+        flyway().migrate();
+
+        try (Connection connection = openConnection()) {
+            seedUsersAndFarms(connection);
+            insertGoat(connection, "SALE-GOAT", "Sale Goat", "FEMEA", 101);
+            execute(connection, "insert into commercial_customer (id, farm_id, name) values (901, 101, 'Sale customer')");
+            long goatId = queryLong(connection, "select id from cabras where num_registro = 'SALE-GOAT'");
+
+            execute(connection, "insert into animal_sale (id, farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (901, 101, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-01', 10, date '2026-01-01', 'PENDING')");
+            assertThatThrownBy(() -> execute(connection, "insert into animal_sale (id, farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (902, 101, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-02', 10, date '2026-01-02', 'PENDING')"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("uk_animal_sale_external_goat_technical");
+
+            execute(connection, "insert into animal_sale (id, farm_id, target_farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (903, 101, 102, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-03', 10, date '2026-01-03', 'PENDING')");
+            execute(connection, "insert into animal_sale (id, farm_id, target_farm_id, customer_id, goat_registration_number, goat_technical_id, goat_name, sale_date, amount, due_date, payment_status) "
+                    + "values (904, 101, 102, 901, 'SALE-GOAT', " + goatId + ", 'Sale Goat', date '2026-01-04', 10, date '2026-01-04', 'PENDING')");
+            assertThat(queryLong(connection, "select count(*) from animal_sale where goat_technical_id = " + goatId + " and target_farm_id is not null")).isEqualTo(2L);
+        }
+    }
+
+    @Test
     void technicalReferencesPreserveFarmAndDeleteSemantics() throws SQLException {
         flyway().migrate();
 
@@ -133,8 +210,9 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             insertGoat(connection, "G-CHILD", "Child", "FEMEA", 101);
             execute(connection, "update cabras set pai_num_registro = 'G-PARENT', pai_goat_id = (select id from cabras where num_registro = 'G-PARENT') where num_registro = 'G-CHILD'");
 
-            assertThatThrownBy(() -> execute(connection, "insert into pregnancy (id, farm_id, goat_id, goat_technical_id, status, created_at, updated_at) values (201, 101, 'G-101', (select id from cabras where num_registro = 'G-102'), 'ACTIVE', now(), now())"))
-                    .isInstanceOf(SQLException.class);
+            // farm_id is historical context; a GoatId may be referenced by a
+            // record created in a different farm after ownership changes.
+            execute(connection, "insert into pregnancy (id, farm_id, goat_id, goat_technical_id, status, created_at, updated_at) values (201, 101, 'G-101', (select id from cabras where num_registro = 'G-102'), 'ACTIVE', now(), now())");
             assertThatThrownBy(() -> execute(connection, "insert into health_events (id, farm_id, goat_id, goat_technical_id, type, status, title, scheduled_date) values (201, 101, 'G-101', 999999, 'VACCINE', 'SCHEDULED', 'Invalid', date '2026-01-01')"))
                     .isInstanceOf(SQLException.class);
 
@@ -297,6 +375,27 @@ class GoatTechnicalReferencesFlywayPostgresIntegrationTest {
             statement.setString(2, type);
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
+            }
+        }
+    }
+
+    private boolean hasIndex(Connection connection, String name) throws SQLException {
+        String sql = "select 1 from pg_indexes where schemaname = 'public' and indexname = ?";
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, name);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    private String indexDefinition(Connection connection, String name) throws SQLException {
+        String sql = "select indexdef from pg_indexes where schemaname = 'public' and indexname = ?";
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, name);
+            try (var resultSet = statement.executeQuery()) {
+                assertThat(resultSet.next()).isTrue();
+                return resultSet.getString(1);
             }
         }
     }

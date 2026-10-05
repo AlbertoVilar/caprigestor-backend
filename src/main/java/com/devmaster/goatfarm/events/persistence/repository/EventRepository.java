@@ -5,12 +5,11 @@ import com.devmaster.goatfarm.events.persistence.entity.Event;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /** JPA implementation detail for event persistence. */
@@ -39,16 +38,21 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             JOIN FETCH e.goat g
             WHERE e.id = :eventId
               AND g.technicalId = :goatTechnicalId
-              AND g.farm.id = :farmId
             """)
-    Optional<Event> findByIdAndGoatTechnicalIdAndFarmId(
+    Optional<Event> findByIdAndGoatTechnicalId(
             @Param("eventId") Long eventId,
-            @Param("goatTechnicalId") Long goatTechnicalId,
-            @Param("farmId") Long farmId
+            @Param("goatTechnicalId") Long goatTechnicalId
     );
 
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM Event e WHERE e.goat IN (SELECT g FROM GoatEntity g WHERE g.farm.user.id <> :adminId)")
-    void deleteEventsFromOtherUsers(@Param("adminId") Long adminId);
+    @Query("""
+            SELECT e FROM Event e
+            WHERE e.goatTechnicalId = :goatTechnicalId
+              AND e.recordingFarmId = :recordingFarmId
+            ORDER BY e.date DESC, e.id DESC
+            """)
+    List<Event> findHistoricalEventsByGoatTechnicalIdAndRecordingFarmId(
+            @Param("goatTechnicalId") Long goatTechnicalId,
+            @Param("recordingFarmId") Long recordingFarmId
+    );
+
 }

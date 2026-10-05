@@ -7,6 +7,8 @@ import com.devmaster.goatfarm.inventory.api.dto.InventoryItemResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryItemApiMapper;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryItemCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryItemQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemResponseVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,7 +18,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -88,7 +89,7 @@ class InventoryItemControllerTest {
         InventoryItemResponseVO responseVO = new InventoryItemResponseVO(77L, 2L, "Milho", false, true);
         InventoryItemResponseDTO responseDTO = new InventoryItemResponseDTO(77L, "Milho", false, true);
 
-        when(queryUseCase.listItems(eq(2L), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(responseVO), pageable, 1));
+        when(queryUseCase.listItems(eq(2L), any(PageQuery.class))).thenReturn(new PageResult<>(List.of(responseVO), 1, 0, 20));
         when(apiMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/inventory/items", 2L)

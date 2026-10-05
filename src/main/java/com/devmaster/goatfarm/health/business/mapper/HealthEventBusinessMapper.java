@@ -3,8 +3,8 @@ package com.devmaster.goatfarm.health.business.mapper;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCreateRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventUpdateRequestVO;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -22,7 +22,7 @@ public interface HealthEventBusinessMapper {
     @Mapping(target = "responsible", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    HealthEvent toEntity(HealthEventCreateRequestVO vo);
+    HealthEventRecord toRecord(HealthEventCreateRequestVO vo);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "farmId", ignore = true)
@@ -32,16 +32,16 @@ public interface HealthEventBusinessMapper {
     @Mapping(target = "responsible", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    void updateEntity(@MappingTarget HealthEvent entity, HealthEventUpdateRequestVO vo);
+    void updateRecord(@MappingTarget HealthEventRecord record, HealthEventUpdateRequestVO vo);
 
     @Mapping(target = "overdue", expression = "java(isOverdue(entity))")
     @Mapping(target = "milkWithdrawalEndDate", expression = "java(resolveWithdrawalEndDate(entity.getPerformedAt(), entity.getWithdrawalMilkDays()))")
     @Mapping(target = "milkWithdrawalActive", expression = "java(isWithdrawalActive(entity.getPerformedAt(), entity.getWithdrawalMilkDays()))")
     @Mapping(target = "meatWithdrawalEndDate", expression = "java(resolveWithdrawalEndDate(entity.getPerformedAt(), entity.getWithdrawalMeatDays()))")
     @Mapping(target = "meatWithdrawalActive", expression = "java(isWithdrawalActive(entity.getPerformedAt(), entity.getWithdrawalMeatDays()))")
-    HealthEventResponseVO toResponseVO(HealthEvent entity);
+    HealthEventResponseVO toResponseVO(HealthEventRecord entity);
 
-    default boolean isOverdue(HealthEvent entity) {
+    default boolean isOverdue(HealthEventRecord entity) {
         if (entity.getScheduledDate() == null) return false;
         if (entity.getStatus() == HealthEventStatus.REALIZADO || entity.getStatus() == HealthEventStatus.CANCELADO) {
             return false;

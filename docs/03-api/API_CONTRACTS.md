@@ -43,6 +43,9 @@ GoatId e a remoção do alias RG serão publicadas somente em uma versão futura
 - Respostas de segurança:
   - `401` via `CustomAuthenticationEntryPoint`
   - `403` via `CustomAccessDeniedHandler` ou `AccessDeniedException`
+- Não existem endpoints REST para limpeza global do banco ou recriação de admin.
+  Rebuild/reset de DEV é operacional e externo à API; bootstrap administrativo,
+  quando habilitado, usa configuração externa e não executa limpeza de dados.
 
 ### Autenticação e sessão
 
@@ -60,6 +63,8 @@ GoatId e a remoção do alias RG serão publicadas somente em uma versão futura
 - Parâmetros padrão: `page` (base 0), `size`, `sort`.
 - O padrão alvo para novos contratos é `content` + metadados em `page.number`, `page.size`, `page.totalElements`, `page.totalPages`.
 - Quando um módulo já publicado ainda retorna `Page` do Spring, a exceção deve ser documentada no módulo e preservada por compatibilidade.
+- Lactation mantém `Page` do Spring somente no histórico HTTP por compatibilidade;
+  os alertas de secagem preservam o envelope próprio `totalPending` + `alerts`.
 
 ### Convenções de payload
 - DTOs de request e response separados por módulo.
@@ -124,6 +129,28 @@ ou OPERATOR vinculado); `canAdministerFarm` segue `@FarmOwnerOnly` (ADMIN ou
 FARM_OWNER da própria fazenda). O vínculo operador–fazenda é sempre decidido
 no backend.
 
+### Eventos genéricos do animal
+
+Rotas canônicas:
+- `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/events`
+- `PUT /api/v1/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/events`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+- `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/events/filter?eventType=&startDate=&endDate=`
+- `DELETE /api/v1/goatfarms/{farmId}/goats/{goatId}/events/{eventId}`
+
+Eventos genéricos aceitam gravação somente para `PESAGEM` e `OUTRO`. Os valores
+legados `COBERTURA`, `PARTO`, `MORTE`, `SAUDE`, `VACINACAO`, `TRANSFERENCIA` e
+`MUDANCA_PROPRIETARIO` permanecem disponíveis em respostas, filtros e registros
+históricos, mas não podem ser criados nem atualizados por este módulo. Eventos
+históricos desses tipos podem ser lidos e excluídos conforme as regras de acesso
+existentes; o fluxo genérico não é fonte de verdade para Saúde, Reprodução,
+Ownership/Transferência ou Saída/Morte.
+
+Tentativa de POST/PUT com um desses tipos retorna `422` e o código
+`GENERIC_EVENT_TYPE_NOT_WRITABLE`. Use os fluxos especializados de Saúde,
+Reprodução, Ownership/Transferência ou Saída do animal.
+
 `GET /api/v1/goatfarms/{id}` permanece público e sanitizado para o catálogo.
 Para preencher a tela de edição, o frontend usa
 `GET /api/v1/goatfarms/{farmId}/management`, protegido por `@FarmOwnerOnly`.
@@ -145,6 +172,18 @@ Importação ABCC:
   atualiza um animal. A mesma combinação raça + RG é validada novamente no preview antes
   de ser disponibilizada para pré-preenchimento.
 - O endpoint `confirm` reutiliza internamente as regras de criação manual de cabra para evitar duplicação de domínio.
+- A situação registral retornada pela ABCC é apenas informativa, exceto quando
+  indicar inequivocamente falecimento (`FALECIDO`, `FALECIDA`, `MORTO`, `MORTA`,
+  `ÓBITO` ou `DECEASED`). Nessa exceção de domínio, o backend fixa o status
+  operacional importado em `FALECIDO`, inclusive se o cliente enviar outro
+  valor. Nos demais casos, `confirm` exige `goat.status` explícito e
+  `confirm-batch` exige status por item, por exemplo
+  `{ "items": [{ "externalId": "A-001", "status": "ATIVO" }, { "externalId": "A-002", "status": "VENDIDO" }] }`.
+  Não existe status global do lote. A interface mostra a situação ABCC de
+  falecimento apenas como aviso e exige escolha explícita do status local, sem
+  pré-preencher nem bloquear o campo. O backend revalida a situação no preview
+  fresco da confirmação. Situação ABCC ausente ou desconhecida não é razão
+  isolada para bloquear a importação.
 
 Genealogia complementar ABCC:
 - Consulta pública e `read-only` para complementar a genealogia do animal local.
@@ -205,6 +244,25 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 - Consultas, resumos e cadastro de cliente exigem usuário autorizado a operar a fazenda: ADMIN, FARM_OWNER próprio ou OPERATOR formalmente vinculado.
 - Registro de venda de animal ou leite, baixa de pagamento e lançamento de despesa operacional são mutações financeiras ou patrimoniais definitivas e exigem ADMIN ou FARM_OWNER da própria fazenda.
 - A autorização das mutações sensíveis é aplicada no controller e validada novamente no caso de uso antes da persistência.
+- `POST /api/v1/goatfarms/{farmId}/commercial/ownership-sales` exige
+  `targetFarmId`, GoatId técnico e `idempotencyKey`; o novo request não contém
+  `customerId`. A fazenda destino é o comprador canônico. Sem `paymentDate`, cria
+  venda `OPEN` e transferência `REQUESTED`, mantendo a propriedade no ledger
+  atual.
+- Quando `paymentDate` é informado, deve ser maior ou igual a `saleDate` e não
+  pode estar no futuro. A venda nasce `PAID` e a transferência é concluída
+  atomicamente no mesmo comando.
+- A resposta expõe `targetFarmId`, `targetFarmName` e `targetFarmTod`. Campos
+  `customerId/customerName` são nulos em novas vendas internas e permanecem
+  apenas para leitura compatível de registros históricos.
+- `PATCH .../ownership-sales/{saleId}/payment` é uma mutação da fazenda de
+  origem. Quando o pagamento é confirmado, o backend marca a venda como `PAID`,
+  fecha/abre os períodos canônicos, move a projeção atual e conclui o handoff na
+  mesma transação. O comprador não precisa aceitar nem rejeitar a venda.
+- Cancelamento de uma venda interna não paga continua autorizado pela fazenda de
+  origem; vendas pagas/concluídas não podem ser canceladas. Aceite/rejeição
+  de `INTERNAL_SALE` retornam erro de regra; permanecem exclusivos do fluxo
+  `INTERNAL_TRANSFER`.
 
 ### Articles
 
@@ -219,7 +277,17 @@ Detalhamento: [caso de uso de parto](../02-modules/REPRODUCTION_MODULE.md#caso-d
 com `@PublicEndpoint` no controller e liberada pelo `SecurityConfig`. Pode ser
 chamada sem token e retorna `200` quando a fazenda existe. O DTO contém apenas
 agregados do rebanho (total, sexo, situação e distribuição por raça), sem
-informações de mutação ou dados de autorização.
+informações de mutação ou dados de autorização. Os campos `sold` e
+`historicallySold` têm semânticas diferentes:
+
+- `sold`: cabras atualmente projetadas na fazenda consultada com status
+  `VENDIDO`;
+- `historicallySold`: quantidade de cabras distintas com ao menos uma venda
+  concluída válida realizada pela fazenda como vendedora. Venda externa exige
+  pagamento `PAID` e ausência de reversão; venda interna exige pagamento `PAID`
+  e transferência canônica `INTERNAL_SALE` em estado `COMPLETED`. Transferência
+  simples não conta. Uma mesma cabra conta uma única vez, mesmo que tenha sido
+  vendida mais de uma vez pela mesma fazenda.
 
 As operações de escrita do mesmo recurso continuam exigindo suas políticas de
 fazenda (`@CanManageFarm` ou `@FarmOwnerOnly`); a consulta pública não altera
@@ -257,6 +325,12 @@ Rotas canônicas de lactação:
 - `GET /api/v1/goatfarms/{farmId}/goats/{goatId}/lactations?page=&size=&sort=`
 - `GET /api/v1/goatfarms/{farmId}/milk/alerts/dry-off?referenceDate=&page=&size=`
 
+Na abertura (`POST`), o payload aceita `startDate` e o booleano aditivo
+`confirmYoungAge` (omitido = `false`). Data anterior ao nascimento canônico
+é rejeitada mesmo com confirmação. Entre o nascimento e o aniversário de
+12 meses, `confirmYoungAge: true` é obrigatório; em idade maior não é exigido.
+Ausência de histórico de prenhez/parto não impede a abertura.
+
 Rotas canônicas de produção de leite:
 - `POST /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`
 - `PATCH /api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}`
@@ -267,6 +341,10 @@ Rotas canônicas de produção de leite:
 Paginação atual:
 - As listagens de lactação e produção continuam retornando `Page` do Spring para preservar compatibilidade.
 - O endpoint `dry-off` retorna envelope agregado com `totalPending` e `alerts`.
+- A listagem de produção de leite mantém o JSON Spring atual (`content` e o
+  objeto `page` com `number`, `size`, `totalElements` e `totalPages`). A
+  neutralização de `Pageable` ocorre somente dentro do backend e não altera o
+  contrato HTTP. A listagem de lactação permanece pendente para F4-I2.
 
 Exemplo de alerta de secagem:
 
@@ -340,6 +418,8 @@ Para `POST /api/v1/goatfarms/{farmId}/inventory/items`:
 - `GET /api/v1/goatfarms/{farmId}/inventory/movements`
   - filtros opcionais: `itemId`, `lotId`, `type`, `fromDate`, `toDate`
   - ordenação padrão: `movementDate desc`, `createdAt desc`
+  - compatibilidade: a ordenação de movimentos é fixa; parâmetros `sort` são
+    aceitos pelo transporte, mas não alteram a ordem efetiva.
   - resposta paginada com `movementId`, `type`, `adjustDirection`, `quantity`, `itemId`, `itemName`, `lotId`, `movementDate`, `reason`, `resultingBalance`, `unitCost`, `subtotalCost`, `freightCost`, `discountAmount`, `totalCost`, `purchaseDate`, `supplierName`, `createdAt`
 - validações obrigatórias:
   - `fromDate <= toDate`
@@ -400,6 +480,7 @@ Erros seguem estrutura `ValidationError`:
   "status": 422,
   "error": "Regra de negócio violada",
   "path": "/api/v1/goatfarms/1/inventory/movements",
+  "code": null,
   "errors": [
     {
       "fieldName": "quantity",
@@ -409,19 +490,156 @@ Erros seguem estrutura `ValidationError`:
 }
 ```
 
+`code` é opcional e pode ser omitido/null em erros existentes. Restrições temporais do ownership canônico usam HTTP `422` e o código estável `GOAT_OWNERSHIP_NOT_VALID_ON_DATE`; a mensagem permanece em `errors[].message`. Falhas reais de autorização continuam usando HTTP `403` sem esse código.
+
 ### Mapeamento principal de status
 | Status | Origem típica |
 |---|---|
 | `400 Bad Request` | `InvalidArgumentException`, `IllegalArgumentException`, JSON inválido |
 | `401 Unauthorized` | falha de autenticação/token |
-| `403 Forbidden` | falha de ownership/perfil |
+| `403 Forbidden` | falha de autorização, perfil ou acesso à fazenda |
 | `404 Not Found` | `ResourceNotFoundException` |
 | `405 Method Not Allowed` | método HTTP não suportado |
 | `409 Conflict` | `DuplicateEntityException`, `DataIntegrityViolationException` |
 | `415 Unsupported Media Type` | content type não suportado |
-| `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean |
+| `422 Unprocessable Entity` | `BusinessRuleException`, validação de bean ou ownership temporal inválido |
 | `503 Service Unavailable` | consulta ABCC indisponível ou insuficiente para validação obrigatória |
 | `500 Internal Server Error` | erro não tratado |
+
+### Ownership Transfer (W7)
+
+O workflow HTTP de propriedade expõe somente `INTERNAL_TRANSFER`. Todas as
+rotas exigem access token JWT; não há `@PublicEndpoint` nem matcher `permitAll`.
+ADMIN pode operar globalmente. FARM_OWNER precisa administrar a fazenda
+envolvida; OPERATOR não pode solicitar, aceitar, rejeitar, cancelar ou consultar
+transferências por este contrato.
+
+Rotas canônicas:
+
+- `POST /api/v1/ownership-transfers`
+- `GET /api/v1/ownership-transfers/{transferId}`
+- `POST /api/v1/ownership-transfers/{transferId}/accept`
+- `POST /api/v1/ownership-transfers/{transferId}/reject`
+- `POST /api/v1/ownership-transfers/{transferId}/cancel`
+- `GET /api/v1/goatfarms/{farmId}/ownership-transfers?direction=INCOMING|OUTGOING&status=&page=0&size=20`
+
+O request de criação é:
+
+```json
+{
+  "goatId": 123,
+  "targetFarmId": 45,
+  "reason": "Transfer between farms",
+  "idempotencyKey": "client-generated-key"
+}
+```
+
+`sourceFarmId` não é aceito como autoridade do cliente: a origem é sempre
+resolvida pelo período aberto canônico do Goat. `goatId` e `targetFarmId` são
+positivos; `reason` é obrigatório e limitado a 1000 caracteres; a chave de
+idempotência é obrigatória e limitada a 255 caracteres. Uma criação válida
+retorna `201 Created`, cabeçalho `Location` e o DTO da transferência.
+
+O response não expõe a versão de persistência nem entidades JPA:
+
+```json
+{
+  "id": 900,
+  "goatId": 123,
+  "sourceFarmId": 10,
+  "targetFarmId": 45,
+  "kind": "INTERNAL_TRANSFER",
+  "status": "REQUESTED",
+  "reason": "Transfer between farms",
+  "requestedAt": "2026-09-14T12:00:00Z",
+  "acceptedAt": null,
+  "effectiveAt": null,
+  "completedAt": null,
+  "cancelledAt": null
+}
+```
+
+O ciclo normal é `REQUESTED -> COMPLETED`, `REJECTED` ou `CANCELLED`. Aceite,
+rejeição e cancelamento delegam integralmente ao caso de uso transacional do
+W6, preservando o ledger de ownership e a projeção legada.
+
+`idempotencyKey` é vinculada ao solicitante: uma repetição exata retorna o
+mesmo recurso; a mesma chave com Goat, destino ou motivo diferente retorna
+`422` por conflito de regra.
+
+O endpoint de inbox/outbox exige `direction` e aceita `status` opcional, com
+`page >= 0` e `1 <= size <= 100`. `INCOMING` filtra `targetFarmId`; `OUTGOING`
+filtra `sourceFarmId`. A ordenação é determinística por `requestedAt DESC, id
+DESC`, e a resposta usa o envelope paginado (`content`, `totalElements`,
+`number`, `size`, `totalPages`).
+
+Respostas esperadas: `400` quando `direction` ou `status` estiver ausente ou
+inválido, ou quando outro argumento for sintaticamente inválido; `401` sem
+autenticação válida; `403` sem administração da fazenda de origem/destino;
+`404` para transferência/fazenda/cabra inexistente ou para tipos de
+transferência ainda não expostos; e `422` para Bean Validation do corpo,
+limites semânticos de paginação ou violação do ciclo de vida/regra de negócio.
+
+### Ownership movement read model
+
+`GET /api/v1/goatfarms/{farmId}/ownership-movements` é a consulta paginada e
+somente leitura do ledger de propriedade para ADMIN ou FARM_OWNER que administra
+a fazenda consultada. `direction` é obrigatório (`INCOMING` ou `OUTGOING`);
+`kind` e `status` são filtros opcionais; `page` começa em zero e `size` aceita
+de 1 a 100.
+
+Cada item representa exatamente um movimento canônico e mantém `goatId`,
+`sourceFarmId` e `targetFarmId` como IDs técnicos. Para leitura humana, o response
+também pode trazer `goatName`, `goatRegistrationNumber`, `sourceFarmName` e
+`targetFarmName`. Esses campos são enriquecimento descritivo atual obtido das
+entidades de animal/fazenda, não snapshots imutáveis do instante da transferência;
+podem ser `null` quando os dados descritivos não estão disponíveis. Clientes
+devem manter fallback para os IDs técnicos. `totalElements` conta movimentos,
+independentemente dos joins usados para compor as descrições.
+
+### Goat Ownership History (W9.2)
+
+`GET /api/v1/goats/{goatId}/ownership-history` é privado e exige autenticação
+JWT. O parâmetro é exclusivamente o `GoatId` estrutural positivo; não há
+`farmId`, RG, registro, TOD, TOE, paginação ou identificador alternativo.
+ADMIN pode ler o histórico completo, inclusive quando todos os períodos estão
+encerrados. O FARM_OWNER atual precisa administrar a fazenda proprietária
+canônica; proprietário apenas histórico e OPERATOR recebem `403`.
+
+Resposta `200`:
+
+```json
+{
+  "goatId": 42,
+  "periods": [
+    {
+      "farmId": 10,
+      "startedAt": "2025-01-01T00:00:00Z",
+      "endedAt": "2026-03-01T12:00:00Z",
+      "entryType": "MANUAL_IMPORT",
+      "exitType": "TRANSFER_OUT",
+      "current": false
+    },
+    {
+      "farmId": 20,
+      "startedAt": "2026-03-01T12:00:00Z",
+      "endedAt": null,
+      "entryType": "TRANSFER_IN",
+      "exitType": null,
+      "current": true
+    }
+  ]
+}
+```
+
+A ordem dos períodos é a ordem canônica retornada pelo caso de uso. O
+controller não reconsulta persistência nem recalcula autorização. Os campos
+internos `id`, versão JPA, `source`, `transferId`, solicitante, motivo,
+`idempotencyKey`, `saleId`, nome da fazenda e `cabras.capril_id` não fazem parte
+do contrato. Respostas esperadas: `400` para GoatId ausente, inválido, zero,
+negativo ou overflow; `401` sem token; `403` sem autorização; `404` quando o
+GoatId não existe; e `422` quando o caso de uso reporta inconsistência canônica
+por meio do handler global.
 
 ## Referências internas
 - Handler global: [src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java](../../src/main/java/com/devmaster/goatfarm/config/exceptions/GlobalExceptionHandler.java)

@@ -4,8 +4,7 @@ import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.ExternalServiceUnavailableException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
-import com.devmaster.goatfarm.genealogy.application.ports.out.GenealogyAbccQueryPort;
-import com.devmaster.goatfarm.genealogy.business.bo.GenealogyAbccSnapshotVO;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatExternalParentQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
@@ -28,16 +27,16 @@ import java.util.Optional;
 public class GenealogicalParentageService implements GoatParentagePort {
 
     private final GoatReferenceQueryPort goatReferenceQueryPort;
-    private final GenealogyAbccQueryPort genealogyAbccQueryPort;
+    private final GoatExternalParentQueryPort goatExternalParentQueryPort;
     private final GoatGenderValidator goatGenderValidator;
 
     public GenealogicalParentageService(
             GoatReferenceQueryPort goatReferenceQueryPort,
-            GenealogyAbccQueryPort genealogyAbccQueryPort,
+            GoatExternalParentQueryPort goatExternalParentQueryPort,
             GoatGenderValidator goatGenderValidator
     ) {
         this.goatReferenceQueryPort = goatReferenceQueryPort;
-        this.genealogyAbccQueryPort = genealogyAbccQueryPort;
+        this.goatExternalParentQueryPort = goatExternalParentQueryPort;
         this.goatGenderValidator = goatGenderValidator;
     }
 
@@ -93,9 +92,9 @@ public class GenealogicalParentageService implements GoatParentagePort {
                     localParent.get().registrationNumber(), localParent.get().name());
         }
 
-        Optional<GenealogyAbccSnapshotVO> abccParent;
+        Optional<GoatExternalParentQueryPort.ExternalParentReference> abccParent;
         try {
-            abccParent = genealogyAbccQueryPort.findGenealogyByRegistrationNumber(registration);
+            abccParent = goatExternalParentQueryPort.findByRegistrationNumber(registration);
         } catch (RuntimeException ex) {
             throw new ExternalServiceUnavailableException(
                     "A consulta à ABCC está temporariamente indisponível.",
@@ -108,9 +107,9 @@ public class GenealogicalParentageService implements GoatParentagePort {
             return Goat.ParentReference.external(registration);
         }
 
-        GenealogyAbccSnapshotVO snapshot = abccParent.get();
-        String returnedRegistration = normalizeRegistration(snapshot.getAnimalRegistrationNumber());
-        if (!registration.equals(returnedRegistration) || snapshot.getAnimalGender() == null) {
+        GoatExternalParentQueryPort.ExternalParentReference snapshot = abccParent.get();
+        String returnedRegistration = normalizeRegistration(snapshot.registrationNumber());
+        if (!registration.equals(returnedRegistration) || snapshot.gender() == null) {
             if (category == Category.PA) {
                 return Goat.ParentReference.external(registration);
             }
@@ -120,7 +119,7 @@ public class GenealogicalParentageService implements GoatParentagePort {
             );
         }
 
-        validateGender(snapshot.getAnimalGender(), role);
+        validateGender(snapshot.gender(), role);
         return Goat.ParentReference.external(registration);
     }
 

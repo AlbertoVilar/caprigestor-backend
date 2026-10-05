@@ -22,13 +22,16 @@ public class GoatAbccPreviewResponseVO {
 
     private String externalSource;
     private String externalId;
+    private String creatorName;
     private String registrationNumber;
     private String name;
     private Gender gender;
     private GoatBreed breed;
     private String color;
     private LocalDate birthDate;
+    /** Compatibility field. Explicit ABCC death is applied at confirmation. */
     private GoatStatus status;
+    private String abccSituation;
     private String tod;
     private String toe;
     private Category category;

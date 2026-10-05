@@ -2,12 +2,18 @@ package com.devmaster.goatfarm.health.business.healthservice;
 
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventCommandUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthEventQueryUseCase;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCancelRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventCreateRequestVO;
 import com.devmaster.goatfarm.health.business.bo.HealthEventDoneRequestVO;
@@ -16,9 +22,6 @@ import com.devmaster.goatfarm.health.business.bo.HealthEventUpdateRequestVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +35,8 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
     private final GoatGenderValidator goatGenderValidator;
     private final HealthEventBusinessMapper mapper;
     private final EntityFinder entityFinder;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     public HealthEventBusiness(
             HealthEventPersistencePort persistencePort,
@@ -40,7 +44,8 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
             GoatGenderValidator goatGenderValidator,
             HealthEventBusinessMapper mapper,
             EntityFinder entityFinder,
-            OwnershipService ownershipService
+            FarmAuthorizationUseCase ownershipService,
+            GoatOwnershipGuardUseCase goatOwnershipGuard
     ) {
         this.persistencePort = persistencePort;
         this.goatReferenceResolver = goatReferenceResolver;
@@ -48,23 +53,38 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
         this.mapper = mapper;
         this.entityFinder = entityFinder;
         this.ownershipService = ownershipService;
+        this.goatOwnershipGuard = goatOwnershipGuard;
     }
 
     @Override
     @Transactional
     public HealthEventResponseVO create(Long farmId, String goatId, HealthEventCreateRequestVO request) {
-        // Controle de acesso deve ser feito no Controller via OwnershipService.canManageFarm(farmId)
+        GoatReference goat = entityFinder.findOrThrow(
+                () -> goatReferenceResolver.resolveGlobal(goatId),
+                "Cabra não encontrada."
+        );
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        requireProjectionMatchesFarm(goat, farmId);
+
+        // Controle de acesso da fazenda é feito no Controller via @CanManageFarm.
         goatGenderValidator.requireActive(farmId, goatId);
 
-        var entity = mapper.toEntity(request);
-        entity.setFarmId(farmId);
-        entity.setGoatId(goatId);
+        var record = mapper.toRecord(request);
+        record.setFarmId(farmId);
+        record.setGoatId(goatId);
 
         // Invariável de domínio: criação é sempre AGENDADO
-        entity.setStatus(HealthEventStatus.AGENDADO);
+        record.setStatus(HealthEventStatus.AGENDADO);
 
-        var saved = persistencePort.save(entity);
+        var saved = persistencePort.save(record);
         return mapper.toResponseVO(saved);
+    }
+
+    private void requireProjectionMatchesFarm(GoatReference goat, Long farmId) {
+        if (goat.farmId() == null || !goat.farmId().equals(farmId)) {
+            throw new AuthorizationDeniedException(
+                    "A projeção legada da cabra está divergente do contexto da fazenda informado.");
+        }
     }
 
     @Override
@@ -78,7 +98,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
             throw new BusinessRuleException("Não é permitido alterar um evento de saúde já realizado ou cancelado.");
         }
 
-        mapper.updateEntity(healthEvent, request);
+        mapper.updateRecord(healthEvent, request);
 
         var saved = persistencePort.save(healthEvent);
         return mapper.toResponseVO(saved);
@@ -155,13 +175,13 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HealthEventResponseVO> listCalendar(
+    public PageResult<HealthEventResponseVO> listCalendar(
             Long farmId,
             LocalDate from,
             LocalDate to,
             HealthEventType type,
             HealthEventStatus status,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
         var healthEvents = persistencePort.findByFarmIdAndPeriod(
                 farmId,
@@ -169,7 +189,7 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
                 to,
                 type,
                 status,
-                pageable
+                pageQuery
         );
 
         return healthEvents.map(mapper::toResponseVO);
@@ -177,14 +197,14 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
 
     @Override
     @Transactional(readOnly = true)
-    public Page<HealthEventResponseVO> listByGoat(
+    public PageResult<HealthEventResponseVO> listByGoat(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
             HealthEventType type,
             HealthEventStatus status,
-            Pageable pageable
+            PageQuery pageQuery
     ) {
         entityFinder.findOrThrow(
                 () -> goatReferenceResolver.resolve(goatId, farmId),
@@ -198,13 +218,13 @@ public class HealthEventBusiness implements HealthEventCommandUseCase, HealthEve
                 to,
                 type,
                 status,
-                pageable
+                pageQuery
         );
 
         return healthEvents.map(mapper::toResponseVO);
     }
 
-    private HealthEvent findEventOrThrow(Long farmId, String goatId, Long eventId) {
+    private HealthEventRecord findEventOrThrow(Long farmId, String goatId, Long eventId) {
         return entityFinder.findOrThrow(
                 () -> persistencePort.findByIdAndFarmIdAndGoatId(eventId, farmId, goatId),
                 "Evento de saúde não encontrado. eventId=" + eventId + ", goatId=" + goatId + ", farmId=" + farmId

@@ -6,7 +6,7 @@ import com.devmaster.goatfarm.genealogy.application.ports.in.GenealogyQueryUseCa
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryIntegrationVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryNodeVO;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyComplementaryResponseVO;
-import com.devmaster.goatfarm.genealogy.business.bo.GenealogyNodeSource;
+import com.devmaster.goatfarm.genealogy.application.model.GenealogyNodeSource;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

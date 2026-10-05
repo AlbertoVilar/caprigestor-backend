@@ -3,8 +3,8 @@ package com.devmaster.goatfarm.milk.application.ports.in;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.MilkProductionUpdateRequestVO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.time.LocalDate;
 
@@ -24,12 +24,12 @@ public interface MilkProductionUseCase {
     );
 
 
-    Page<MilkProductionResponseVO> getMilkProductions(
+    PageResult<MilkProductionResponseVO> getMilkProductions(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable,
+            PageQuery pageQuery,
             boolean includeCanceled
     );
 

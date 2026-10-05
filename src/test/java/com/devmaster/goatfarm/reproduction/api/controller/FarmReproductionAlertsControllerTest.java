@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.reproduction.api.dto.PregnancyDiagnosisAlertItemDT
 import com.devmaster.goatfarm.reproduction.api.dto.PregnancyDueAlertItemDTO;
 import com.devmaster.goatfarm.reproduction.api.mapper.ReproductionMapper;
 import com.devmaster.goatfarm.reproduction.application.ports.in.ReproductionQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDiagnosisAlertVO;
 import com.devmaster.goatfarm.reproduction.business.bo.PregnancyDueAlertVO;
 import org.junit.jupiter.api.Test;
@@ -11,9 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
@@ -65,8 +64,8 @@ class FarmReproductionAlertsControllerTest {
                 .lastCoverageDate(alertVO.getLastCoverageDate())
                 .build();
 
-        when(queryUseCase.getPendingPregnancyDiagnosisAlerts(eq(farmId), eq(referenceDate), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
+        when(queryUseCase.getPendingPregnancyDiagnosisAlerts(eq(farmId), eq(referenceDate), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(alertVO), 1, 0, 20));
         when(mapper.toPregnancyDiagnosisAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", farmId)
@@ -94,8 +93,8 @@ class FarmReproductionAlertsControllerTest {
                 .daysOverdue(alertVO.getDaysOverdue())
                 .build();
 
-        when(queryUseCase.getPendingPregnancyDiagnosisAlerts(eq(farmId), isNull(), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
+        when(queryUseCase.getPendingPregnancyDiagnosisAlerts(eq(farmId), isNull(), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(alertVO), 1, 0, 20));
         when(mapper.toPregnancyDiagnosisAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/pregnancy-diagnosis", farmId)
@@ -122,8 +121,8 @@ class FarmReproductionAlertsControllerTest {
                 .daysOverdue(alertVO.getDaysOverdue())
                 .build();
 
-        when(queryUseCase.getPendingBirthAlerts(eq(farmId), eq(referenceDate), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
+        when(queryUseCase.getPendingBirthAlerts(eq(farmId), eq(referenceDate), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(alertVO), 1, 0, 20));
         when(mapper.toPregnancyDueAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/reproduction/alerts/births-due", farmId)

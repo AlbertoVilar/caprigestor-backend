@@ -61,6 +61,18 @@ com evidência no cofre/CI/runbook do ambiente; não registre valores de secrets
 - [ ] confirmar que nenhum secret de desenvolvimento foi reutilizado e que o
       acesso temporário de bootstrap foi revogado ou rotacionado.
 
+### SMTP e readiness na primeira HML
+
+Se a entrega de e-mail (incluindo recuperação de senha) não fizer parte da
+aceitação da primeira HML, configure deliberadamente
+`MAIL_HEALTH_ENABLED=false`. Nesse caso, a indisponibilidade de SMTP não
+participa do health/readiness do backend; isso não comprova que o envio de
+e-mail funciona.
+
+Se a aceitação da HML incluir recuperação de senha ou qualquer outro fluxo de
+e-mail, configure `MAIL_HEALTH_ENABLED=true` e disponibilize SMTP controlado e
+alcançável. O health deve então refletir uma falha de SMTP.
+
 Esta checklist não é evidência de HML concluída: no estado atual do projeto a
 primeira homologação ainda não foi executada.
 

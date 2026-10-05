@@ -3,6 +3,8 @@ package com.devmaster.goatfarm.inventory.business.inventoryservice;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryLotCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryLotQueryUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryLotPersistencePort;
@@ -11,7 +13,6 @@ import com.devmaster.goatfarm.inventory.business.bo.InventoryLotCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotCreateVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryLotResponseVO;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,7 +58,7 @@ public class InventoryLotBusiness implements InventoryLotCommandUseCase, Invento
 
     @Override
     @Transactional(readOnly = true)
-    public Page<InventoryLotResponseVO> listLots(InventoryLotFilterVO filter) {
+    public PageResult<InventoryLotResponseVO> listLots(InventoryLotFilterVO filter, PageQuery page) {
         if (filter == null) {
             throw new InvalidArgumentException("filter", "Filtro da listagem de lotes é obrigatório.");
         }
@@ -66,7 +67,11 @@ public class InventoryLotBusiness implements InventoryLotCommandUseCase, Invento
             throw new InvalidArgumentException("farmId", "farmId é obrigatório.");
         }
 
-        return persistencePort.listLots(filter);
+        if (page == null) {
+            throw new InvalidArgumentException("page", "Paginação é obrigatória.");
+        }
+
+        return persistencePort.listLots(filter, page);
     }
 
     @Override

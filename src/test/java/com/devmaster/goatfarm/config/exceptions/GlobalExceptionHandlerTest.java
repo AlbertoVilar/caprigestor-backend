@@ -5,6 +5,10 @@ import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.config.exceptions.custom.ValidationError;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
+import com.devmaster.goatfarm.events.application.exception.GenericEventTypeNotWritableException;
+import com.devmaster.goatfarm.application.exception.AuthorizationDeniedException;
+import com.devmaster.goatfarm.application.exception.GoatOwnershipNotValidOnDateException;
+import com.devmaster.goatfarm.application.exception.PersistenceConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -46,6 +51,38 @@ class GlobalExceptionHandlerTest {
         assertEquals("Conflito de integridade de dados", body.getError());
         assertTrue(body.getErrors().stream().anyMatch(e ->
                 "status".equals(e.getFieldName()) && "Já existe uma gestação ativa para esta cabra".equals(e.getMessage())));
+    }
+
+    @Test
+    void shouldHandleDataIntegrityViolationException_forDuplicateActiveLactation() {
+        Throwable rootCause = new RuntimeException(
+                "duplicate key value violates unique constraint \"ux_lactation_single_active_per_goat_technical\"");
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Constraint violation", rootCause);
+
+        ResponseEntity<ValidationError> response =
+                globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "status".equals(error.getFieldName())
+                        && "Já existe uma lactação ativa para esta cabra".equals(error.getMessage())));
+    }
+
+    @Test
+    void shouldHandleDataIntegrityViolationException_forDuplicateGoatRegistration() {
+        Throwable rootCause = new RuntimeException(
+                "duplicate key value violates unique constraint \"uk_cabras_farm_registration\"");
+        DataIntegrityViolationException exception = new DataIntegrityViolationException("Constraint violation", rootCause);
+
+        ResponseEntity<ValidationError> response =
+                globalExceptionHandler.handleDataIntegrityViolation(exception, httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "registrationNumber".equals(error.getFieldName())
+                        && "Número de registro já existe para outro animal".equals(error.getMessage())));
     }
 
     @Test
@@ -112,6 +149,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldHandlePersistenceConflictWithGenericIntegrityContract() {
+        ResponseEntity<ValidationError> response = globalExceptionHandler.handlePersistenceConflict(
+                new PersistenceConflictException("conflict", new RuntimeException("constraint")), httpServletRequest);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        ValidationError body = response.getBody();
+        assertNotNull(body);
+        assertEquals("Conflito de integridade de dados", body.getError());
+        assertTrue(body.getErrors().stream().anyMatch(error ->
+                "integrity".equals(error.getFieldName())
+                        && "Violação de integridade no banco de dados".equals(error.getMessage())));
+    }
+
+    @Test
     void shouldHandleBusinessRuleException() {
         String errorMessage = "Regra de negócio violada";
         BusinessRuleException exception = new BusinessRuleException("business_rule", errorMessage);
@@ -125,5 +176,64 @@ class GlobalExceptionHandlerTest {
         assertEquals("Regra de negócio violada", body.getError());
         assertEquals("/api/v1/test", body.getPath());
         assertTrue(body.getErrors().stream().anyMatch(e -> "business_rule".equals(e.getFieldName()) && errorMessage.equals(e.getMessage())));
+    }
+
+    @Test
+    void shouldHandleSpringAccessDeniedExceptionWithForbiddenContract() {
+        String message = "Acesso restrito";
+        ResponseEntity<ValidationError> response = globalExceptionHandler.accessDenied(
+                new AccessDeniedException(message), httpServletRequest);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.FORBIDDEN.value(), body.getStatus());
+        assertEquals("Acesso negado", body.getError());
+        assertEquals("/api/v1/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(error ->
+                "auth".equals(error.getFieldName()) && message.equals(error.getMessage())));
+    }
+
+    @Test
+    void shouldHandleApplicationAuthorizationDeniedExceptionWithForbiddenContract() {
+        String message = "Cabra não pertence à fazenda informada.";
+        ResponseEntity<ValidationError> response = globalExceptionHandler.authorizationDenied(
+                new AuthorizationDeniedException(message), httpServletRequest);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        ValidationError body = response.getBody();
+        assertEquals(HttpStatus.FORBIDDEN.value(), body.getStatus());
+        assertEquals("Acesso negado", body.getError());
+        assertEquals("/api/v1/test", body.getPath());
+        assertTrue(body.getErrors().stream().anyMatch(error ->
+                "auth".equals(error.getFieldName()) && message.equals(error.getMessage())));
+        assertNull(body.getCode());
+    }
+
+    @Test
+    void shouldHandleOwnershipDateInvariantWithStable422Code() {
+        String message = "Ownership não é inequívoco na data informada.";
+        ResponseEntity<ValidationError> response = globalExceptionHandler.goatOwnershipNotValidOnDate(
+                new GoatOwnershipNotValidOnDateException(message), httpServletRequest);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(GoatOwnershipNotValidOnDateException.ERROR_CODE, response.getBody().getCode());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "ownership".equals(error.getFieldName()) && message.equals(error.getMessage())));
+    }
+
+    @Test
+    void shouldHandleGenericEventTypeNotWritableWithStable422Code() {
+        ResponseEntity<ValidationError> response = globalExceptionHandler.genericEventTypeNotWritable(
+                new GenericEventTypeNotWritableException(), httpServletRequest);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(GenericEventTypeNotWritableException.ERROR_CODE, response.getBody().getCode());
+        assertTrue(response.getBody().getErrors().stream().anyMatch(error ->
+                "eventType".equals(error.getFieldName())
+                        && error.getMessage().contains("módulo especializado")));
     }
 }

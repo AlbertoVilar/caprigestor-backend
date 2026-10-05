@@ -2,6 +2,7 @@ package com.devmaster.goatfarm.goat.application.routing;
 
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -31,5 +32,22 @@ public class GoatReferenceResolver {
         return GoatRouteIdentifier.technicalId(routeToken)
                 .flatMap(id -> referenceQueryPort.findReferenceByTechnicalIdAndFarmId(id, farmId))
                 .or(() -> referenceQueryPort.findReferenceByRegistrationNumberAndFarmId(routeToken, farmId));
+    }
+
+    public Optional<GoatReference> resolveGlobal(String routeToken) {
+        if (routeToken == null) {
+            return Optional.empty();
+        }
+
+        return GoatRouteIdentifier.technicalId(routeToken)
+                .flatMap(referenceQueryPort::findReferenceByTechnicalId)
+                .or(() -> referenceQueryPort.findReferenceByRegistrationNumber(routeToken));
+    }
+
+    public Optional<GoatReference> resolveGlobal(GoatId goatId) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        return referenceQueryPort.findReferenceByTechnicalId(goatId);
     }
 }

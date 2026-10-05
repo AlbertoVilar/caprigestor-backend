@@ -14,10 +14,13 @@ import com.devmaster.goatfarm.milk.api.dto.MilkProductionRequestDTO;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
 import com.devmaster.goatfarm.milk.enums.MilkProductionStatus;
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.LactationEntity;
+import com.devmaster.goatfarm.milk.persistence.entity.MilkProductionEntity;
 import com.devmaster.goatfarm.milk.persistence.repository.LactationRepository;
 import com.devmaster.goatfarm.milk.persistence.repository.MilkProductionRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +35,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -72,15 +76,19 @@ class MilkProductionCancellationIntegrationTest {
     @Autowired
     private MilkProductionRepository milkProductionRepository;
 
+    @Autowired
+    private GoatOwnershipPeriodRepository goatOwnershipPeriodRepository;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
-    private Lactation activeLactation;
+    private LactationEntity activeLactation;
 
     @BeforeEach
     void setUp() {
         milkProductionRepository.deleteAll();
         lactationRepository.deleteAll();
+        goatOwnershipPeriodRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();
         userRepository.deleteAll();
@@ -110,9 +118,19 @@ class MilkProductionCancellationIntegrationTest {
         ownerGoat.setStatus(GoatStatus.ATIVO);
         ownerGoat = goatRepository.save(ownerGoat);
 
-        activeLactation = new Lactation();
+        GoatOwnershipPeriodEntity ownership = new GoatOwnershipPeriodEntity();
+        ownership.setGoatId(ownerGoat.getTechnicalId());
+        ownership.setFarmId(ownerFarm.getId());
+        ownership.setStartedAt(Instant.parse("2020-01-01T00:00:00Z"));
+        ownership.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownership.setSource("test-fixture");
+        ownership.setVersion(0L);
+        goatOwnershipPeriodRepository.save(ownership);
+
+        activeLactation = new LactationEntity();
         activeLactation.setFarmId(ownerFarm.getId());
         activeLactation.setGoatId(ownerGoat.getRegistrationNumber());
+        activeLactation.setGoatTechnicalId(ownerGoat.getTechnicalId());
         activeLactation.setStartDate(LocalDate.now().minusDays(10));
         activeLactation.setStatus(LactationStatus.ACTIVE);
         activeLactation = lactationRepository.save(activeLactation);
@@ -131,18 +149,21 @@ class MilkProductionCancellationIntegrationTest {
     }
 
     @Test
-    void shouldCancelMilkProductionAndHideFromDefaultList() throws Exception {
+    void shouldCancelMilkProductionEntityAndHideFromDefaultList() throws Exception {
         String token = loginAndGetToken("owner@example.com", "password");
-        MilkProduction production = saveMilkProduction(LocalDate.now().minusDays(1), MilkingShift.MORNING);
+        MilkProductionEntity production = saveMilkProductionEntity(LocalDate.now().minusDays(1), MilkingShift.MORNING);
+        var originalCreatedAt = milkProductionRepository.findById(production.getId()).orElseThrow().getCreatedAt();
 
         mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
 
-        MilkProduction canceled = milkProductionRepository.findById(production.getId()).orElseThrow();
+        MilkProductionEntity canceled = milkProductionRepository.findById(production.getId()).orElseThrow();
         assertThat(canceled.getStatus()).isEqualTo(MilkProductionStatus.CANCELED);
         assertThat(canceled.getCanceledAt()).isNotNull();
+        assertThat(canceled.getCreatedAt()).isEqualTo(originalCreatedAt);
+        assertThat(canceled.getUpdatedAt()).isAfterOrEqualTo(originalCreatedAt);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber())
@@ -191,7 +212,7 @@ class MilkProductionCancellationIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate date = LocalDate.now().minusDays(1);
 
-        saveMilkProduction(date, MilkingShift.MORNING);
+        saveMilkProductionEntity(date, MilkingShift.MORNING);
 
         MilkProductionRequestDTO request = MilkProductionRequestDTO.builder()
                 .date(date)
@@ -213,7 +234,7 @@ class MilkProductionCancellationIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
         LocalDate date = LocalDate.now().minusDays(1);
 
-        MilkProduction production = saveMilkProduction(date, MilkingShift.MORNING);
+        MilkProductionEntity production = saveMilkProductionEntity(date, MilkingShift.MORNING);
 
         mockMvc.perform(delete("/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions/{id}",
                         ownerFarm.getId(), ownerGoat.getRegistrationNumber(), production.getId())
@@ -236,10 +257,11 @@ class MilkProductionCancellationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 
-    private MilkProduction saveMilkProduction(LocalDate date, MilkingShift shift) {
-        MilkProduction production = new MilkProduction();
+    private MilkProductionEntity saveMilkProductionEntity(LocalDate date, MilkingShift shift) {
+        MilkProductionEntity production = new MilkProductionEntity();
         production.setFarmId(ownerFarm.getId());
         production.setGoatId(ownerGoat.getRegistrationNumber());
+        production.setGoatTechnicalId(ownerGoat.getTechnicalId());
         production.setLactation(activeLactation);
         production.setDate(date);
         production.setShift(shift);

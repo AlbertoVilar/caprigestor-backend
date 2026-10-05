@@ -1,10 +1,9 @@
 package com.devmaster.goatfarm.goat.business;
 
 import com.devmaster.goatfarm.audit.application.ports.in.OperationalAuditUseCase;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
-import com.devmaster.goatfarm.config.security.OwnershipService;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
-import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.authority.business.bo.AuthenticatedPrincipal;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatRegistrationHistoryPersistencePort;
 import com.devmaster.goatfarm.goat.business.bo.GoatRegistrationRectificationRequestVO;
@@ -18,6 +17,7 @@ import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.enums.RegistrationRectificationSource;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,10 +39,11 @@ import static org.mockito.Mockito.*;
 class GoatRegistrationRectificationBusinessTest {
 
     @Mock private GoatPersistencePort goatPersistencePort;
-    @Mock private GoatReferenceResolver goatReferenceResolver;
     @Mock private GoatRegistrationHistoryPersistencePort historyPersistencePort;
-    @Mock private OwnershipService ownershipService;
+    @Mock private FarmAuthorizationUseCase ownershipService;
+    @Mock private CurrentPrincipalQueryUseCase currentPrincipalQuery;
     @Mock private OperationalAuditUseCase operationalAuditUseCase;
+    @Mock private GoatOwnershipGuardUseCase goatOwnershipGuard;
 
     private GoatRegistrationRectificationBusiness business;
     private Goat goat;
@@ -49,18 +51,17 @@ class GoatRegistrationRectificationBusinessTest {
     @BeforeEach
     void setUp() {
         business = new GoatRegistrationRectificationBusiness(
-                goatPersistencePort, goatReferenceResolver, historyPersistencePort,
-                ownershipService, operationalAuditUseCase);
+                goatPersistencePort, historyPersistencePort,
+                ownershipService, operationalAuditUseCase, currentPrincipalQuery, goatOwnershipGuard);
         goat = Goat.rehydrate(
                 new GoatId(7L), RegistrationIdentity.fromTodAndToe("16432", "18012"),
                 "Matriz", Gender.FEMEA, GoatBreed.SAANEN, "Branca", LocalDate.of(2024, 1, 1),
                 GoatStatus.INATIVO, null, null, null, Category.PA, null, null,
                 1L, 9L, "Capril", "Alberto");
-        when(goatReferenceResolver.resolve("technical-7", 1L))
-                .thenReturn(Optional.of(new GoatReference(new GoatId(7L), 1L, goat.registrationNumber(), goat.name(), goat.gender())));
-        when(goatPersistencePort.findByIdAndFarmId(new GoatId(7L), 1L)).thenReturn(Optional.of(goat));
+        when(goatPersistencePort.findById(new GoatId(7L))).thenReturn(Optional.of(goat));
         lenient().when(goatPersistencePort.save(any(Goat.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        lenient().when(ownershipService.getCurrentUser()).thenReturn(user(9L));
+        lenient().when(currentPrincipalQuery.requireCurrent()).thenReturn(
+                new AuthenticatedPrincipal(9L, "alberto@example.com", "Alberto", Set.of()));
         lenient().when(historyPersistencePort.save(any(GoatRegistrationHistory.class))).thenAnswer(invocation -> {
             GoatRegistrationHistory value = invocation.getArgument(0);
             return new GoatRegistrationHistory(11L, value.goatId(), value.farmId(), value.oldIdentity(), value.newIdentity(),
@@ -102,6 +103,44 @@ class GoatRegistrationRectificationBusinessTest {
     }
 
     @Test
+    void rejectsRectificationOutsideLastCanonicalFarm() {
+        doThrow(new com.devmaster.goatfarm.application.exception.AuthorizationDeniedException(
+                "A fazenda informada não corresponde à última fazenda canônica associada ao animal."))
+                .when(goatOwnershipGuard).requireLastAssociatedFarm(new GoatId(7L), 2L);
+
+        assertThatThrownBy(() -> business.rectify(2L, "technical-7",
+                request("20001", "20002", "Fazenda incorreta")))
+                .isInstanceOf(com.devmaster.goatfarm.application.exception.AuthorizationDeniedException.class)
+                .hasMessageContaining("última fazenda canônica");
+
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(historyPersistencePort, never()).save(any());
+    }
+
+    @Test
+    void rejectsRectificationWhenOwnershipProjectionDriftsFromCanonicalFarm() {
+        assertThatThrownBy(() -> business.rectify(2L, "technical-7",
+                request("20001", "20002", "Projeção divergente")))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("diverge");
+
+        verify(goatOwnershipGuard).requireLastAssociatedFarm(new GoatId(7L), 2L);
+        verify(goatPersistencePort, never()).save(any(Goat.class));
+        verify(historyPersistencePort, never()).save(any());
+        verify(operationalAuditUseCase, never()).record(any());
+    }
+
+    @Test
+    void rejectsRegistrationHistoryWhenOwnershipProjectionDriftsFromCanonicalFarm() {
+        assertThatThrownBy(() -> business.history(2L, "technical-7"))
+                .isInstanceOf(com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException.class)
+                .hasMessageContaining("diverge");
+
+        verify(goatOwnershipGuard).requireLastAssociatedFarm(new GoatId(7L), 2L);
+        verify(historyPersistencePort, never()).findByFarmIdAndGoatId(anyLong(), any());
+    }
+
+    @Test
     void rejectsAnUnchangedIdentityWithoutHistory() {
         assertThatThrownBy(() -> business.rectify(1L, "technical-7",
                 request("16432", "18012", "Sem alteração")))
@@ -116,11 +155,4 @@ class GoatRegistrationRectificationBusinessTest {
                 tod, toe, RegistrationRectificationSource.ABCC, "ABCC-2026-001", reason);
     }
 
-    private User user(Long id) {
-        User user = new User();
-        user.setId(id);
-        user.setName("Alberto");
-        user.setEmail("alberto@example.com");
-        return user;
-    }
 }

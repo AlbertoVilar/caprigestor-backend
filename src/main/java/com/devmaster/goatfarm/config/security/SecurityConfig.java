@@ -121,6 +121,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // Fazendas (público - leitura)
                 .requestMatchers(HttpMethod.GET,
+                        "/api/v1/goatfarms/managed").hasAnyAuthority("ROLE_ADMIN", "ROLE_FARM_OWNER", "ROLE_OPERATOR")
+                .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms",
                         "/api/v1/goatfarms/*",
                         "/api/v1/goatfarms/name").permitAll()
@@ -143,7 +145,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                         "/api/v1/goatfarms/*/goats/*/genealogies").permitAll()
                 .requestMatchers("/api/v1/articles/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/api/v1/users/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")
                 .requestMatchers(HttpMethod.PUT, "/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_OPERATOR", "ROLE_FARM_OWNER")

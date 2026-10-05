@@ -8,6 +8,7 @@ import com.devmaster.goatfarm.milk.api.dto.LactationSummaryResponseDTO;
 import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationCommandUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
@@ -177,8 +178,8 @@ public class LactationController {
             @Parameter(description = "Identificador da fazenda") @PathVariable Long farmId,
             @Parameter(description = "Identificador da cabra") @PathVariable String goatId,
             @PageableDefault(sort = "startDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<LactationResponseVO> pageVO = lactationQueryUseCase.getAllLactations(farmId, goatId, pageable);
-        Page<LactationResponseDTO> pageDTO = pageVO.map(lactationMapper::toResponseDTO);
+        var pageVO = lactationQueryUseCase.getAllLactations(farmId, goatId, SpringPageMapper.toQuery(pageable));
+        Page<LactationResponseDTO> pageDTO = SpringPageMapper.toSpringPage(pageVO.map(lactationMapper::toResponseDTO), pageable);
         return ResponseEntity.ok(pageDTO);
     }
 }

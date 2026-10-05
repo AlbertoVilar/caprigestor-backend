@@ -3,11 +3,11 @@ package com.devmaster.goatfarm.health.business.healthservice;
 import com.devmaster.goatfarm.application.core.business.common.EntityFinder;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.business.bo.HealthWithdrawalOriginVO;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +52,21 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
     }
 
     @Override
+    public GoatWithdrawalStatusVO getGoatWithdrawalStatus(com.devmaster.goatfarm.goat.domain.GoatId goatId,
+                                                           LocalDate referenceDate) {
+        GoatReference goat = entityFinder.findOrThrow(
+                () -> goatReferenceResolver.resolveGlobal(goatId),
+                "Cabra não encontrada para o GoatId informado."
+        );
+        return buildStatus(
+                goat.registrationNumber(),
+                goat.id().value(),
+                healthEventPersistencePort.findPerformedWithWithdrawalByGoatTechnicalId(goatId),
+                safeReferenceDate(referenceDate)
+        );
+    }
+
+    @Override
     public List<GoatWithdrawalStatusVO> listActiveWithdrawalStatuses(Long farmId, LocalDate referenceDate) {
         LocalDate effectiveReferenceDate = safeReferenceDate(referenceDate);
         return healthEventPersistencePort.findPerformedWithWithdrawalByFarmId(farmId).stream()
@@ -71,19 +86,19 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
                 .toList();
     }
 
-    private GoatWithdrawalStatusVO buildStatus(String goatId, Long goatTechnicalId, List<HealthEvent> events, LocalDate referenceDate) {
+    private GoatWithdrawalStatusVO buildStatus(String goatId, Long goatTechnicalId, List<HealthEventRecord> events, LocalDate referenceDate) {
         Optional<HealthWithdrawalOriginVO> milkWithdrawal = events.stream()
                 .map(event -> toOrigin(event, event.getWithdrawalMilkDays()))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(origin -> isActive(origin.withdrawalEndDate(), referenceDate))
+                .filter(origin -> isActive(origin.performedDate(), origin.withdrawalEndDate(), referenceDate))
                 .max(Comparator.comparing(HealthWithdrawalOriginVO::withdrawalEndDate));
 
         Optional<HealthWithdrawalOriginVO> meatWithdrawal = events.stream()
                 .map(event -> toOrigin(event, event.getWithdrawalMeatDays()))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .filter(origin -> isActive(origin.withdrawalEndDate(), referenceDate))
+                .filter(origin -> isActive(origin.performedDate(), origin.withdrawalEndDate(), referenceDate))
                 .max(Comparator.comparing(HealthWithdrawalOriginVO::withdrawalEndDate));
 
         return GoatWithdrawalStatusVO.builder()
@@ -97,7 +112,7 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
                 .build();
     }
 
-    private Optional<HealthWithdrawalOriginVO> toOrigin(HealthEvent event, Integer withdrawalDays) {
+    private Optional<HealthWithdrawalOriginVO> toOrigin(HealthEventRecord event, Integer withdrawalDays) {
         if (event.getPerformedAt() == null || withdrawalDays == null || withdrawalDays <= 0) {
             return Optional.empty();
         }
@@ -120,8 +135,10 @@ public class HealthWithdrawalBusiness implements HealthWithdrawalQueryUseCase {
         return referenceDate != null ? referenceDate : LocalDate.now();
     }
 
-    private boolean isActive(LocalDate withdrawalEndDate, LocalDate referenceDate) {
-        return withdrawalEndDate != null && !referenceDate.isAfter(withdrawalEndDate);
+    private boolean isActive(LocalDate performedDate, LocalDate withdrawalEndDate, LocalDate referenceDate) {
+        return performedDate != null && withdrawalEndDate != null
+                && !referenceDate.isBefore(performedDate)
+                && !referenceDate.isAfter(withdrawalEndDate);
     }
 
     private record GoatWithdrawalKey(Long technicalId, String registrationNumber) {

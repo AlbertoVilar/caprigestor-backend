@@ -1,13 +1,22 @@
 package com.devmaster.goatfarm.milk.business.lactationservice;
 
 import com.devmaster.goatfarm.application.core.business.validation.GoatGenderValidator;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
+import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.goat.enums.Gender;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.milk.application.ports.out.LactationPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionPersistencePort;
-import com.devmaster.goatfarm.milk.application.ports.out.PregnancySnapshotQueryPort;
+import com.devmaster.goatfarm.milk.application.ports.out.MilkProductionSummaryQueryPort;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancySnapshotQueryUseCase;
+import com.devmaster.goatfarm.reproduction.application.ports.in.PregnancyDryOffQueryUseCase;
+import com.devmaster.goatfarm.reproduction.application.model.PregnancyDryOffSnapshot;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryRequestVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationRequestVO;
@@ -15,22 +24,19 @@ import com.devmaster.goatfarm.milk.business.bo.LactationResponseVO;
 import com.devmaster.goatfarm.milk.business.bo.LactationSummaryResponseVO;
 import com.devmaster.goatfarm.milk.business.mapper.LactationBusinessMapper;
 import com.devmaster.goatfarm.milk.enums.LactationStatus;
-import com.devmaster.goatfarm.milk.persistence.entity.Lactation;
-import com.devmaster.goatfarm.milk.persistence.projection.LactationDryOffAlertProjection;
+import com.devmaster.goatfarm.milk.domain.Lactation;
 import com.devmaster.goatfarm.sharedkernel.pregnancy.PregnancySnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.time.Instant;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,14 +55,21 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LactationBusinessTest {
 
+    private static final Clock CLOCK = Clock.fixed(
+            LocalDate.of(2026, 9, 27).atStartOfDay(ZoneId.of("America/Sao_Paulo")).toInstant(),
+            ZoneId.of("America/Sao_Paulo"));
+
     @Mock
     private LactationPersistencePort lactationPersistencePort;
 
     @Mock
-    private MilkProductionPersistencePort milkProductionPersistencePort;
+    private MilkProductionSummaryQueryPort milkProductionSummaryQueryPort;
 
     @Mock
-    private PregnancySnapshotQueryPort pregnancySnapshotQueryPort;
+    private PregnancySnapshotQueryUseCase pregnancySnapshotQueryPort;
+
+    @Mock
+    private PregnancyDryOffQueryUseCase pregnancyDryOffQueryUseCase;
 
     @Mock
     private GoatGenderValidator goatGenderValidator;
@@ -64,13 +77,49 @@ class LactationBusinessTest {
     @Mock
     private LactationBusinessMapper lactationMapper;
 
-    @InjectMocks
+    @Mock
+    private GoatReferenceResolver goatReferenceResolver;
+
+    @Mock
+    private GoatOwnershipGuardUseCase goatOwnershipGuard;
+
+    @Mock
+    private GoatBirthDateQueryPort goatBirthDateQueryPort;
+
     private LactationBusiness lactationBusiness;
 
     @BeforeEach
     void setUp() {
         lenient().doNothing().when(goatGenderValidator).requireFemale(anyLong(), anyString());
         lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(anyLong(), anyString());
+        lenient().doNothing().when(goatGenderValidator).requireFemaleAndActive(any(GoatId.class));
+        lenient().when(goatReferenceResolver.resolveGlobal(anyString()))
+                .thenReturn(Optional.of(new GoatReference(new GoatId(123L), 1L, "123", "Test goat", Gender.FEMEA)));
+        lenient().doNothing().when(goatOwnershipGuard).requireCurrentFarm(any(GoatId.class), anyLong());
+        lenient().doNothing().when(goatOwnershipGuard)
+                .requireUnambiguousOwnershipOnDate(any(GoatId.class), anyLong(), any(LocalDate.class));
+        lenient().when(lactationPersistencePort.findActiveByGoatTechnicalId(any(GoatId.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(lactationPersistencePort.findActiveByFarmIdAndGoatId(anyLong(), anyString()))
+                .thenReturn(Optional.empty());
+        lenient().when(lactationPersistencePort.findLatestByGoatTechnicalId(any(GoatId.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(any(GoatId.class), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+        lenient().when(goatBirthDateQueryPort.findBirthDate(any(GoatId.class)))
+                .thenReturn(Optional.of(LocalDate.of(2020, 1, 1)));
+        lactationBusiness = new LactationBusiness(
+                lactationPersistencePort,
+                milkProductionSummaryQueryPort,
+                pregnancySnapshotQueryPort,
+                pregnancyDryOffQueryUseCase,
+                goatGenderValidator,
+                lactationMapper,
+                goatReferenceResolver,
+                goatOwnershipGuard,
+                goatBirthDateQueryPort,
+                CLOCK
+        );
     }
 
     @Test
@@ -79,16 +128,14 @@ class LactationBusinessTest {
         String goatId = "123";
         LactationRequestVO requestVO = validRequestVO();
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.empty());
-        when(lactationPersistencePort.findAllByFarmIdAndGoatId(eq(farmId), eq(goatId), any(Pageable.class)))
-                .thenReturn(Page.empty());
-        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(farmId, goatId, requestVO.getStartDate()))
+        when(lactationPersistencePort.findLatestByGoatTechnicalId(new GoatId(123L)))
+                .thenReturn(Optional.empty());
+        when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(new GoatId(123L), requestVO.getStartDate()))
                 .thenReturn(Optional.empty());
 
         Lactation savedEntity = savedLactationEntity();
-        savedEntity.setFarmId(farmId);
-        savedEntity.setGoatId(goatId);
 
         when(lactationPersistencePort.save(any(Lactation.class))).thenReturn(savedEntity);
 
@@ -103,7 +150,7 @@ class LactationBusinessTest {
         assertEquals(expectedVO.getId(), result.getId());
         assertEquals(expectedVO.getStatus(), result.getStatus());
 
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(123L));
         verify(lactationPersistencePort).save(captor.capture());
 
         Lactation capturedEntity = captor.getValue();
@@ -122,13 +169,13 @@ class LactationBusinessTest {
         LactationRequestVO requestVO = validRequestVO();
         Lactation activeEntity = activeLactationEntity();
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.of(activeEntity));
 
         assertThrows(BusinessRuleException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, requestVO));
 
-        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(farmId, goatId);
+        verify(lactationPersistencePort).findActiveByGoatTechnicalId(new GoatId(123L));
         verify(lactationPersistencePort, never()).save(any(Lactation.class));
         verifyNoInteractions(lactationMapper);
     }
@@ -139,20 +186,15 @@ class LactationBusinessTest {
         String goatId = "123";
         LactationRequestVO requestVO = validRequestVO();
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(20L);
-        dryLactation.setFarmId(farmId);
-        dryLactation.setGoatId(goatId);
-        dryLactation.setStatus(LactationStatus.DRY);
-        dryLactation.setStartDate(LocalDate.of(2025, 11, 1));
-        dryLactation.setEndDate(LocalDate.of(2026, 3, 28));
-        dryLactation.setDryStartDate(LocalDate.of(2026, 3, 28));
+        Lactation dryLactation = Lactation.rehydrate(20L, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2025, 11, 1), LocalDate.of(2026, 3, 28), null,
+                LocalDate.of(2026, 3, 28), 90, 60, null, null);
 
-        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(farmId, goatId))
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
                 .thenReturn(Optional.empty());
-        when(lactationPersistencePort.findAllByFarmIdAndGoatId(eq(farmId), eq(goatId), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(dryLactation)));
-        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(farmId, goatId, requestVO.getStartDate()))
+        when(lactationPersistencePort.findLatestByGoatTechnicalId(new GoatId(123L)))
+                .thenReturn(Optional.of(dryLactation));
+        when(pregnancySnapshotQueryPort.findLatestByGoatTechnicalId(new GoatId(123L), requestVO.getStartDate()))
                 .thenReturn(Optional.of(new PregnancySnapshot(
                         true,
                         LocalDate.of(2025, 12, 28),
@@ -173,7 +215,7 @@ class LactationBusinessTest {
         String goatId = "123";
 
         LactationRequestVO futureRequest = new LactationRequestVO();
-        futureRequest.setStartDate(LocalDate.now().plusDays(1));
+        futureRequest.setStartDate(LocalDate.now(CLOCK).plusDays(1));
 
         InvalidArgumentException ex = assertThrows(InvalidArgumentException.class,
                 () -> lactationBusiness.openLactation(farmId, goatId, futureRequest));
@@ -194,12 +236,8 @@ class LactationBusinessTest {
         LactationDryRequestVO dryRequestVO = new LactationDryRequestVO();
         dryRequestVO.setEndDate(endDate);
 
-        Lactation existingLactation = new Lactation();
-        existingLactation.setId(lactationId);
-        existingLactation.setFarmId(farmId);
-        existingLactation.setGoatId(goatId);
-        existingLactation.setStatus(LactationStatus.ACTIVE);
-        existingLactation.setStartDate(startDate);
+        Lactation existingLactation = Lactation.rehydrate(lactationId, farmId, goatId, null,
+                LactationStatus.ACTIVE, startDate, null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(existingLactation));
@@ -248,8 +286,8 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation closedLactation = new Lactation();
-        closedLactation.setStatus(LactationStatus.CLOSED);
+        Lactation closedLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.CLOSED,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(closedLactation));
@@ -267,9 +305,8 @@ class LactationBusinessTest {
         Long lactationId = 10L;
         LocalDate startDate = LocalDate.of(2026, 5, 1);
 
-        Lactation activeLactation = new Lactation();
-        activeLactation.setStatus(LactationStatus.ACTIVE);
-        activeLactation.setStartDate(startDate);
+        Lactation activeLactation = Lactation.rehydrate(10L, farmId, goatId, null, LactationStatus.ACTIVE,
+                startDate, null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(activeLactation));
@@ -287,14 +324,9 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(lactationId);
-        dryLactation.setFarmId(farmId);
-        dryLactation.setGoatId(goatId);
-        dryLactation.setStatus(LactationStatus.DRY);
-        dryLactation.setStartDate(LocalDate.of(2025, 11, 15));
-        dryLactation.setEndDate(LocalDate.of(2026, 3, 28));
-        dryLactation.setDryStartDate(LocalDate.of(2026, 3, 28));
+        Lactation dryLactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2025, 11, 15), LocalDate.of(2026, 3, 28), null,
+                LocalDate.of(2026, 3, 28), 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(dryLactation));
@@ -328,9 +360,8 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(lactationId);
-        dryLactation.setStatus(LactationStatus.DRY);
+        Lactation dryLactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(dryLactation));
@@ -357,9 +388,8 @@ class LactationBusinessTest {
         String goatId = "123";
         Long lactationId = 10L;
 
-        Lactation dryLactation = new Lactation();
-        dryLactation.setId(lactationId);
-        dryLactation.setStatus(LactationStatus.DRY);
+        Lactation dryLactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.DRY,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(dryLactation));
@@ -398,6 +428,44 @@ class LactationBusinessTest {
     }
 
     @Test
+    void getActiveLactation_shouldUseOnlyCurrentFarmOperationalSegment() {
+        Lactation current = Lactation.rehydrate(50L, 1L, "123", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 25), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(1L, "123"))
+                .thenReturn(Optional.of(current));
+        when(lactationMapper.toResponseVO(current)).thenReturn(responseVO());
+
+        LactationResponseVO result = lactationBusiness.getActiveLactation(1L, "123");
+
+        assertNotNull(result);
+        verify(goatOwnershipGuard).requireCurrentFarm(new GoatId(123L), 1L);
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(1L, "123");
+        assertEquals(1L, current.getFarmId());
+    }
+
+    @Test
+    void activeSummary_shouldUseCurrentFarmOperationalSegment() {
+        Lactation current = Lactation.rehydrate(50L, 1L, "123", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 25), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByFarmIdAndGoatId(1L, "123"))
+                .thenReturn(Optional.of(current));
+        when(milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
+                eq(1L), eq("123"), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
+        when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(1L), eq("123"), any(LocalDate.class)))
+                .thenReturn(Optional.empty());
+
+        LactationSummaryResponseVO result = lactationBusiness.getActiveLactationSummary(1L, "123");
+
+        assertNotNull(result);
+        assertEquals(50L, result.getLactation().getLactationId());
+        assertEquals(1L, current.getFarmId());
+        verify(lactationPersistencePort).findActiveByFarmIdAndGoatId(1L, "123");
+    }
+
+    @Test
     void getActiveLactation_shouldThrowResourceNotFound_whenNotExists() {
         Long farmId = 1L;
         String goatId = "123";
@@ -427,25 +495,65 @@ class LactationBusinessTest {
     }
 
     @Test
+    void closeActiveForOwnershipTransferUsesSaoPauloDateAndPreservesProvenance() {
+        Lactation active = Lactation.rehydrate(49L, 19L, "OLD-RG", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 24), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
+                .thenReturn(Optional.of(active));
+        when(lactationPersistencePort.save(active)).thenReturn(active);
+
+        lactationBusiness.closeActiveForOwnershipTransfer(
+                new GoatId(123L), 19L, Instant.parse("2026-09-25T02:00:00Z"));
+
+        assertEquals(LactationStatus.CLOSED, active.getStatus());
+        assertEquals(LocalDate.of(2026, 9, 24), active.getEndDate());
+        assertEquals(19L, active.getFarmId());
+        verify(lactationPersistencePort).save(active);
+    }
+
+    @Test
+    void closeActiveForOwnershipTransferDoesNothingWithoutActiveSegment() {
+        lactationBusiness.closeActiveForOwnershipTransfer(
+                new GoatId(123L), 19L, Instant.parse("2026-09-25T12:00:00Z"));
+
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
+    }
+
+    @Test
+    void closeActiveForOwnershipTransferFailsClosedWhenActiveSegmentHasUnexpectedFarm() {
+        Lactation active = Lactation.rehydrate(49L, 18L, "OTHER-RG", 123L,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 9, 24), null,
+                null, null, 90, 60, null, null);
+        when(lactationPersistencePort.findActiveByGoatTechnicalId(new GoatId(123L)))
+                .thenReturn(Optional.of(active));
+
+        assertThrows(BusinessRuleException.class,
+                () -> lactationBusiness.closeActiveForOwnershipTransfer(
+                        new GoatId(123L), 19L, Instant.parse("2026-09-25T12:00:00Z")));
+        verify(lactationPersistencePort, never()).save(any(Lactation.class));
+    }
+
+    @Test
     void getAllLactations_shouldReturnPageOfLactations() {
         Long farmId = 1L;
         String goatId = "123";
-        Pageable pageable = PageRequest.of(0, 10);
+        PageQuery pageQuery = new PageQuery(0, 10, List.of());
 
         List<Lactation> lactationList = List.of(activeLactationEntity());
-        Page<Lactation> lactationPage = new PageImpl<>(lactationList);
+        PageResult<Lactation> lactationPage = new PageResult<>(lactationList, 1, 0, 10);
 
         LactationResponseVO responseVO = responseVO();
 
-        when(lactationPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageable))
+        when(lactationPersistencePort.findAllByFarmIdAndGoatId(farmId, goatId, pageQuery))
                 .thenReturn(lactationPage);
         when(lactationMapper.toResponseVO(any(Lactation.class))).thenReturn(responseVO);
 
-        Page<LactationResponseVO> result = lactationBusiness.getAllLactations(farmId, goatId, pageable);
+        PageResult<LactationResponseVO> result = lactationBusiness.getAllLactations(farmId, goatId, pageQuery);
 
         assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        assertEquals(responseVO.getId(), result.getContent().get(0).getId());
+        assertEquals(1, result.totalElements());
+        assertEquals(responseVO.getId(), result.content().get(0).getId());
     }
 
     @Test
@@ -455,15 +563,12 @@ class LactationBusinessTest {
         Long lactationId = 10L;
         LocalDate breedingDate = LocalDate.now().minusDays(100);
 
-        Lactation lactation = activeLactationEntity();
-        lactation.setId(lactationId);
-        lactation.setFarmId(farmId);
-        lactation.setGoatId(goatId);
-        lactation.setDryAtPregnancyDays(90);
+        Lactation lactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(lactation));
-        when(milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+        when(milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
                 eq(farmId), eq(goatId), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
         when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
@@ -484,15 +589,12 @@ class LactationBusinessTest {
         Long lactationId = 10L;
         LocalDate breedingDate = LocalDate.now().minusDays(100);
 
-        Lactation lactation = activeLactationEntity();
-        lactation.setId(lactationId);
-        lactation.setFarmId(farmId);
-        lactation.setGoatId(goatId);
-        lactation.setDryAtPregnancyDays(90);
+        Lactation lactation = Lactation.rehydrate(lactationId, farmId, goatId, null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
 
         when(lactationPersistencePort.findByIdAndFarmIdAndGoatId(lactationId, farmId, goatId))
                 .thenReturn(Optional.of(lactation));
-        when(milkProductionPersistencePort.findByFarmIdAndGoatIdAndDateBetween(
+        when(milkProductionSummaryQueryPort.findSummaryByFarmIdAndGoatIdAndDateBetween(
                 eq(farmId), eq(goatId), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
         when(pregnancySnapshotQueryPort.findLatestByFarmIdAndGoatId(eq(farmId), eq(goatId), any(LocalDate.class)))
@@ -517,24 +619,20 @@ class LactationBusinessTest {
     void getDryOffAlerts_shouldMapProjectionAndCalculateOverdueDays() {
         Long farmId = 1L;
         LocalDate referenceDate = LocalDate.of(2026, 2, 1);
-        Pageable pageable = PageRequest.of(0, 10);
+        PageQuery pageQuery = new PageQuery(0, 10, List.of());
 
-        LactationDryOffAlertProjection projection = mock(LactationDryOffAlertProjection.class);
-        when(projection.getLactationId()).thenReturn(11L);
-        when(projection.getGoatId()).thenReturn("GOAT-001");
-        when(projection.getStartDatePregnancy()).thenReturn(LocalDate.of(2025, 10, 20));
-        when(projection.getBreedingDate()).thenReturn(LocalDate.of(2025, 10, 20));
-        when(projection.getConfirmDate()).thenReturn(LocalDate.of(2025, 12, 20));
-        when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 1, 18));
-        when(projection.getDryAtPregnancyDays()).thenReturn(90);
+        when(lactationPersistencePort.findAllActiveByFarmId(farmId)).thenReturn(List.of(
+                Lactation.rehydrate(11L, farmId, "GOAT-001", null, LactationStatus.ACTIVE,
+                        LocalDate.of(2025, 10, 1), null, null, null, 90, 60, null, null)));
+        when(pregnancyDryOffQueryUseCase.findLatestRelevantByFarmId(farmId, referenceDate)).thenReturn(List.of(
+                new PregnancyDryOffSnapshot(1L, farmId, null, "GOAT-001", "ACTIVE",
+                        LocalDate.of(2025, 10, 20), LocalDate.of(2025, 12, 20),
+                        LocalDate.of(2025, 10, 20), null)));
 
-        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, 90, pageable))
-                .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
+        PageResult<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageQuery);
 
-        Page<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageable);
-
-        assertEquals(1, result.getTotalElements());
-        LactationDryOffAlertVO alert = result.getContent().get(0);
+        assertEquals(1, result.totalElements());
+        LactationDryOffAlertVO alert = result.content().get(0);
         assertEquals("GOAT-001", alert.getGoatId());
         assertEquals(104, alert.getGestationDays());
         assertEquals(14, alert.getDaysOverdue());
@@ -546,27 +644,96 @@ class LactationBusinessTest {
     void getDryOffAlerts_shouldKeepOverdueAtZero_whenReferenceDateIsBeforeDryOffDate() {
         Long farmId = 1L;
         LocalDate referenceDate = LocalDate.of(2026, 1, 10);
-        Pageable pageable = PageRequest.of(0, 10);
+        PageQuery pageQuery = new PageQuery(0, 10, List.of());
 
-        LactationDryOffAlertProjection projection = mock(LactationDryOffAlertProjection.class);
-        when(projection.getLactationId()).thenReturn(22L);
-        when(projection.getGoatId()).thenReturn("GOAT-002");
-        when(projection.getStartDatePregnancy()).thenReturn(LocalDate.of(2025, 12, 1));
-        when(projection.getBreedingDate()).thenReturn(LocalDate.of(2025, 12, 1));
-        when(projection.getConfirmDate()).thenReturn(LocalDate.of(2026, 1, 1));
-        when(projection.getDryOffDate()).thenReturn(LocalDate.of(2026, 3, 1));
-        when(projection.getDryAtPregnancyDays()).thenReturn(90);
+        when(lactationPersistencePort.findAllActiveByFarmId(farmId)).thenReturn(List.of(
+                Lactation.rehydrate(22L, farmId, "GOAT-002", null, LactationStatus.ACTIVE,
+                        LocalDate.of(2025, 11, 1), null, null, null, 90, 60, null, null)));
+        when(pregnancyDryOffQueryUseCase.findLatestRelevantByFarmId(farmId, referenceDate)).thenReturn(List.of(
+                new PregnancyDryOffSnapshot(2L, farmId, null, "GOAT-002", "ACTIVE",
+                        LocalDate.of(2025, 12, 1), LocalDate.of(2026, 1, 1),
+                        LocalDate.of(2025, 12, 1), null)));
 
-        when(lactationPersistencePort.findDryOffAlerts(farmId, referenceDate, 90, pageable))
-                .thenReturn(new PageImpl<>(List.of(projection), pageable, 1));
+        PageResult<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageQuery);
 
-        Page<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageable);
+        assertEquals(0, result.totalElements());
+    }
 
-        assertEquals(1, result.getTotalElements());
-        LactationDryOffAlertVO alert = result.getContent().get(0);
-        assertEquals(40, alert.getGestationDays());
-        assertEquals(0, alert.getDaysOverdue());
-        assertFalse(alert.isDryOffRecommendation());
+    @Test
+    void getDryOffAlerts_shouldRespectCustomAndDefaultDaysOrderingAndPagination() {
+        Long farmId = 1L;
+        LocalDate referenceDate = LocalDate.of(2026, 3, 5);
+        int requestedPage = 1;
+        int requestedPageSize = 2;
+        PageQuery pageQuery = new PageQuery(requestedPage, requestedPageSize, List.of());
+
+        Lactation earliest = Lactation.rehydrate(8L, farmId, "GOAT-EARLY", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 29), null, null, null, 30, 60, null, null);
+        Lactation goatAFirst = Lactation.rehydrate(4L, farmId, "GOAT-A", null, LactationStatus.ACTIVE,
+                LocalDate.of(2025, 12, 1), null, null, null, null, 60, null, null);
+        Lactation goatASecond = Lactation.rehydrate(5L, farmId, "GOAT-A", null, LactationStatus.ACTIVE,
+                LocalDate.of(2025, 12, 1), null, null, null, null, 60, null, null);
+        Lactation goatB = Lactation.rehydrate(6L, farmId, "GOAT-B", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 30), null, null, null, 30, 60, null, null);
+        when(lactationPersistencePort.findAllActiveByFarmId(farmId)).thenReturn(
+                List.of(goatB, goatASecond, earliest, goatAFirst));
+        when(pregnancyDryOffQueryUseCase.findLatestRelevantByFarmId(farmId, referenceDate)).thenReturn(List.of(
+                new PregnancyDryOffSnapshot(10L, farmId, null, "GOAT-A", "ACTIVE",
+                        LocalDate.of(2025, 12, 1), null, LocalDate.of(2025, 12, 1), null),
+                new PregnancyDryOffSnapshot(11L, farmId, null, "GOAT-B", "ACTIVE",
+                        LocalDate.of(2026, 1, 30), null, LocalDate.of(2026, 1, 30), null),
+                new PregnancyDryOffSnapshot(12L, farmId, null, "GOAT-EARLY", "ACTIVE",
+                        LocalDate.of(2026, 1, 29), null, LocalDate.of(2026, 1, 29), null)));
+
+        PageResult<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageQuery);
+
+        assertEquals(requestedPage, result.page());
+        assertEquals(requestedPageSize, result.size());
+        assertEquals(4, result.totalElements());
+        assertEquals(List.of("GOAT-A", "GOAT-B"), result.content().stream()
+                .map(LactationDryOffAlertVO::getGoatId).toList());
+        assertEquals(List.of(5L, 6L), result.content().stream()
+                .map(LactationDryOffAlertVO::getLactationId).toList());
+        assertEquals(90, result.content().get(0).getDryAtPregnancyDays());
+        assertEquals(30, result.content().get(1).getDryAtPregnancyDays());
+        assertEquals(LocalDate.of(2026, 3, 1), result.content().get(0).getDryOffDate());
+        assertEquals(LocalDate.of(2026, 3, 1), result.content().get(1).getDryOffDate());
+    }
+
+    @Test
+    void getDryOffAlerts_shouldOmitActiveLactationWhenPregnancyIsMissing() {
+        Long farmId = 1L;
+        LocalDate referenceDate = LocalDate.of(2026, 3, 5);
+        Lactation lactation = Lactation.rehydrate(7L, farmId, "GOAT-NO-PREGNANCY", null,
+                LactationStatus.ACTIVE, LocalDate.of(2026, 1, 1), null, null, null, 30, 60, null, null);
+        when(lactationPersistencePort.findAllActiveByFarmId(farmId)).thenReturn(List.of(lactation));
+        when(pregnancyDryOffQueryUseCase.findLatestRelevantByFarmId(farmId, referenceDate))
+                .thenReturn(List.of());
+
+        PageResult<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(
+                farmId, referenceDate, new PageQuery(0, 10, List.of()));
+
+        assertNotNull(result);
+        assertTrue(result.content().isEmpty());
+        assertEquals(0, result.totalElements());
+    }
+
+    @Test
+    void getDryOffAlerts_shouldOmitMissingAndNonActivePregnancies() {
+        Long farmId = 1L;
+        LocalDate referenceDate = LocalDate.of(2026, 3, 5);
+        PageQuery pageQuery = new PageQuery(0, 10, List.of());
+        Lactation lactation = Lactation.rehydrate(4L, farmId, "GOAT-004", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 30, 60, null, null);
+        when(lactationPersistencePort.findAllActiveByFarmId(farmId)).thenReturn(List.of(lactation));
+        when(pregnancyDryOffQueryUseCase.findLatestRelevantByFarmId(farmId, referenceDate)).thenReturn(List.of(
+                new PregnancyDryOffSnapshot(14L, farmId, null, "GOAT-004", "CLOSED",
+                        LocalDate.of(2026, 1, 1), null, LocalDate.of(2026, 1, 1), null)));
+
+        PageResult<LactationDryOffAlertVO> result = lactationBusiness.getDryOffAlerts(farmId, referenceDate, pageQuery);
+
+        assertNotNull(result);
+        assertEquals(0, result.totalElements());
     }
 
     private LactationRequestVO validRequestVO() {
@@ -576,19 +743,13 @@ class LactationBusinessTest {
     }
 
     private Lactation activeLactationEntity() {
-        Lactation entity = new Lactation();
-        entity.setId(10L);
-        entity.setStatus(LactationStatus.ACTIVE);
-        entity.setStartDate(LocalDate.of(2026, 1, 1));
-        return entity;
+        return Lactation.rehydrate(10L, 1L, "123", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
     }
 
     private Lactation savedLactationEntity() {
-        Lactation entity = new Lactation();
-        entity.setId(11L);
-        entity.setStatus(LactationStatus.ACTIVE);
-        entity.setStartDate(LocalDate.of(2026, 1, 1));
-        return entity;
+        return Lactation.rehydrate(11L, 1L, "123", null, LactationStatus.ACTIVE,
+                LocalDate.of(2026, 1, 1), null, null, null, 90, 60, null, null);
     }
 
     private LactationResponseVO responseVO() {

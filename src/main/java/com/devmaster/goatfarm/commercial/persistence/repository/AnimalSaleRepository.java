@@ -16,9 +16,38 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
     boolean existsByGoatRegistrationNumber(String goatRegistrationNumber);
     boolean existsByFarm_IdAndGoatTechnicalId(Long farmId, Long goatTechnicalId);
 
+    boolean existsByGoatTechnicalIdAndTargetFarmIsNull(Long goatTechnicalId);
+
     Optional<AnimalSale> findByIdAndFarm_Id(Long id, Long farmId);
 
     List<AnimalSale> findByFarm_IdOrderBySaleDateDescIdDesc(Long farmId);
+
+    List<AnimalSale> findByTargetFarm_IdOrderBySaleDateDescIdDesc(Long targetFarmId);
+
+    @Query("""
+            select count(distinct sale.goatTechnicalId)
+            from AnimalSale sale
+            where sale.farm.id = :farmId
+              and sale.paymentStatus = :paymentStatus
+              and (
+                  (sale.targetFarm is null and not exists (
+                      select reversal.id
+                      from AnimalSaleReversal reversal
+                      where reversal.sale.id = sale.id
+                  ))
+                  or (sale.targetFarm is not null and exists (
+                      select transfer.id
+                      from com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransferEntity transfer
+                      where transfer.saleId = sale.id
+                        and transfer.kind = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE
+                        and transfer.status = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED
+                  ))
+              )
+            """)
+    long countDistinctCompletedSoldGoatsByFarmId(
+            @Param("farmId") Long farmId,
+            @Param("paymentStatus") SalePaymentStatus paymentStatus
+    );
 
     @Query("""
             select coalesce(sum(a.amount), 0)
@@ -27,6 +56,21 @@ public interface AnimalSaleRepository extends JpaRepository<AnimalSale, Long> {
               and a.paymentStatus = :paymentStatus
               and a.paymentDate >= :fromDate
               and a.paymentDate <= :toDate
+              and not exists (
+                  select reversal.id
+                  from AnimalSaleReversal reversal
+                  where reversal.sale.id = a.id
+              )
+              and (
+                  a.targetFarm is null
+                  or exists (
+                      select transfer.id
+                      from com.devmaster.goatfarm.goatownership.persistence.entity.OwnershipTransferEntity transfer
+                      where transfer.saleId = a.id
+                        and transfer.kind = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferKind.INTERNAL_SALE
+                        and transfer.status = com.devmaster.goatfarm.goatownership.domain.OwnershipTransferStatus.COMPLETED
+                  )
+              )
             """)
     BigDecimal sumPaidAmountByFarmIdAndPaymentDateBetween(
             @Param("farmId") Long farmId,

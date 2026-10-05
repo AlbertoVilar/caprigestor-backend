@@ -1,34 +1,34 @@
 package com.devmaster.goatfarm.article.application.ports.out;
 
 import com.devmaster.goatfarm.article.enums.ArticleCategory;
-import com.devmaster.goatfarm.article.persistence.entity.Article;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.article.business.bo.ArticleResponseVO;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface ArticlePersistencePort {
 
-    Article save(Article article);
+    ArticleResponseVO save(ArticleResponseVO article);
 
-    Optional<Article> findById(Long id);
+    Optional<ArticleResponseVO> findById(Long id);
 
-    Optional<Article> findBySlug(String slug);
+    Optional<ArticleResponseVO> findBySlug(String slug);
 
-    Optional<Article> findBySlugAndPublishedTrue(String slug);
+    Optional<ArticleResponseVO> findBySlugAndPublishedTrue(String slug);
 
     boolean existsBySlug(String slug);
 
     boolean existsBySlugAndIdNot(String slug, Long id);
 
-    Page<Article> findAll(Pageable pageable);
+    PageResult<ArticleResponseVO> findAll(PageQuery pageQuery);
 
-    Page<Article> findPublished(ArticleCategory category, String q, Pageable pageable);
+    PageResult<ArticleResponseVO> findPublished(ArticleCategory category, String q, PageQuery pageQuery);
 
-    List<Article> findTop3HighlightedPublished();
+    List<ArticleResponseVO> findTop3HighlightedPublished();
 
-    Page<Article> findLatestPublished(Pageable pageable);
+    List<ArticleResponseVO> findLatestPublished(int limit);
 
     void deleteById(Long id);
 }

@@ -16,8 +16,8 @@ import com.devmaster.goatfarm.reproduction.enums.BreedingType;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyCheckResult;
 import com.devmaster.goatfarm.reproduction.enums.PregnancyStatus;
 import com.devmaster.goatfarm.reproduction.enums.ReproductiveEventType;
-import com.devmaster.goatfarm.reproduction.persistence.entity.Pregnancy;
-import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEvent;
+import com.devmaster.goatfarm.reproduction.persistence.entity.PregnancyEntity;
+import com.devmaster.goatfarm.reproduction.persistence.entity.ReproductiveEventEntity;
 import com.devmaster.goatfarm.reproduction.persistence.repository.PregnancyRepository;
 import com.devmaster.goatfarm.reproduction.persistence.repository.ReproductiveEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +34,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -82,6 +83,9 @@ class ReproductionActivePregnancyIntegrationTest {
     @SpyBean
     private PregnancyPersistenceAdapter pregnancyPersistenceAdapter;
 
+    @Autowired
+    private Clock clock;
+
     private User ownerUser;
     private GoatFarm ownerFarm;
     private GoatEntity ownerGoat;
@@ -125,7 +129,7 @@ class ReproductionActivePregnancyIntegrationTest {
         ownerGoat.setRegistrationNumber("GOAT-001");
         ownerGoat.setName("Mimosinha");
         ownerGoat.setGender(Gender.FEMEA);
-        ownerGoat.setBirthDate(LocalDate.now().minusYears(2));
+        ownerGoat.setBirthDate(LocalDate.now(clock).minusYears(2));
         ownerGoat.setFarm(ownerFarm);
         ownerGoat.setStatus(GoatStatus.ATIVO);
         goatRepository.save(ownerGoat);
@@ -148,28 +152,28 @@ class ReproductionActivePregnancyIntegrationTest {
         String token = loginAndGetToken("owner@example.com", "password");
 
         // 1. Create initial coverage (breeding)
-        ReproductiveEvent coverage = ReproductiveEvent.builder()
+        ReproductiveEventEntity coverage = ReproductiveEventEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .eventType(ReproductiveEventType.COVERAGE)
-                .eventDate(LocalDate.now().minusDays(60))
+                .eventDate(LocalDate.now(clock).minusDays(60))
                 .breedingType(BreedingType.NATURAL)
                 .build();
         reproductiveEventRepository.save(coverage);
 
         // 2. Create an EXISTING Active Pregnancy
-        Pregnancy activePregnancy = Pregnancy.builder()
+        PregnancyEntity activePregnancy = PregnancyEntity.builder()
                 .farmId(ownerFarm.getId())
                 .goatId(ownerGoat.getRegistrationNumber())
                 .status(PregnancyStatus.ACTIVE)
                 .breedingDate(coverage.getEventDate())
-                .confirmDate(LocalDate.now().minusDays(10))
+                .confirmDate(LocalDate.now(clock).minusDays(10))
                 .build();
         pregnancyRepository.save(activePregnancy);
 
         // 3. Prepare request to confirm another pregnancy
         PregnancyConfirmRequestDTO request = new PregnancyConfirmRequestDTO();
-        request.setCheckDate(LocalDate.now());
+        request.setCheckDate(LocalDate.now(clock));
         request.setCheckResult(PregnancyCheckResult.POSITIVE);
         request.setNotes("Tentativa de duplicidade");
 

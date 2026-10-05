@@ -1,15 +1,16 @@
 package com.devmaster.goatfarm.goat.persistence.adapter;
 
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatGenealogyReadUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatReferenceQueryPort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatBreedCount;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatValidationQueryPort;
+import com.devmaster.goatfarm.goat.application.ports.out.GoatBirthDateQueryPort;
 import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
 import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 /**
  * Persistence adapter for the Goat aggregate.
@@ -39,8 +41,8 @@ import java.util.Optional;
  * repository projections remain private to the persistence boundary.</p>
  */
 @Component
-public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyQueryPort,
-        GoatReferenceQueryPort, GoatValidationQueryPort {
+public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealogyReadUseCase,
+        GoatReferenceQueryPort, GoatValidationQueryPort, GoatBirthDateQueryPort {
 
     private final GoatRepository goatRepository;
     private final GoatPersistenceMapper mapper;
@@ -114,6 +116,13 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public Optional<GoatReference> findReferenceByTechnicalId(GoatId goatId) {
+        return goatId == null
+                ? Optional.empty()
+                : goatRepository.findByTechnicalId(goatId.value()).map(this::toReference);
+    }
+
+    @Override
     public Optional<GoatReference> findReferenceByRegistrationNumberAndFarmId(
             String registrationNumber,
             Long farmId
@@ -164,6 +173,24 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
+    public Optional<GoatValidationSnapshot> findForValidation(GoatId goatId) {
+        return goatId == null
+                ? Optional.empty()
+                : goatRepository.findByTechnicalId(goatId.value())
+                .map(goat -> new GoatValidationSnapshot(
+                        goat.getRegistrationNumber(),
+                        goat.getGender(),
+                        goat.getStatus()
+                ));
+    }
+
+    @Override
+    public Optional<LocalDate> findBirthDate(GoatId goatId) {
+        return goatId == null ? Optional.empty()
+                : goatRepository.findByTechnicalId(goatId.value()).map(GoatEntity::getBirthDate);
+    }
+
+    @Override
     public Optional<GoatGenealogySnapshot> findGenealogyByRegistrationNumberAndFarmId(
             String registrationNumber,
             Long farmId
@@ -175,9 +202,14 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
     }
 
     @Override
-    public void deleteById(GoatId id) {
-        goatRepository.findByTechnicalId(id.value()).ifPresent(goatRepository::delete);
+    public Optional<GoatGenealogySnapshot> findGenealogyByGoatId(GoatId goatId) {
+        if (goatId == null) {
+            return Optional.empty();
+        }
+        return goatRepository.findByTechnicalIdWithTechnicalFamilyGraph(goatId.value())
+                .map(goat -> toStructuralGenealogySnapshot(goat, 3));
     }
+
 
     @Override
     public boolean existsByRegistrationNumber(String registrationNumber) {
@@ -254,6 +286,46 @@ public class GoatPersistenceAdapter implements GoatPersistencePort, GoatGenealog
         }
         return null;
     }
+
+    private GoatGenealogySnapshot toStructuralGenealogySnapshot(GoatEntity goat, int remainingGenerations) {
+        return new GoatGenealogySnapshot(
+                GoatId.of(goat.getTechnicalId()),
+                goat.getRegistrationNumber(),
+                goat.getName(),
+                goat.getBreed(),
+                goat.getColor(),
+                goat.getStatus(),
+                goat.getGender(),
+                goat.getCategory(),
+                goat.getTod(),
+                goat.getToe(),
+                goat.getBirthDate(),
+                null,
+                null,
+                remainingGenerations > 0 ? toStructuralGenealogyParent(goat.getTechnicalFather(),
+                        goat.getExternalFatherRegistrationNumber(), remainingGenerations) : null,
+                remainingGenerations > 0 ? toStructuralGenealogyParent(goat.getTechnicalMother(),
+                        goat.getExternalMotherRegistrationNumber(), remainingGenerations) : null
+        );
+    }
+
+    private GoatGenealogySnapshot.ParentReference toStructuralGenealogyParent(
+            GoatEntity technicalParent,
+            String externalRegistrationNumber,
+            int remainingGenerations
+    ) {
+        GoatEntity localParent = technicalParent;
+        if (localParent != null) {
+            return GoatGenealogySnapshot.ParentReference.local(
+                    toStructuralGenealogySnapshot(localParent, remainingGenerations - 1)
+            );
+        }
+        if (externalRegistrationNumber != null && !externalRegistrationNumber.isBlank()) {
+            return GoatGenealogySnapshot.ParentReference.external(externalRegistrationNumber);
+        }
+        return null;
+    }
+
 
     private GoatReference toReference(GoatEntity goat) {
         return new GoatReference(

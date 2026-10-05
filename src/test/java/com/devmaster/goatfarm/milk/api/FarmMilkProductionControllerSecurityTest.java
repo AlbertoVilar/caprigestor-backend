@@ -56,9 +56,6 @@ class FarmMilkProductionControllerSecurityTest {
     @MockBean
     private OwnershipService ownershipService;
 
-    @MockBean
-    private com.devmaster.goatfarm.authority.business.AdminMaintenanceBusiness adminMaintenanceBusiness;
-
     @BeforeEach
     void setUp() {
         when(ownershipService.canManageFarm(17L)).thenReturn(true);

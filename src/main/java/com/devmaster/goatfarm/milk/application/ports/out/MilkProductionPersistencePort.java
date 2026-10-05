@@ -1,9 +1,10 @@
 package com.devmaster.goatfarm.milk.application.ports.out;
 
 import com.devmaster.goatfarm.milk.enums.MilkingShift;
-import com.devmaster.goatfarm.milk.persistence.entity.MilkProduction;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.milk.domain.MilkProduction;
+import com.devmaster.goatfarm.goat.domain.GoatId;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,14 +21,20 @@ public interface MilkProductionPersistencePort {
             MilkingShift shift
     );
 
+    boolean existsActiveByGoatTechnicalIdAndDateAndShift(
+            GoatId goatId,
+            LocalDate date,
+            MilkingShift shift
+    );
+
     Optional<MilkProduction> findById(Long farmId, String goatId, Long id);
 
-    Page<MilkProduction> search(
+    PageResult<MilkProduction> search(
             Long farmId,
             String goatId,
             LocalDate from,
             LocalDate to,
-            Pageable pageable,
+            PageQuery pageQuery,
             boolean includeCanceled
     );
 

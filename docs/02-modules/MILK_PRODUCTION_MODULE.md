@@ -1,5 +1,5 @@
 # Módulo Milk Production
-Última atualização: 2026-09-10
+Última atualização: 2026-09-13
 Escopo: registro diário de ordenhas por cabra e consulta paginada de produção.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Módulo Lactação](./LACTATION_MODULE.md), [Guia de Migração](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -10,10 +10,26 @@ As respostas de produção e alertas podem retornar `goatTechnicalId`; `goatId`
 continua sendo snapshot registral para compatibilidade. A integridade técnica
 é derivada da lactação pela migration V41.
 
+### Fronteira de persistência (DEV-A9B)
+
+`milk.domain.MilkProduction` e `milk.domain.FarmMilkProduction` são modelos
+framework-free. As entidades JPA `MilkProductionEntity` e
+`FarmMilkProductionEntity` permanecem confinadas aos adaptadores, preservando
+as tabelas e os nomes de entidade JPQL existentes. O módulo Milk não consulta
+diretamente a tabela `pregnancy`; alertas de secagem usam o contrato batch
+`PregnancyDryOffQueryUseCase`, fornecido pelo contexto Reproduction.
+
 ## Regras / Contratos
 - Base URL: `/api/v1/goatfarms/{farmId}/goats/{goatId}/milk-productions`.
 - `POST` exige `date`, `shift` e `volumeLiters`.
-- Registro de produção depende de lactação ativa.
+- Registro de produção depende de lactação `ACTIVE` do farm operacional atual;
+  uma lactação `ACTIVE` histórica de outro ownership não pode ser reutilizada.
+- No handoff de ownership, a lactação `ACTIVE` da origem é fechada
+  atomicamente (`ACTIVE -> CLOSED`), preservando `farm_id`, GoatId e produções;
+  o comprador inicia um novo segmento `ACTIVE` para novas produções.
+- `CLOSED` por transferência não é `DRY` nem pode ser retomada. O histórico
+  continua disponível no dossiê e não é migrado; a unicidade global de `ACTIVE`
+  por GoatId da V47 permanece válida.
 - `PATCH` atualiza apenas campos permitidos (`volumeLiters`, `notes`).
 - `DELETE` realiza cancelamento lógico (não remove histórico físico).
 - As rotas deste módulo são publicadas exclusivamente em `/api/v1/...`.
@@ -68,6 +84,18 @@ GET /api/v1/goatfarms/1/goats/BR123/milk-productions?from=2026-02-01&to=2026-02-
 ## Paginação
 - As rotas são publicadas exclusivamente em `/api/v1/...`.
 - A listagem continua retornando `Page` do Spring para preservar compatibilidade com consumidores já publicados.
+- Internamente, a listagem de produção atravessa o core como `PageQuery`/`PageResult`;
+  `Pageable`/`Page` ficam restritos ao controller e ao adapter de persistência.
+- O adapter preserva a compatibilidade técnica: consulta primeiro por `goatTechnicalId`
+  e só usa o fallback legado por `goat_id` quando a página técnica solicitada não
+  possui conteúdo. Os datasets não são mesclados.
+- O default HTTP permanece `size=12` e `date DESC`, `shift ASC`, `id DESC`;
+  `sort` explícito mantém a semântica atual do Spring. `includeCanceled=false`
+  continua excluindo registros cancelados de conteúdo e totais.
+
+Após DEV-A11-I3-F4-I2, o contexto Milk está isolado de Spring Data em
+application/business também no fluxo de Lactation; Reproduction permanece como
+a próxima dívida de paginação independente.
 
 ## Erros/Status
 - `400`: payload inválido, filtros inconsistentes ou paginação inválida.

@@ -4,14 +4,12 @@ import com.devmaster.goatfarm.milk.api.dto.LactationDryOffAlertItemDTO;
 import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -57,8 +55,8 @@ class FarmMilkAlertsControllerTest {
                 .dryOffRecommendation(alertVO.isDryOffRecommendation())
                 .build();
 
-        when(lactationQueryUseCase.getDryOffAlerts(eq(farmId), eq(referenceDate), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
+        when(lactationQueryUseCase.getDryOffAlerts(eq(farmId), eq(referenceDate), any()))
+                .thenReturn(new PageResult<>(List.of(alertVO), 1, 0, 20));
         when(lactationMapper.toDryOffAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", farmId)
@@ -90,8 +88,8 @@ class FarmMilkAlertsControllerTest {
                 .dryOffRecommendation(alertVO.isDryOffRecommendation())
                 .build();
 
-        when(lactationQueryUseCase.getDryOffAlerts(eq(farmId), eq(referenceDate), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(alertVO), PageRequest.of(0, 20), 1));
+        when(lactationQueryUseCase.getDryOffAlerts(eq(farmId), eq(referenceDate), any()))
+                .thenReturn(new PageResult<>(List.of(alertVO), 1, 0, 20));
         when(lactationMapper.toDryOffAlertItemDTO(alertVO)).thenReturn(alertDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/milk/alerts/dry-off", farmId)

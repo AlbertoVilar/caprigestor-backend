@@ -33,6 +33,7 @@ public class GoatRequestVO {
 
     private Long farmId;
     private Long userId;
+    private GoatCreatorProvenanceVO creatorProvenance;
 
     public GoatRequestVO() {
     }

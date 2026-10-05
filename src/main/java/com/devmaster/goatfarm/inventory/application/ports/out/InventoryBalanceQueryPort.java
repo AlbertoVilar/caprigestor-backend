@@ -2,9 +2,10 @@ package com.devmaster.goatfarm.inventory.application.ports.out;
 
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceResponseVO;
-import org.springframework.data.domain.Page;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 
 public interface InventoryBalanceQueryPort {
 
-    Page<InventoryBalanceResponseVO> listBalances(InventoryBalanceFilterVO filter);
+    PageResult<InventoryBalanceResponseVO> listBalances(InventoryBalanceFilterVO filter, PageQuery page);
 }

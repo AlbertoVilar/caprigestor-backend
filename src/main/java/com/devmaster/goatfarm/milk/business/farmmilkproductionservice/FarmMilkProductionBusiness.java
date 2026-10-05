@@ -2,11 +2,11 @@ package com.devmaster.goatfarm.milk.business.farmmilkproductionservice;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmExistenceQueryUseCase;
 import com.devmaster.goatfarm.milk.application.ports.in.FarmMilkProductionUseCase;
 import com.devmaster.goatfarm.milk.application.ports.out.FarmMilkProductionPersistencePort;
 import com.devmaster.goatfarm.milk.business.bo.*;
-import com.devmaster.goatfarm.milk.persistence.entity.FarmMilkProduction;
+import com.devmaster.goatfarm.milk.domain.FarmMilkProduction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +23,14 @@ import java.util.TreeMap;
 public class FarmMilkProductionBusiness implements FarmMilkProductionUseCase {
 
     private final FarmMilkProductionPersistencePort persistencePort;
-    private final GoatFarmPersistencePort goatFarmPersistencePort;
+    private final FarmExistenceQueryUseCase farmExistenceQuery;
 
     public FarmMilkProductionBusiness(
             FarmMilkProductionPersistencePort persistencePort,
-            GoatFarmPersistencePort goatFarmPersistencePort
+            FarmExistenceQueryUseCase farmExistenceQuery
     ) {
         this.persistencePort = persistencePort;
-        this.goatFarmPersistencePort = goatFarmPersistencePort;
+        this.farmExistenceQuery = farmExistenceQuery;
     }
 
     @Override
@@ -194,8 +194,9 @@ public class FarmMilkProductionBusiness implements FarmMilkProductionUseCase {
             throw new InvalidArgumentException("farmId", "farmId e obrigatorio.");
         }
 
-        goatFarmPersistencePort.findById(farmId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fazenda nao encontrada."));
+        if (!farmExistenceQuery.existsById(farmId)) {
+            throw new ResourceNotFoundException("Fazenda nao encontrada.");
+        }
     }
 
     private LocalDate validateProductionDate(LocalDate productionDate) {

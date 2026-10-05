@@ -1,5 +1,5 @@
 ﻿# Modulo Lactacao
-Ultima atualizacao: 2026-09-10
+Ultima atualizacao: 2026-09-13
 Escopo: abertura, secagem, retomada, consulta de lactacoes e alertas de secagem por fazenda.
 Links relacionados: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md), [API_CONTRACTS](../03-api/API_CONTRACTS.md), [Modulo Milk Production](./MILK_PRODUCTION_MODULE.md), [Guia de Migracao](../03-api/API_VERSIONING_MIGRATION_GUIDE.md)
 
@@ -9,6 +9,40 @@ O modulo de lactacao pertence ao contexto `milk` e controla o ciclo produtivo da
 As respostas de lactação retornam `goatTechnicalId` de forma aditiva. O campo
 `goatId` permanece o RG compatível da rota; as referências persistidas usam
 `lactation.goat_technical_id`.
+
+### Fronteira de domínio (DEV-A7)
+
+O agregado `com.devmaster.goatfarm.milk.domain.Lactation` é framework-free e
+controla apenas as transições intrínsecas `ACTIVE` <-> `DRY`. Regras que
+dependem de outros agregados (cabra fêmea/ativa, unicidade, prenhez e política
+de datas) permanecem na camada de aplicação.
+
+`LactationEntity` é a representação JPA da tabela `lactation` e não atravessa
+os casos de uso. `LactationPersistenceMapper` converte entre a entidade e o
+agregado; `LactationPersistencePort` expõe o agregado e o snapshot de alertas.
+O nome de entidade JPA `Lactation` foi preservado para compatibilidade com
+consultas JPQL existentes, sem alteração de schema ou migrations.
+
+O resumo de produção é consumido por um contrato de aplicação
+(`MilkProductionSummaryQueryPort`), mantendo as entidades JPA de produção
+confinadas aos adaptadores. A paginação Spring permanece apenas na API: o
+histórico atravessa o core como `PageQuery`/`PageResult` e o adapter traduz para
+`Page`/`Pageable`. Alertas de secagem combinam lactações
+ativas do contexto Milk com o contrato batch `PregnancyDryOffQueryUseCase`,
+proprietário de Reproduction; Milk não consulta mais a tabela `pregnancy`.
+
+### Segmentação por ownership
+
+Na conclusão de um `INTERNAL_TRANSFER` ou `INTERNAL_SALE`, a lactação `ACTIVE`
+da fazenda de origem é fechada atomicamente (`ACTIVE -> CLOSED`) junto com o
+handoff de ownership. O `farm_id`, o `GoatId`, o início, as produções e toda a
+proveniência do segmento antigo permanecem imutáveis. Esse `CLOSED` é distinto
+de `DRY` e não pode ser retomado. Após a transferência, o proprietário atual
+pode iniciar uma nova lactação `ACTIVE` para o mesmo animal; a unicidade global
+de uma lactação `ACTIVE` por GoatId da V47 continua válida porque o segmento
+anterior foi fechado. O histórico continua disponível no dossiê e não é
+migrado. A data final derivada de um `Instant` usa `America/Sao_Paulo`, e a
+regra de ownership fail-closed permanece válida quando o dia civil é dividido.
 
 ## Regras operacionais atuais
 - `ACTIVE`: lactacao em producao, apta a receber registros de leite.
@@ -26,6 +60,14 @@ As respostas de lactação retornam `goatTechnicalId` de forma aditiva. O campo
 ## Regras / Contratos
 - Base principal por cabra: `/api/v1/goatfarms/{farmId}/goats/{goatId}/lactations`.
 - Abertura exige `startDate`.
+- A data de início nunca pode anteceder a data de nascimento canônica da cabra.
+- Antes do aniversário de 12 meses, a abertura exige `confirmYoungAge: true` explícito;
+  o campo omitido equivale a `false`. A regra é validada no backend após o
+  ownership e a aptidão operacional, usando a data persistida da cabra por
+  `GoatId`. A partir do aniversário de 12 meses, o campo não é necessário.
+- Prenhez ou parto cadastrados não são pré-requisitos: uma cabra adquirida já
+  lactante pode ser registrada sem inventar histórico reprodutivo. As
+  salvaguardas de prenhez já existentes permanecem.
 - Secagem (`dry`) exige `endDate` e move o ciclo para `DRY`.
 - Retomada (`resume`) so e aceita para uma lactacao `DRY` cuja prenhez nao esteja mais ativa.
 - Consultas de sumario combinam dados da lactacao, producao e recomendacao de secagem.
@@ -62,7 +104,8 @@ Content-Type: application/json
 
 ```json
 {
-  "startDate": "2026-01-01"
+  "startDate": "2026-01-01",
+  "confirmYoungAge": false
 }
 ```
 
@@ -118,6 +161,7 @@ GET /api/v1/goatfarms/1/milk/alerts/dry-off?referenceDate=2026-02-10&page=0&size
 - As rotas sao publicadas exclusivamente em `/api/v1/...`.
 - O historico de lactacoes continua retornando `Page` do Spring para preservar compatibilidade com consumidores ja publicados.
 - O endpoint de alertas retorna um envelope agregado proprio (`totalPending` + `alerts`).
+- Alertas calculam e ordenam o conjunto completo, preservam `totalPending` antes do slicing e só então recortam a página solicitada.
 
 ## Erros/Status
 - `400`: validacao de payload, parametros invalidos ou paginacao inconsistente.

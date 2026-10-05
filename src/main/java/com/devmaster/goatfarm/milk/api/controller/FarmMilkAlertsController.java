@@ -5,6 +5,7 @@ import com.devmaster.goatfarm.milk.api.dto.LactationDryOffAlertItemDTO;
 import com.devmaster.goatfarm.milk.api.dto.LactationDryOffAlertResponseDTO;
 import com.devmaster.goatfarm.milk.api.mapper.LactationMapper;
 import com.devmaster.goatfarm.milk.application.ports.in.LactationQueryUseCase;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.milk.business.bo.LactationDryOffAlertVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -63,14 +64,14 @@ public class FarmMilkAlertsController {
     ) {
         LocalDate effectiveReferenceDate = referenceDate != null ? referenceDate : LocalDate.now();
         Pageable pageable = PageRequest.of(page, size);
-        Page<LactationDryOffAlertVO> alertsPage = lactationQueryUseCase.getDryOffAlerts(farmId, effectiveReferenceDate, pageable);
+        var alertsPage = lactationQueryUseCase.getDryOffAlerts(farmId, effectiveReferenceDate, SpringPageMapper.toQuery(pageable));
 
-        List<LactationDryOffAlertItemDTO> alerts = alertsPage.getContent().stream()
+        List<LactationDryOffAlertItemDTO> alerts = alertsPage.content().stream()
                 .map(lactationMapper::toDryOffAlertItemDTO)
                 .toList();
 
         return ResponseEntity.ok(LactationDryOffAlertResponseDTO.builder()
-                .totalPending(alertsPage.getTotalElements())
+                .totalPending(alertsPage.totalElements())
                 .alerts(alerts)
                 .build());
     }

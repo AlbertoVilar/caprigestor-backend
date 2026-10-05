@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.authority.application.ports.out;
 
-import com.devmaster.goatfarm.authority.persistence.entity.Role;
+import com.devmaster.goatfarm.authority.business.bo.AuthorityRole;
 
 import java.util.Optional;
 
@@ -8,5 +8,5 @@ import java.util.Optional;
  * Porta de saída para persistência de roles/autoridades.
  */
 public interface RolePersistencePort {
-    Optional<Role> findByAuthority(String authority);
+    Optional<AuthorityRole> findByAuthority(String authority);
 }

@@ -7,81 +7,268 @@ import com.devmaster.goatfarm.audit.enums.OperationalAuditActionType;
 import com.devmaster.goatfarm.config.exceptions.DuplicateEntityException;
 import com.devmaster.goatfarm.config.exceptions.custom.BusinessRuleException;
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.config.security.OwnershipService;
+import com.devmaster.goatfarm.authority.application.ports.in.FarmAuthorizationUseCase;
+import com.devmaster.goatfarm.authority.application.ports.in.CurrentPrincipalQueryUseCase;
 import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
+import com.devmaster.goatfarm.farm.application.model.FarmRecord;
 import com.devmaster.goatfarm.goat.application.ports.in.GoatManagementUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
+import com.devmaster.goatfarm.goatownership.application.model.GoatOwnershipInitializationCommand;
+import com.devmaster.goatfarm.goatownership.application.model.TerminalOwnershipExitCommand;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipExitUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipGuardUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.in.GoatOwnershipInitializationUseCase;
+import com.devmaster.goatfarm.goatownership.application.ports.out.CreatorReferencePersistencePort;
+import com.devmaster.goatfarm.goatownership.domain.CreatorReference;
+import com.devmaster.goatfarm.goatownership.domain.CreatorSource;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatHerdSnapshot;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPage;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatParentagePort;
 import com.devmaster.goatfarm.goat.application.ports.out.GoatPersistencePort;
+import com.devmaster.goatfarm.goat.application.ports.out.HistoricalAnimalSaleQueryPort;
 import com.devmaster.goatfarm.goat.business.bo.GoatBreedSummaryVO;
+import com.devmaster.goatfarm.goat.business.bo.GoatCreatorProvenanceVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.domain.Goat;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
 import com.devmaster.goatfarm.goat.application.routing.GoatRouteIdentifier;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
 import com.devmaster.goatfarm.goat.enums.GoatExitType;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /** Application service for Goat, depending on the domain-facing persistence boundary. */
 @Service
 public class GoatBusiness implements GoatManagementUseCase {
     private final GoatPersistencePort goatPort;
+    private final HistoricalAnimalSaleQueryPort historicalAnimalSaleQueryPort;
     private final GoatFarmPersistencePort goatFarmPort;
-    private final OwnershipService ownershipService;
+    private final FarmAuthorizationUseCase ownershipService;
     private final EntityFinder entityFinder;
     private final OperationalAuditUseCase operationalAuditUseCase;
     private final GoatParentagePort parentagePort;
+    private final CurrentPrincipalQueryUseCase currentPrincipalQuery;
+    private final GoatOwnershipExitUseCase goatOwnershipExitUseCase;
+    private final GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase;
+    private final GoatOwnershipGuardUseCase goatOwnershipGuard;
+    private final CreatorReferencePersistencePort creatorReferencePersistencePort;
+    private final Clock clock;
 
-    public GoatBusiness(GoatPersistencePort goatPort, GoatFarmPersistencePort goatFarmPort,
-                        OwnershipService ownershipService, EntityFinder entityFinder,
-                        OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort) {
+    public GoatBusiness(GoatPersistencePort goatPort, HistoricalAnimalSaleQueryPort historicalAnimalSaleQueryPort,
+                        GoatFarmPersistencePort goatFarmPort,
+                        FarmAuthorizationUseCase ownershipService, EntityFinder entityFinder,
+                        OperationalAuditUseCase operationalAuditUseCase, GoatParentagePort parentagePort,
+                        CurrentPrincipalQueryUseCase currentPrincipalQuery,
+                        GoatOwnershipExitUseCase goatOwnershipExitUseCase,
+                        GoatOwnershipInitializationUseCase goatOwnershipInitializationUseCase,
+                        GoatOwnershipGuardUseCase goatOwnershipGuard,
+                        CreatorReferencePersistencePort creatorReferencePersistencePort,
+                        Clock clock) {
         this.goatPort = goatPort;
+        this.historicalAnimalSaleQueryPort = historicalAnimalSaleQueryPort;
         this.goatFarmPort = goatFarmPort;
         this.ownershipService = ownershipService;
         this.entityFinder = entityFinder;
         this.operationalAuditUseCase = operationalAuditUseCase;
         this.parentagePort = parentagePort;
+        this.currentPrincipalQuery = currentPrincipalQuery;
+        this.goatOwnershipExitUseCase = goatOwnershipExitUseCase;
+        this.goatOwnershipInitializationUseCase = goatOwnershipInitializationUseCase;
+        this.goatOwnershipGuard = goatOwnershipGuard;
+        this.creatorReferencePersistencePort = creatorReferencePersistencePort;
+        this.clock = clock;
     }
 
     @Transactional
     @Override
-    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO) {
+    public GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO, GoatCreationOrigin origin) {
         ownershipService.verifyFarmManagement(farmId);
         RegistrationIdentity identity = identityForCreation(requestVO);
         String registration = identity.registrationNumber();
         if (goatPort.existsByRegistrationNumber(registration)) throw new DuplicateEntityException("Número de registro já existe.");
-        entityFinder.findOrThrow(() -> goatFarmPort.findById(farmId), "Fazenda não encontrada.");
+        FarmRecord farm = goatFarmPort.findById(farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Fazenda não encontrada."));
         GoatParentagePort.ResolvedParentage parents = parentagePort.resolve(requestVO.getCategory(), registration,
                 requestVO.getFatherRegistrationNumber(), requestVO.getMotherRegistrationNumber());
         Goat goat = Goat.register(identity,
                 requestVO.getName(), requestVO.getGender(), requestVO.getBreed(), requestVO.getColor(), requestVO.getBirthDate(),
                 requestVO.getStatus(), requestVO.getCategory(), parents.father(), parents.mother(), farmId,
-                ownershipService.getCurrentUser().getId());
-        return toResponse(goatPort.save(goat));
+                currentPrincipalQuery.requireCurrent().id());
+        Goat saved = goatPort.save(goat);
+        if (saved == null || saved.id() == null) {
+            throw new BusinessRuleException("goat", "A criação da cabra não retornou um GoatId estrutural válido.");
+        }
+        CreatorReference creatorReference = resolveCreatorReference(farm, saved, requestVO, origin);
+        CreatorReference persistedCreator = creatorReferencePersistencePort.create(saved.id(), creatorReference);
+        if (persistedCreator == null) {
+            throw new BusinessRuleException("creatorReference", "A proveniência do criador não foi persistida.");
+        }
+        goatOwnershipInitializationUseCase.initialize(
+                new GoatOwnershipInitializationCommand(saved.id(), farmId, origin));
+        return toResponse(saved);
+    }
+
+    private CreatorReference resolveCreatorReference(FarmRecord registeringFarm, Goat saved,
+                                                     GoatRequestVO requestVO, GoatCreationOrigin origin) {
+        GoatCreatorProvenanceVO supplied = requestVO.getCreatorProvenance();
+        Instant recordedAt = clock.instant();
+        String evidence = supplied == null ? null : trimToNull(supplied.getEvidenceReference());
+
+        return switch (origin) {
+            case BIRTH -> resolveBirthCreator(registeringFarm, supplied, evidence, recordedAt);
+            case ABCC_IMPORT -> resolveAbccCreator(supplied, evidence, recordedAt);
+            case MANUAL -> resolveManualCreator(supplied, recordedAt);
+        };
+    }
+
+    private CreatorReference resolveBirthCreator(FarmRecord registeringFarm, GoatCreatorProvenanceVO supplied,
+                                                 String evidence, Instant recordedAt) {
+        String canonicalTod = trimToNull(registeringFarm.tod());
+        if (supplied == null || evidence == null || !evidence.startsWith("BIRTH:PREGNANCY:")
+                || supplied.getCreatorFarmId() == null || trimToNull(supplied.getCreatorTod()) == null) {
+            throw new BusinessRuleException("creatorProvenance",
+                    "A birth-created goat requires canonical birth creator evidence.");
+        }
+        if (canonicalTod == null) {
+            throw new BusinessRuleException("creatorProvenance.creatorTod",
+                    "The canonical birth farm must have a TOD.");
+        }
+        if (!registeringFarm.id().equals(supplied.getCreatorFarmId())) {
+            throw new BusinessRuleException("creatorProvenance.creatorFarmId",
+                    "The birth creator farm must match the canonical birth farm.");
+        }
+        if (!canonicalTod.equalsIgnoreCase(trimToNull(supplied.getCreatorTod()))) {
+            throw new BusinessRuleException("creatorProvenance.creatorTod",
+                    "The birth creator TOD must match the canonical birth farm.");
+        }
+        return CreatorReference.farm(canonicalTod, registeringFarm.id(), registeringFarm.name(),
+                CreatorSource.BIRTH, evidence, recordedAt);
+    }
+
+    private CreatorReference resolveAbccCreator(GoatCreatorProvenanceVO supplied, String evidence, Instant recordedAt) {
+        if (supplied == null) {
+            return CreatorReference.unknown(recordedAt);
+        }
+        String snapshot = trimToNull(supplied.getCreatorNameSnapshot());
+        String creatorTod = trimToNull(supplied.getCreatorTod());
+        if (snapshot == null && creatorTod == null) return CreatorReference.unknown(recordedAt);
+        if (evidence == null || !evidence.startsWith("ABCC:")) {
+            throw new BusinessRuleException("creatorProvenance.evidenceReference",
+                    "ABCC creator provenance requires a traceable ABCC evidence reference.");
+        }
+        // A name-only ABCC declaration is external evidence, not sufficient
+        // registral proof to bind an immutable creator farm reference.
+        if (creatorTod == null) {
+            return CreatorReference.external(null, snapshot, CreatorSource.ABCC,
+                    evidence, recordedAt);
+        }
+        List<FarmRecord> matches = findAbccCreatorMatches(snapshot, creatorTod);
+        if (matches.size() == 1) {
+            FarmRecord creatorFarm = matches.getFirst();
+            if (trimToNull(creatorFarm.tod()) == null) {
+                return CreatorReference.external(creatorTod, snapshot, CreatorSource.ABCC,
+                        evidence, recordedAt);
+            }
+            return CreatorReference.farm(creatorFarm.tod(), creatorFarm.id(), creatorFarm.name(), CreatorSource.ABCC,
+                    evidence, recordedAt);
+        }
+        return CreatorReference.external(creatorTod, snapshot, CreatorSource.ABCC,
+                evidence, recordedAt);
+    }
+
+    private List<FarmRecord> findAbccCreatorMatches(String snapshot, String creatorTod) {
+        PageQuery pageQuery = new PageQuery(0, 100, List.of());
+        var firstPage = snapshot != null
+                ? goatFarmPort.searchByName(snapshot, pageQuery)
+                : goatFarmPort.findAll(pageQuery);
+        if (firstPage == null) return List.of();
+
+        List<FarmRecord> all = new ArrayList<>(firstPage.content());
+        long total = firstPage.totalElements();
+        for (int page = 1; !firstPage.content().isEmpty() && all.size() < total; page++) {
+            var nextPage = snapshot != null
+                    ? goatFarmPort.searchByName(snapshot, new PageQuery(page, 100, List.of()))
+                    : goatFarmPort.findAll(new PageQuery(page, 100, List.of()));
+            if (nextPage == null || nextPage.content().isEmpty()) break;
+            all.addAll(nextPage.content());
+        }
+        return all.stream()
+                .filter(farm -> snapshot == null || (farm.name() != null && farm.name().trim().equalsIgnoreCase(snapshot)))
+                .filter(farm -> creatorTod == null || (farm.tod() != null && farm.tod().trim().equalsIgnoreCase(creatorTod)))
+                .toList();
+    }
+
+    private CreatorReference resolveManualCreator(GoatCreatorProvenanceVO supplied, Instant recordedAt) {
+        if (supplied == null) {
+            return CreatorReference.unknown(recordedAt);
+        }
+        String evidence = trimToNull(supplied.getEvidenceReference());
+        if (evidence == null) {
+            throw new BusinessRuleException("creatorProvenance.evidenceReference",
+                    "A declaração manual de criador exige uma referência de evidência.");
+        }
+        Long creatorFarmId = supplied.getCreatorFarmId();
+        String snapshot = trimToNull(supplied.getCreatorNameSnapshot());
+        if (creatorFarmId != null) {
+            FarmRecord creatorFarm = goatFarmPort.findById(creatorFarmId)
+                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(
+                            "Fazenda criadora não encontrada."));
+            String canonicalTod = trimToNull(creatorFarm.tod());
+            if (canonicalTod == null) {
+                throw new BusinessRuleException("creatorProvenance.creatorTod",
+                        "A fazenda criadora vinculada deve possuir TOD.");
+            }
+            String suppliedTod = trimToNull(supplied.getCreatorTod());
+            if (suppliedTod != null && !canonicalTod.equalsIgnoreCase(suppliedTod)) {
+                throw new BusinessRuleException("creatorProvenance.creatorTod",
+                        "O TOD informado diverge do TOD canônico da fazenda criadora.");
+            }
+            return CreatorReference.farm(canonicalTod, creatorFarm.id(), creatorFarm.name(), CreatorSource.MANUAL_DECLARATION,
+                    evidence, recordedAt);
+        }
+        if (snapshot == null && trimToNull(supplied.getCreatorTod()) == null) {
+            return CreatorReference.unknown(recordedAt);
+        }
+        return CreatorReference.external(trimToNull(supplied.getCreatorTod()), snapshot,
+                CreatorSource.MANUAL_DECLARATION, evidence, recordedAt);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Transactional
     @Override
     public GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO) {
         ownershipService.verifyFarmOwnership(farmId);
-        Goat goat = findOrThrow(farmId, goatId);
+        Goat goat = findCanonicalGoatOrThrow(goatId);
+        goatOwnershipGuard.requireCurrentFarm(goat.id(), farmId);
+        assertProjectionMatchesCanonicalFarm(goat, farmId);
+        if (requestVO.getStatus() != goat.status()) {
+            throw new BusinessRuleException("status",
+                    "O status do animal não pode ser alterado na atualização cadastral comum. "
+                            + "Use o fluxo de saída ou a transição de ciclo de vida apropriada.");
+        }
         RegistrationIdentity submittedIdentity;
         try {
             submittedIdentity = RegistrationIdentity.of(requestVO.getRegistrationNumber(), requestVO.getTod(), requestVO.getToe());
@@ -110,8 +297,13 @@ public class GoatBusiness implements GoatManagementUseCase {
         validateExit(goat, requestVO);
         GoatStatus previousStatus = goat.status();
         GoatStatus currentStatus = mapExitStatus(requestVO.getExitType());
-        goat.markExit(requestVO.getExitType(), requestVO.getExitDate(), normalizeNotes(requestVO.getNotes()), currentStatus);
-        Goat saved = goatPort.save(goat);
+        goatOwnershipExitUseCase.closeTerminalOwnership(new TerminalOwnershipExitCommand(
+                goat.id(), farmId, mapOwnershipExitType(requestVO.getExitType())));
+        Goat lockedGoat = goatPort.findByIdAndFarmId(goat.id(), farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        validateExit(lockedGoat, requestVO);
+        lockedGoat.markExit(requestVO.getExitType(), requestVO.getExitDate(), normalizeNotes(requestVO.getNotes()), currentStatus);
+        Goat saved = goatPort.save(lockedGoat);
         operationalAuditUseCase.record(new OperationalAuditRecordVO(farmId,
                 saved.id() == null ? null : saved.id().value(), saved.registrationNumber(),
                 OperationalAuditActionType.GOAT_EXIT, saved.registrationNumber(), "Saída do rebanho registrada como "
@@ -124,9 +316,25 @@ public class GoatBusiness implements GoatManagementUseCase {
 
     @Transactional
     @Override
+    public GoatResponseVO restoreAfterSaleReversal(Long farmId, String goatId) {
+        ownershipService.verifyFarmManagement(farmId);
+        GoatId technicalId = GoatRouteIdentifier.technicalId(goatId)
+                .orElseThrow(() -> new InvalidArgumentException("goatId", "A reversão exige o GoatId técnico."));
+        Goat goat = goatPort.findByIdAndFarmId(technicalId, farmId)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+        if (goat.status() != GoatStatus.VENDIDO || goat.exitType() != GoatExitType.VENDA) {
+            throw new BusinessRuleException("goatId", "A projeção atual não representa uma venda externa reversível.");
+        }
+        goat.markExit(null, null, null, GoatStatus.ATIVO);
+        return toResponse(goatPort.save(goat));
+    }
+
+    @Transactional
+    @Override
     public void deleteGoat(Long farmId, String goatId) {
-        ownershipService.verifyGoatOwnership(farmId, goatId);
-        goatPort.deleteById(findOrThrow(farmId, goatId).id());
+        ownershipService.verifyFarmOwnership(farmId);
+        throw new BusinessRuleException("goat",
+                "A exclusão física de um animal canônico é proibida para preservar seu histórico operacional.");
     }
 
     @Transactional(readOnly = true)
@@ -135,28 +343,28 @@ public class GoatBusiness implements GoatManagementUseCase {
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable) {
-        return toSpringPage(goatPort.findAllByFarmId(farmId, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatPageQuery query) {
+        return goatPort.findAllByFarmId(farmId, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, Pageable pageable) {
-        return breed == null ? findAllGoatsByFarm(farmId, pageable)
-                : toSpringPage(goatPort.findAllByFarmIdAndBreed(farmId, breed, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, GoatPageQuery query) {
+        return breed == null ? findAllGoatsByFarm(farmId, query)
+                : goatPort.findAllByFarmIdAndBreed(farmId, breed, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable) {
-        return toSpringPage(goatPort.findByNameAndFarmId(farmId, name, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatPageQuery query) {
+        return goatPort.findByNameAndFarmId(farmId, name, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     @Override
-    public Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, Pageable pageable) {
-        return breed == null ? findGoatsByNameAndFarm(farmId, name, pageable)
-                : toSpringPage(goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, toQuery(pageable)));
+    public GoatPage<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, GoatPageQuery query) {
+        return breed == null ? findGoatsByNameAndFarm(farmId, name, query)
+                : goatPort.findByNameAndFarmIdAndBreed(farmId, name, breed, query).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -174,32 +382,41 @@ public class GoatBusiness implements GoatManagementUseCase {
         if (summary.withoutBreed() > 0) breeds.add(GoatBreedSummaryVO.builder().breed(null).label("Não informada").count(summary.withoutBreed()).build());
         breeds.sort(Comparator.comparingLong(GoatBreedSummaryVO::getCount).reversed().thenComparing(GoatBreedSummaryVO::getLabel, String.CASE_INSENSITIVE_ORDER));
         return GoatHerdSummaryVO.builder().total(summary.total()).males(summary.males()).females(summary.females())
-                .active(summary.active()).inactive(summary.inactive()).sold(summary.sold()).deceased(summary.deceased()).breeds(breeds).build();
+                .active(summary.active()).inactive(summary.inactive()).sold(summary.sold())
+                .historicallySold(historicalAnimalSaleQueryPort.countDistinctSoldGoatsByFarmId(farmId))
+                .deceased(summary.deceased()).breeds(breeds).build();
     }
 
     private Goat findOrThrow(Long farmId, String token) {
+        return findInFarm(farmId, token)
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+    }
+
+    private Goat findCanonicalGoatOrThrow(String token) {
+        var technicalId = GoatRouteIdentifier.technicalId(token);
+        return technicalId.flatMap(goatPort::findById)
+                .or(() -> goatPort.findDomainByRegistrationNumber(token))
+                .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException(
+                        "Cabra não encontrada."));
+    }
+
+    private void assertProjectionMatchesCanonicalFarm(Goat goat, Long canonicalFarmId) {
+        if (!Objects.equals(canonicalFarmId, goat.farmId())) {
+            throw new BusinessRuleException("ownership",
+                    "A projeção de fazenda do animal diverge do ownership canônico.");
+        }
+    }
+
+    private java.util.Optional<Goat> findInFarm(Long farmId, String token) {
         // Explicit technical tokens are unambiguous even when an RG happens
         // to contain only digits. Every other route token is an RG; a bare
         // numeric token must never be guessed to be a technical id.
         var explicitTechnicalId = GoatRouteIdentifier.technicalId(token);
         if (explicitTechnicalId.isPresent()) {
-            return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId)
-                    .orElseThrow(() -> new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda."));
+            return goatPort.findByIdAndFarmId(explicitTechnicalId.get(), farmId);
         }
 
-        Goat found = goatPort.findByRegistrationNumberAndFarmId(token, farmId).orElse(null);
-        if (found == null) throw new com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException("Cabra não encontrada nesta fazenda.");
-        return found;
-    }
-
-    private Page<GoatResponseVO> toSpringPage(GoatPage<Goat> page) {
-        Pageable pageable = org.springframework.data.domain.PageRequest.of(page.page(), page.size());
-        return new PageImpl<>(page.content().stream().map(this::toResponse).toList(), pageable, page.totalElements());
-    }
-
-    private GoatPageQuery toQuery(Pageable pageable) {
-        String sort = pageable.getSort().stream().findFirst().map(o -> o.getProperty() + "," + o.getDirection().name()).orElse("");
-        return new GoatPageQuery(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        return goatPort.findByRegistrationNumberAndFarmId(token, farmId);
     }
 
     private GoatResponseVO toResponse(Goat goat) {
@@ -221,10 +438,20 @@ public class GoatBusiness implements GoatManagementUseCase {
         if (goat.birthDate() != null && requestVO.getExitDate().isBefore(goat.birthDate())) throw new InvalidArgumentException("exitDate", "Data de saída não pode ser anterior à data de nascimento");
         if (goat.status() != GoatStatus.ATIVO) throw new BusinessRuleException("status", "A saída controlada só é permitida para animais com status ATIVO. Status atual: " + goat.status());
         if (goat.exitType() != null || goat.exitDate() != null) throw new BusinessRuleException("exitDate", "Já existe saída registrada para este animal");
+        if (requestVO.getExitType() == GoatExitType.TRANSFERENCIA) throw new BusinessRuleException("exitType", "Transferência deve usar o fluxo de transferência de propriedade.");
     }
 
     private GoatStatus mapExitStatus(GoatExitType type) {
-        return switch (type) { case VENDA -> GoatStatus.VENDIDO; case MORTE -> GoatStatus.FALECIDO; case DESCARTE, DOACAO, TRANSFERENCIA -> GoatStatus.INATIVO; };
+        return switch (type) { case VENDA -> GoatStatus.VENDIDO; case MORTE -> GoatStatus.FALECIDO; case DESCARTE, DOACAO -> GoatStatus.INATIVO; case TRANSFERENCIA -> throw new BusinessRuleException("exitType", "Transferência deve usar o fluxo de transferência de propriedade."); };
+    }
+    private OwnershipExitType mapOwnershipExitType(GoatExitType type) {
+        return switch (type) {
+            case VENDA -> OwnershipExitType.EXTERNAL_SALE;
+            case MORTE -> OwnershipExitType.DEATH;
+            case DESCARTE -> OwnershipExitType.RETIREMENT;
+            case DOACAO -> OwnershipExitType.DONATION;
+            case TRANSFERENCIA -> throw new BusinessRuleException("exitType", "Transferência deve usar o fluxo de transferência de propriedade.");
+        };
     }
     private String normalize(String value) { return value == null ? null : value.trim().replaceAll("\\s+", "").toUpperCase(Locale.ROOT); }
 

@@ -1,42 +1,35 @@
 package com.devmaster.goatfarm.authority.business.mapper;
 
+import com.devmaster.goatfarm.authority.business.bo.AuthorityAccount;
 import com.devmaster.goatfarm.authority.business.bo.LoginResponseVO;
 import com.devmaster.goatfarm.authority.business.bo.UserRequestVO;
 import com.devmaster.goatfarm.authority.business.bo.UserResponseVO;
-import com.devmaster.goatfarm.authority.persistence.entity.Role;
-import com.devmaster.goatfarm.authority.persistence.entity.User;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
 
-@Mapper(componentModel = "spring")
-public interface AuthorityBusinessMapper {
+/** Maps application-owned Authority models to use-case VOs. */
+@Component
+public class AuthorityBusinessMapper {
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "password", ignore = true)
-    @Mapping(target = "roles", ignore = true)
-    @Mapping(target = "goatFarms", ignore = true)
-    User toEntity(UserRequestVO vo);
+    public AuthorityAccount toAccount(UserRequestVO vo) {
+        return new AuthorityAccount(null, vo.getName(), vo.getEmail(), vo.getCpf(), null,
+                vo.getRoles() == null ? java.util.Set.of() : java.util.Set.copyOf(vo.getRoles()));
+    }
 
-    @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToStringList")
-    UserResponseVO toResponseVO(User user);
+    public UserResponseVO toResponseVO(AuthorityAccount account) {
+        return new UserResponseVO(account.id(), account.name(), account.email(), account.cpf(),
+                new ArrayList<>(account.roles()));
+    }
 
-    default LoginResponseVO toLoginResponseVO(User user, String accessToken, String refreshToken, long expiresIn) {
+    public LoginResponseVO toLoginResponseVO(AuthorityAccount account, String accessToken,
+                                             String refreshToken, long expiresIn) {
         return LoginResponseVO.builder()
-                .user(toResponseVO(user))
+                .user(toResponseVO(account))
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
                 .build();
-    }
-
-    @Named("rolesToStringList")
-    default List<String> rolesToStringList(Set<Role> roles) {
-        return roles == null ? null : roles.stream().map(Role::getAuthority).collect(Collectors.toList());
     }
 }

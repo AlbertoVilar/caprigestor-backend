@@ -15,4 +15,5 @@ import java.time.LocalDate;
 @Builder
 public class LactationRequestVO {
     private LocalDate startDate;
+    private boolean confirmYoungAge;
 }

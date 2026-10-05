@@ -31,6 +31,4 @@ public interface EventManagementUseCase {
 
     void deleteEvent(Long farmId, String registrationNumber, Long eventId);
 
-    /** Administrative maintenance operation, invoked only by the authority workflow. */
-    void deleteEventsFromOtherUsers(Long adminId);
 }

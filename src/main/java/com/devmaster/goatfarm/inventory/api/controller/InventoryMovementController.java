@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.inventory.api.controller;
 
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementCreateRequestDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementHistoryResponseDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryMovementResponseDTO;
@@ -104,11 +105,12 @@ public class InventoryMovementController {
             })
             Pageable pageable
     ) {
-        Page<InventoryMovementHistoryResponseDTO> page = queryUseCase.listMovements(
-                new InventoryMovementFilterVO(farmId, itemId, lotId, type, fromDate, toDate, pageable)
+        var result = queryUseCase.listMovements(
+                new InventoryMovementFilterVO(farmId, itemId, lotId, type, fromDate, toDate),
+                SpringPageMapper.toQuery(pageable)
         ).map(apiMapper::toHistoryResponseDTO);
 
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(SpringPageMapper.toSpringPage(result, pageable));
     }
 
     @Operation(

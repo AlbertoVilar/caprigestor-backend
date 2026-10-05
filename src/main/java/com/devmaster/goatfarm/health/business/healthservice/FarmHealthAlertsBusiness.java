@@ -3,6 +3,7 @@ package com.devmaster.goatfarm.health.business.healthservice;
 import com.devmaster.goatfarm.health.application.ports.in.FarmHealthAlertsQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.in.HealthWithdrawalQueryUseCase;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
+import com.devmaster.goatfarm.health.application.model.HealthEventWindow;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertItemVO;
 import com.devmaster.goatfarm.health.business.bo.FarmHealthAlertsResponseVO;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
@@ -10,10 +11,6 @@ import com.devmaster.goatfarm.health.business.bo.HealthEventResponseVO;
 import com.devmaster.goatfarm.health.business.bo.WithdrawalAlertItemVO;
 import com.devmaster.goatfarm.health.business.mapper.HealthEventBusinessMapper;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,19 +46,18 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
         LocalDate fromUpcoming = today.plusDays(1);
         LocalDate toOverdue = today.minusDays(1);
 
-        Pageable topPageable = PageRequest.of(0, 5, Sort.by("scheduledDate").ascending());
+        HealthEventWindow dueToday = persistencePort
+                .findNextScheduledEvents(farmId, today, today, null, HealthEventStatus.AGENDADO, 5);
 
-        Page<HealthEventResponseVO> dueToday = persistencePort
-                .findByFarmIdAndPeriod(farmId, today, today, null, HealthEventStatus.AGENDADO, topPageable)
-                .map(mapper::toResponseVO);
+        HealthEventWindow upcoming = persistencePort
+                .findNextScheduledEvents(farmId, fromUpcoming, upcomingTo, null, HealthEventStatus.AGENDADO, 5);
 
-        Page<HealthEventResponseVO> upcoming = persistencePort
-                .findByFarmIdAndPeriod(farmId, fromUpcoming, upcomingTo, null, HealthEventStatus.AGENDADO, topPageable)
-                .map(mapper::toResponseVO);
+        HealthEventWindow overdue = persistencePort
+                .findNextScheduledEvents(farmId, null, toOverdue, null, HealthEventStatus.AGENDADO, 5);
 
-        Page<HealthEventResponseVO> overdue = persistencePort
-                .findByFarmIdAndPeriod(farmId, null, toOverdue, null, HealthEventStatus.AGENDADO, topPageable)
-                .map(mapper::toResponseVO);
+        var dueTodayResponses = dueToday.content().stream().map(mapper::toResponseVO).toList();
+        var upcomingResponses = upcoming.content().stream().map(mapper::toResponseVO).toList();
+        var overdueResponses = overdue.content().stream().map(mapper::toResponseVO).toList();
 
         List<GoatWithdrawalStatusVO> activeWithdrawalStatuses = withdrawalQueryUseCase
                 .listActiveWithdrawalStatuses(farmId, today);
@@ -81,22 +77,22 @@ public class FarmHealthAlertsBusiness implements FarmHealthAlertsQueryUseCase {
                 .toList();
 
         return FarmHealthAlertsResponseVO.builder()
-                .dueTodayCount((int) dueToday.getTotalElements())
-                .upcomingCount((int) upcoming.getTotalElements())
-                .overdueCount((int) overdue.getTotalElements())
+                .dueTodayCount((int) dueToday.totalElements())
+                .upcomingCount((int) upcoming.totalElements())
+                .overdueCount((int) overdue.totalElements())
                 .activeMilkWithdrawalCount((int) activeWithdrawalStatuses.stream().filter(GoatWithdrawalStatusVO::hasActiveMilkWithdrawal).count())
                 .activeMeatWithdrawalCount((int) activeWithdrawalStatuses.stream().filter(GoatWithdrawalStatusVO::hasActiveMeatWithdrawal).count())
-                .dueTodayTop(toAlertItems(dueToday))
-                .upcomingTop(toAlertItems(upcoming))
-                .overdueTop(toAlertItems(overdue))
+                .dueTodayTop(toAlertItems(dueTodayResponses))
+                .upcomingTop(toAlertItems(upcomingResponses))
+                .overdueTop(toAlertItems(overdueResponses))
                 .milkWithdrawalTop(milkWithdrawalTop)
                 .meatWithdrawalTop(meatWithdrawalTop)
                 .windowDays(safeWindowDays)
                 .build();
     }
 
-    private List<FarmHealthAlertItemVO> toAlertItems(Page<HealthEventResponseVO> page) {
-        return page.getContent().stream()
+    private List<FarmHealthAlertItemVO> toAlertItems(List<HealthEventResponseVO> events) {
+        return events.stream()
                 .map(this::toAlertItem)
                 .toList();
     }

@@ -1,14 +1,14 @@
 package com.devmaster.goatfarm.inventory.business.inventoryservice;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryItemCommandUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryItemQueryUseCase;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryItemPersistencePort;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemCreateVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemResponseVO;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,10 +34,10 @@ public class InventoryItemBusiness implements InventoryItemCommandUseCase, Inven
 
     @Override
     @Transactional(readOnly = true)
-    public Page<InventoryItemResponseVO> listItems(Long farmId, Pageable pageable) {
+    public PageResult<InventoryItemResponseVO> listItems(Long farmId, PageQuery page) {
         // Mantém a listagem paginada restrita à fazenda informada.
         validateFarmId(farmId);
-        return persistencePort.listByFarmId(farmId, pageable);
+        return persistencePort.listByFarmId(farmId, page);
     }
 
     private void validateFarmId(Long farmId) {

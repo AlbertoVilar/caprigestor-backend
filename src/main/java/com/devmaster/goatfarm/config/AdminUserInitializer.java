@@ -59,6 +59,7 @@ public class AdminUserInitializer implements CommandLineRunner {
             return;
         }
 
+        validateBootstrapConfiguration();
         logger.info(">>> Iniciando AdminUserInitializer <<<");
 
         Role adminRole = ensureRoleExists("ROLE_ADMIN");
@@ -105,6 +106,19 @@ public class AdminUserInitializer implements CommandLineRunner {
 
         userRepository.save(adminUser);
         logger.warn(">>> Usuário administrativo bootstrap criado. Altere a senha antes de expor o sistema. <<<");
+    }
+
+    private void validateBootstrapConfiguration() {
+        requireConfigured("caprigestor.bootstrap.admin.email", adminEmail);
+        requireConfigured("caprigestor.bootstrap.admin.name", adminName);
+        requireConfigured("caprigestor.bootstrap.admin.cpf", adminCpf);
+        requireConfigured("caprigestor.bootstrap.admin.initial-password", adminInitialPassword);
+    }
+
+    private void requireConfigured(String field, String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Bootstrap admin is enabled but required configuration '" + field + "' is blank");
+        }
     }
 
     private Role ensureRoleExists(String authority) {

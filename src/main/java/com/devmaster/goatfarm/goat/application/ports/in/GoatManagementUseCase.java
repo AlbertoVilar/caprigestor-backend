@@ -5,9 +5,10 @@ import com.devmaster.goatfarm.goat.business.bo.GoatHerdSummaryVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatResponseVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitRequestVO;
 import com.devmaster.goatfarm.goat.business.bo.GoatExitResponseVO;
+import com.devmaster.goatfarm.goat.application.model.GoatCreationOrigin;
 import com.devmaster.goatfarm.goat.enums.GoatBreed;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPage;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 
 import java.util.List;
 
@@ -16,23 +17,26 @@ import java.util.List;
  */
 public interface GoatManagementUseCase {
 
-    GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO);
+    GoatResponseVO createGoat(Long farmId, GoatRequestVO requestVO, GoatCreationOrigin origin);
 
     GoatResponseVO updateGoat(Long farmId, String goatId, GoatRequestVO requestVO);
 
     GoatExitResponseVO exitGoat(Long farmId, String goatId, GoatExitRequestVO requestVO);
 
+    /** Restores the current projection after an authorized sale reversal. */
+    GoatResponseVO restoreAfterSaleReversal(Long farmId, String goatId);
+
     void deleteGoat(Long farmId, String goatId);
 
     GoatResponseVO findGoatById(Long farmId, String goatId);
 
-    Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, Pageable pageable);
+    GoatPage<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatPageQuery query);
 
-    Page<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, Pageable pageable);
+    GoatPage<GoatResponseVO> findAllGoatsByFarm(Long farmId, GoatBreed breed, GoatPageQuery query);
 
-    Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, Pageable pageable);
+    GoatPage<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatPageQuery query);
 
-    Page<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, Pageable pageable);
+    GoatPage<GoatResponseVO> findGoatsByNameAndFarm(Long farmId, String name, GoatBreed breed, GoatPageQuery query);
 
     List<GoatResponseVO> listOffspring(Long farmId, String goatId);
 

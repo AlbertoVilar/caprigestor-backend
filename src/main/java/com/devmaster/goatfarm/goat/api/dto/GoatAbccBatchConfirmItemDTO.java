@@ -1,6 +1,8 @@
 package com.devmaster.goatfarm.goat.api.dto;
 
+import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,4 +20,7 @@ public class GoatAbccBatchConfirmItemDTO {
     @NotBlank(message = "Identificador externo da ABCC é obrigatório.")
     @Size(max = 32, message = "Identificador externo deve ter no máximo {max} caracteres.")
     private String externalId;
+
+    @NotNull(message = "A situação local do animal é obrigatória para a importação em lote.")
+    private GoatStatus status;
 }

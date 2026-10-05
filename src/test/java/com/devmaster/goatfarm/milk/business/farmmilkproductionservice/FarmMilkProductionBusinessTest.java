@@ -1,14 +1,14 @@
 package com.devmaster.goatfarm.milk.business.farmmilkproductionservice;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
-import com.devmaster.goatfarm.farm.application.ports.out.GoatFarmPersistencePort;
-import com.devmaster.goatfarm.farm.persistence.entity.GoatFarm;
+import com.devmaster.goatfarm.farm.application.ports.in.FarmExistenceQueryUseCase;
+
 import com.devmaster.goatfarm.milk.application.ports.out.FarmMilkProductionPersistencePort;
 import com.devmaster.goatfarm.milk.business.bo.FarmMilkProductionAnnualSummaryVO;
 import com.devmaster.goatfarm.milk.business.bo.FarmMilkProductionDailySummaryVO;
 import com.devmaster.goatfarm.milk.business.bo.FarmMilkProductionMonthlySummaryVO;
 import com.devmaster.goatfarm.milk.business.bo.FarmMilkProductionUpsertRequestVO;
-import com.devmaster.goatfarm.milk.persistence.entity.FarmMilkProduction;
+import com.devmaster.goatfarm.milk.domain.FarmMilkProduction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,14 +41,14 @@ class FarmMilkProductionBusinessTest {
     private FarmMilkProductionPersistencePort persistencePort;
 
     @Mock
-    private GoatFarmPersistencePort goatFarmPersistencePort;
+    private FarmExistenceQueryUseCase farmExistenceQuery;
 
     @InjectMocks
     private FarmMilkProductionBusiness business;
 
     @BeforeEach
     void setUp() {
-        lenient().when(goatFarmPersistencePort.findById(anyLong())).thenReturn(Optional.of(new GoatFarm()));
+        lenient().when(farmExistenceQuery.existsById(anyLong())).thenReturn(true);
     }
 
     @Test
@@ -230,15 +230,8 @@ class FarmMilkProductionBusinessTest {
     }
 
     private FarmMilkProduction buildRecord(LocalDate date, String total, String withdrawal, String marketable) {
-        return FarmMilkProduction.builder()
-                .id(Math.abs(date.toEpochDay()))
-                .farmId(17L)
-                .productionDate(date)
-                .totalProduced(new BigDecimal(total))
-                .withdrawalProduced(new BigDecimal(withdrawal))
-                .marketableProduced(new BigDecimal(marketable))
-                .notes("QA")
-                .updatedAt(LocalDateTime.of(2026, 3, 30, 8, 0))
-                .build();
+        return new FarmMilkProduction(Math.abs(date.toEpochDay()), 17L, date,
+                new BigDecimal(total), new BigDecimal(withdrawal), new BigDecimal(marketable),
+                "QA", null, LocalDateTime.of(2026, 3, 30, 8, 0));
     }
 }

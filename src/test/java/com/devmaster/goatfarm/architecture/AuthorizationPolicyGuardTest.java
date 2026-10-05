@@ -5,6 +5,8 @@ import com.devmaster.goatfarm.config.security.authorization.AuthenticatedFarmRea
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import com.devmaster.goatfarm.config.security.authorization.FarmOwnerOnly;
 import com.devmaster.goatfarm.config.security.authorization.PublicEndpoint;
+import com.devmaster.goatfarm.goat.api.controller.GoatController;
+import com.devmaster.goatfarm.goat.api.dto.GoatRegistrationRectificationRequestDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -84,6 +86,18 @@ class AuthorizationPolicyGuardTest {
                 .isEqualTo("hasAuthority('ROLE_ADMIN') or (hasAuthority('ROLE_FARM_OWNER') and @ownershipService.isFarmOwner(#farmId))");
         assertThat(AdminOnly.class.getAnnotation(PreAuthorize.class).value())
                 .isEqualTo("hasAuthority('ROLE_ADMIN')");
+    }
+
+    @Test
+    void goatRegistrationEndpointsMustRetainOwnerOnlyPolicy() throws Exception {
+        Method rectification = GoatController.class.getDeclaredMethod(
+                "rectifyRegistration", Long.class, String.class,
+                GoatRegistrationRectificationRequestDTO.class);
+        Method history = GoatController.class.getDeclaredMethod(
+                "registrationHistory", Long.class, String.class);
+
+        assertThat(rectification.isAnnotationPresent(FarmOwnerOnly.class)).isTrue();
+        assertThat(history.isAnnotationPresent(FarmOwnerOnly.class)).isTrue();
     }
 
     private boolean isFarmController(Class<?> controller) {

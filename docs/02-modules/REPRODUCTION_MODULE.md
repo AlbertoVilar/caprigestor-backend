@@ -7,6 +7,12 @@ Atualizado em 2026-09-04 para o caso de uso de parto com referências genealógi
 
 ## Visao geral
 O modulo `reproduction` controla eventos de cobertura, checks de prenhez, status da gestacao e alertas farm-level para diagnostico pendente e parto devido.
+Na camada de aplicação, os comandos são decompostos em `BreedingCommandBusiness`,
+`PregnancyCommandBusiness`, `BirthCommandBusiness` e `WeaningCommandBusiness`,
+expostos por portas de entrada coesas. As consultas permanecem em
+`ReproductionQueryBusiness`; `EffectiveCoverageDateResolver` concentra a regra
+interna de cobertura efetiva. Essa decomposição não altera as rotas HTTP nem os
+contratos públicos.
 
 As respostas de prenhez, eventos, parto, desmame e alertas carregam
 `goatTechnicalId` de forma aditiva. `goatId` continua sendo o RG utilizado nas

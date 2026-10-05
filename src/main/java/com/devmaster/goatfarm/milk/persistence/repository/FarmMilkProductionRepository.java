@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.milk.persistence.repository;
 
-import com.devmaster.goatfarm.milk.persistence.entity.FarmMilkProduction;
+import com.devmaster.goatfarm.milk.persistence.entity.FarmMilkProductionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface FarmMilkProductionRepository extends JpaRepository<FarmMilkProduction, Long> {
+public interface FarmMilkProductionRepository extends JpaRepository<FarmMilkProductionEntity, Long> {
 
     @Modifying
     @Query(
@@ -55,9 +55,9 @@ public interface FarmMilkProductionRepository extends JpaRepository<FarmMilkProd
             @Param("notes") String notes
     );
 
-    Optional<FarmMilkProduction> findByFarmIdAndProductionDate(Long farmId, LocalDate productionDate);
+    Optional<FarmMilkProductionEntity> findByFarmIdAndProductionDate(Long farmId, LocalDate productionDate);
 
-    List<FarmMilkProduction> findByFarmIdAndProductionDateBetweenOrderByProductionDateAsc(
+    List<FarmMilkProductionEntity> findByFarmIdAndProductionDateBetweenOrderByProductionDateAsc(
             Long farmId,
             LocalDate from,
             LocalDate to

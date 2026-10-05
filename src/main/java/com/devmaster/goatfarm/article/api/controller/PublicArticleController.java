@@ -7,6 +7,7 @@ import com.devmaster.goatfarm.article.enums.ArticleCategory;
 import com.devmaster.goatfarm.article.api.mapper.ArticleMapper;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicDetailResponseVO;
 import com.devmaster.goatfarm.article.business.bo.ArticlePublicListResponseVO;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -42,8 +43,8 @@ public class PublicArticleController {
             @Parameter(description = "Categoria do artigo") @RequestParam(required = false) ArticleCategory category,
             @Parameter(description = "Busca por título ou resumo") @RequestParam(required = false) String q,
             @PageableDefault(sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<ArticlePublicListResponseVO> page = articleQueryUseCase.getPublishedArticles(category, q, pageable);
-        Page<ArticlePublicListResponseDTO> dtoPage = page.map(articleMapper::toPublicListResponseDTO);
+        var page = articleQueryUseCase.getPublishedArticles(category, q, SpringPageMapper.toQuery(pageable));
+        Page<ArticlePublicListResponseDTO> dtoPage = SpringPageMapper.toSpringPage(page.map(articleMapper::toPublicListResponseDTO), pageable);
         return ResponseEntity.ok(dtoPage);
     }
 

@@ -2,6 +2,8 @@ package com.devmaster.goatfarm.inventory.business.inventoryservice;
 
 import com.devmaster.goatfarm.config.exceptions.custom.InvalidArgumentException;
 import com.devmaster.goatfarm.inventory.application.ports.out.InventoryItemPersistencePort;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemCreateRequestVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemCreateVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryItemResponseVO;
@@ -11,8 +13,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -97,15 +97,15 @@ class InventoryItemBusinessTest {
 
     @Test
     void listItems_shouldDelegateToPersistencePort() {
-        PageRequest pageable = PageRequest.of(0, 20);
-        when(persistencePort.listByFarmId(9L, pageable)).thenReturn(new PageImpl<>(List.of(
+        PageQuery page = new PageQuery(0, 20, List.of());
+        when(persistencePort.listByFarmId(9L, page)).thenReturn(new PageResult<>(List.of(
                 new InventoryItemResponseVO(1L, 9L, "Milho", false, true)
-        )));
+        ), 1, 0, 20));
 
-        var page = inventoryItemBusiness.listItems(9L, pageable);
+        var result = inventoryItemBusiness.listItems(9L, page);
 
-        assertThat(page.getTotalElements()).isEqualTo(1);
-        assertThat(page.getContent()).extracting(InventoryItemResponseVO::name).containsExactly("Milho");
-        verify(persistencePort).listByFarmId(9L, pageable);
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.content()).extracting(InventoryItemResponseVO::name).containsExactly("Milho");
+        verify(persistencePort).listByFarmId(9L, page);
     }
 }

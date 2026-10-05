@@ -2,9 +2,11 @@ package com.devmaster.goatfarm.health.application.ports.out;
 
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
+import com.devmaster.goatfarm.health.application.model.HealthEventWindow;
+import com.devmaster.goatfarm.goat.domain.GoatId;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,16 +14,21 @@ import java.util.Optional;
 
 public interface HealthEventPersistencePort {
 
-    HealthEvent save(HealthEvent healthEvent);
-    Optional<HealthEvent> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
-    Page<HealthEvent> findByFarmIdAndGoatId(Long farmId, String goatId, LocalDate from, LocalDate to,
-                                            HealthEventType type, HealthEventStatus status, Pageable pageable);
+    HealthEventRecord save(HealthEventRecord healthEvent);
+    Optional<HealthEventRecord> findByIdAndFarmIdAndGoatId(Long id, Long farmId, String goatId);
+    PageResult<HealthEventRecord> findByFarmIdAndGoatId(Long farmId, String goatId, LocalDate from, LocalDate to,
+                                                        HealthEventType type, HealthEventStatus status, PageQuery pageQuery);
 
-    Page<HealthEvent> findByFarmIdAndPeriod(Long farmId, LocalDate from, LocalDate to,
-                                            HealthEventType type, HealthEventStatus status, Pageable pageable);
+    PageResult<HealthEventRecord> findByFarmIdAndPeriod(Long farmId, LocalDate from, LocalDate to,
+                                                        HealthEventType type, HealthEventStatus status, PageQuery pageQuery);
 
-    List<HealthEvent> findPerformedWithWithdrawalByFarmIdAndGoatId(Long farmId, String goatId);
+    HealthEventWindow findNextScheduledEvents(Long farmId, LocalDate from, LocalDate to,
+                                              HealthEventType type, HealthEventStatus status, int limit);
 
-    List<HealthEvent> findPerformedWithWithdrawalByFarmId(Long farmId);
+    List<HealthEventRecord> findPerformedWithWithdrawalByFarmIdAndGoatId(Long farmId, String goatId);
+
+    List<HealthEventRecord> findPerformedWithWithdrawalByFarmId(Long farmId);
+
+    List<HealthEventRecord> findPerformedWithWithdrawalByGoatTechnicalId(GoatId goatId);
 
 }

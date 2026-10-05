@@ -15,6 +15,10 @@ import com.devmaster.goatfarm.goat.enums.Gender;
 import com.devmaster.goatfarm.goat.enums.GoatStatus;
 import com.devmaster.goatfarm.goat.persistence.entity.GoatEntity;
 import com.devmaster.goatfarm.goat.persistence.repository.GoatRepository;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipEntryType;
+import com.devmaster.goatfarm.goatownership.domain.OwnershipExitType;
+import com.devmaster.goatfarm.goatownership.persistence.entity.GoatOwnershipPeriodEntity;
+import com.devmaster.goatfarm.goatownership.persistence.repository.GoatOwnershipPeriodRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,12 +33,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -67,6 +74,15 @@ class EventOperationalAuthorizationIntegrationTest {
 
     @Autowired
     private EventRepository eventRepository;
+
+    @Autowired
+    private GoatOwnershipPeriodRepository ownershipPeriodRepository;
+
+    private static final ZoneId DOMAIN_ZONE = ZoneId.of("America/Sao_Paulo");
+
+    private LocalDate domainToday() {
+        return LocalDate.now(DOMAIN_ZONE);
+    }
 
     private User admin;
     private User owner;
@@ -199,6 +215,201 @@ class EventOperationalAuthorizationIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void futureEventDateIsRejectedBeforePersistence() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+
+        mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Future event", domainToday().plusDays(1))))
+                .andExpect(status().isBadRequest());
+
+        org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void genericCreateAllowsOnlyPesagemAndOutro() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+
+        for (EventType eventType : new EventType[]{EventType.PESAGEM, EventType.OUTRO}) {
+            mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                            .header("Authorization", bearer(token))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(eventPayload(managedGoat, "Allowed " + eventType,
+                                    domainToday().minusDays(1), eventType)))
+                    .andExpect(status().isCreated());
+        }
+
+        org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void genericCreateRejectsEveryLegacySpecializedTypeWithStable422Code() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+        long existingEvents = eventRepository.count();
+
+        for (EventType eventType : new EventType[]{EventType.COBERTURA, EventType.PARTO, EventType.MORTE,
+                EventType.SAUDE, EventType.VACINACAO, EventType.TRANSFERENCIA, EventType.MUDANCA_PROPRIETARIO}) {
+            mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                            .header("Authorization", bearer(token))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(eventPayload(managedGoat, "Rejected " + eventType,
+                                    domainToday().minusDays(1), eventType)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+        }
+
+        org.assertj.core.api.Assertions.assertThat(eventRepository.count()).isEqualTo(existingEvents);
+    }
+
+    @Test
+    void genericUpdateRejectsLegacyTransitionAndKeepsHistoricalLegacyEventReadOnly() throws Exception {
+        String token = loginAndGetToken(owner.getEmail());
+        long writableEventId = createEvent(token, managedFarm, managedGoat, "Writable event");
+
+        mockMvc.perform(put(eventPath(managedFarm, managedGoat) + "/{eventId}", writableEventId)
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Convert to vaccine", domainToday().minusDays(1),
+                                EventType.VACINACAO)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+        org.assertj.core.api.Assertions.assertThat(eventRepository.findById(writableEventId).orElseThrow().getEventType())
+                .isEqualTo(EventType.OUTRO);
+
+        Event legacyEvent = createPersistedEvent(managedGoat, "Historical vaccine event", managedFarm.getId());
+        mockMvc.perform(put(eventPath(managedFarm, managedGoat) + "/{eventId}", legacyEvent.getId())
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Edit historical", domainToday().minusDays(1),
+                                EventType.OUTRO)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+        org.assertj.core.api.Assertions.assertThat(eventRepository.findById(legacyEvent.getId()).orElseThrow().getEventType())
+                .isEqualTo(EventType.VACINACAO);
+    }
+
+    @Test
+    void genericDeleteRejectsEveryLegacySpecializedTypeAndKeepsHistoryPersisted() throws Exception {
+        String ownerToken = loginAndGetToken(owner.getEmail());
+        String operatorToken = loginAndGetToken(linkedOperator.getEmail());
+        EventType[] specializedTypes = {EventType.COBERTURA, EventType.PARTO, EventType.MORTE,
+                EventType.SAUDE, EventType.VACINACAO, EventType.TRANSFERENCIA,
+                EventType.MUDANCA_PROPRIETARIO};
+
+        for (EventType eventType : specializedTypes) {
+            Event legacyEvent = createPersistedEvent(managedGoat, "Historical " + eventType,
+                    managedFarm.getId(), eventType);
+
+            mockMvc.perform(delete(eventPath(managedFarm, managedGoat) + "/{eventId}", legacyEvent.getId())
+                            .header("Authorization", bearer(operatorToken)))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(delete(eventPath(managedFarm, managedGoat) + "/{eventId}", legacyEvent.getId())
+                            .header("Authorization", bearer(ownerToken)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.code").value("GENERIC_EVENT_TYPE_NOT_WRITABLE"));
+
+            org.assertj.core.api.Assertions.assertThat(eventRepository.findById(legacyEvent.getId()))
+                    .isPresent()
+                    .get()
+                    .extracting(Event::getEventType)
+                    .isEqualTo(eventType);
+        }
+    }
+
+    @Test
+    void genericDeleteStillAllowsPesagemAndOutro() throws Exception {
+        String ownerToken = loginAndGetToken(owner.getEmail());
+
+        for (EventType eventType : new EventType[]{EventType.PESAGEM, EventType.OUTRO}) {
+            long eventId = createEvent(ownerToken, managedFarm, managedGoat,
+                    "Writable " + eventType, eventType);
+
+            mockMvc.perform(delete(eventPath(managedFarm, managedGoat) + "/{eventId}", eventId)
+                            .header("Authorization", bearer(ownerToken)))
+                    .andExpect(status().isNoContent());
+            org.assertj.core.api.Assertions.assertThat(eventRepository.existsById(eventId)).isFalse();
+        }
+    }
+
+    @Test
+    void historicalLegacyVaccinationRemainsReadableByIdAndFilter() throws Exception {
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(get(eventPath(otherFarm, otherGoat) + "/{eventId}", otherFarmEvent.getId())
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventType").value("VACINACAO"));
+        mockMvc.perform(get(eventPath(otherFarm, otherGoat) + "/filter?eventType=VACINACAO")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].eventType").value("VACINACAO"));
+    }
+
+    @Test
+    void formerOwnerCannotCreateEventAfterCanonicalTransfer() throws Exception {
+        LocalDate transferDate = domainToday().minusDays(2);
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
+        String token = loginAndGetToken(owner.getEmail());
+
+        mockMvc.perform(post(eventPath(managedFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Former owner event", transferDate.minusDays(1))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void currentOwnerCannotCreateEventInPreviousOwnersPeriod() throws Exception {
+        LocalDate transferDate = domainToday().minusDays(2);
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, transferDate, true);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Previous owner event", transferDate.minusDays(1))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void currentOwnerCanCreateEventForAnUnambiguousCurrentDate() throws Exception {
+        transferOwnership(managedGoat, managedFarm, otherFarm, true);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Current owner event", domainToday())))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void transferDayIsRejectedForDateOnlyEvent() throws Exception {
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, domainToday().minusDays(2), false);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Transfer day event", domainToday().minusDays(2))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void projectionDriftFailsClosedEvenWhenCanonicalOwnerMatchesRequest() throws Exception {
+        transferOwnershipOnDate(managedGoat, managedFarm, otherFarm, domainToday().minusDays(2), false);
+        String token = loginAndGetToken(admin.getEmail());
+
+        mockMvc.perform(post(eventPath(otherFarm, managedGoat))
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(eventPayload(managedGoat, "Drifted projection event", domainToday())))
+                .andExpect(status().isForbidden());
+    }
+
     private void assertAdministrativeEventLifecycle(String token, String description) throws Exception {
         long eventId = createEvent(token, managedFarm, managedGoat, description);
 
@@ -221,10 +432,15 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private long createEvent(String token, GoatFarm farm, GoatEntity goat, String description) throws Exception {
+        return createEvent(token, farm, goat, description, EventType.OUTRO);
+    }
+
+    private long createEvent(String token, GoatFarm farm, GoatEntity goat, String description,
+                             EventType eventType) throws Exception {
         MvcResult result = mockMvc.perform(post(eventPath(farm, goat))
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(eventPayload(goat, description)))
+                        .content(eventPayload(goat, description, domainToday().minusDays(1), eventType)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
@@ -252,17 +468,35 @@ class EventOperationalAuthorizationIntegrationTest {
         goat.setRegistrationNumber(registrationNumber);
         goat.setName(name);
         goat.setGender(Gender.FEMEA);
-        goat.setBirthDate(LocalDate.now().minusYears(2));
+        goat.setBirthDate(domainToday().minusYears(2));
         goat.setStatus(GoatStatus.ATIVO);
         goat.setFarm(farm);
-        return goatRepository.save(goat);
+        GoatEntity saved = goatRepository.save(goat);
+        GoatOwnershipPeriodEntity ownership = new GoatOwnershipPeriodEntity();
+        ownership.setGoatId(saved.getTechnicalId());
+        ownership.setFarmId(farm.getId());
+        ownership.setStartedAt(Instant.parse("2020-01-01T00:00:00Z"));
+        ownership.setEntryType(OwnershipEntryType.MANUAL_IMPORT);
+        ownership.setSource("EVENT_TEST");
+        ownershipPeriodRepository.save(ownership);
+        return saved;
     }
 
     private Event createPersistedEvent(GoatEntity goat, String description) {
+        return createPersistedEvent(goat, description, null);
+    }
+
+    private Event createPersistedEvent(GoatEntity goat, String description, Long recordingFarmId) {
+        return createPersistedEvent(goat, description, recordingFarmId, EventType.VACINACAO);
+    }
+
+    private Event createPersistedEvent(GoatEntity goat, String description, Long recordingFarmId,
+                                       EventType eventType) {
         Event event = new Event();
         event.setGoat(goat);
-        event.setEventType(EventType.VACINACAO);
-        event.setDate(LocalDate.now().minusDays(1));
+        event.setRecordingFarmId(recordingFarmId);
+        event.setEventType(eventType);
+        event.setDate(domainToday().minusDays(1));
         event.setDescription(description);
         event.setLocation("Farm");
         event.setVeterinarian("Veterinarian");
@@ -284,21 +518,56 @@ class EventOperationalAuthorizationIntegrationTest {
     }
 
     private String eventPayload(GoatEntity goat, String description) {
-        return "{\"goatId\":\"" + goat.getRegistrationNumber() + "\","
-                + "\"eventType\":\"VACINACAO\","
-                + "\"date\":\"" + LocalDate.now().minusDays(1) + "\","
-                + "\"description\":\"" + description + "\","
-                + "\"location\":\"Farm\","
-                + "\"veterinarian\":\"Veterinarian\","
-                + "\"outcome\":\"Completed\"}";
+        return eventPayload(goat, description, domainToday().minusDays(1));
+    }
+
+    private String eventPayload(GoatEntity goat, String description, LocalDate date) {
+        return eventPayload(goat, description, date, EventType.OUTRO);
+    }
+
+    private String eventPayload(GoatEntity goat, String description, LocalDate date, EventType eventType) {
+        return String.format(
+                "{\"goatId\":\"%s\",\"eventType\":\"%s\",\"date\":\"%s\","
+                        + "\"description\":\"%s\",\"location\":\"Farm\","
+                        + "\"veterinarian\":\"Veterinarian\",\"outcome\":\"Completed\"}",
+                goat.getRegistrationNumber(), eventType, date, description);
     }
 
     private String bearer(String token) {
         return "Bearer " + token;
     }
 
+    private void transferOwnership(GoatEntity goat, GoatFarm source, GoatFarm target, boolean updateProjection) {
+        transferOwnershipOnDate(goat, source, target, domainToday().minusDays(2), updateProjection);
+    }
+
+    private void transferOwnershipOnDate(GoatEntity goat, GoatFarm source, GoatFarm target,
+                                         LocalDate transferDate, boolean updateProjection) {
+        GoatOwnershipPeriodEntity current = ownershipPeriodRepository
+                .findByGoatIdAndEndedAtIsNull(goat.getTechnicalId())
+                .orElseThrow();
+        Instant effectiveAt = transferDate.atStartOfDay(DOMAIN_ZONE).toInstant().plusSeconds(14 * 60 * 60);
+        current.setEndedAt(effectiveAt);
+        current.setExitType(OwnershipExitType.TRANSFER_OUT);
+        ownershipPeriodRepository.saveAndFlush(current);
+
+        GoatOwnershipPeriodEntity targetPeriod = new GoatOwnershipPeriodEntity();
+        targetPeriod.setGoatId(goat.getTechnicalId());
+        targetPeriod.setFarmId(target.getId());
+        targetPeriod.setStartedAt(effectiveAt);
+        targetPeriod.setEntryType(OwnershipEntryType.TRANSFER_IN);
+        targetPeriod.setSource("EVENT_TEST_TRANSFER");
+        ownershipPeriodRepository.saveAndFlush(targetPeriod);
+
+        if (updateProjection) {
+            goat.setFarm(target);
+            goatRepository.saveAndFlush(goat);
+        }
+    }
+
     private void cleanDatabase() {
         eventRepository.deleteAll();
+        ownershipPeriodRepository.deleteAll();
         farmOperatorRepository.deleteAll();
         goatRepository.deleteAll();
         goatFarmRepository.deleteAll();

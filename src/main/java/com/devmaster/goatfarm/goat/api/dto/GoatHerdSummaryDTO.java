@@ -21,6 +21,7 @@ public class GoatHerdSummaryDTO {
     private long active;
     private long inactive;
     private long sold;
+    private long historicallySold;
     private long deceased;
     private List<GoatBreedSummaryDTO> breeds;
 }

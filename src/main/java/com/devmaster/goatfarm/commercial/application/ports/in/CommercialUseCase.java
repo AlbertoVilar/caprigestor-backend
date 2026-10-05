@@ -24,6 +24,8 @@ public interface CommercialUseCase {
 
     AnimalSaleResponseVO registerAnimalSalePayment(Long farmId, Long saleId, SalePaymentRequestVO requestVO);
 
+    AnimalSaleResponseVO reverseExternalAnimalSale(Long farmId, Long saleId, String reason);
+
     MilkSaleResponseVO createMilkSale(Long farmId, MilkSaleRequestVO requestVO);
 
     List<MilkSaleResponseVO> listMilkSales(Long farmId);

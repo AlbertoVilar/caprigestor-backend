@@ -1,6 +1,6 @@
 package com.devmaster.goatfarm.goat.persistence.adapter;
 
-import com.devmaster.goatfarm.goat.application.ports.out.GoatPageQuery;
+import com.devmaster.goatfarm.goat.application.pagination.GoatPageQuery;
 import com.devmaster.goatfarm.goat.domain.Goat;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.goat.domain.RegistrationIdentity;
@@ -20,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -88,12 +91,37 @@ class GoatPersistenceAdapterTest {
     }
 
     @Test
-    void exposesValidationSummaryAndTechnicalDelete() {
+    void birthDateLookupUsesCanonicalTechnicalIdentity() {
+        when(repository.findByTechnicalId(10L)).thenReturn(Optional.of(entity));
+
+        assertThat(adapter.findBirthDate(GoatId.of(10L)))
+                .contains(LocalDate.of(2024, 1, 1));
+        assertThat(adapter.findBirthDate(null)).isEmpty();
+        verify(repository).findByTechnicalId(10L);
+    }
+
+    @Test
+    void mapsApplicationPaginationToSpringDataAtPersistenceBoundary() {
+        Page<GoatEntity> page = new PageImpl<>(List.of(entity), PageRequest.of(2, 5), 21);
+        when(repository.findAllByFarmId(eq(1L), any(Pageable.class))).thenReturn(page);
+
+        GoatPageQuery query = new GoatPageQuery(2, 5, "name,DESC");
+        assertThat(adapter.findAllByFarmId(1L, query).totalElements()).isEqualTo(21);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(repository).findAllByFarmId(eq(1L), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isEqualTo(2);
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(5);
+        assertThat(pageable.getValue().getSort().getOrderFor("name").getDirection())
+                .isEqualTo(org.springframework.data.domain.Sort.Direction.DESC);
+    }
+
+    @Test
+    void exposesValidationSummary() {
         when(repository.findByRegistrationNumberAndFarmId("RG-10", 1L)).thenReturn(Optional.of(entity));
         when(repository.findByRegistrationNumberAndFarmIdWithTechnicalFamilyGraph("RG-10", 1L))
                 .thenReturn(Optional.of(entity));
         when(repository.existsByRegistrationNumber("RG-10")).thenReturn(true);
-        when(repository.findByTechnicalId(10L)).thenReturn(Optional.of(entity));
         when(repository.countByFarmId(1L)).thenReturn(20L);
         when(repository.countByFarmIdAndGender(1L, Gender.MACHO)).thenReturn(4L);
         when(repository.countByFarmIdAndGender(1L, Gender.FEMEA)).thenReturn(16L);
@@ -114,8 +142,19 @@ class GoatPersistenceAdapterTest {
         assertThat(adapter.getHerdSummary(1L).total()).isEqualTo(20L);
         assertThat(adapter.existsByRegistrationNumber("RG-10")).isTrue();
 
-        adapter.deleteById(new GoatId(10L));
-        verify(repository).delete(entity);
+    }
+
+    @Test
+    void findGenealogyByGoatId_usesTechnicalIdAndSetsBreederAndOwnerNull() {
+        when(repository.findByTechnicalIdWithTechnicalFamilyGraph(10L)).thenReturn(Optional.of(entity));
+
+        var result = adapter.findGenealogyByGoatId(GoatId.of(10L));
+
+        assertThat(result).isPresent();
+        assertThat(result.get().id()).isEqualTo(GoatId.of(10L));
+        assertThat(result.get().registrationNumber()).isEqualTo("RG-10");
+        assertThat(result.get().breederName()).isNull();
+        assertThat(result.get().farmOwnerName()).isNull();
     }
 
     private GoatEntity entity(Long technicalId, String registration) {

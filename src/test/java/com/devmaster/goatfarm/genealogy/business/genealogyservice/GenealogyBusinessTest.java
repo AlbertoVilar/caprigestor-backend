@@ -1,7 +1,7 @@
 package com.devmaster.goatfarm.genealogy.business.genealogyservice;
 
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogyQueryPort;
-import com.devmaster.goatfarm.goat.application.ports.out.GoatGenealogySnapshot;
+import com.devmaster.goatfarm.goat.application.ports.in.GoatGenealogyReadUseCase;
+import com.devmaster.goatfarm.goat.application.model.GoatGenealogySnapshot;
 import com.devmaster.goatfarm.config.exceptions.custom.ResourceNotFoundException;
 import com.devmaster.goatfarm.genealogy.business.bo.GenealogyResponseVO;
 import com.devmaster.goatfarm.genealogy.business.mapper.GenealogyBusinessMapper;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 class GenealogyBusinessTest {
 
     @Mock
-    private GoatGenealogyQueryPort goatGenealogyQueryPort;
+    private GoatGenealogyReadUseCase goatGenealogyQueryPort;
 
     @Mock
     private GenealogyBusinessMapper genealogyMapper;

@@ -5,10 +5,10 @@ import com.devmaster.goatfarm.goat.application.ports.out.GoatReference;
 import com.devmaster.goatfarm.goat.application.routing.GoatReferenceResolver;
 import com.devmaster.goatfarm.goat.domain.GoatId;
 import com.devmaster.goatfarm.health.application.ports.out.HealthEventPersistencePort;
+import com.devmaster.goatfarm.health.application.model.HealthEventRecord;
 import com.devmaster.goatfarm.health.business.bo.GoatWithdrawalStatusVO;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventStatus;
 import com.devmaster.goatfarm.health.domain.enums.HealthEventType;
-import com.devmaster.goatfarm.health.persistence.entity.HealthEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -113,7 +113,30 @@ class HealthWithdrawalBusinessTest {
         assertTrue(statuses.getFirst().hasActiveMilkWithdrawal());
     }
 
-    private HealthEvent buildPerformedEvent(
+    @Test
+    void globalWithdrawalStatusUsesGoatIdentityAcrossFarmsAndHonorsPerformedDate() {
+        HealthWithdrawalBusiness business = new HealthWithdrawalBusiness(
+                healthEventPersistencePort,
+                goatReferenceResolver,
+                new EntityFinder()
+        );
+        GoatId goatId = new GoatId(42L);
+        LocalDate referenceDate = LocalDate.of(2026, 3, 29);
+        when(goatReferenceResolver.resolveGlobal(goatId)).thenReturn(Optional.of(
+                new GoatReference(goatId, 2L, "NEW-RG", "Goat", null)));
+        when(healthEventPersistencePort.findPerformedWithWithdrawalByGoatTechnicalId(goatId)).thenReturn(List.of(
+                buildPerformedEvent(30L, 1L, "OLD-RG", "Origin treatment", LocalDate.of(2026, 3, 28), 4, 0),
+                buildPerformedEvent(31L, 1L, "OLD-RG", "Future treatment", LocalDate.of(2026, 4, 1), 4, 0)
+        ));
+
+        GoatWithdrawalStatusVO status = business.getGoatWithdrawalStatus(goatId, referenceDate);
+
+        assertTrue(status.hasActiveMilkWithdrawal());
+        assertEquals(30L, status.milkWithdrawal().eventId());
+        assertEquals("NEW-RG", status.goatId());
+    }
+
+    private HealthEventRecord buildPerformedEvent(
             Long eventId,
             Long farmId,
             String goatId,
@@ -122,7 +145,7 @@ class HealthWithdrawalBusinessTest {
             Integer milkWithdrawalDays,
             Integer meatWithdrawalDays
     ) {
-        HealthEvent event = new HealthEvent();
+        HealthEventRecord event = new HealthEventRecord();
         event.setId(eventId);
         event.setFarmId(farmId);
         event.setGoatId(goatId);

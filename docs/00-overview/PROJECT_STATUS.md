@@ -1,98 +1,134 @@
-# Status do Projeto CapriGestor Backend
+# Status do Projeto CapriGestor
 
-Ultima atualizacao: 2026-09-11
-Escopo: estado funcional humano e versionado do backend no commit integrado de develop.
-Links relacionados: [Portal](../INDEX.md), [MVP](./MVP_READY.md), [Roadmap](./ROADMAP.md), [Contratos API](../03-api/API_CONTRACTS.md), [Arquitetura](../01-architecture/ARCHITECTURE.md)
+Última atualização: 2026-10-05
+Escopo: resumo canônico do estado integrado do CapriGestor. Código, migrations,
+testes, configuração, workflows e os repositórios são a fonte técnica primária.
+Este documento registra o estado observado na auditoria R1; não substitui os
+gates de CI ou a revisão de promoção.
 
-## Resumo executivo
+Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
+[Quality Gates](../01-architecture/QUALITY_GATES.md),
+[Contratos API](../03-api/API_CONTRACTS.md).
 
-O backend esta funcional e organizado como um monolito modular com arquitetura
-hexagonal, PostgreSQL/Flyway, seguranca JWT farm-scoped e CI/CD com gates de
-qualidade. O estado tecnico deve ser conferido no codigo, nas migrations, nos
-testes, no `pom.xml`, nos workflows e nos manifestos Docker.
+## Estado da release candidate
 
-Nesta onda, `cabras.id` passou a ser propagado como GoatId técnico nos
-consumidores de eventos, genealogia, reprodução, saúde, lactação/leite,
-comercial e auditoria. O RG continua como identidade registral/snapshot e as
-rotas RG permanecem compatíveis durante a transição. A integridade técnica é
-fechada pelas migrations V41 e V42; as rotas estruturais versionadas e a
-retirada dos aliases RG continuam documentadas em
-[GOAT_IDENTITY_DEPENDENT_MODULES_WAVE](../01-architecture/GOAT_IDENTITY_DEPENDENT_MODULES_WAVE.md).
-Na revisão ID4-C1, os consumidores de produção também deixaram de depender do
-`LegacyGoatPersistencePort`; a resolução de tokens passou a ser explícita e
-centralizada em `GoatReferenceResolver`, com guarda ArchUnit para evitar o
-retorno de entidades e repositórios JPA ao core.
+- Backend `develop`: `1abf127b10547f2180c76db45a394d0e371d2fd3`.
+- Frontend `develop`: `72816f7e8a2299c6820c3e25c86fdaee9a3e4e6c`.
+- Backend `main`: `49a3ee26641dfc607ff392533e991ae5d795c8f9`, 220 commits atrás de
+  `develop`; frontend `main`: `3c2294a4f5ab48a3aa29cc9c60029ee87c78ebe7`,
+  71 commits atrás. A promoção ainda não ocorreu.
+- Na auditoria R1 não havia PRs abertas nos dois repositórios.
+- Os checks de push dos SHAs atuais de `develop` estavam verdes. As revisões de
+  dependências são executadas no contexto de PR e ainda precisam ser observadas
+  nas PRs de promoção.
+- A validação completa da release candidate e a promoção por PR para `main`
+  continuam pendentes. **Este estado não declara HML nem produção prontas.**
+- A cadeia Flyway integrada vai de V1 a V56. Migrations publicadas não devem ser
+  reescritas ou condensadas.
 
-Na ID5-A (branch `feat/goat-registration-rectification`), o fluxo explícito
-de retificação registral foi implementado sem trocar o `GoatId`: somente
-`ADMIN` e `FARM_OWNER` podem corrigir TOD/TOE/RG pelo endpoint administrativo,
-com validação canônica, proteção contra duplicidade, auditoria operacional e
-histórico imutável em `goat_registration_history`. O `PUT` comum permanece
-restrito a alterações de perfil e rejeita mudança de identidade. Esta onda
-ainda aguarda revisão/integração em `develop`; não inclui frontend nem reset
-da base descartável de desenvolvimento.
+## Arquitetura e módulos
 
-Baseline desta atualizacao:
+O backend é um monólito modular Java/Spring Boot com PostgreSQL e Flyway. A
+direção arquitetural é hexagonal pragmática: API/adapters de entrada chamam
+casos de uso e o núcleo dos módulos; persistência, segurança, mensageria e
+integrações ficam atrás de boundaries/ports quando já isolados. Ainda há
+módulos legados com acoplamentos a reduzir; não se declara isolamento acadêmico
+ou conclusão de toda refatoração arquitetural.
 
-- branch: `refactor/goat-genealogy-events`;
-- commit: see the merge commit for PR #239;
-- `origin/main`: `b9aaa94c007e7865ec218816ce99e51b6a7864a5`;
-- a arvore de trabalho estava limpa na coleta deste status;
-- relatorios de teste existentes: 589 testes, 0 falhas, 0 erros e 1 ignorado.
+Os principais módulos de domínio incluem Authority/Security, Farm, Goat,
+Goat Ownership, Genealogy, Reproduction, Lactation/Milk, Health, Events,
+Commercial/Finance, Inventory, Article/Blog e Audit.
 
-## Modulos implementados
+A identidade estrutural do animal é o `GoatId` técnico. RG/TOD/TOE continuam
+identificadores e dados de negócio/registral usados em integrações, consultas e
+snapshots; não são a identidade relacional estrutural. As FKs locais críticas
+apontam para GoatId.
 
-| Modulo | Estado | Responsabilidade principal |
-|---|---|---|
-| Authority | Implementado | JWT, usuarios, papeis, refresh session, operadores e reset de senha |
-| Farm | Implementado | fazendas, ownership, permissoes, enderecos e telefones |
-| Goat / Genealogy | Implementado | animais, genealogia, saida controlada e integracao ABCC |
-| Events | Implementado | historico operacional por animal |
-| Reproduction | Implementado | coberturas, prenhez, diagnostico, parto, desmame e alertas |
-| Lactation / Milk | Implementado | lactacao, producao individual, producao consolidada e alertas |
-| Health | Implementado | eventos sanitarios, carencia, calendario e alertas |
-| Inventory | Implementado | itens, lotes, ledger, saldo e idempotencia |
-| Commercial | Implementado | clientes, vendas e financeiro operacional minimo |
-| Article | Implementado | artigos publicos e administracao editorial |
-| Audit | Implementado | trilha de auditoria operacional |
+## Funcionalidades integradas
 
-## API e seguranca
+- **Propriedade e histórico:** períodos de propriedade canônicos, histórico de
+  movimentações e transferências internas; fatos históricos mantêm seu contexto
+  de fazenda sem redefinir retroativamente a propriedade atual do animal.
+- **Comercial:** venda interna integrada ao fluxo de propriedade, conclusão
+  orientada pelo pagamento quando aplicável, venda externa e reversão auditável.
+- **ABCC e genealogia:** consulta/lookup e pré-visualização são separados da
+  confirmação/importação; existe importação em lote com resultado por item.
+  Genealogia suporta referências locais e externas, com limites/timeout e
+  tratamento explícito de falhas da integração.
+- **Eventos e saúde:** Health possui fluxo e persistência próprios, separados do
+  módulo genérico Events. Fatos especializados de saúde/reprodução não devem ser
+  gravados ou removidos pelo CRUD genérico; registros legados especializados
+  permanecem consultáveis, mas sem ações genéricas de edição/exclusão.
+  `PESAGEM` e `OUTRO` continuam como tipos genéricos.
+- **Frontend:** inclui seletor de fazenda gerenciada, fluxo de importação ABCC e
+  cartão de histórico de animais vendidos, compatíveis com os contratos atuais
+  do backend.
+- **Segurança:** JWT é stateless; a autorização farm-scoped separa políticas
+  administrativas de operação. `ADMIN` é global, `FARM_OWNER` administra a
+  própria fazenda e `OPERATOR` depende de vínculo persistido para capacidades
+  operacionais. Leituras públicas de catálogo/genealogia/consultas ABCC são
+  exceções explícitas documentadas; mutações continuam protegidas pelas políticas
+  apropriadas.
 
-- As rotas de aplicacao usam exclusivamente `/api/v1`.
-- Consultas publicas sao deliberadas e limitadas a fazendas, animais,
-  genealogia e consultas ABCC documentadas.
-- `@CanManageFarm` permite ADMIN, proprietario da fazenda ou operador vinculado.
-- `@FarmOwnerOnly` permite ADMIN ou proprietario da fazenda.
-- `@AdminOnly` permite somente ADMIN.
-- `GET /api/v1/goatfarms/{farmId}/goats/summary` é uma consulta pública de
-  agregados e usa `@PublicEndpoint`; as mutações de animais continuam protegidas.
+## Banco, migrations e validação
 
-## Banco, testes e entrega
+- O modelo atual usa PostgreSQL e migrations Flyway imutáveis até V56.
+- As migrations V39–V43 introduziram e propagaram GoatId estrutural. V45–V56
+  estabelecem propriedade/histórico canônicos e evoluem integridade e fluxos
+  comerciais.
+- A cobertura de integração PostgreSQL/Testcontainers inclui instalação limpa
+  no schema atual, upgrades representativos (incluindo V43 até latest) e
+  invariantes de ownership. Os workflows de `develop` nos SHAs acima concluíram
+  com sucesso no R1; a execução/teste-smoke consolidada de RC ainda é pendente.
+- Os testes backend rodam por `./mvnw -B -U clean verify`; o CI de frontend
+  executa lint, typecheck, testes com cobertura, build e Playwright E2E.
 
-- Flyway possui migrations V1 a V43; V38 reforca referencias compostas por
-  fazenda, V39 introduz GoatId, V40 cria sombras técnicas, V41 exige GoatId
-  nos consumidores dependentes, V42 promove a PK técnica e V43 retira as FKs
-  estruturais que ainda apontavam para RG, preservando RG como identificador
-  de negócio/snapshot e criando o histórico de retificações. Migrations
-  publicadas não foram editadas.
-- Desenvolvimento usa PostgreSQL; testes usam H2 e testes de integracao
-  PostgreSQL quando Docker esta disponivel.
-- O piso de cobertura efetivo do `pom.xml` e `0.7588` (75,88%).
-- CI inclui testes, CodeQL, secret scan, dependency review, SBOM e Trivy.
-- Compose local usa PostgreSQL 15; HML/producao devem registrar a versao
-  efetiva no runbook do ambiente.
+## CI, infraestrutura e operação
 
-## Limites atuais e proximos passos
+No R1, os gates de push do backend em `develop` estavam verdes: Clean test,
+CodeQL, Secret scan, deny_root_markdown, Maven SBOM e Container image scan. No
+frontend: Lint + Unit + Build, E2E Playwright e Gitleaks. Dependency review do
+backend e Review dependencies do frontend exigem contexto de PR.
 
-- `GoatEntity` usa `id` como `@Id` JPA técnico; `num_registro` permanece RG
-  único e corrigível como dado de negócio. As rotas v1 ainda são aliases
-  registrais explícitos e não inferem GoatId pelo formato da URL.
-- Fallbacks por RG permanecem apenas para compatibilidade de fixtures e rotas
-  legadas. A futura API estrutural deverá declarar GoatId explicitamente; tokens
-  numéricos isolados não são inferidos como GoatId.
-- A base de desenvolvimento continua descartável, mas não foi resetada; o
-  reset pré-HML será uma operação separada, após a migração coerente.
+O backend oferece imagem Docker; o compose de produção mantém o backend na rede
+interna, usa secrets externos para chaves JWT e deixa a publicação web ao
+frontend/proxy. Os arquivos `.env.prod.example`, compose e runbooks são
+**templates**: imagens, banco, CORS, hostname, SMTP e secrets precisam de valores
+específicos e validação do ambiente. Não devem ser tratados como configuração
+pronta para deploy.
 
-Este documento representa onde o produto esta. O trabalho futuro deve ficar no
-[ROADMAP](./ROADMAP.md). Nao use este arquivo para registrar hashes efemeros de
-cada tarefa, detalhes de implementacao ou contexto exclusivo de um ambiente.
+## Pendências e limites conhecidos
+
+- Executar o gate consolidado de release candidate precede a promoção para
+  `main`.
+- A promoção deve ocorrer por PRs `develop → main`, com diff de promoção
+  revisado e todos os checks obrigatórios, inclusive revisões de dependências,
+  concluídos nos heads exatos.
+- A auditoria R1 não confirmou novos defeitos funcionais bloqueantes. Timeline
+  unificada somente leitura, eventual código legado não utilizado no frontend,
+  limpeza histórica de duplicidades e refatorações sem bug reproduzido ficam
+  como investigação/trabalho futuro, não como bloqueadores atuais de `main`.
+- O hardening concorrente do fluxo de recuperação de senha permanece uma dívida
+  de segurança documentada separadamente; não foi reaberto nem validado por R1.
+- A instalação limpa e os arquivos de exemplo não comprovam prontidão de HML ou
+  produção. Ambas as declarações dependem de infraestrutura e configuração
+  próprias de ambiente.
+
+## Nota de escopo local observada no R1
+
+Quatro alterações não commitadas no checkout canônico do backend foram
+classificadas como locais e **fora da release candidate**: a alteração de
+duração do JWT de acesso de 900 para 86400 segundos e seus arquivos
+complementares de teste e documentação (`JwtService.java`,
+`application.properties`, `AuthControllerIntegrationTest.java` e
+`AUTHORITY_ACCESS_MODULE.md`). Elas não integram os SHAs remotos de `develop`;
+não foram incorporadas nem descartadas nesta wave. A duração de 24 horas não é
+configuração aprovada para a release.
+
+## Continuidade
+
+Consulte [ARCHITECTURE.md](../01-architecture/ARCHITECTURE.md) e
+[QUALITY_GATES.md](../01-architecture/QUALITY_GATES.md) para boundaries e gates;
+documentos de módulo/API descrevem contratos funcionais. Roadmaps e planos
+históricos explicam decisões anteriores, mas não substituem o estado observado
+nos repositórios e nos workflows.

@@ -1,6 +1,7 @@
 package com.devmaster.goatfarm.inventory.api.controller;
 
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
+import com.devmaster.goatfarm.api.pagination.SpringPageMapper;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryItemCreateRequestDTO;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryItemResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryItemApiMapper;
@@ -107,8 +108,8 @@ public class InventoryItemController {
             @PathVariable Long farmId,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        Page<InventoryItemResponseDTO> page = queryUseCase.listItems(farmId, pageable)
+        var result = queryUseCase.listItems(farmId, SpringPageMapper.toQuery(pageable))
                 .map(apiMapper::toResponseDTO);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(SpringPageMapper.toSpringPage(result, pageable));
     }
 }

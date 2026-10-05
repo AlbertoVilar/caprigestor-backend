@@ -4,6 +4,8 @@ import com.devmaster.goatfarm.config.exceptions.GlobalExceptionHandler;
 import com.devmaster.goatfarm.inventory.api.dto.InventoryBalanceResponseDTO;
 import com.devmaster.goatfarm.inventory.api.mapper.InventoryBalanceApiMapper;
 import com.devmaster.goatfarm.inventory.application.ports.in.InventoryBalanceQueryUseCase;
+import com.devmaster.goatfarm.application.pagination.PageQuery;
+import com.devmaster.goatfarm.application.pagination.PageResult;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceFilterVO;
 import com.devmaster.goatfarm.inventory.business.bo.InventoryBalanceResponseVO;
 import org.junit.jupiter.api.Test;
@@ -12,8 +14,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import com.devmaster.goatfarm.config.security.authorization.CanManageFarm;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,8 +63,8 @@ class InventoryBalanceControllerTest {
                 new BigDecimal("18.750")
         );
 
-        when(queryUseCase.listBalances(any(InventoryBalanceFilterVO.class)))
-                .thenReturn(new PageImpl<>(List.of(responseVO), PageRequest.of(0, 20), 1));
+        when(queryUseCase.listBalances(any(InventoryBalanceFilterVO.class), any(PageQuery.class)))
+                .thenReturn(new PageResult<>(List.of(responseVO), 1, 0, 20));
         when(apiMapper.toResponseDTO(responseVO)).thenReturn(responseDTO);
 
         mockMvc.perform(get("/api/v1/goatfarms/{farmId}/inventory/balances", 1L)
@@ -76,7 +76,7 @@ class InventoryBalanceControllerTest {
                 .andExpect(jsonPath("$.content[0].trackLot").value(true))
                 .andExpect(jsonPath("$.page.totalElements").value(1));
 
-        verify(queryUseCase).listBalances(any(InventoryBalanceFilterVO.class));
+        verify(queryUseCase).listBalances(any(InventoryBalanceFilterVO.class), any(PageQuery.class));
     }
 
     @Test
