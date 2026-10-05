@@ -1,162 +1,134 @@
-# Status do Projeto CapriGestor Backend
+# Status do Projeto CapriGestor
 
-Última atualização: 2026-09-13
-Escopo: único estado humano versionado e conciso do backend. Código, migrations,
-testes, configuração e CI são a fonte técnica primária.
+Última atualização: 2026-10-05
+Escopo: resumo canônico do estado integrado do CapriGestor. Código, migrations,
+testes, configuração, workflows e os repositórios são a fonte técnica primária.
+Este documento registra o estado observado na auditoria R1; não substitui os
+gates de CI ou a revisão de promoção.
 
 Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 [Quality Gates](../01-architecture/QUALITY_GATES.md),
 [Contratos API](../03-api/API_CONTRACTS.md).
 
-## Baseline atual
+## Estado da release candidate
 
-- A baseline integrada de `develop` inclui a PR #269 (`DEV-A11-I3-A`), merge
-  `f1ff12f`; as boundaries Authority/Security I2 e Article I3-A estão concluídas.
-- A última migration é `V44__enforce_single_active_lactation.sql`; não há V45.
-- O backend é um monólito modular Java/Spring Boot com PostgreSQL/Flyway,
-  autenticação JWT e autorização farm-scoped.
-- `CAPRIGESTOR_CURRENT_STATE.md`, se existir localmente, é cache não
-  autoritativo e candidato à remoção; não é necessário em clone limpo.
-- O estado de execução e a saúde do CI devem ser confirmados nos workflows e
-  no repositório no momento da tarefa; este documento não substitui essa prova.
+- Backend `develop`: `1abf127b10547f2180c76db45a394d0e371d2fd3`.
+- Frontend `develop`: `72816f7e8a2299c6820c3e25c86fdaee9a3e4e6c`.
+- Backend `main`: `49a3ee26641dfc607ff392533e991ae5d795c8f9`, 220 commits atrás de
+  `develop`; frontend `main`: `3c2294a4f5ab48a3aa29cc9c60029ee87c78ebe7`,
+  71 commits atrás. A promoção ainda não ocorreu.
+- Na auditoria R1 não havia PRs abertas nos dois repositórios.
+- Os checks de push dos SHAs atuais de `develop` estavam verdes. As revisões de
+  dependências são executadas no contexto de PR e ainda precisam ser observadas
+  nas PRs de promoção.
+- A validação completa da release candidate e a promoção por PR para `main`
+  continuam pendentes. **Este estado não declara HML nem produção prontas.**
+- A cadeia Flyway integrada vai de V1 a V56. Migrations publicadas não devem ser
+  reescritas ou condensadas.
 
-## Arquitetura atual
+## Arquitetura e módulos
 
-O destino é arquitetura hexagonal pragmática: API/Web → casos de uso → domínio,
-com persistência, segurança e integrações atrás de ports/adapters. O core já
-possui boundaries mecânicos para domínio, controller, Goat, lactação, leite,
-reprodução e segurança, mas ainda há dívida legada em outros módulos.
+O backend é um monólito modular Java/Spring Boot com PostgreSQL e Flyway. A
+direção arquitetural é hexagonal pragmática: API/adapters de entrada chamam
+casos de uso e o núcleo dos módulos; persistência, segurança, mensageria e
+integrações ficam atrás de boundaries/ports quando já isolados. Ainda há
+módulos legados com acoplamentos a reduzir; não se declara isolamento acadêmico
+ou conclusão de toda refatoração arquitetural.
 
-Autorização usa `FarmAuthorizationUseCase` e `CurrentPrincipalQueryUseCase`.
-`SecurityContextHolder` permanece confinado ao adapter de principal atual. As
-rotas farm-scoped declaram políticas semânticas (`@CanManageFarm`,
-`@FarmOwnerOnly`, `@AdminOnly`, `@AuthenticatedFarmRead` ou `@PublicEndpoint`).
+Os principais módulos de domínio incluem Authority/Security, Farm, Goat,
+Goat Ownership, Genealogy, Reproduction, Lactation/Milk, Health, Events,
+Commercial/Finance, Inventory, Article/Blog e Audit.
 
-## Waves concluídas relevantes
+A identidade estrutural do animal é o `GoatId` técnico. RG/TOD/TOE continuam
+identificadores e dados de negócio/registral usados em integrações, consultas e
+snapshots; não são a identidade relacional estrutural. As FKs locais críticas
+apontam para GoatId.
 
-- DEV-A11-R (Final Hexagonal Closure Audit) foi concluída em modo read-only. Os
-  14 pares legados de ports de aplicação para entidades JPA foram identificados;
-  após a I2-C, restavam 11 pares explícitos. As waves DEV-A11-I3-A (Article),
-  DEV-A11-I3-B (Health), DEV-A11-I3-C (Farm/Address/Phone) e DEV-A11-I3-D
-  (Audit) reduziram a baseline para 4 pares legados fora destas boundaries.
-  DEV-A11-I3-E1 isolou Commercial (Customer, AnimalSale e MilkSale) com
-  modelos/ports tecnológicos neutros; a baseline integrada caiu de 4 para 1.
-  DEV-A11-I3-E2 isolou Finance operacional com `OperationalExpenseCommand`/
-  `OperationalExpenseRecord`; a baseline integrada caiu de 1 para 0.
-- A10 isolou limites de principal autenticado, autorização por fazenda,
-  validação crítica, publicação de eventos e emissão de JWT.
-- A11-I1 reforçou o guard global que impede o domínio de depender de
-  `application`.
-- DEV-A11-I2-I isolou exceções de persistência: adapters de Farm e Phone
-  traduzem conflitos Spring DAO para `PersistenceConflictException`, o
-  onboarding preserva seu 409 histórico de duplicidade e os demais fluxos
-  mantêm o contrato genérico de integridade. O guard global de Spring DAO no
-  core está ativo e verde.
-- GoatId técnico foi introduzido e propagado estruturalmente pelas migrations
-  V39–V43. FKs locais críticas usam identidade técnica; RG permanece
-  identificador registral/ABCC e snapshot de negócio.
-- V44 reforçou a regra de uma única lactação ativa por animal/fazenda.
-- DEV-A11-I3-F1 isolou a paginação de Article e Farm do core: `PageQuery`,
-  `PageResult` e `SortSpec` são modelos neutros; controllers mantêm o contrato
-  HTTP Spring e adapters traduzem para `Pageable`/`Page`.
-- DEV-A11-I3-F2 isolou a paginação de Health do core usando os mesmos contratos
-  neutros. O calendário e as consultas por cabra preservam o JSON Spring na API;
-  alertas usam uma janela de eventos limitada orientada à intenção, mantendo os
-  contadores totais sem expor paginação ao business.
-- DEV-A11-I3-F3 isolou a paginação de Inventory: filtros permanecem modelos de
-  negócio, `PageQuery` é argumento separado nos use cases/ports e adapters
-  convertem para Spring Data. O contrato HTTP e a ordenação fixa de movimentos
-  (`movementDate desc`, `createdAt desc`) foram preservados.
-- DEV-A11-I3-F4-I1 isolou a paginação da listagem de produção de leite. O fluxo
-  usa `PageQuery`/`PageResult` no application/business/port, mantendo Spring
-  `Pageable`/`Page` apenas na API e no adapter. A paginação de Lactation e os
-  alertas de secagem permanecem abertos para F4-I2.
-- DEV-A11-I3-F4-I2 isolou a paginação de Lactation: histórico usa
-  `PageQuery`/`PageResult`, alertas de secagem usam composição e slicing neutros,
-  e a seleção da última lactação usa consulta orientada à intenção. O contrato
-  HTTP de histórico e o envelope `totalPending` dos alertas permanecem intactos.
-  Milk application/business não possui mais dependências de Spring Data.
-- DEV-A11-I3-F5 implementa o isolamento da paginação de Reproduction na PR #282:
-  o core usa `PageQuery`/`PageResult`, os controllers preservam `Page`/`Pageable`
-  HTTP e os adapters traduzem para Spring Data. O guard global de Spring Data no
-  core está ativo e verde; a PR aguarda revisão arquitetural antes do merge.
-- A retificação registral preserva GoatId, é administrativa e mantém histórico
-  imutável; o `PUT` comum não altera identidade.
-- DEV-A11-I2 (Password Hashing, Authentication/Token e Account/Role Persistence)
-  foi concluída e integrada no merge `adb025d` (PR #267). O core Authority não
-  depende de infraestrutura Spring Security nem de entidades JPA de Authority.
+## Funcionalidades integradas
 
-## Dívida arquitetural conhecida
+- **Propriedade e histórico:** períodos de propriedade canônicos, histórico de
+  movimentações e transferências internas; fatos históricos mantêm seu contexto
+  de fazenda sem redefinir retroativamente a propriedade atual do animal.
+- **Comercial:** venda interna integrada ao fluxo de propriedade, conclusão
+  orientada pelo pagamento quando aplicável, venda externa e reversão auditável.
+- **ABCC e genealogia:** consulta/lookup e pré-visualização são separados da
+  confirmação/importação; existe importação em lote com resultado por item.
+  Genealogia suporta referências locais e externas, com limites/timeout e
+  tratamento explícito de falhas da integração.
+- **Eventos e saúde:** Health possui fluxo e persistência próprios, separados do
+  módulo genérico Events. Fatos especializados de saúde/reprodução não devem ser
+  gravados ou removidos pelo CRUD genérico; registros legados especializados
+  permanecem consultáveis, mas sem ações genéricas de edição/exclusão.
+  `PESAGEM` e `OUTRO` continuam como tipos genéricos.
+- **Frontend:** inclui seletor de fazenda gerenciada, fluxo de importação ABCC e
+  cartão de histórico de animais vendidos, compatíveis com os contratos atuais
+  do backend.
+- **Segurança:** JWT é stateless; a autorização farm-scoped separa políticas
+  administrativas de operação. `ADMIN` é global, `FARM_OWNER` administra a
+  própria fazenda e `OPERATOR` depende de vínculo persistido para capacidades
+  operacionais. Leituras públicas de catálogo/genealogia/consultas ABCC são
+  exceções explícitas documentadas; mutações continuam protegidas pelas políticas
+  apropriadas.
 
-- O baseline `ApplicationPortPersistenceBoundaryArchUnitTest` agora é zero:
-  ports de aplicação não podem depender de entidades JPA. A regra deixou de ser
-  uma allowlist temporária e passou a ser estrutural.
-- A boundary DEV-A11-I3-C removeu `FarmUserPersistencePort` e o adapter de User:
-  o onboarding de fazenda usa o contrato de aplicação `UserManagementUseCase`
-  e `AuthorityAccount`, enquanto o adapter de Farm resolve a entidade JPA.
-- Finance usa `farmId` e `GoatFarmPersistencePort` somente para existência;
-  resolução de `GoatFarm` e mapeamento de `OperationalExpense` ficam no adapter.
-  Commercial
-  agora usa `CustomerRecord`, `AnimalSaleRecord` e `MilkSaleRecord`, com adapters
-  responsáveis por resolver entidades JPA. Audit já usa `OperationalAuditRecord`
-  e está isolado de entidades JPA no core (DEV-A11-I3-D).
-- Não há dependências de `Page`/`Pageable`/`Sort` do Spring Data no core
-  `application`/`business`; o guard global correspondente está ativo e verde.
-  Permanecem apenas APIs de autenticação em módulos fora da boundary Authority,
-  com guards específicos e trabalho de hardening separado quando aplicável.
-- A transição de identidade ainda contém compatibilidades de API/token por RG e
-  `String goatId`. Esse trabalho chama-se **Goat Identity Transition Closure**;
-  não é a criação de GoatId.
-- O antigo plano estrutural **ID4-B0/ID4** é obsoleto e já foi implementado nas
-  migrations V39–V43 e no modelo técnico atual. Não há trabalho futuro para
-  criar GoatId, promover `cabras.id` ou repetir a migração estrutural; somente
-  resíduos comprovados de **Goat Identity Transition Closure** permanecem.
+## Banco, migrations e validação
 
-## Wave ativa e trabalho adiado
+- O modelo atual usa PostgreSQL e migrations Flyway imutáveis até V56.
+- As migrations V39–V43 introduziram e propagaram GoatId estrutural. V45–V56
+  estabelecem propriedade/histórico canônicos e evoluem integridade e fluxos
+  comerciais.
+- A cobertura de integração PostgreSQL/Testcontainers inclui instalação limpa
+  no schema atual, upgrades representativos (incluindo V43 até latest) e
+  invariantes de ownership. Os workflows de `develop` nos SHAs acima concluíram
+  com sucesso no R1; a execução/teste-smoke consolidada de RC ainda é pendente.
+- Os testes backend rodam por `./mvnw -B -U clean verify`; o CI de frontend
+  executa lint, typecheck, testes com cobertura, build e Playwright E2E.
 
-- DEV-A11-I2-A (Password Hashing Boundary) foi concluída e integrada na
-  `develop`. O core Authority depende de `PasswordHashingPort`; o
-  `PasswordEncoder` do Spring permanece somente no adapter de infraestrutura.
-- DEV-A11-I2-B (Authentication and Token Boundaries) foi concluída e integrada
-  na `develop`. `AuthBusiness` depende de `CredentialAuthenticationPort` e
-  `AuthTokenPort`; as APIs concretas de autenticação e JWT permanecem confinadas
-  aos adapters de infraestrutura. Login, refresh, rotação, replay, logout,
-  claims e contratos HTTP são preservados.
-- DEV-A11-I2-C (Authority Account & Role Persistence Boundary) foi concluída e
-  integrada. `AuthorityAccount`, `AuthorityRole`, `RefreshSessionRecord` e
-  `PasswordResetTokenRecord` são modelos da aplicação; JPA permanece nos
-  adapters/mapper. O onboarding de fazenda usa uma ponte explícita e transitória
-  fora do core Authority para a relação legada com `User`.
-- I2-D e I2-E, como descritas no roadmap antigo, são obsoletas como waves
-  arquiteturais independentes: seus limites de persistência e UserDetails já
-  foram cobertos pela I2-C. A implementação de `User implements UserDetails` é
-  apenas limpeza opcional futura.
-- A atomicidade concorrente do consumo de token de recuperação de senha é dívida
-  de hardening de segurança separada, não dívida hexagonal. As boundaries Article,
-  Health e Farm/Address/Phone foram implementadas; a revisão arquitetural da
-  I3-C permanece pendente.
-- DEV-A11-I2-P0 foi integrada na `develop`: as duas rotas HTTP de limpeza global
-  foram removidas, assim como a credencial hard-coded e a orquestração sem
-  consumidores; o bootstrap administrativo continua externo e desabilitado por
-  padrão.
-- As boundaries Health, Audit, Commercial (I3-E1) e Finance (I3-E2) foram
-  implementadas e integradas em `develop`; a dívida JPA do core foi zerada.
-- Adiado: hardening separado de recuperação de senha, mudanças adicionais de
-  contrato/API, mudanças de schema, reset DEV, HML e `main`. F4-I2 está concluída
-  e F5 está implementada na PR #282, aguardando merge arquitetural.
+## CI, infraestrutura e operação
 
-## Compatibilidade e operações
+No R1, os gates de push do backend em `develop` estavam verdes: Clean test,
+CodeQL, Secret scan, deny_root_markdown, Maven SBOM e Container image scan. No
+frontend: Lint + Unit + Build, E2E Playwright e Gitleaks. Dependency review do
+backend e Review dependencies do frontend exigem contexto de PR.
 
-- A base DEV contém dados descartáveis para teste, mas reset continua operação
-  explícita e futura. Migrations publicadas não são reescritas.
-- RG é lookup registral e pode coexistir com GoatId técnico durante a transição;
-  aliases/fallbacks não devem ser removidos sem decisão documentada de contrato.
-- Antes de HML, o projeto exigirá instalação limpa PostgreSQL → Flyway
-  V1..latest → startup → bootstrap/smoke tests.
+O backend oferece imagem Docker; o compose de produção mantém o backend na rede
+interna, usa secrets externos para chaves JWT e deixa a publicação web ao
+frontend/proxy. Os arquivos `.env.prod.example`, compose e runbooks são
+**templates**: imagens, banco, CORS, hostname, SMTP e secrets precisam de valores
+específicos e validação do ambiente. Não devem ser tratados como configuração
+pronta para deploy.
 
-## Onde continuar
+## Pendências e limites conhecidos
 
-Use [ARCHITECTURE.md](../01-architecture/ARCHITECTURE.md) para target e dívida,
-[QUALITY_GATES.md](../01-architecture/QUALITY_GATES.md) para o que CI já impõe,
-e os documentos de módulo/API para mudanças funcionais. Roadmaps e planos
-históricos ajudam a entender decisões, mas não definem o estado atual.
+- Executar o gate consolidado de release candidate precede a promoção para
+  `main`.
+- A promoção deve ocorrer por PRs `develop → main`, com diff de promoção
+  revisado e todos os checks obrigatórios, inclusive revisões de dependências,
+  concluídos nos heads exatos.
+- A auditoria R1 não confirmou novos defeitos funcionais bloqueantes. Timeline
+  unificada somente leitura, eventual código legado não utilizado no frontend,
+  limpeza histórica de duplicidades e refatorações sem bug reproduzido ficam
+  como investigação/trabalho futuro, não como bloqueadores atuais de `main`.
+- O hardening concorrente do fluxo de recuperação de senha permanece uma dívida
+  de segurança documentada separadamente; não foi reaberto nem validado por R1.
+- A instalação limpa e os arquivos de exemplo não comprovam prontidão de HML ou
+  produção. Ambas as declarações dependem de infraestrutura e configuração
+  próprias de ambiente.
+
+## Nota de escopo local observada no R1
+
+Quatro alterações não commitadas no checkout canônico do backend foram
+classificadas como locais e **fora da release candidate**: a alteração de
+duração do JWT de acesso de 900 para 86400 segundos e seus arquivos
+complementares de teste e documentação (`JwtService.java`,
+`application.properties`, `AuthControllerIntegrationTest.java` e
+`AUTHORITY_ACCESS_MODULE.md`). Elas não integram os SHAs remotos de `develop`;
+não foram incorporadas nem descartadas nesta wave. A duração de 24 horas não é
+configuração aprovada para a release.
+
+## Continuidade
+
+Consulte [ARCHITECTURE.md](../01-architecture/ARCHITECTURE.md) e
+[QUALITY_GATES.md](../01-architecture/QUALITY_GATES.md) para boundaries e gates;
+documentos de módulo/API descrevem contratos funcionais. Roadmaps e planos
+históricos explicam decisões anteriores, mas não substituem o estado observado
+nos repositórios e nos workflows.
