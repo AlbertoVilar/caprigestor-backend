@@ -53,6 +53,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,6 +65,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers(disabledWithoutDocker = true)
 @Import(OwnershipSaleTransactionRollbackPostgresIntegrationTest.FailureConfiguration.class)
 class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
+    private static final AtomicInteger FIXTURE_SEQUENCE = new AtomicInteger();
+
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
             System.getProperty("caprigestor.test.postgres.image", "postgres:16-alpine"));
@@ -413,16 +416,18 @@ class OwnershipSaleTransactionRollbackPostgresIntegrationTest {
     private SaleFixture fixture(String suffix) {
         User seller = user("sale-" + suffix + "-seller");
         User buyer = user("sale-" + suffix + "-buyer");
-        String code = Integer.toHexString(Math.abs(suffix.hashCode())).toUpperCase().substring(0, 2);
-        GoatFarm sourceFarm = farm("Sale " + suffix + " source", ("S" + code + "01"), seller);
-        GoatFarm targetFarm = farm("Sale " + suffix + " target", ("T" + code + "01"), buyer);
+        int fixtureId = FIXTURE_SEQUENCE.incrementAndGet();
+        String sourceTod = String.format("S%04d", fixtureId);
+        String targetTod = String.format("T%04d", fixtureId);
+        GoatFarm sourceFarm = farm("Sale " + suffix + " source", sourceTod, seller);
+        GoatFarm targetFarm = farm("Sale " + suffix + " target", targetTod, buyer);
         GoatEntity goat = new GoatEntity();
-        goat.setRegistrationNumber("S" + code + "0001");
+        goat.setRegistrationNumber(sourceTod + "0001");
         goat.setName("Concurrent " + suffix + " goat");
         goat.setGender(Gender.FEMEA);
         goat.setBirthDate(LocalDate.of(2024, 1, 1));
         goat.setStatus(GoatStatus.ATIVO);
-        goat.setTod("S" + code);
+        goat.setTod(sourceTod);
         goat.setToe("0001");
         goat.setFarm(sourceFarm);
         goat.setUser(seller);
