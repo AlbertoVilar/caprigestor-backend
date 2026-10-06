@@ -1,0 +1,14 @@
+vulnerabilities:
+  - id: CVE-2026-47884
+    purls:
+      - pkg:maven/org.springframework/spring-webmvc@6.2.19
+    expired_at: 2026-12-31
+    statement: >-
+      Temporary risk acceptance for the resolved Spring MVC 6.2.19 dependency.
+      The documented exploit path requires XsltView plus a wildcard MVC
+      rendering route with an implicit view name; this application exposes REST
+      endpoints and has no XSLT view rendering configuration. No compatible
+      Spring Boot 3.x-managed fix is currently available; moving to Spring 7
+      or Boot 4 would be a major upgrade. Remove this exception when a supported
+      Spring Boot line supplies the fix, before expiry, or if MVC view rendering
+      is introduced. Review and renew explicitly; do not extend automatically.
