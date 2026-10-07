@@ -117,7 +117,7 @@ altera a política, não apenas a forma de consulta.
 
 ## Sessão JWT
 
-- O access token é emitido com `typ=access`, emissor, audiência, `kid` e `jti`; sua duração padrão é 15 minutos (`security.jwt.duration`).
+- O access token é emitido com `typ=access`, emissor, audiência, `kid` e `jti`. O fallback global e o perfil de testes usam 15 minutos (`security.jwt.duration`); o perfil `dev` usa 24 horas por padrão para facilitar desenvolvimento e QA manual. O perfil de produção exige `JWT_DURATION` explicitamente; adote 900 segundos (15 minutos) como recomendação operacional e nunca reutilize o TTL de desenvolvimento em HML/produção.
 - O refresh token é emitido com `typ=refresh`, `scope=REFRESH`, `jti` e `familyId`; sua duração padrão é 7 dias (`security.jwt.refresh-duration`).
 - `POST /api/v1/auth/refresh` aceita exclusivamente refresh tokens. Cada uso consome a sessão persistida, emite uma nova sessão da mesma família e registra a substituição.
 - Reuso de refresh token consumido, expirado ou revogado invalida toda a família. Não são armazenados tokens brutos: apenas SHA-256, identificadores e metadados de ciclo de vida.
@@ -162,7 +162,7 @@ Variaveis relevantes:
 - `PASSWORD_RESET_FROM_ADDRESS`
 - `PASSWORD_RESET_TTL_MINUTES`
 - `PASSWORD_RESET_COOLDOWN_SECONDS`
-- `JWT_DURATION` (segundos; padrão local: 900)
+- `JWT_DURATION` (segundos; fallback global/testes: 900; `dev`: 86400; produção: obrigatório, recomendado 900)
 - `JWT_REFRESH_DURATION` (segundos; padrão local: 604800)
 - `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY_ID` (obrigatórios em produção)
 
@@ -178,7 +178,7 @@ Padrao local recomendado:
 - `PASSWORD_RESET_FRONTEND_BASE_URL=http://localhost:5173`
 
 ## O que ficou para fase 2
-- revogação imediata de access tokens (hoje a revogação é imediata para refresh tokens; access tokens expiram em até 15 minutos)
+- revogação imediata de access tokens (hoje a revogação é imediata para refresh tokens; access tokens expiram conforme o TTL do ambiente. O padrão de produção recomendado é 900 segundos; o perfil `dev` usa 86400 segundos por conveniência e não deve ser reutilizado em ambiente persistente)
 - rate limit por IP
 - captcha / anti-abuso adicional
 - envio assincrono de email
@@ -187,4 +187,4 @@ Padrao local recomendado:
 
 ## Observação de segurança
 
-As sessões de refresh são invalidadas automaticamente quando a senha ou os papéis mudam. O access token não é consultado no banco a cada requisição; por isso a contenção total depende do seu TTL curto até que exista uma lista de revogação distribuída.
+As sessões de refresh são invalidadas automaticamente quando a senha ou os papéis mudam. O access token não é consultado no banco a cada requisição; por isso a contenção total depende do TTL configurado para o ambiente até que exista uma lista de revogação distribuída. O TTL de 24 horas é exclusivo do perfil `dev` por padrão.
