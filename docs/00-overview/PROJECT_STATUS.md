@@ -23,11 +23,11 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
   PRs backend #341 e frontend #206. A promoção agora em avaliação é incremental
   e contém somente mudanças integradas depois daquela release.
 - Os workflows pós-merge mais recentes de `develop` passaram nos SHAs acima.
-  Os checks obrigatórios no contexto das próximas PRs para `main`, incluindo as
-  revisões de dependências, ainda precisam ser executados e aprovados.
-- As PRs coordenadas `develop → main` ainda não foram abertas. A promoção e a
-  revisão dos respectivos diffs continuam pendentes. **Este estado não declara
-  HML nem produção prontas.**
+  Os checks obrigatórios devem ser executados e aprovados no contexto das PRs
+  de promoção para `main`, incluindo as revisões de dependências, nos heads exatos.
+- A promoção coordenada ocorre por PRs `develop → main` com revisão dos diffs e
+  todos os checks obrigatórios aprovados antes de qualquer merge. **Este estado
+  não declara HML nem produção prontas.**
 - A cadeia Flyway integrada vai de V1 a V56. Migrations publicadas não devem ser
   reescritas ou condensadas.
 
@@ -96,8 +96,8 @@ apontam para GoatId.
 - A cobertura de integração PostgreSQL/Testcontainers inclui instalação limpa
   no schema atual, upgrades representativos (incluindo V43 até latest) e
   invariantes de ownership. Os checks pós-merge atuais de backend e frontend em
-  `develop` concluíram com sucesso; os gates específicos das PRs de promoção
-  para `main` ainda não foram executados.
+  `develop` concluíram com sucesso; os gates específicos devem ser reexecutados
+  e aprovados nas PRs de promoção para `main`.
 - Os testes backend rodam por `./mvnw -B -U clean verify`; o CI de frontend
   executa lint, typecheck, testes com cobertura, build e Playwright E2E.
 
