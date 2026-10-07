@@ -1,10 +1,10 @@
 # Status do Projeto CapriGestor
 
-Última atualização: 2026-10-05
+Última atualização: 2026-10-07
 Escopo: resumo canônico do estado integrado do CapriGestor. Código, migrations,
 testes, configuração, workflows e os repositórios são a fonte técnica primária.
-Este documento registra o estado observado na auditoria R1; não substitui os
-gates de CI ou a revisão de promoção.
+Este documento registra o estado integrado atual e não substitui os gates de CI
+ou a revisão de promoção.
 
 Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 [Quality Gates](../01-architecture/QUALITY_GATES.md),
@@ -12,17 +12,22 @@ Links: [Portal](../INDEX.md), [Arquitetura](../01-architecture/ARCHITECTURE.md),
 
 ## Estado da release candidate
 
-- Backend `develop`: `1abf127b10547f2180c76db45a394d0e371d2fd3`.
-- Frontend `develop`: `72816f7e8a2299c6820c3e25c86fdaee9a3e4e6c`.
-- Backend `main`: `49a3ee26641dfc607ff392533e991ae5d795c8f9`, 220 commits atrás de
-  `develop`; frontend `main`: `3c2294a4f5ab48a3aa29cc9c60029ee87c78ebe7`,
-  71 commits atrás. A promoção ainda não ocorreu.
-- Na auditoria R1 não havia PRs abertas nos dois repositórios.
-- Os checks de push dos SHAs atuais de `develop` estavam verdes. As revisões de
-  dependências são executadas no contexto de PR e ainda precisam ser observadas
-  nas PRs de promoção.
-- A validação completa da release candidate e a promoção por PR para `main`
-  continuam pendentes. **Este estado não declara HML nem produção prontas.**
+- Backend: o baseline funcional atual de `develop` antes desta atualização
+  documental é `6d176f3e0577cb31ba880b2a21712b8645b1c39b`; backend `main` está em
+  `7bbdd48cc6d745e1573905b724b1631b16f98e86`. Nesse baseline, `develop`
+  está 5 commits à frente, sem commits exclusivos na `main`.
+- Frontend `develop`: `f157405b7d8a26b914623adc6a6dd240601ba3ae`; frontend
+  `main`: `6ceae1f9bb0dc3bdbaf7600bf10d0a2a2292dcd6`. `develop` está 6 commits
+  à frente, sem commits exclusivos na `main`.
+- A promoção anterior de `develop` para `main` foi concluída e validada pelas
+  PRs backend #341 e frontend #206. A promoção agora em avaliação é incremental
+  e contém somente mudanças integradas depois daquela release.
+- Os workflows pós-merge mais recentes de `develop` passaram nos SHAs acima.
+  Os checks obrigatórios no contexto das próximas PRs para `main`, incluindo as
+  revisões de dependências, ainda precisam ser executados e aprovados.
+- As PRs coordenadas `develop → main` ainda não foram abertas. A promoção e a
+  revisão dos respectivos diffs continuam pendentes. **Este estado não declara
+  HML nem produção prontas.**
 - A cadeia Flyway integrada vai de V1 a V56. Migrations publicadas não devem ser
   reescritas ou condensadas.
 
@@ -69,6 +74,18 @@ apontam para GoatId.
   operacionais. Leituras públicas de catálogo/genealogia/consultas ABCC são
   exceções explícitas documentadas; mutações continuam protegidas pelas políticas
   apropriadas.
+- **Duração JWT:** fallback global e perfil de testes usam 900 segundos; o
+  perfil `dev` usa 86400 segundos para desenvolvimento e QA manual. O perfil de
+  produção exige `JWT_DURATION` explícito; a recomendação operacional é 900
+  segundos. A duração ampliada de desenvolvimento não deve ser reutilizada em
+  HML ou produção.
+- **Supply chain:** baseline integrada em `develop`, com SBOM e análise da imagem
+  nos workflows. A exceção temporária do Trivy para `CVE-2026-47884` expira em
+  `2026-12-31`; ela é uma exceção de política com prazo, não evidência de que a
+  vulnerabilidade foi corrigida. Deve ser removida quando houver correção
+  suportada ou quando as premissas de não explorabilidade deixarem de valer. Se
+  ainda for necessária no vencimento, qualquer renovação exige nova revisão e
+  aceitação explícita de risco; não deve ser prorrogada automaticamente.
 
 ## Banco, migrations e validação
 
@@ -78,17 +95,22 @@ apontam para GoatId.
   comerciais.
 - A cobertura de integração PostgreSQL/Testcontainers inclui instalação limpa
   no schema atual, upgrades representativos (incluindo V43 até latest) e
-  invariantes de ownership. Os workflows de `develop` nos SHAs acima concluíram
-  com sucesso no R1; a execução/teste-smoke consolidada de RC ainda é pendente.
+  invariantes de ownership. Os checks pós-merge atuais de backend e frontend em
+  `develop` concluíram com sucesso; os gates específicos das PRs de promoção
+  para `main` ainda não foram executados.
 - Os testes backend rodam por `./mvnw -B -U clean verify`; o CI de frontend
   executa lint, typecheck, testes com cobertura, build e Playwright E2E.
 
 ## CI, infraestrutura e operação
 
-No R1, os gates de push do backend em `develop` estavam verdes: Clean test,
-CodeQL, Secret scan, deny_root_markdown, Maven SBOM e Container image scan. No
-frontend: Lint + Unit + Build, E2E Playwright e Gitleaks. Dependency review do
-backend e Review dependencies do frontend exigem contexto de PR.
+Nos SHAs atuais de `develop`, os gates pós-merge do backend estão verdes:
+Clean test, CodeQL Java analysis, Secret scan, deny_root_markdown, Maven SBOM e
+Container image scan. No frontend, os workflows pós-merge observados de
+Frontend Quality e Secret Scan estão verdes. As duas branches `main` usam checks
+obrigatórios e estritos. Na promoção, o frontend precisa passar novamente por
+Lint + Unit + Build, E2E Playwright, Gitleaks e Review dependencies; no backend,
+Dependency review e os demais checks obrigatórios também precisam passar no
+contexto da PR.
 
 O backend oferece imagem Docker; o compose de produção mantém o backend na rede
 interna, usa secrets externos para chaves JWT e deixa a publicação web ao
@@ -99,11 +121,9 @@ pronta para deploy.
 
 ## Pendências e limites conhecidos
 
-- Executar o gate consolidado de release candidate precede a promoção para
-  `main`.
-- A promoção deve ocorrer por PRs `develop → main`, com diff de promoção
-  revisado e todos os checks obrigatórios, inclusive revisões de dependências,
-  concluídos nos heads exatos.
+- Concluir a revisão dos diffs e os checks obrigatórios nas PRs coordenadas
+  `develop → main` precede qualquer merge. Os checks devem passar nos heads
+  exatos das PRs, com as bases `main` atualizadas.
 - A auditoria R1 não confirmou novos defeitos funcionais bloqueantes. Timeline
   unificada somente leitura, eventual código legado não utilizado no frontend,
   limpeza histórica de duplicidades e refatorações sem bug reproduzido ficam
@@ -114,16 +134,13 @@ pronta para deploy.
   produção. Ambas as declarações dependem de infraestrutura e configuração
   próprias de ambiente.
 
-## Nota de escopo local observada no R1
+## Estado do checkout canônico
 
-Quatro alterações não commitadas no checkout canônico do backend foram
-classificadas como locais e **fora da release candidate**: a alteração de
-duração do JWT de acesso de 900 para 86400 segundos e seus arquivos
-complementares de teste e documentação (`JwtService.java`,
-`application.properties`, `AuthControllerIntegrationTest.java` e
-`AUTHORITY_ACCESS_MODULE.md`). Elas não integram os SHAs remotos de `develop`;
-não foram incorporadas nem descartadas nesta wave. A duração de 24 horas não é
-configuração aprovada para a release.
+Na reconciliação concluída em 2026-10-07, o checkout raiz do backend ficou limpo
+e sincronizado com `origin/develop@6d176f3e0577cb31ba880b2a21712b8645b1c39b`.
+As configurações e documentação locais antigas que aplicavam 24 horas
+globalmente foram substituídas pela política por ambiente integrada em
+`develop`.
 
 ## Continuidade
 
